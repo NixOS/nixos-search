@@ -27,13 +27,16 @@ def get_last_evaluation(channel):
     )
     evaluations = []
     for item in s3_result.get("CommonPrefixes"):
-        if not item :
+        if not item:
             continue
         prefix = item.get("Prefix")
         evaluation = prefix[len(f"{project}/{project_version}/{channel}"):]
         if evaluation.startswith("beta"):
             evaluation = evaluation[len("beta"):]
-        revisions_since_start, git_revision = evaluation.lstrip(".").rstrip("/").split(".")
+        try:
+            revisions_since_start, git_revision = evaluation.lstrip(".").rstrip("/").split(".")
+        except:
+            continue
         evaluations.append(dict(
             revisions_since_start=int(revisions_since_start),
             git_revision=git_revision,

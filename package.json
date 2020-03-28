@@ -1,0 +1,45 @@
+{
+  "name": "nixos-search",
+  "version": "1.0.0",
+  "description": "Search NixOS packages and options.",
+  "main": "index.js",
+  "repository": "https://github.com/NixOS/nixos-search",
+  "author": "Rok Garbas <rok@garbas.si>",
+  "license": "MIT",
+  "scripts": {
+    "test": "elm-test",
+    "dev": "webpack-dev-server --hot --colors --port 3000",
+    "build": "webpack",
+    "prod": "webpack -p",
+    "analyse": "elm-analyse -s -p 3001 -o"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.7.2",
+    "@babel/preset-env": "^7.7.1",
+    "babel-loader": "^8.0.6",
+    "clean-webpack-plugin": "^3.0.0",
+    "closure-webpack-plugin": "^2.0.1",
+    "copy-webpack-plugin": "^5.0.5",
+    "css-loader": "^3.2.0",
+    "elm-analyse": "^0.16.5",
+    "elm-hot-webpack-loader": "^1.1.6",
+    "elm-test": "^0.19.1-1",
+    "elm-webpack-loader": "^6.0.1",
+    "file-loader": "^6.0.0",
+    "google-closure-compiler": "^20200224.0.0",
+    "html-webpack-plugin": "^4.0.2",
+    "mini-css-extract-plugin": "^0.9.0",
+    "node-sass": "^4.13.1",
+    "resolve-url-loader": "^3.1.0",
+    "sass-loader": "^8.0.0",
+    "style-loader": "^1.0.0",
+    "url-loader": "^4.0.0",
+    "webpack": "^4.41.2",
+    "webpack-cli": "^3.3.10",
+    "webpack-dev-server": "^3.9.0",
+    "webpack-merge": "^4.2.2"
+  },
+  "dependencies": {
+    "purecss": "^1.0.1"
+  }
+}
