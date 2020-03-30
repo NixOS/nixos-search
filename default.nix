@@ -57,6 +57,9 @@ in pkgs.stdenv.mkDerivation {
     (with pkgs.elmPackages; [
       elm
       elm-format
+      elm-language-server
+      elm-test
+      elm-analyse
     ]);
 
   # TODO: elm-webpack-loader is trying to download the packages instead of using 
