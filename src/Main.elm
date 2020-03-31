@@ -1,24 +1,38 @@
-port module Main exposing (main)
+module Main exposing (main)
 
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav exposing (Key)
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onInput)
+import Html
+    exposing
+        ( Html
+        , button
+        , div
+        , h1
+        , header
+        , input
+        , li
+        , text
+        , ul
+        )
+import Html.Attributes
+    exposing
+        ( class
+        , type_
+        , value
+        )
+import Html.Events
+    exposing
+        ( onClick
+        , onInput
+        )
 import Http exposing (Error(..))
-import Json.Decode as Decode
 import Url exposing (Url)
-import Url.Parser as UrlParser exposing ((</>), (<?>), Parser)
+import Url.Parser as UrlParser
+    exposing
+        ( (<?>)
+        , Parser
+        )
 import Url.Parser.Query as UrlParserQuery
-
-
-
--- ---------------------------
--- PORTS
--- ---------------------------
-
-
-port toJs : String -> Cmd msg
 
 
 
@@ -35,7 +49,7 @@ type alias Model =
 
 type alias SearchModel =
     { query : String
-    , results : List String
+    , results : List SearchResult
     }
 
 
@@ -43,12 +57,53 @@ type Page
     = Search SearchModel
 
 
+type SearchResult
+    = Package SearchResultPackage
+    | Option SearchResultOption
+
+
+type alias SearchResultPackage =
+    { attribute_name : String
+    , name : String
+    , version : String
+    , description : String
+    , longDescription : String
+    , license : List SearchResultPackageLicense
+    , position : String
+    , homepage : String
+    }
+
+
+type alias SearchResultOption =
+    { option_name : String
+    , description : String
+    , type_ : String
+    , default : String
+    , example : String
+    , source : String
+    }
+
+
+type alias SearchResultPackageLicense =
+    { fullName : String
+    , url : String
+    }
+
+
+type alias SearchResultPackageMaintainer =
+    { name : String
+    , email : String
+    , github : String
+    }
+
+
+emptySearch : Page
 emptySearch =
     Search { query = "", results = [] }
 
 
 init : Int -> Url -> Key -> ( Model, Cmd Msg )
-init flags url key =
+init _ url key =
     ( { key = key
       , page = UrlParser.parse urlParser url |> Maybe.withDefault emptySearch
       }
@@ -102,7 +157,7 @@ type Msg
 initPage : Page -> Cmd Msg
 initPage page =
     case page of
-        Search model ->
+        Search _ ->
             Cmd.none
 
 
@@ -116,9 +171,21 @@ update message model =
             let
                 newModel =
                     { model | page = UrlParser.parse urlParser url |> Maybe.withDefault model.page }
-            in
-            ( { newModel
-                | page =
+
+                packages =
+                    [ Package
+                        { attribute_name = "firefox"
+                        , name = "firefox"
+                        , version = "74.0"
+                        , description = "A web browser built from Firefox source tree (with plugins: )"
+                        , longDescription = ""
+                        , license = [ { fullName = "Mozilla Public License 2.0", url = "http://spdx.org/licenses/MPL-2.0.html" } ]
+                        , position = ""
+                        , homepage = "http://www.mozilla.com/en-US/firefox/"
+                        }
+                    ]
+
+                newPage =
                     case newModel.page of
                         Search searchModel ->
                             Search
@@ -128,10 +195,11 @@ update message model =
                                             []
 
                                         else
-                                            [ "result1" ]
+                                            packages
                                 }
-              }
-            , initPage model.page
+            in
+            ( { newModel | page = newPage }
+            , initPage newPage
             )
 
         SearchPageInput query ->
@@ -186,9 +254,14 @@ searchPage model =
         ]
 
 
-searchPageResult : String -> Html Msg
-searchPageResult item =
-    li [] [ text item ]
+searchPageResult : SearchResult -> Html Msg
+searchPageResult result =
+    case result of
+        Package package ->
+            li [] [ text package.attribute_name ]
+
+        Option option ->
+            li [] [ text option.option_name ]
 
 
 
