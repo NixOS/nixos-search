@@ -4,11 +4,12 @@ import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav exposing (Key)
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick)
+import Html.Events exposing (onClick, onInput)
 import Http exposing (Error(..))
 import Json.Decode as Decode
 import Url exposing (Url)
-import Url.Parser as UrlParser exposing ((</>), Parser)
+import Url.Parser as UrlParser exposing ((</>), (<?>), Parser)
+import Url.Parser.Query as UrlParserQuery
 
 
 
@@ -32,14 +33,27 @@ type alias Model =
     }
 
 
-init : Int -> Url -> Key -> ( Model, Cmd Msg )
-init flags url key =
-    ( { key = key, page = UrlParser.parse urlParser url |> Maybe.withDefault (Counter 0) }, Cmd.none )
+type alias SearchModel =
+    { query : String
+    , results : List String
+    }
 
 
 type Page
-    = Counter Int
-    | Server String
+    = Search SearchModel
+
+
+emptySearch =
+    Search { query = "", results = [] }
+
+
+init : Int -> Url -> Key -> ( Model, Cmd Msg )
+init flags url key =
+    ( { key = key
+      , page = UrlParser.parse urlParser url |> Maybe.withDefault emptySearch
+      }
+    , Cmd.none
+    )
 
 
 
@@ -61,9 +75,14 @@ handleUrlRequest key urlRequest =
 urlParser : Parser (Page -> msg) msg
 urlParser =
     UrlParser.oneOf
-        [ UrlParser.map Counter <| UrlParser.s "counter" </> UrlParser.int
-        , UrlParser.map Server <| UrlParser.s "server" </> UrlParser.string
-        , UrlParser.map (Server "") <| UrlParser.s "server"
+        [ UrlParser.map
+            (\q ->
+                Search
+                    { query = q |> Maybe.withDefault ""
+                    , results = []
+                    }
+            )
+            (UrlParser.s "search" <?> UrlParserQuery.string "query")
         ]
 
 
@@ -76,9 +95,15 @@ urlParser =
 type Msg
     = OnUrlRequest UrlRequest
     | OnUrlChange Url
-    | Inc
-    | TestServer
-    | OnServerResponse (Result Http.Error String)
+    | SearchPageInput String
+    | SearchQuerySubmit
+
+
+initPage : Page -> Cmd Msg
+initPage page =
+    case page of
+        Search model ->
+            Cmd.none
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -88,57 +113,43 @@ update message model =
             ( model, handleUrlRequest model.key urlRequest )
 
         OnUrlChange url ->
-            ( { model | page = UrlParser.parse urlParser url |> Maybe.withDefault model.page }, Cmd.none )
-
-        Inc ->
-            case model.page of
-                Counter x ->
-                    let
-                        xx =
-                            x + 1
-                    in
-                    ( { model | page = Counter xx }
-                    , Nav.pushUrl model.key <| "/counter/" ++ String.fromInt xx
-                    )
-
-                _ ->
-                    ( model, Cmd.none )
-
-        TestServer ->
             let
-                expect =
-                    Http.expectJson OnServerResponse (Decode.field "result" Decode.string)
+                newModel =
+                    { model | page = UrlParser.parse urlParser url |> Maybe.withDefault model.page }
             in
-            ( model
-            , Http.get { url = "/test", expect = expect }
+            ( { newModel
+                | page =
+                    case newModel.page of
+                        Search searchModel ->
+                            Search
+                                { searchModel
+                                    | results =
+                                        if searchModel.query == "" then
+                                            []
+
+                                        else
+                                            [ "result1" ]
+                                }
+              }
+            , initPage model.page
             )
 
-        OnServerResponse res ->
-            case res of
-                Ok serverMessage ->
-                    ( { model | page = Server serverMessage }, Cmd.none )
+        SearchPageInput query ->
+            ( { model
+                | page =
+                    case model.page of
+                        Search searchModel ->
+                            Search { searchModel | query = query }
+              }
+            , Cmd.none
+            )
 
-                Err err ->
-                    ( { model | page = Server <| "Error: " ++ httpErrorToString err }, Cmd.none )
-
-
-httpErrorToString : Http.Error -> String
-httpErrorToString err =
-    case err of
-        BadUrl _ ->
-            "BadUrl"
-
-        Timeout ->
-            "Timeout"
-
-        NetworkError ->
-            "NetworkError"
-
-        BadStatus _ ->
-            "BadStatus"
-
-        BadBody s ->
-            "BadBody: " ++ s
+        SearchQuerySubmit ->
+            case model.page of
+                Search searchModel ->
+                    ( model
+                    , Nav.pushUrl model.key <| "/search?query=" ++ searchModel.query
+                    )
 
 
 
@@ -151,47 +162,33 @@ view : Model -> Html Msg
 view model =
     div [ class "container" ]
         [ header []
-            [ img [ src "/images/logo.png" ] []
-            , h1 [] [ text "Elm 0.19 Webpack Starter, with hot-reloading" ]
+            [ h1 [] [ text "NixOS Search" ]
             ]
         , case model.page of
-            Counter counter ->
-                counterPage counter
-
-            Server serverMessage ->
-                serverPage serverMessage
-        , p []
-            [ text "And now don't forget to add a star to the Github repo "
-            , a [ href "https://github.com/simonh1000/elm-webpack-starter" ] [ text "elm-webpack-starter" ]
-            ]
+            Search searchModel ->
+                searchPage searchModel
         ]
 
 
-counterPage counter =
-    div [ class "pure-u-1-3" ]
-        [ a [ href "/server/" ] [ text "Switch to server" ]
-        , p [] [ text "Click on the button below to increment the state." ]
-        , button
-            [ class "pure-button pure-button-primary"
-            , onClick Inc
+searchPage : SearchModel -> Html Msg
+searchPage model =
+    div []
+        [ div []
+            [ input
+                [ type_ "text"
+                , onInput SearchPageInput
+                , value model.query
+                ]
+                []
+            , button [ onClick SearchQuerySubmit ] [ text "Search" ]
             ]
-            [ text "+ 1" ]
-        , text <| String.fromInt counter
-        , p [] [ text "Then make a change to the source code and see how the state is retained after you recompile." ]
+        , ul [] (List.map searchPageResult model.results)
         ]
 
 
-serverPage serverMessage =
-    div [ class "pure-u-1-3" ]
-        [ a [ href "/counter/1" ] [ text "Switch to counter" ]
-        , p [] [ text "Test the dev server" ]
-        , button
-            [ class "pure-button pure-button-primary"
-            , onClick TestServer
-            ]
-            [ text "ping dev server" ]
-        , text serverMessage
-        ]
+searchPageResult : String -> Html Msg
+searchPageResult item =
+    li [] [ text item ]
 
 
 
@@ -207,7 +204,7 @@ main =
         , update = update
         , view =
             \m ->
-                { title = "Elm 0.19 starter"
+                { title = "NixOS Search"
                 , body = [ view m ]
                 }
         , subscriptions = \_ -> Sub.none
