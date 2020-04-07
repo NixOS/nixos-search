@@ -75,6 +75,8 @@ def get_packages(evaluation):
                     )
                     for license in licenses
                 ]
+            else:
+                licenses = []
             maintainers = [
                 type(maintainer) == str
                 and dict(name=maintainer, email=None, github=None)
