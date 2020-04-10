@@ -1,0 +1,27 @@
+name: "Hourly Build & Deploy to Netlify"
+on:
+  schedule:
+  - cron: '0 * * * *'
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checking out the repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Installing Nix
+      uses: cachix/install-nix-action@v8
+    - name: Building search.nixos.org
+      run: nix-shell --run "yarn prod"
+    - name: Deploy to Netlify
+      uses: nwtgck/actions-netlify@v1.0.5
+      env:
+        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+      with:
+        publish-dir: './build'
+        production-branch: 'master'
+        deploy-message: 'Deploy from GitHub Actions'
+      if: github.repository == 'NixOS/nixos-search'
+

@@ -532,7 +532,11 @@ searchPage model =
                 searchPageResult model.showDetailsFor result.hits
 
             R.Failure error ->
-                div [] [ text "Error!", pre [] [ text (Debug.toString error) ] ]
+                div []
+                    [ text "Error!"
+
+                    --, pre [] [ text (Debug.toString error) ]
+                    ]
         ]
 
 
@@ -560,7 +564,9 @@ searchPageResultItem showDetailsFor item =
             let
                 packageDetails =
                     if Just item.id == showDetailsFor then
-                        [ td [ colspan 4 ] [ text "works!" ] ]
+                        [ td [ colspan 4 ]
+                            []
+                        ]
 
                     else
                         []
