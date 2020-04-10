@@ -54,6 +54,7 @@ def get_packages(evaluation):
         check=True,
     )
     packages = json.loads(result.stdout).items()
+    packages = list(packages)[:10]
 
     def gen():
         for attr_name, data in packages:
@@ -87,7 +88,14 @@ def get_packages(evaluation):
                 )
                 for maintainer in data["meta"].get("maintainers", [])
             ]
+            platforms = [
+                type(platform) == str
+                and platform
+                or None
+                for platform in data["meta"].get("platforms", [])
+            ]
             yield dict(
+                id=attr_name,
                 attr_name=attr_name,
                 name=data["pname"],
                 version=data["version"],
@@ -95,6 +103,7 @@ def get_packages(evaluation):
                 longDescription=data["meta"].get("longDescription", ""),
                 license=licenses,
                 maintainers=maintainers,
+                platforms=[i for i in platforms if i],
                 position=position,
                 homepage=data["meta"].get("homepage"),
             )
@@ -114,6 +123,7 @@ def get_options(evaluation):
     if os.path.exists(options_file):
         with open(options_file) as f:
             options = json.load(f).items()
+    options = list(options)[:10]
 
     def gen():
         for name, option in options:
@@ -123,6 +133,7 @@ def get_options(evaluation):
                     example.get("_type") == "literalExample":
                 example = str(example["text"])
             yield dict(
+                id=name,
                 option_name=name,
                 description=option.get("description"),
                 type=option.get("type"),
@@ -132,6 +143,7 @@ def get_options(evaluation):
             )
 
     return len(options), gen
+
 
 def recreate_index(es, channel):
     if es.indices.exists(f"{channel}-packages"):
@@ -162,6 +174,7 @@ def recreate_index(es, channel):
                             github=dict(type="text"),
                         ),
                     ),
+                    platforms=dict(type="keyword"),
                     position=dict(type="text"),
                     homepage=dict(type="text"),
                 ),

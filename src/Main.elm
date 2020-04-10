@@ -6,19 +6,33 @@ import Browser.Navigation as Nav exposing (Key)
 import Html
     exposing
         ( Html
+        , a
         , button
         , div
+        , footer
+        , form
         , h1
         , header
+        , img
         , input
         , li
+        , p
         , pre
+        , table
+        , tbody
+        , td
         , text
+        , th
+        , thead
+        , tr
         , ul
         )
 import Html.Attributes
     exposing
         ( class
+        , colspan
+        , href
+        , src
         , type_
         , value
         )
@@ -26,6 +40,7 @@ import Html.Events
     exposing
         ( onClick
         , onInput
+        , onSubmit
         )
 import Http
 import Json.Decode as D
@@ -33,6 +48,7 @@ import Json.Decode.Pipeline as DP
 import Json.Encode as E
 import RemoteData as R
 import Url exposing (Url)
+import Url.Builder as UrlBuilder
 import Url.Parser as UrlParser
     exposing
         ( (<?>)
@@ -64,8 +80,9 @@ type alias Model =
 
 
 type alias SearchModel =
-    { query : String
+    { query : Maybe String
     , result : R.WebData SearchResult
+    , showDetailsFor : Maybe String
     }
 
 
@@ -117,6 +134,7 @@ type alias SearchResultPackage =
     , longDescription : Maybe String
     , licenses : List SearchResultPackageLicense
     , maintainers : List SearchResultPackageMaintainer
+    , platforms : List String
     , position : Maybe String
     , homepage : Maybe String
     }
@@ -133,7 +151,7 @@ type alias SearchResultOption =
 
 
 type alias SearchResultPackageLicense =
-    { fullName : String
+    { fullName : Maybe String
     , url : Maybe String
     }
 
@@ -147,19 +165,75 @@ type alias SearchResultPackageMaintainer =
 
 emptySearch : Page
 emptySearch =
-    SearchPage { query = "", result = R.NotAsked }
+    SearchPage
+        { query = Nothing
+        , result = R.NotAsked
+        , showDetailsFor = Nothing
+        }
 
 
 init : Flags -> Url -> Key -> ( Model, Cmd Msg )
 init flags url key =
-    ( { key = key
-      , elasticsearchUrl = flags.elasticsearchUrl
-      , elasticsearchUsername = flags.elasticsearchUsername
-      , elasticsearchPassword = flags.elasticsearchPassword
-      , page = UrlParser.parse urlParser url |> Maybe.withDefault emptySearch
-      }
-    , Cmd.none
+    let
+        model =
+            { key = key
+            , elasticsearchUrl = flags.elasticsearchUrl
+            , elasticsearchUsername = flags.elasticsearchUsername
+            , elasticsearchPassword = flags.elasticsearchPassword
+            , page = UrlParser.parse urlParser url |> Maybe.withDefault emptySearch
+            }
+    in
+    ( model
+    , initPageCmd model model
     )
+
+
+initPageCmd : Model -> Model -> Cmd Msg
+initPageCmd oldModel model =
+    let
+        makeRequest query =
+            Http.riskyRequest
+                { method = "POST"
+                , headers =
+                    [ Http.header "Authorization" ("Basic " ++ Base64.encode (model.elasticsearchUsername ++ ":" ++ model.elasticsearchPassword))
+                    ]
+                , url = model.elasticsearchUrl ++ "/nixos-unstable-packages/_search"
+                , body =
+                    Http.jsonBody <|
+                        E.object
+                            [ ( "query"
+                              , E.object
+                                    [ ( "match"
+                                      , E.object
+                                            [ ( "attr_name"
+                                              , E.object
+                                                    [ ( "query", E.string query )
+
+                                                    -- I'm not sure we need fuziness
+                                                    --, ( "fuzziness", E.int 1 )
+                                                    ]
+                                              )
+                                            ]
+                                      )
+                                    ]
+                              )
+                            ]
+                , expect = Http.expectJson (R.fromResult >> SearchQueryResponse) decodeResult
+                , timeout = Nothing
+                , tracker = Nothing
+                }
+    in
+    case oldModel.page of
+        SearchPage oldSearchModel ->
+            case model.page of
+                SearchPage searchModel ->
+                    if (oldSearchModel.query == searchModel.query) && R.isSuccess oldSearchModel.result then
+                        Cmd.none
+
+                    else
+                        searchModel.query
+                            |> Maybe.map makeRequest
+                            |> Maybe.withDefault Cmd.none
 
 
 
@@ -182,13 +256,14 @@ urlParser : Parser (Page -> msg) msg
 urlParser =
     UrlParser.oneOf
         [ UrlParser.map
-            (\q ->
+            (\query showDetailsFor ->
                 SearchPage
-                    { query = q |> Maybe.withDefault ""
+                    { query = query
                     , result = R.NotAsked
+                    , showDetailsFor = showDetailsFor
                     }
             )
-            (UrlParser.s "search" <?> UrlParserQuery.string "query")
+            (UrlParser.s "search" <?> UrlParserQuery.string "query" <?> UrlParserQuery.string "showDetailsFor")
         ]
 
 
@@ -204,6 +279,7 @@ type Msg
     | SearchPageInput String
     | SearchQuerySubmit
     | SearchQueryResponse (R.WebData SearchResult)
+    | SearchShowPackageDetails String
 
 
 decodeResult : D.Decoder SearchResult
@@ -255,6 +331,7 @@ decodeResultPackage =
         |> DP.required "longDescription" (D.nullable D.string)
         |> DP.required "license" (D.list decodeResultPackageLicense)
         |> DP.required "maintainers" (D.list decodeResultPackageMaintainer)
+        |> DP.required "platforms" (D.list D.string)
         |> DP.required "position" (D.nullable D.string)
         |> DP.required "homepage" (D.nullable D.string)
 
@@ -262,7 +339,7 @@ decodeResultPackage =
 decodeResultPackageLicense : D.Decoder SearchResultPackageLicense
 decodeResultPackageLicense =
     D.map2 SearchResultPackageLicense
-        (D.field "fullName" D.string)
+        (D.field "fullName" (D.nullable D.string))
         (D.field "url" (D.nullable D.string))
 
 
@@ -285,44 +362,6 @@ decodeResultOption =
         (D.field "source" D.string)
 
 
-initPage : Model -> Cmd Msg
-initPage model =
-    case model.page of
-        SearchPage searchModel ->
-            if searchModel.query == "" then
-                Cmd.none
-
-            else
-                Http.riskyRequest
-                    { method = "POST"
-                    , headers =
-                        [ Http.header "Authorization" ("Basic " ++ Base64.encode (model.elasticsearchUsername ++ ":" ++ model.elasticsearchPassword))
-                        ]
-                    , url = model.elasticsearchUrl ++ "/nixos-unstable-packages/_search"
-                    , body =
-                        Http.jsonBody <|
-                            E.object
-                                [ ( "query"
-                                  , E.object
-                                        [ ( "match"
-                                          , E.object
-                                                [ ( "name"
-                                                  , E.object
-                                                        [ ( "query", E.string searchModel.query )
-                                                        , ( "fuzziness", E.int 1 )
-                                                        ]
-                                                  )
-                                                ]
-                                          )
-                                        ]
-                                  )
-                                ]
-                    , expect = Http.expectJson (R.fromResult >> SearchQueryResponse) decodeResult
-                    , timeout = Nothing
-                    , tracker = Nothing
-                    }
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
     case message of
@@ -340,18 +379,19 @@ update message model =
                             SearchPage
                                 { searchModel
                                     | result =
-                                        if searchModel.query == "" then
-                                            R.NotAsked
+                                        case searchModel.query of
+                                            Just query ->
+                                                R.Loading
 
-                                        else
-                                            R.Loading
+                                            Nothing ->
+                                                R.NotAsked
                                 }
 
                 newNewModel =
                     { newModel | page = newPage }
             in
             ( newNewModel
-            , initPage newNewModel
+            , initPageCmd newModel newNewModel
             )
 
         SearchPageInput query ->
@@ -359,7 +399,7 @@ update message model =
                 | page =
                     case model.page of
                         SearchPage searchModel ->
-                            SearchPage { searchModel | query = query }
+                            SearchPage { searchModel | query = Just query }
               }
             , Cmd.none
             )
@@ -368,7 +408,7 @@ update message model =
             case model.page of
                 SearchPage searchModel ->
                     ( model
-                    , Nav.pushUrl model.key <| "/search?query=" ++ searchModel.query
+                    , Nav.pushUrl model.key <| createSearchUrl searchModel
                     )
 
         SearchQueryResponse result ->
@@ -382,6 +422,47 @@ update message model =
                     , Cmd.none
                     )
 
+        SearchShowPackageDetails showDetailsFor ->
+            case model.page of
+                SearchPage searchModel ->
+                    let
+                        newSearchModel =
+                            { searchModel
+                                | showDetailsFor =
+                                    if searchModel.showDetailsFor == Just showDetailsFor then
+                                        Nothing
+
+                                    else
+                                        Just showDetailsFor
+                            }
+                    in
+                    ( model
+                    , Nav.pushUrl model.key <| createSearchUrl newSearchModel
+                    )
+
+
+createSearchUrl : SearchModel -> String
+createSearchUrl model =
+    []
+        |> List.append
+            (model.query
+                |> Maybe.map
+                    (\query ->
+                        [ UrlBuilder.string "query" query ]
+                    )
+                |> Maybe.withDefault []
+            )
+        |> List.append
+            (model.showDetailsFor
+                |> Maybe.map
+                    (\x ->
+                        [ UrlBuilder.string "showDetailsFor" x
+                        ]
+                    )
+                |> Maybe.withDefault []
+            )
+        |> UrlBuilder.absolute [ "search" ]
+
 
 
 -- ---------------------------
@@ -391,27 +472,54 @@ update message model =
 
 view : Model -> Html Msg
 view model =
-    div [ class "container" ]
+    div []
         [ header []
-            [ h1 [] [ text "NixOS Search" ]
+            [ div [ class "navbar navbar-static-top" ]
+                [ div [ class "navbar-inner" ]
+                    [ div [ class "container" ]
+                        [ a [ class "brand", href "https://search.nixos.org" ]
+                            [ img [ src "https://nixos.org/logo/nix-wiki.png", class "logo" ] []
+                            ]
+                        ]
+                    ]
+                ]
             ]
-        , case model.page of
-            SearchPage searchModel ->
-                searchPage searchModel
+        , div [ class "container main" ]
+            [ case model.page of
+                SearchPage searchModel ->
+                    searchPage searchModel
+            , footer [] []
+            ]
         ]
 
 
 searchPage : SearchModel -> Html Msg
 searchPage model =
-    div []
-        [ div []
-            [ input
-                [ type_ "text"
-                , onInput SearchPageInput
-                , value model.query
+    div [ class "search-page" ]
+        [ h1 [ class "page-header" ] [ text "Search for packages and options" ]
+        , div [ class "search-input" ]
+            [ form [ onSubmit SearchQuerySubmit ]
+                [ div [ class "input-append" ]
+                    [ input
+                        [ type_ "text"
+                        , onInput SearchPageInput
+                        , value <| Maybe.withDefault "" model.query
+                        ]
+                        []
+                    , div [ class "btn-group" ]
+                        [ button [ class "btn" ] [ text "Search" ]
+
+                        --TODO: and option to select the right channel+version+evaluation
+                        --, button [ class "btn" ] [ text "Loading ..." ]
+                        --, div [ class "popover bottom" ]
+                        --    [ div [ class "arrow" ] []
+                        --    , div [ class "popover-title" ] [ text "Select options" ]
+                        --    , div [ class "popover-content" ]
+                        --        [ p [] [ text "Sed posuere consectetur est at lobortis. Aenean eu leo quam. Pellentesque ornare sem lacinia quam venenatis vestibulum." ] ]
+                        --    ]
+                        ]
+                    ]
                 ]
-                []
-            , button [ onClick SearchQuerySubmit ] [ text "Search" ]
             ]
         , case model.result of
             R.NotAsked ->
@@ -421,26 +529,60 @@ searchPage model =
                 div [] [ text "Loading" ]
 
             R.Success result ->
-                ul [] (searchPageResult result.hits)
+                searchPageResult model.showDetailsFor result.hits
 
             R.Failure error ->
                 div [] [ text "Error!", pre [] [ text (Debug.toString error) ] ]
         ]
 
 
-searchPageResult : SearchResultHits -> List (Html Msg)
-searchPageResult result =
-    List.map searchPageResultItem result.hits
+searchPageResult : Maybe String -> SearchResultHits -> Html Msg
+searchPageResult showDetailsFor result =
+    div [ class "search-result" ]
+        [ table [ class "table table-hover" ]
+            [ thead []
+                [ tr []
+                    [ th [] [ text "Attribute name" ]
+                    , th [] [ text "Name" ]
+                    , th [] [ text "Version" ]
+                    , th [] [ text "Description" ]
+                    ]
+                ]
+            , tbody [] <| List.concatMap (searchPageResultItem showDetailsFor) result.hits
+            ]
+        ]
 
 
-searchPageResultItem : SearchResultItem -> Html Msg
-searchPageResultItem item =
-    -- case item.source of
-    --     Package package ->
-    --         li [] [ text package.attr_name ]
-    --     Option option ->
-    --         li [] [ text option.option_name ]
-    li [] [ text <| Debug.toString item ]
+searchPageResultItem : Maybe String -> SearchResultItem -> List (Html Msg)
+searchPageResultItem showDetailsFor item =
+    case item.source of
+        Package package ->
+            let
+                packageDetails =
+                    if Just item.id == showDetailsFor then
+                        [ td [ colspan 4 ] [ text "works!" ] ]
+
+                    else
+                        []
+            in
+            [ tr [ onClick <| SearchShowPackageDetails item.id ]
+                [ td [] [ text package.attr_name ]
+                , td [] [ text package.name ]
+                , td [] [ text package.version ]
+                , td [] [ text <| Maybe.withDefault "" package.description ]
+                ]
+            ]
+                ++ packageDetails
+
+        Option option ->
+            [ tr
+                []
+                [--  td [] [ text option.option_name ]
+                 --, td [] [ text option.name ]
+                 --, td [] [ text option.version ]
+                 --, td [] [ text option.description ]
+                ]
+            ]
 
 
 
