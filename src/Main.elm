@@ -110,10 +110,7 @@ submitQuery :
 submitQuery old ( new, cmd ) =
     let
         triggerSearch oldModel newModel msg makeRequest =
-            if (oldModel.query == newModel.query) && RemoteData.isSuccess oldModel.result then
-                ( new, cmd )
-
-            else
+            if newModel.query /= Nothing then
                 ( new
                 , Cmd.batch
                     [ cmd
@@ -123,13 +120,22 @@ submitQuery old ( new, cmd ) =
                         |> Cmd.map msg
                     ]
                 )
+
+            else
+                ( new, cmd )
     in
     case ( old.page, new.page ) of
         ( Packages oldModel, Packages newModel ) ->
             triggerSearch oldModel newModel PackagesMsg Page.Packages.makeRequest
 
+        ( NotFound, Packages newModel ) ->
+            triggerSearch newModel newModel PackagesMsg Page.Packages.makeRequest
+
         ( Options oldModel, Options newModel ) ->
             triggerSearch oldModel newModel OptionsMsg Page.Options.makeRequest
+
+        ( NotFound, Options newModel ) ->
+            triggerSearch newModel newModel OptionsMsg Page.Options.makeRequest
 
         ( _, _ ) ->
             ( new, cmd )
