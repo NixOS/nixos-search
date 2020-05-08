@@ -117,10 +117,10 @@ submitQuery old ( new, cmd ) =
                 ( new
                 , Cmd.batch
                     [ cmd
-                    , Page.Packages.makeRequest
+                    , makeRequest
                         new.elasticsearch
                         (Maybe.withDefault "" newModel.query)
-                        |> Cmd.map PackagesMsg
+                        |> Cmd.map msg
                     ]
                 )
     in
