@@ -54,7 +54,7 @@ def get_packages(evaluation):
         check=True,
     )
     packages = json.loads(result.stdout).items()
-    packages = list(packages)[:10]
+    packages = list(packages)
 
     def gen():
         for attr_name, data in packages:
@@ -123,7 +123,7 @@ def get_options(evaluation):
     if os.path.exists(options_file):
         with open(options_file) as f:
             options = json.load(f).items()
-    options = list(options)[:10]
+    options = list(options)
 
     def gen():
         for name, option in options:

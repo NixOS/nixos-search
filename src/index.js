@@ -1,6 +1,6 @@
 'use strict';
 
-require("./styles.scss");
+require("./index.scss");
 
 const {Elm} = require('./Main');
 

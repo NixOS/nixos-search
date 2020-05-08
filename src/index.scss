@@ -1,9 +1,14 @@
 
-header .navbar a.brand {
-  line-height: 1.5em;
+header .navbar {
+  a.brand {
+    line-height: 1.5em;
+  }
   img.logo {
     height: 1.5em;
     margin-right: 0.5em;
+  }
+  ul.nav > li > a {
+    line-height: 2.5em;
   }
 }
 
