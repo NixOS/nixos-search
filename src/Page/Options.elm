@@ -146,7 +146,6 @@ makeRequest :
 makeRequest options query =
     ElasticSearch.makeRequest
         "option_name"
-        -- TODO: add support for different channels
         "nixos-unstable-options"
         decodeResultItemSource
         options
