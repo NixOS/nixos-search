@@ -126,7 +126,14 @@ update path navKey msg model =
             )
 
         ShowDetails selected ->
-            ( { model | showDetailsFor = Just selected }
+            ( { model
+                | showDetailsFor =
+                    if model.showDetailsFor == Just selected then
+                        Nothing
+
+                    else
+                        Just selected
+              }
             , Cmd.none
             )
 
