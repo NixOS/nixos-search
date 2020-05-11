@@ -22,6 +22,7 @@ import Html
         , em
         , form
         , h1
+        , h4
         , input
         , li
         , option
@@ -265,42 +266,65 @@ view path title model viewSuccess outMsg =
             ]
         , case model.result of
             RemoteData.NotAsked ->
-                div [] [ text "NotAsked" ]
+                div [] [ text "" ]
 
             RemoteData.Loading ->
                 div [] [ text "Loading" ]
 
             RemoteData.Success result ->
-                div []
-                    [ p []
-                        [ em []
-                            [ text
-                                ("Showing results "
-                                    ++ String.fromInt model.from
-                                    ++ "-"
-                                    ++ String.fromInt
-                                        (if model.from + model.size > result.hits.total.value then
-                                            result.hits.total.value
-
-                                         else
-                                            model.from + model.size
-                                        )
-                                    ++ " of "
-                                    ++ String.fromInt result.hits.total.value
-                                    ++ "."
-                                )
-                            ]
+                if result.hits.total.value == 0 then
+                    div []
+                        [ h4 [] [ text <| "No " ++ path ++ " found!" ]
                         ]
-                    , viewPager outMsg model result path
-                    , viewSuccess model.showDetailsFor result
-                    , viewPager outMsg model result path
-                    ]
+
+                else
+                    div []
+                        [ p []
+                            [ em []
+                                [ text
+                                    ("Showing results "
+                                        ++ String.fromInt model.from
+                                        ++ "-"
+                                        ++ String.fromInt
+                                            (if model.from + model.size > result.hits.total.value then
+                                                result.hits.total.value
+
+                                             else
+                                                model.from + model.size
+                                            )
+                                        ++ " of "
+                                        ++ String.fromInt result.hits.total.value
+                                        ++ "."
+                                    )
+                                ]
+                            ]
+                        , viewPager outMsg model result path
+                        , viewSuccess model.showDetailsFor result
+                        , viewPager outMsg model result path
+                        ]
 
             RemoteData.Failure error ->
-                div []
-                    [ text "Error!"
+                let
+                    ( errorTitle, errorMessage ) =
+                        case error of
+                            Http.BadUrl text ->
+                                ( "Bad Url!", text )
 
-                    --, pre [] [ text (Debug.toString error) ]
+                            Http.Timeout ->
+                                ( "Timeout!", "Request to the server timeout." )
+
+                            Http.NetworkError ->
+                                ( "Network Error!", "Please check your network connection." )
+
+                            Http.BadStatus code ->
+                                ( "Bad Status", "Server returned " ++ String.fromInt code )
+
+                            Http.BadBody text ->
+                                ( "Bad Body", text )
+                in
+                div [ class "alert alert-error" ]
+                    [ h4 [] [ text errorTitle ]
+                    , text errorMessage
                     ]
         ]
 
