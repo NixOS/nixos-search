@@ -13,7 +13,13 @@ import ElasticSearch
 import Html
     exposing
         ( Html
+        , a
+        , dd
         , div
+        , dl
+        , dt
+        , pre
+        , span
         , table
         , tbody
         , td
@@ -26,11 +32,15 @@ import Html.Attributes
     exposing
         ( class
         , colspan
+        , href
+        , property
         )
 import Html.Events
     exposing
         ( onClick
         )
+import Html.Parser
+import Html.Parser.Util
 import Json.Decode
 
 
@@ -122,8 +132,7 @@ viewResultItem showDetailsFor item =
     let
         packageDetails =
             if Just item.id == showDetailsFor then
-                [ td [ colspan 1 ]
-                    [ text "This are details!" ]
+                [ td [ colspan 1 ] [ viewResultItemDetails item ]
                 ]
 
             else
@@ -133,6 +142,63 @@ viewResultItem showDetailsFor item =
         [ td [] [ text item.source.option_name ]
         ]
         :: packageDetails
+
+
+viewResultItemDetails :
+    ElasticSearch.ResultItem ResultItemSource
+    -> Html Msg
+viewResultItemDetails item =
+    let
+        default =
+            "Not given"
+
+        asText value =
+            span [] <|
+                case Html.Parser.run value of
+                    Ok nodes ->
+                        Html.Parser.Util.toVirtualDom nodes
+
+                    Err _ ->
+                        []
+
+        asCode value =
+            pre [] [ text value ]
+
+        asLink value =
+            a [ href value ] [ text value ]
+
+        -- TODO: this should take channel into account as well
+        githubUrlPrefix =
+            "https://github.com/NixOS/nixpkgs-channels/blob/nixos-unstable/"
+
+        asGithubLink value =
+            a
+                [ href <| githubUrlPrefix ++ (value |> String.replace ":" "#L") ]
+                [ text <| value ]
+
+        withDefault wrapWith value =
+            case value of
+                "" ->
+                    text default
+
+                "None" ->
+                    text default
+
+                _ ->
+                    wrapWith value
+    in
+    dl [ class "dl-horizontal" ]
+        [ dt [] [ text "Description" ]
+        , dd [] [ withDefault asText item.source.description ]
+        , dt [] [ text "Default value" ]
+        , dd [] [ withDefault asCode item.source.default ]
+        , dt [] [ text "Type" ]
+        , dd [] [ withDefault asCode item.source.type_ ]
+        , dt [] [ text "Example value" ]
+        , dd [] [ withDefault asCode item.source.example ]
+        , dt [] [ text "Declared in" ]
+        , dd [] [ withDefault asGithubLink item.source.source ]
+        ]
 
 
 

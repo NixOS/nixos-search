@@ -13,7 +13,13 @@ import ElasticSearch
 import Html
     exposing
         ( Html
+        , a
+        , code
+        , dd
         , div
+        , dl
+        , dt
+        , li
         , table
         , tbody
         , td
@@ -21,11 +27,13 @@ import Html
         , th
         , thead
         , tr
+        , ul
         )
 import Html.Attributes
     exposing
         ( class
         , colspan
+        , href
         )
 import Html.Events
     exposing
@@ -143,8 +151,7 @@ viewResultItem showDetailsFor item =
     let
         packageDetails =
             if Just item.id == showDetailsFor then
-                [ td [ colspan 4 ]
-                    [ text "This are details!" ]
+                [ td [ colspan 4 ] [ viewResultItemDetails item ]
                 ]
 
             else
@@ -157,6 +164,102 @@ viewResultItem showDetailsFor item =
         , td [] [ text <| Maybe.withDefault "" item.source.description ]
         ]
         :: packageDetails
+
+
+viewResultItemDetails :
+    ElasticSearch.ResultItem ResultItemSource
+    -> Html Msg
+viewResultItemDetails item =
+    let
+        default =
+            "Not specified"
+
+        asText =
+            text
+
+        asLink value =
+            a [ href value ] [ text value ]
+
+        -- TODO: this should take channel into account as well
+        githubUrlPrefix =
+            "https://github.com/NixOS/nixpkgs-channels/blob/nixos-unstable/"
+
+        cleanPosition value =
+            if String.startsWith "source/" value then
+                String.dropLeft 7 value
+
+            else
+                value
+
+        asGithubLink value =
+            a
+                [ href <| githubUrlPrefix ++ (value |> String.replace ":" "#L" |> cleanPosition) ]
+                [ text <| cleanPosition value ]
+
+        withDefault wrapWith maybe =
+            case maybe of
+                Nothing ->
+                    text default
+
+                Just "" ->
+                    text default
+
+                Just value ->
+                    wrapWith value
+
+        convertToGithubUrl value =
+            if String.startsWith "source/" value then
+                githubUrlPrefix ++ String.dropLeft 7 value
+
+            else
+                githubUrlPrefix ++ value
+
+        -- TODO: add links to hydra for hydra_platforms
+        -- example: https://hydra.nixos.org/job/nixos/release-20.03/nixpkgs.gnome3.accerciser.i686-linux
+        showPlatform platform =
+            li [] [ text platform ]
+
+        showLicence license =
+            li []
+                [ case ( license.fullName, license.url ) of
+                    ( Nothing, Nothing ) ->
+                        text default
+
+                    ( Just fullName, Nothing ) ->
+                        text fullName
+
+                    ( Nothing, Just url ) ->
+                        a [ href url ] [ text default ]
+
+                    ( Just fullName, Just url ) ->
+                        a [ href url ] [ text fullName ]
+                ]
+
+        showMaintainer maintainer =
+            li []
+                [ a
+                    [ href <| "https://github.com/" ++ maintainer.github ]
+                    [ text <| maintainer.name ++ " <" ++ maintainer.email ++ ">" ]
+                ]
+    in
+    dl [ class "dl-horizontal" ]
+        [ dt [] [ text "Install command" ]
+        , dd [] [ code [] [ text <| "nix-env -iA nixos." ++ item.source.attr_name ] ]
+        , dt [] [ text <| "Nix expression" ]
+
+        -- TODO: point to correct branch/channel
+        , dd [] [ withDefault asGithubLink item.source.position ]
+        , dt [] [ text "Platforms" ]
+        , dd [] [ ul [ class "inline" ] <| List.map showPlatform item.source.platforms ]
+        , dt [] [ text "Homepage" ]
+        , dd [] [ withDefault asLink item.source.homepage ]
+        , dt [] [ text "Licenses" ]
+        , dd [] [ ul [ class "inline" ] <| List.map showLicence item.source.licenses ]
+        , dt [] [ text "Maintainers" ]
+        , dd [] [ ul [ class "inline" ] <| List.map showMaintainer item.source.maintainers ]
+        , dt [] [ text "Long description" ]
+        , dd [] [ withDefault asText item.source.longDescription ]
+        ]
 
 
 
