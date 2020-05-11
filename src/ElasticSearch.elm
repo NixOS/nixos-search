@@ -263,7 +263,8 @@ view path title model viewSuccess outMsg =
             RemoteData.Failure error ->
                 div []
                     [ text "Error!"
-                    , pre [] [ text (Debug.toString error) ]
+
+                    --, pre [] [ text (Debug.toString error) ]
                     ]
         ]
 
