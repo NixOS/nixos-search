@@ -25,8 +25,33 @@ header .navbar {
     }
   }
   .search-result {
-    tbody tr {
+    tbody > tr {
       cursor: pointer;
+    }
+    tbody > td > dl > dd > ul.inline {
+      margin: 0;
+      li {
+        margin: 0;
+        padding: 0;
+      }
+      li::after {
+        content: ", ";
+        padding-right: 0.5em;
+      }
+      li:last-child::after {
+        content: "";
+      }
+    }
+    tbody > td > dl > dd > pre {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      line-height: 20px;
+      margin: 0;
+    }
+    tbody > td > dl > dt,
+    tbody > td > dl > dd {
+      margin-bottom: 1em;
     }
   }
 }
