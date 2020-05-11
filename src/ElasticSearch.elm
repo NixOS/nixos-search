@@ -244,12 +244,38 @@ makeRequestBody field query =
         objectIn name object =
             [ ( name, Json.Encode.object object ) ]
     in
-    -- I'm not sure we need fuziness
-    --, ( "fuzziness", Json.Encode.int 1 )
-    query
-        |> stringIn "query"
+    -- Prefix Query
+    -- {
+    --     "query": {
+    --         "prefix": {
+    --             "user": {
+    --                 "value": ""
+    --             }
+    --         }
+    --     }
+    -- }
+    --query
+    --    |> stringIn "value"
+    --    |> objectIn field
+    --    |> objectIn "prefix"
+    --    |> objectIn "query"
+    --    |> Json.Encode.object
+    --    |> Http.jsonBody
+    --
+    -- Wildcard Query
+    -- {
+    --     "query": {
+    --         "wildcard": {
+    --             "<field>": {
+    --                 "value": "*<value>*",
+    --             }
+    --         }
+    --     }
+    -- }
+    ("*" ++ query ++ "*")
+        |> stringIn "value"
         |> objectIn field
-        |> objectIn "match"
+        |> objectIn "wildcard"
         |> objectIn "query"
         |> Json.Encode.object
         |> Http.jsonBody
