@@ -154,7 +154,7 @@ def recreate_index(es, channel):
             settings=dict(number_of_shards=1),
             mappings=dict(
                 properties=dict(
-                    attr_name=dict(type="text"),
+                    attr_name=dict(type="keyword"),
                     name=dict(type="text"),
                     version=dict(type="text"),
                     description=dict(type="text"),
@@ -189,7 +189,7 @@ def recreate_index(es, channel):
             settings=dict(number_of_shards=1),
             mappings=dict(
                 properties=dict(
-                    option_name=dict(type="text"),
+                    option_name=dict(type="keyword"),
                     description=dict(type="text"),
                     type=dict(type="keyword"),
                     default=dict(type="text"),
