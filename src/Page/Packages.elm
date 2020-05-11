@@ -74,13 +74,15 @@ type alias ResultPackageLicense =
 type alias ResultPackageMaintainer =
     { name : String
     , email : String
-    , github : String
+    , github : Maybe String
     }
 
 
 init :
     Maybe String
     -> Maybe String
+    -> Maybe Int
+    -> Maybe Int
     -> ( Model, Cmd Msg )
 init =
     ElasticSearch.init
@@ -112,7 +114,8 @@ update navKey msg model =
 view : Model -> Html Msg
 view model =
     ElasticSearch.view
-        { title = "Search NixOS packages" }
+        "packages"
+        "Search NixOS packages"
         model
         viewSuccess
         SearchMsg
@@ -238,7 +241,14 @@ viewResultItemDetails item =
         showMaintainer maintainer =
             li []
                 [ a
-                    [ href <| "https://github.com/" ++ maintainer.github ]
+                    [ href <|
+                        case maintainer.github of
+                            Just github ->
+                                "https://github.com/" ++ github
+
+                            Nothing ->
+                                "#"
+                    ]
                     [ text <| maintainer.name ++ " <" ++ maintainer.email ++ ">" ]
                 ]
     in
@@ -269,14 +279,18 @@ viewResultItemDetails item =
 makeRequest :
     ElasticSearch.Options
     -> String
+    -> Int
+    -> Int
     -> Cmd Msg
-makeRequest options query =
+makeRequest options query from size =
     ElasticSearch.makeRequest
         "attr_name"
         "nixos-unstable-packages"
         decodeResultItemSource
         options
         query
+        from
+        size
         |> Cmd.map SearchMsg
 
 
@@ -311,4 +325,4 @@ decodeResultPackageMaintainer =
     Json.Decode.map3 ResultPackageMaintainer
         (Json.Decode.field "name" Json.Decode.string)
         (Json.Decode.field "email" Json.Decode.string)
-        (Json.Decode.field "github" Json.Decode.string)
+        (Json.Decode.field "github" (Json.Decode.nullable Json.Decode.string))

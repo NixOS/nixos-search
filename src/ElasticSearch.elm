@@ -7,7 +7,6 @@ module ElasticSearch exposing
     , decodeResult
     , init
     , makeRequest
-    , showLoadingOnQuery
     , update
     , view
     )
@@ -17,23 +16,34 @@ import Browser.Navigation
 import Html
     exposing
         ( Html
+        , a
         , button
         , div
+        , em
         , form
         , h1
         , input
+        , li
+        , p
+        , pre
         , text
+        , ul
         )
 import Html.Attributes
     exposing
         ( class
+        , classList
+        , href
         , type_
         , value
         )
 import Html.Events
     exposing
-        ( onInput
+        ( custom
+        , onClick
+        , onInput
         , onSubmit
+        , preventDefaultOn
         )
 import Http
 import Json.Decode
@@ -46,6 +56,8 @@ type alias Model a =
     { query : Maybe String
     , result : RemoteData.WebData (Result a)
     , showDetailsFor : Maybe String
+    , from : Int
+    , size : Int
     }
 
 
@@ -78,11 +90,15 @@ type alias ResultItem a =
 init :
     Maybe String
     -> Maybe String
+    -> Maybe Int
+    -> Maybe Int
     -> ( Model a, Cmd msg )
-init query showDetailsFor =
+init query showDetailsFor from size =
     ( { query = query
       , result = RemoteData.NotAsked
       , showDetailsFor = showDetailsFor
+      , from = Maybe.withDefault 0 from
+      , size = Maybe.withDefault 15 size
       }
     , Cmd.none
     )
@@ -95,7 +111,8 @@ init query showDetailsFor =
 
 
 type Msg a
-    = QueryInput String
+    = NoOp
+    | QueryInput String
     | QuerySubmit
     | QueryResponse (RemoteData.WebData (Result a))
     | ShowDetails String
@@ -109,6 +126,11 @@ update :
     -> ( Model a, Cmd (Msg a) )
 update path navKey msg model =
     case msg of
+        NoOp ->
+            ( model
+            , Cmd.none
+            )
+
         QueryInput query ->
             ( { model | query = Just query }
             , Cmd.none
@@ -116,7 +138,11 @@ update path navKey msg model =
 
         QuerySubmit ->
             ( model
-            , createUrl path model.query model.showDetailsFor
+            , createUrl path
+                model.query
+                model.showDetailsFor
+                0
+                model.size
                 |> Browser.Navigation.pushUrl navKey
             )
 
@@ -135,27 +161,23 @@ update path navKey msg model =
                  else
                     Just selected
                 )
+                model.from
+                model.size
                 |> Browser.Navigation.pushUrl navKey
             )
 
 
-showLoadingOnQuery : Model a -> Model a
-showLoadingOnQuery model =
-    -- TODO: use this
-    { model
-        | result =
-            case model.query of
-                Just query ->
-                    RemoteData.Loading
-
-                Nothing ->
-                    RemoteData.NotAsked
-    }
-
-
-createUrl : String -> Maybe String -> Maybe String -> String
-createUrl path query showDetailsFor =
-    []
+createUrl :
+    String
+    -> Maybe String
+    -> Maybe String
+    -> Int
+    -> Int
+    -> String
+createUrl path query showDetailsFor from size =
+    [ Url.Builder.int "from" from
+    , Url.Builder.int "size" size
+    ]
         |> List.append
             (query
                 |> Maybe.map
@@ -181,14 +203,15 @@ createUrl path query showDetailsFor =
 
 
 view :
-    { title : String }
+    String
+    -> String
     -> Model a
     -> (Maybe String -> Result a -> Html b)
     -> (Msg a -> b)
     -> Html b
-view options model viewSuccess outMsg =
+view path title model viewSuccess outMsg =
     div [ class "search-page" ]
-        [ h1 [ class "page-header" ] [ text options.title ]
+        [ h1 [ class "page-header" ] [ text title ]
         , div [ class "search-input" ]
             [ form [ onSubmit (outMsg QuerySubmit) ]
                 [ div [ class "input-append" ]
@@ -200,15 +223,6 @@ view options model viewSuccess outMsg =
                         []
                     , div [ class "btn-group" ]
                         [ button [ class "btn" ] [ text "Search" ]
-
-                        --TODO: and option to select the right channel+version+evaluation
-                        --, button [ class "btn" ] [ text "Loading ..." ]
-                        --, div [ class "popover bottom" ]
-                        --    [ div [ class "arrow" ] []
-                        --    , div [ class "popover-title" ] [ text "Select options" ]
-                        --    , div [ class "popover-content" ]
-                        --        [ p [] [ text "Sed posuere consectetur est at lobortis. Aenean eu leo quam. Pellentesque ornare sem lacinia quam venenatis vestibulum." ] ]
-                        --    ]
                         ]
                     ]
                 ]
@@ -221,14 +235,127 @@ view options model viewSuccess outMsg =
                 div [] [ text "Loading" ]
 
             RemoteData.Success result ->
-                viewSuccess model.showDetailsFor result
+                div []
+                    [ p []
+                        [ em []
+                            [ text
+                                ("Showing results "
+                                    ++ String.fromInt model.from
+                                    ++ "-"
+                                    ++ String.fromInt
+                                        (if model.from + model.size > result.hits.total.value then
+                                            result.hits.total.value
+
+                                         else
+                                            model.from + model.size
+                                        )
+                                    ++ " of "
+                                    ++ String.fromInt result.hits.total.value
+                                    ++ "."
+                                )
+                            ]
+                        ]
+                    , viewPager outMsg model result path
+                    , viewSuccess model.showDetailsFor result
+                    , viewPager outMsg model result path
+                    ]
 
             RemoteData.Failure error ->
                 div []
                     [ text "Error!"
-
-                    --, pre [] [ text (Debug.toString error) ]
+                    , pre [] [ text (Debug.toString error) ]
                     ]
+        ]
+
+
+viewPager :
+    (Msg a -> b)
+    -> Model a
+    -> Result a
+    -> String
+    -> Html b
+viewPager outMsg model result path =
+    ul [ class "pager" ]
+        [ li
+            [ classList
+                [ ( "disabled", model.from == 0 )
+                ]
+            ]
+            [ a
+                [ if model.from == 0 then
+                    href "#disabled"
+
+                  else
+                    href <|
+                        createUrl
+                            path
+                            model.query
+                            model.showDetailsFor
+                            0
+                            model.size
+                ]
+                [ text "First" ]
+            ]
+        , li
+            [ classList
+                [ ( "disabled", model.from == 0 )
+                ]
+            ]
+            [ a
+                [ href <|
+                    if model.from - model.size < 0 then
+                        "#disabled"
+
+                    else
+                        createUrl
+                            path
+                            model.query
+                            model.showDetailsFor
+                            (model.from - model.size)
+                            model.size
+                ]
+                [ text "Previous" ]
+            ]
+        , li
+            [ classList
+                [ ( "disabled", model.from + model.size >= result.hits.total.value )
+                ]
+            ]
+            [ a
+                [ href <|
+                    if model.from + model.size >= result.hits.total.value then
+                        "#disabled"
+
+                    else
+                        createUrl
+                            path
+                            model.query
+                            model.showDetailsFor
+                            (model.from + model.size)
+                            model.size
+                ]
+                [ text "Next" ]
+            ]
+        , li
+            [ classList
+                [ ( "disabled", model.from + model.size >= result.hits.total.value )
+                ]
+            ]
+            [ a
+                [ href <|
+                    if model.from + model.size >= result.hits.total.value then
+                        "#disabled"
+
+                    else
+                        createUrl
+                            path
+                            model.query
+                            model.showDetailsFor
+                            ((result.hits.total.value // model.size) * model.size)
+                            model.size
+                ]
+                [ text "Last" ]
+            ]
         ]
 
 
@@ -243,8 +370,13 @@ type alias Options =
     }
 
 
-makeRequestBody : String -> String -> Http.Body
-makeRequestBody field query =
+makeRequestBody :
+    String
+    -> String
+    -> Int
+    -> Int
+    -> Http.Body
+makeRequestBody field query from size =
     let
         stringIn name value =
             [ ( name, Json.Encode.string value ) ]
@@ -254,6 +386,7 @@ makeRequestBody field query =
     in
     -- Prefix Query
     -- {
+    --     ""
     --     "query": {
     --         "prefix": {
     --             "user": {
@@ -285,6 +418,10 @@ makeRequestBody field query =
         |> objectIn field
         |> objectIn "wildcard"
         |> objectIn "query"
+        |> List.append
+            [ ( "from", Json.Encode.int from )
+            , ( "size", Json.Encode.int size )
+            ]
         |> Json.Encode.object
         |> Http.jsonBody
 
@@ -295,15 +432,17 @@ makeRequest :
     -> Json.Decode.Decoder a
     -> Options
     -> String
+    -> Int
+    -> Int
     -> Cmd (Msg a)
-makeRequest field index decodeResultItemSource options query =
+makeRequest field index decodeResultItemSource options query from size =
     Http.riskyRequest
         { method = "POST"
         , headers =
             [ Http.header "Authorization" ("Basic " ++ Base64.encode (options.username ++ ":" ++ options.password))
             ]
         , url = options.url ++ "/" ++ index ++ "/_search"
-        , body = makeRequestBody field query
+        , body = makeRequestBody field query from size
         , expect =
             Http.expectJson
                 (RemoteData.fromResult >> QueryResponse)
