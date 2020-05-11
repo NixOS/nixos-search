@@ -81,6 +81,7 @@ type alias ResultPackageMaintainer =
 init :
     Maybe String
     -> Maybe String
+    -> Maybe String
     -> Maybe Int
     -> Maybe Int
     -> ( Model, Cmd Msg )
@@ -279,13 +280,14 @@ viewResultItemDetails item =
 makeRequest :
     ElasticSearch.Options
     -> String
+    -> String
     -> Int
     -> Int
     -> Cmd Msg
-makeRequest options query from size =
+makeRequest options channel query from size =
     ElasticSearch.makeRequest
         "attr_name"
-        "nixos-unstable-packages"
+        ("nixos-" ++ channel ++ "-packages")
         decodeResultItemSource
         options
         query

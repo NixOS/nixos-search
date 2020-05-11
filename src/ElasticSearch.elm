@@ -24,8 +24,11 @@ import Html
         , h1
         , input
         , li
+        , option
         , p
-        , pre
+        , select
+        , span
+        , strong
         , text
         , ul
         )
@@ -53,7 +56,8 @@ import Url.Builder
 
 
 type alias Model a =
-    { query : Maybe String
+    { channel : String
+    , query : Maybe String
     , result : RemoteData.WebData (Result a)
     , showDetailsFor : Maybe String
     , from : Int
@@ -90,11 +94,13 @@ type alias ResultItem a =
 init :
     Maybe String
     -> Maybe String
+    -> Maybe String
     -> Maybe Int
     -> Maybe Int
     -> ( Model a, Cmd msg )
-init query showDetailsFor from size =
-    ( { query = query
+init channel query showDetailsFor from size =
+    ( { channel = Maybe.withDefault "unstable" channel
+      , query = query
       , result = RemoteData.NotAsked
       , showDetailsFor = showDetailsFor
       , from = Maybe.withDefault 0 from
@@ -112,6 +118,7 @@ init query showDetailsFor from size =
 
 type Msg a
     = NoOp
+    | ChannelChange String
     | QueryInput String
     | QuerySubmit
     | QueryResponse (RemoteData.WebData (Result a))
@@ -131,6 +138,11 @@ update path navKey msg model =
             , Cmd.none
             )
 
+        ChannelChange channel ->
+            ( { model | channel = channel }
+            , Cmd.none
+            )
+
         QueryInput query ->
             ( { model | query = Just query }
             , Cmd.none
@@ -138,7 +150,9 @@ update path navKey msg model =
 
         QuerySubmit ->
             ( model
-            , createUrl path
+            , createUrl
+                path
+                model.channel
                 model.query
                 model.showDetailsFor
                 0
@@ -153,7 +167,9 @@ update path navKey msg model =
 
         ShowDetails selected ->
             ( model
-            , createUrl path
+            , createUrl
+                path
+                model.channel
                 model.query
                 (if model.showDetailsFor == Just selected then
                     Nothing
@@ -169,14 +185,16 @@ update path navKey msg model =
 
 createUrl :
     String
+    -> String
     -> Maybe String
     -> Maybe String
     -> Int
     -> Int
     -> String
-createUrl path query showDetailsFor from size =
+createUrl path channel query showDetailsFor from size =
     [ Url.Builder.int "from" from
     , Url.Builder.int "size" size
+    , Url.Builder.string "channel" channel
     ]
         |> List.append
             (query
@@ -224,6 +242,24 @@ view path title model viewSuccess outMsg =
                     , div [ class "btn-group" ]
                         [ button [ class "btn" ] [ text "Search" ]
                         ]
+                    ]
+                , span []
+                    [ strong []
+                        [ text " in " ]
+                    , select
+                        [ onInput (\x -> outMsg (ChannelChange x)) ]
+                        [ option
+                            [ value "unstable" ]
+                            [ text "unstable" ]
+                        , option
+                            [ value "20.03" ]
+                            [ text "20.03" ]
+                        , option
+                            [ value "19.09" ]
+                            [ text "19.09" ]
+                        ]
+                    , strong []
+                        [ text " channel." ]
                     ]
                 ]
             ]
@@ -290,6 +326,7 @@ viewPager outMsg model result path =
                     href <|
                         createUrl
                             path
+                            model.channel
                             model.query
                             model.showDetailsFor
                             0
@@ -310,6 +347,7 @@ viewPager outMsg model result path =
                     else
                         createUrl
                             path
+                            model.channel
                             model.query
                             model.showDetailsFor
                             (model.from - model.size)
@@ -330,6 +368,7 @@ viewPager outMsg model result path =
                     else
                         createUrl
                             path
+                            model.channel
                             model.query
                             model.showDetailsFor
                             (model.from + model.size)
@@ -350,6 +389,7 @@ viewPager outMsg model result path =
                     else
                         createUrl
                             path
+                            model.channel
                             model.query
                             model.showDetailsFor
                             ((result.hits.total.value // model.size) * model.size)

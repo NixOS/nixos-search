@@ -65,6 +65,7 @@ type alias ResultItemSource =
 init :
     Maybe String
     -> Maybe String
+    -> Maybe String
     -> Maybe Int
     -> Maybe Int
     -> ( Model, Cmd Msg )
@@ -211,13 +212,14 @@ viewResultItemDetails item =
 makeRequest :
     ElasticSearch.Options
     -> String
+    -> String
     -> Int
     -> Int
     -> Cmd Msg
-makeRequest options query from size =
+makeRequest options channel query from size =
     ElasticSearch.makeRequest
         "option_name"
-        "nixos-unstable-options"
+        ("nixos-" ++ channel ++ "-options")
         decodeResultItemSource
         options
         query
