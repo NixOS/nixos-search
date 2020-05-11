@@ -155,13 +155,6 @@ showLoadingOnQuery model =
 
 createUrl : String -> Maybe String -> Maybe String -> String
 createUrl path query showDetailsFor =
-    let
-        _ =
-            Debug.log "createUrl:query" query
-
-        _ =
-            Debug.log "createUrl:showDetailsFor" showDetailsFor
-    in
     []
         |> List.append
             (query
