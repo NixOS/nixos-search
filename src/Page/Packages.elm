@@ -171,9 +171,6 @@ viewResultItemDetails :
     -> Html Msg
 viewResultItemDetails item =
     let
-        _ =
-            Debug.log "ITEM" item
-
         default =
             "Not specified"
 
