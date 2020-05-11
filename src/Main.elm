@@ -116,6 +116,7 @@ submitQuery old ( new, cmd ) =
                     [ cmd
                     , makeRequest
                         new.elasticsearch
+                        newModel.channel
                         (Maybe.withDefault "" newModel.query)
                         newModel.from
                         newModel.size
@@ -172,13 +173,13 @@ changeRouteTo model url =
             -- on the home page
             ( newModel, Browser.Navigation.pushUrl newModel.navKey "/packages" )
 
-        Just (Route.Packages query showDetailsFor from size) ->
-            Page.Packages.init query showDetailsFor from size
+        Just (Route.Packages channel query showDetailsFor from size) ->
+            Page.Packages.init channel query showDetailsFor from size
                 |> updateWith Packages PackagesMsg newModel
                 |> submitQuery newModel
 
-        Just (Route.Options query showDetailsFor from size) ->
-            Page.Options.init query showDetailsFor from size
+        Just (Route.Options channel query showDetailsFor from size) ->
+            Page.Options.init channel query showDetailsFor from size
                 |> updateWith Options OptionsMsg newModel
                 |> submitQuery newModel
 
