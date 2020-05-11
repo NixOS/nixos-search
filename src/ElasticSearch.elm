@@ -126,15 +126,16 @@ update path navKey msg model =
             )
 
         ShowDetails selected ->
-            ( { model
-                | showDetailsFor =
-                    if model.showDetailsFor == Just selected then
-                        Nothing
+            ( model
+            , createUrl path
+                model.query
+                (if model.showDetailsFor == Just selected then
+                    Nothing
 
-                    else
-                        Just selected
-              }
-            , Cmd.none
+                 else
+                    Just selected
+                )
+                |> Browser.Navigation.pushUrl navKey
             )
 
 
