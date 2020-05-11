@@ -65,6 +65,8 @@ type alias ResultItemSource =
 init :
     Maybe String
     -> Maybe String
+    -> Maybe Int
+    -> Maybe Int
     -> ( Model, Cmd Msg )
 init =
     ElasticSearch.init
@@ -96,7 +98,8 @@ update navKey msg model =
 view : Model -> Html Msg
 view model =
     ElasticSearch.view
-        { title = "Search NixOS options" }
+        "options"
+        "Search NixOS options"
         model
         viewSuccess
         SearchMsg
@@ -208,14 +211,18 @@ viewResultItemDetails item =
 makeRequest :
     ElasticSearch.Options
     -> String
+    -> Int
+    -> Int
     -> Cmd Msg
-makeRequest options query =
+makeRequest options query from size =
     ElasticSearch.makeRequest
         "option_name"
         "nixos-unstable-options"
         decodeResultItemSource
         options
         query
+        from
+        size
         |> Cmd.map SearchMsg
 
 

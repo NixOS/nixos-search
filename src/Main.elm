@@ -117,6 +117,8 @@ submitQuery old ( new, cmd ) =
                     , makeRequest
                         new.elasticsearch
                         (Maybe.withDefault "" newModel.query)
+                        newModel.from
+                        newModel.size
                         |> Cmd.map msg
                     ]
                 )
@@ -170,13 +172,13 @@ changeRouteTo model url =
             -- on the home page
             ( newModel, Browser.Navigation.pushUrl newModel.navKey "/packages" )
 
-        Just (Route.Packages query showDetailsFor) ->
-            Page.Packages.init query showDetailsFor
+        Just (Route.Packages query showDetailsFor from size) ->
+            Page.Packages.init query showDetailsFor from size
                 |> updateWith Packages PackagesMsg newModel
                 |> submitQuery newModel
 
-        Just (Route.Options query showDetailsFor) ->
-            Page.Options.init query showDetailsFor
+        Just (Route.Options query showDetailsFor from size) ->
+            Page.Options.init query showDetailsFor from size
                 |> updateWith Options OptionsMsg newModel
                 |> submitQuery newModel
 
@@ -188,7 +190,11 @@ update msg model =
             case urlRequest of
                 Browser.Internal url ->
                     ( model
-                    , Browser.Navigation.pushUrl model.navKey <| Url.toString url
+                    , if url.fragment == Just "disabled" then
+                        Cmd.none
+
+                      else
+                        Browser.Navigation.pushUrl model.navKey <| Url.toString url
                     )
 
                 Browser.External href ->
