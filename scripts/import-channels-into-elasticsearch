@@ -155,7 +155,7 @@ def recreate_index(es, channel):
             mappings=dict(
                 properties=dict(
                     attr_name=dict(type="keyword"),
-                    name=dict(type="text"),
+                    name=dict(type="keyword"),
                     version=dict(type="text"),
                     description=dict(type="text"),
                     longDescription=dict(type="text"),
@@ -176,7 +176,7 @@ def recreate_index(es, channel):
                     ),
                     platforms=dict(type="keyword"),
                     position=dict(type="text"),
-                    homepage=dict(type="text"),
+                    homepage=dict(type="keyword"),
                 ),
             ),
         ),
