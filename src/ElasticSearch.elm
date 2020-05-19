@@ -498,47 +498,51 @@ makeRequestBody field query from size =
     --   }
     -- }
     let
-      objectIn name value =
-        [ (name, Json.Encode.object value)]
-      encodeTerm (name, boost) =
-        ( "term", Json.Encode.object
-          [(name, Json.Encode.object
-            [ ("value", Json.Encode.string query)
-            , ("boost", Json.Encode.float boost)
+        listIn name type_ value =
+            [ ( name, Json.Encode.list type_ value ) ]
+
+        objectIn name value =
+            [ ( name, Json.Encode.object value ) ]
+
+        encodeTerm ( name, boost ) =
+            [ ( "term"
+              , Json.Encode.object
+                    [ ( name
+                      , Json.Encode.object
+                            [ ( "value", Json.Encode.string query )
+                            , ( "boost", Json.Encode.float boost )
+                            ]
+                      )
+                    ]
+              )
             ]
-           )
-          ]
-        )
     in
-    --[ ("pname", 2.0)
-    --, ("pversion", 0.2)
-    --, ("description", 0.3)
-    --, ("longDescription", 0.1)
-    --] 
-    --  |> List.map encodeTerm
-    --  [ (Json.Encode.object [ ("multi_match"
-    --                   , Json.Encode.object
-    --                         [ ( "query", Json.Encode.string query )
-    --                         , ( "boost", Json.Encode.float 1.0)
-    --                         , ( "fields"
-    --                           , Json.Encode.list Json.Encode.string
-    --                                 [ "attr_name.raw"
-    --                                 , "attr_name"
-    --                                 ]
-    --                           )
-    --                         ])
-    --                   ])
-    --                 ]
-    [ [ ("SS", Json.Encode.string "SSSS") ] ]
-      |> Json.Encode.list Json.Encode.object
-      |> objectIn "should"
-      |> objectIn "bool"
-      |> objectIn "query"
-      |> List.append [ ( "from", Json.Encode.int from )
-                     , ( "size", Json.Encode.int size )
-                     ]
-      |> Json.Encode.object
-      |> Http.jsonBody
+    [ ( "pname", 2.0 )
+    , ( "pversion", 0.2 )
+    , ( "description", 0.3 )
+    , ( "longDescription", 0.1 )
+    ]
+        |> List.map encodeTerm
+        |> List.append
+            [ [ "attr_name.raw"
+              , "attr_name"
+              ]
+                |> listIn "fields" Json.Encode.string
+                |> List.append
+                    [ ( "query", Json.Encode.string query )
+                    , ( "boost", Json.Encode.float 1.0 )
+                    ]
+                |> objectIn "multi_match"
+            ]
+        |> listIn "should" Json.Encode.object
+        |> objectIn "bool"
+        |> objectIn "query"
+        |> List.append
+            [ ( "from", Json.Encode.int from )
+            , ( "size", Json.Encode.int size )
+            ]
+        |> Json.Encode.object
+        |> Http.jsonBody
 
 
 makeRequest :
@@ -554,8 +558,8 @@ makeRequest field index decodeResultItemSource options query from size =
     Http.riskyRequest
         { method = "POST"
         , headers =
-        --    [ Http.header "Authorization" ("Basic " ++ Base64.encode (options.username ++ ":" ++ options.password))
-            []
+            [ Http.header "Authorization" ("Basic " ++ Base64.encode (options.username ++ ":" ++ options.password))
+            ]
         , url = options.url ++ "/" ++ index ++ "/_search"
         , body = makeRequestBody field query from size
         , expect =
