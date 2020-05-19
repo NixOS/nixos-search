@@ -11,6 +11,9 @@ import os.path
 import shlex
 import subprocess
 import tqdm
+import botocore.client
+import botocore
+
 
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -18,8 +21,7 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def get_last_evaluation(channel):
     project, project_version = channel.split("-", 1)
-
-    s3 = boto3.client("s3")
+    s3 = boto3.client("s3", config=botocore.client.Config(signature_version=botocore.UNSIGNED))
     s3_result = s3.list_objects(
         Bucket="nix-releases",
         Prefix=f"{project}/{project_version}/",
