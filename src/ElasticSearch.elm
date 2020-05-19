@@ -442,53 +442,46 @@ makeRequestBody :
     -> Int
     -> Http.Body
 makeRequestBody field query from size =
-    let
-        stringIn name value =
-            [ ( name, Json.Encode.string value ) ]
-
-        objectIn name object =
-            [ ( name, Json.Encode.object object ) ]
-    in
     -- Prefix Query
     -- {
-    --     ""
     --     "query": {
-    --         "prefix": {
-    --             "user": {
-    --                 "value": ""
-    --             }
+    --         "multi_match" : {
+    --             "query": "python37Packages.requests",
+    --             "fields": [
+    --                 "attr_name.raw",
+    --                 "attr_name",
+    --                 "pname",
+    --                 "pversion",
+    --                 "description",
+    --                 "longDescription"
+    --             ]
     --         }
     --     }
-    -- }
-    --query
-    --    |> stringIn "value"
-    --    |> objectIn field
-    --    |> objectIn "prefix"
-    --    |> objectIn "query"
-    --    |> Json.Encode.object
-    --    |> Http.jsonBody
-    --
-    -- Wildcard Query
-    -- {
-    --     "query": {
-    --         "wildcard": {
-    --             "<field>": {
-    --                 "value": "*<value>*",
-    --             }
-    --         }
-    --     }
-    -- }
-    ("*" ++ query ++ "*")
-        |> stringIn "value"
-        |> objectIn field
-        |> objectIn "wildcard"
-        |> objectIn "query"
-        |> List.append
+    Http.jsonBody
+        (Json.Encode.object
             [ ( "from", Json.Encode.int from )
             , ( "size", Json.Encode.int size )
+            , ( "query"
+              , Json.Encode.object
+                    [ ( "multi_match"
+                      , Json.Encode.object
+                            [ ( "query", Json.Encode.string query )
+                            , ( "fields"
+                              , Json.Encode.list Json.Encode.string
+                                    [ "attr_name.raw"
+                                    , "attr_name"
+                                    , "pname"
+                                    , "pversion"
+                                    , "description"
+                                    , "longDescription"
+                                    ]
+                              )
+                            ]
+                      )
+                    ]
+              )
             ]
-        |> Json.Encode.object
-        |> Http.jsonBody
+        )
 
 
 makeRequest :

@@ -103,9 +103,9 @@ def get_packages(evaluation):
             licenses = data["meta"].get("license")
             if licenses:
                 if type(licenses) == str:
-                    licenses = [dict(fullName=licenses)] 
+                    licenses = [dict(fullName=licenses)]
                 elif type(licenses) == dict:
-                    licenses = [licenses] 
+                    licenses = [licenses]
                 licenses = [
                     type(license) == str
                     and dict(fullName=license, url=None)
@@ -136,8 +136,8 @@ def get_packages(evaluation):
             yield dict(
                 id=attr_name,
                 attr_name=attr_name,
-                name=data["pname"],
-                version=data["version"],
+                pname=data["pname"],
+                pversion=data["version"],
                 description=data["meta"].get("description"),
                 longDescription=data["meta"].get("longDescription", ""),
                 license=licenses,
@@ -202,8 +202,8 @@ def recreate_index(es, channel):
                             }
                         },
                     ),
-                    name=dict(type="keyword"),
-                    version=dict(type="text"),
+                    pname=dict(type="keyword"),
+                    pversion=dict(type="text"),
                     description=dict(type="text"),
                     longDescription=dict(type="text"),
                     license=dict(
