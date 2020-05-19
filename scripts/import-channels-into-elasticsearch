@@ -11,15 +11,54 @@ import os.path
 import shlex
 import subprocess
 import tqdm
+import botocore.client
+import botocore
+
 
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
+ANALYSIS = {
+    'analyzer': {
+        'nixAttrName': {
+            'type': 'custom',
+            'tokenizer': 'nix_attrname',
+            'filter': ['lowercase', 'nix_stopwords'],
+        },
+    },
+    'tokenizer': {
+        'nix_attrname': {
+            'type': 'pattern',
+            # Split on attrname separators like _, .
+            'pattern': "|".join([
+                '[_.-]',  # Common separators like underscores, dots and dashes
+                '\\d+?Packages',  # python37Packages -> python
+                # Camelcase tokenizer adapted from
+                # https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-pattern-analyzer.html
+                "".join([
+                    '(?<=[\\p{L}&&[^\\p{Lu}]])'  # lower case
+                    '(?=\\p{Lu})',  # followed by upper case
+                    '|',
+                    '(?<=\\p{Lu})'  # or upper case
+                    '(?=\\p{Lu}[\\p{L}&&[^\\p{Lu}]])',  # followed by lower case
+                ])
+            ])
+        },
+    },
+    'filter': {
+        'nix_stopwords': {
+            'type': 'stop',
+            'ignore_case': True,
+            'stopwords': ['packages', 'package', 'options', 'option'],
+        },
+    },
+}
+
+
 def get_last_evaluation(channel):
     project, project_version = channel.split("-", 1)
-
-    s3 = boto3.client("s3")
+    s3 = boto3.client("s3", config=botocore.client.Config(signature_version=botocore.UNSIGNED))
     s3_result = s3.list_objects(
         Bucket="nix-releases",
         Prefix=f"{project}/{project_version}/",
@@ -64,9 +103,9 @@ def get_packages(evaluation):
             licenses = data["meta"].get("license")
             if licenses:
                 if type(licenses) == str:
-                    licenses = [dict(fullName=licenses)] 
+                    licenses = [dict(fullName=licenses)]
                 elif type(licenses) == dict:
-                    licenses = [licenses] 
+                    licenses = [licenses]
                 licenses = [
                     type(license) == str
                     and dict(fullName=license, url=None)
@@ -97,8 +136,8 @@ def get_packages(evaluation):
             yield dict(
                 id=attr_name,
                 attr_name=attr_name,
-                name=data["pname"],
-                version=data["version"],
+                pname=data["pname"],
+                pversion=data["version"],
                 description=data["meta"].get("description"),
                 longDescription=data["meta"].get("longDescription", ""),
                 license=licenses,
@@ -151,12 +190,20 @@ def recreate_index(es, channel):
     es.indices.create(
         index=f"{channel}-packages",
         body=dict(
-            settings=dict(number_of_shards=1),
+            settings=dict(number_of_shards=1, analysis=ANALYSIS),
             mappings=dict(
                 properties=dict(
-                    attr_name=dict(type="keyword"),
-                    name=dict(type="keyword"),
-                    version=dict(type="text"),
+                    attr_name=dict(
+                        type="text",
+                        analyzer="nixAttrName",
+                        fields={
+                            "raw": {
+                                "type": "keyword",
+                            }
+                        },
+                    ),
+                    pname=dict(type="keyword"),
+                    pversion=dict(type="text"),
                     description=dict(type="text"),
                     longDescription=dict(type="text"),
                     license=dict(
@@ -186,7 +233,7 @@ def recreate_index(es, channel):
     es.indices.create(
         index=f"{channel}-options",
         body=dict(
-            settings=dict(number_of_shards=1),
+            settings=dict(number_of_shards=1, analysis=ANALYSIS),
             mappings=dict(
                 properties=dict(
                     option_name=dict(type="keyword"),

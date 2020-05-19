@@ -53,8 +53,8 @@ type alias Model =
 
 type alias ResultItemSource =
     { attr_name : String
-    , name : String
-    , version : String
+    , pname : String
+    , pversion : String
     , description : Maybe String
     , longDescription : Maybe String
     , licenses : List ResultPackageLicense
@@ -163,8 +163,8 @@ viewResultItem showDetailsFor item =
     in
     tr [ onClick (SearchMsg (ElasticSearch.ShowDetails item.id)) ]
         [ td [] [ text item.source.attr_name ]
-        , td [] [ text item.source.name ]
-        , td [] [ text item.source.version ]
+        , td [] [ text item.source.pname ]
+        , td [] [ text item.source.pversion ]
         , td [] [ text <| Maybe.withDefault "" item.source.description ]
         ]
         :: packageDetails
@@ -304,8 +304,8 @@ decodeResultItemSource : Json.Decode.Decoder ResultItemSource
 decodeResultItemSource =
     Json.Decode.succeed ResultItemSource
         |> Json.Decode.Pipeline.required "attr_name" Json.Decode.string
-        |> Json.Decode.Pipeline.required "name" Json.Decode.string
-        |> Json.Decode.Pipeline.required "version" Json.Decode.string
+        |> Json.Decode.Pipeline.required "pname" Json.Decode.string
+        |> Json.Decode.Pipeline.required "pversion" Json.Decode.string
         |> Json.Decode.Pipeline.required "description" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "longDescription" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "license" (Json.Decode.list decodeResultPackageLicense)
