@@ -133,9 +133,17 @@ def get_packages(evaluation):
                 or None
                 for platform in data["meta"].get("platforms", [])
             ]
-            yield dict(
+
+            attr_set = None
+            if "." in attr_name:
+                attr_set = attr_name.split(".")[0]
+                if not attr_set.endswith("Packages") and not attr_set.endswith("Plugins"):
+                    attr_set = None
+
+            doc = dict(
                 id=attr_name,
                 attr_name=attr_name,
+                attr_set=attr_set,
                 pname=data["pname"],
                 pversion=data["version"],
                 description=data["meta"].get("description"),
@@ -146,6 +154,7 @@ def get_packages(evaluation):
                 position=position,
                 homepage=data["meta"].get("homepage"),
             )
+            yield doc
 
     return len(packages), gen
 
@@ -202,6 +211,7 @@ def recreate_index(es, channel):
                             }
                         },
                     ),
+                    attr_set=dict(type="keyword"),
                     pname=dict(type="keyword"),
                     pversion=dict(type="text"),
                     description=dict(type="text"),
