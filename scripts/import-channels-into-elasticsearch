@@ -213,7 +213,7 @@ def recreate_index(es, channel):
                     ),
                     attr_set=dict(type="keyword"),
                     pname=dict(type="keyword"),
-                    pversion=dict(type="text"),
+                    pversion=dict(type="keyword"),
                     description=dict(type="text"),
                     longDescription=dict(type="text"),
                     license=dict(
