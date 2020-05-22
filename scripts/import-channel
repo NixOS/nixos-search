@@ -12,6 +12,8 @@
 
 import boto3
 import click
+import logging
+import click_log
 import elasticsearch
 import elasticsearch.helpers
 import json
@@ -21,6 +23,9 @@ import subprocess
 import tqdm
 import botocore.client
 import botocore
+
+logger = logging.getLogger("import-channel")
+click_log.basic_config(logger)
 
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -68,17 +73,27 @@ ANALYSIS = {
 
 
 def get_last_evaluation(channel):
+    logger.debug(f"Retriving last evaluation for {channel} channel")
+
     project, project_version = channel.split("-", 1)
+    logger.debug(f"get_last_evaluation: project='{project}'")
+    logger.debug(f"get_last_evaluation: project_version='{project_version}'")
+
+    bucket = "nix-releases"
+    prefix = f"{project}/{project_version}/"
+    logger.debug(
+        f"get_last_evaluation: list all evaluation in '{bucket}' bucker under '{prefix}' prefix"
+    )
+
     s3 = boto3.client(
         "s3", config=botocore.client.Config(signature_version=botocore.UNSIGNED)
     )
-    s3_result = s3.list_objects(
-        Bucket="nix-releases", Prefix=f"{project}/{project_version}/", Delimiter="/",
-    )
+    s3_result = s3.list_objects(Bucket=bucket, Prefix=prefix, Delimiter="/",)
     evaluations = []
     for item in s3_result.get("CommonPrefixes"):
         if not item:
             continue
+        logger.debug(f"get_last_evaluation: evaluation in raw {item}")
         prefix = item.get("Prefix")
         evaluation = prefix[len(f"{project}/{project_version}/{channel}") :]
         if evaluation.startswith("beta"):
@@ -89,19 +104,27 @@ def get_last_evaluation(channel):
             )
         except Exception as e:  # noqa
             continue
-        evaluations.append(
-            dict(
-                revisions_since_start=int(revisions_since_start),
-                git_revision=git_revision,
-                prefix=prefix,
-            )
-        )
+        evaluation = {
+            "revisions_since_start": int(revisions_since_start),
+            "git_revision": git_revision,
+            "prefix": prefix,
+        }
+        logger.debug(f"get_last_evaluation: evaluation {evaluation}")
+        evaluations.append(evaluation)
 
+    logger.debug(
+        f"get_last_evaluation: {len(evaluations)} evaluations found for {channel} channel"
+    )
     evaluations = sorted(evaluations, key=lambda i: i["revisions_since_start"])
+
+    logger.debug(f"get_last_evaluation: last evaluation is: {evaluations[-1]}")
     return evaluations[-1]
 
 
 def get_packages(evaluation):
+    logger.debug(
+        f"get_packages: Retriving list of packages for '{evaluation['git_revision']}' revision"
+    )
     result = subprocess.run(
         shlex.split(
             f"nix-env -f '<nixpkgs>' -I nixpkgs=https://github.com/NixOS/nixpkgs-channels/archive/{evaluation['git_revision']}.tar.gz --arg config 'import {CURRENT_DIR}/packages-config.nix' -qa --json"
@@ -170,6 +193,7 @@ def get_packages(evaluation):
             )
             yield doc
 
+    logger.debug(f"get_packages: Found {len(packages)} packages")
     return len(packages), gen
 
 
@@ -212,10 +236,14 @@ def get_options(evaluation):
 
 
 def recreate_index(es, channel):
-    if es.indices.exists(f"{channel}-packages"):
-        es.indices.delete(index=f"{channel}-packages")
+    packages_index = f"{channel}-packages"
+    if es.indices.exists(packages_index):
+        es.indices.delete(index=packages_index)
+        logger.debug(
+            f"recreate_index: index '{packages_index}' already exists and was deleted"
+        )
     es.indices.create(
-        index=f"{channel}-packages",
+        index=packages_index,
         body=dict(
             settings=dict(number_of_shards=1, analysis=ANALYSIS),
             mappings=dict(
@@ -251,10 +279,16 @@ def recreate_index(es, channel):
             ),
         ),
     )
-    if es.indices.exists(f"{channel}-options"):
-        es.indices.delete(index=f"{channel}-options")
+    logger.debug(f"recreate_index: index '{packages_index}' was created")
+
+    options_index = f"{channel}-options"
+    if es.indices.exists(options_index):
+        es.indices.delete(index=options_index)
+        logger.debug(
+            f"recreate_index: index '{options_index}' already exists and was deleted"
+        )
     es.indices.create(
-        index=f"{channel}-options",
+        index=options_index,
         body=dict(
             settings=dict(number_of_shards=1, analysis=ANALYSIS),
             mappings=dict(
@@ -269,12 +303,25 @@ def recreate_index(es, channel):
             ),
         ),
     )
+    logger.debug(f"recreate_index: index '{options_index}' was created")
 
 
 @click.command()
-@click.option("--es-url", help="Elasticsearch connection url")
-@click.option("--channel")
-def main(es_url, channel):
+@click.option("-u", "--es-url", help="Elasticsearch connection url")
+@click.option("-c", "--channel", help="NixOS channel name")
+@click.option("-v", "--verbose", count=True)
+def main(es_url, channel, verbose):
+
+    logging_level = "CRITICAL"
+    if verbose == 1:
+        logging_level = "WARNING"
+    elif verbose >= 2:
+        logging_level = "DEBUG"
+
+    logger.setLevel(getattr(logging, logging_level))
+    logger.debug(f"Verbosity is {verbose}")
+    logger.debug(f"Logging set to {logging_level}")
+
     evaluation = get_last_evaluation(channel)
     es = elasticsearch.Elasticsearch([es_url])
     recreate_index(es, channel)
@@ -290,7 +337,7 @@ def main(es_url, channel):
         ):
             progress.update(1)
             successes += ok
-        print("Indexed %d/%d packages" % (successes, number_of_packages))
+        click.echo("Indexed %d/%d packages" % (successes, number_of_packages))
 
     # write options
     number_of_options, gen_options = get_options(evaluation)
@@ -308,3 +355,5 @@ def main(es_url, channel):
 
 if __name__ == "__main__":
     main()
+
+# vi:ft=python
