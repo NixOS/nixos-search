@@ -287,7 +287,7 @@ makeRequest :
 makeRequest options channel query from size =
     ElasticSearch.makeRequest
         "attr_name"
-        ("nixos-" ++ channel ++ "-packages")
+        ("latest-nixos-" ++ channel ++ "-packages")
         decodeResultItemSource
         options
         query
