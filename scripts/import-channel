@@ -301,7 +301,6 @@ def create_index_name(type_, channel, evaluation):
 
 def update_alias(es, name, index):
     tmp = es.indices.put_alias(index=index, name=name)
-    debugger
     logger.debug(f"'{name}' alias now points to '{index}' index")
 
 
