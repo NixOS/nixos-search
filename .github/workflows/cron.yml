@@ -1,5 +1,6 @@
 name: "Hourly Build & Deploy to Netlify"
 on:
+  pull_request:
   schedule:
   - cron: '0 * * * *'
 jobs:
