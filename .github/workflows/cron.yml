@@ -24,4 +24,4 @@ jobs:
       run: |
         cd scripts/
         ./import-channel --es-url ${{ secrets.ELASTICSEARCH_URL }} --channel ${{ matrix.channel }} -vvv
-      if: github.repository == 'NixOS/nixos-homepage'
+      if: github.repository == 'NixOS/nixos-search'
