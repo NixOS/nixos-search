@@ -29,7 +29,7 @@ click_log.basic_config(logger)
 
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-INDEX_SCHEMA_VERSION=1
+INDEX_SCHEMA_VERSION = 1
 ANALYSIS = {
     "analyzer": {
         "nixAttrName": {
@@ -72,9 +72,7 @@ ANALYSIS = {
 PACKAGES_MAPPING = dict(
     properties=dict(
         attr_name=dict(
-            type="text",
-            analyzer="nixAttrName",
-            fields={"raw": {"type": "keyword"}},
+            type="text", analyzer="nixAttrName", fields={"raw": {"type": "keyword"}},
         ),
         attr_set=dict(type="keyword"),
         pname=dict(type="keyword"),
@@ -83,9 +81,7 @@ PACKAGES_MAPPING = dict(
         longDescription=dict(type="text"),
         license=dict(
             type="nested",
-            properties=dict(
-                fullName=dict(type="text"), url=dict(type="text"),
-            ),
+            properties=dict(fullName=dict(type="text"), url=dict(type="text"),),
         ),
         maintainers=dict(
             type="nested",
@@ -282,10 +278,7 @@ def create_index(es, index, mapping):
     es.indices.create(
         index=index,
         body={
-            "settings": {
-                "number_of_shards": 1,
-                "analysis": ANALYSIS,
-            },
+            "settings": {"number_of_shards": 1, "analysis": ANALYSIS},
             "mappings": mapping,
         },
     )
@@ -300,7 +293,7 @@ def create_index_name(type_, channel, evaluation):
 
 
 def update_alias(es, name, index):
-    tmp = es.indices.put_alias(index=index, name=name)
+    es.indices.put_alias(index=index, name=name)
     logger.debug(f"'{name}' alias now points to '{index}' index")
 
 
