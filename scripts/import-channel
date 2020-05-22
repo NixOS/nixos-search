@@ -329,7 +329,7 @@ def main(es_url, channel, verbose):
         progress = tqdm.tqdm(unit="packages", total=number_of_packages)
         successes = 0
         for ok, action in elasticsearch.helpers.streaming_bulk(
-            client=es, index=f"{channel}-packages", actions=gen_packages()
+            client=es, index=packages_index, actions=gen_packages()
         ):
             progress.update(1)
             successes += ok
@@ -342,7 +342,7 @@ def main(es_url, channel, verbose):
         progress = tqdm.tqdm(unit="options", total=number_of_options)
         successes = 0
         for ok, action in elasticsearch.helpers.streaming_bulk(
-            client=es, index=f"{channel}-options", actions=gen_options()
+            client=es, index=options_index, actions=gen_options()
         ):
             progress.update(1)
             successes += ok
