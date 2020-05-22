@@ -1,0 +1,26 @@
+name: "Hourly import channel to Elasticsearch"
+on:
+  schedule:
+  - cron: '0 * * * *'
+jobs:
+  hourly-import-channel:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        channel:
+          - nixos-unstable
+          - nixos-20.03
+          - nixos-19.09
+      fail-fast: true
+    steps:
+    - name: Checking out the repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Installing Nix
+      uses: cachix/install-nix-action@v8
+    - name: Import ${{ matrix.channel }} channel
+      run: |
+        cd scripts/
+        ./import-channel --es-url ${{ secrets.ELASTICSEARCH_URL }} --channel ${{ matrix.channel }} -vvv
+      if: github.repository == 'NixOS/nixos-search'
