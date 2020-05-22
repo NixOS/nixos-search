@@ -1,10 +1,10 @@
-name: "Hourly Build & Deploy to Netlify"
+name: "Hourly import channel to Elasticsearch"
 on:
   pull_request:
   schedule:
   - cron: '0 * * * *'
 jobs:
-  hourly-build-and-deploy:
+  hourly-import-channel:
     runs-on: ubuntu-latest
     strategy:
       matrix:
