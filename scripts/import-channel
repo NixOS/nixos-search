@@ -1,6 +1,14 @@
 #! /usr/bin/env nix-shell
-#! nix-shell -i python3 -p python3 python3Packages.click python3Packages.elasticsearch python3Packages.boto3 python3Packages.tqdm
+#! nix-shell -i python3 -p python3 python3Packages.click python3Packages.click-log python3Packages.elasticsearch python3Packages.boto3 python3Packages.tqdm
 
+# develop:
+# $ nix-shell -p python3Packages.black python3Packages.mypy python3Packages.flake8
+#
+# format:
+# $ nix-shell -p python3Packages.black --command "black import-channel"
+#
+# lint:
+# $ nix-shell -p python3Packages.flake8 --command "flake8 --ignore E501,E265 import-channel"
 
 import boto3
 import click
@@ -15,42 +23,45 @@ import botocore.client
 import botocore
 
 
-
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 ANALYSIS = {
-    'analyzer': {
-        'nixAttrName': {
-            'type': 'custom',
-            'tokenizer': 'nix_attrname',
-            'filter': ['lowercase', 'nix_stopwords'],
+    "analyzer": {
+        "nixAttrName": {
+            "type": "custom",
+            "tokenizer": "nix_attrname",
+            "filter": ["lowercase", "nix_stopwords"],
         },
     },
-    'tokenizer': {
-        'nix_attrname': {
-            'type': 'pattern',
+    "tokenizer": {
+        "nix_attrname": {
+            "type": "pattern",
             # Split on attrname separators like _, .
-            'pattern': "|".join([
-                '[_.-]',  # Common separators like underscores, dots and dashes
-                '\\d+?Packages',  # python37Packages -> python
-                # Camelcase tokenizer adapted from
-                # https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-pattern-analyzer.html
-                "".join([
-                    '(?<=[\\p{L}&&[^\\p{Lu}]])'  # lower case
-                    '(?=\\p{Lu})',  # followed by upper case
-                    '|',
-                    '(?<=\\p{Lu})'  # or upper case
-                    '(?=\\p{Lu}[\\p{L}&&[^\\p{Lu}]])',  # followed by lower case
-                ])
-            ])
+            "pattern": "|".join(
+                [
+                    "[_.-]",  # Common separators like underscores, dots and dashes
+                    "\\d+?Packages",  # python37Packages -> python
+                    # Camelcase tokenizer adapted from
+                    # https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-pattern-analyzer.html
+                    "".join(
+                        [
+                            "(?<=[\\p{L}&&[^\\p{Lu}]])"  # lower case
+                            "(?=\\p{Lu})",  # followed by upper case
+                            "|",
+                            "(?<=\\p{Lu})"  # or upper case
+                            "(?=\\p{Lu}[\\p{L}&&[^\\p{Lu}]])",  # followed by lower case
+                        ]
+                    ),
+                ]
+            ),
         },
     },
-    'filter': {
-        'nix_stopwords': {
-            'type': 'stop',
-            'ignore_case': True,
-            'stopwords': ['packages', 'package', 'options', 'option'],
+    "filter": {
+        "nix_stopwords": {
+            "type": "stop",
+            "ignore_case": True,
+            "stopwords": ["packages", "package", "options", "option"],
         },
     },
 }
@@ -58,29 +69,33 @@ ANALYSIS = {
 
 def get_last_evaluation(channel):
     project, project_version = channel.split("-", 1)
-    s3 = boto3.client("s3", config=botocore.client.Config(signature_version=botocore.UNSIGNED))
+    s3 = boto3.client(
+        "s3", config=botocore.client.Config(signature_version=botocore.UNSIGNED)
+    )
     s3_result = s3.list_objects(
-        Bucket="nix-releases",
-        Prefix=f"{project}/{project_version}/",
-        Delimiter="/",
+        Bucket="nix-releases", Prefix=f"{project}/{project_version}/", Delimiter="/",
     )
     evaluations = []
     for item in s3_result.get("CommonPrefixes"):
         if not item:
             continue
         prefix = item.get("Prefix")
-        evaluation = prefix[len(f"{project}/{project_version}/{channel}"):]
+        evaluation = prefix[len(f"{project}/{project_version}/{channel}") :]
         if evaluation.startswith("beta"):
-            evaluation = evaluation[len("beta"):]
+            evaluation = evaluation[len("beta") :]
         try:
-            revisions_since_start, git_revision = evaluation.lstrip(".").rstrip("/").split(".")
-        except:
+            revisions_since_start, git_revision = (
+                evaluation.lstrip(".").rstrip("/").split(".")
+            )
+        except Exception as e:  # noqa
             continue
-        evaluations.append(dict(
-            revisions_since_start=int(revisions_since_start),
-            git_revision=git_revision,
-            prefix=prefix,
-        ))
+        evaluations.append(
+            dict(
+                revisions_since_start=int(revisions_since_start),
+                git_revision=git_revision,
+                prefix=prefix,
+            )
+        )
 
     evaluations = sorted(evaluations, key=lambda i: i["revisions_since_start"])
     return evaluations[-1]
@@ -88,7 +103,9 @@ def get_last_evaluation(channel):
 
 def get_packages(evaluation):
     result = subprocess.run(
-        shlex.split(f"nix-env -f '<nixpkgs>' -I nixpkgs=https://github.com/NixOS/nixpkgs-channels/archive/{evaluation['git_revision']}.tar.gz --arg config 'import {CURRENT_DIR}/packages-config.nix' -qa --json"),
+        shlex.split(
+            f"nix-env -f '<nixpkgs>' -I nixpkgs=https://github.com/NixOS/nixpkgs-channels/archive/{evaluation['git_revision']}.tar.gz --arg config 'import {CURRENT_DIR}/packages-config.nix' -qa --json"
+        ),
         stdout=subprocess.PIPE,
         check=True,
     )
@@ -109,10 +126,7 @@ def get_packages(evaluation):
                 licenses = [
                     type(license) == str
                     and dict(fullName=license, url=None)
-                    or dict(
-                        fullName=license.get("fullName"),
-                        url=license.get("url"),
-                    )
+                    or dict(fullName=license.get("fullName"), url=license.get("url"),)
                     for license in licenses
                 ]
             else:
@@ -128,16 +142,16 @@ def get_packages(evaluation):
                 for maintainer in data["meta"].get("maintainers", [])
             ]
             platforms = [
-                type(platform) == str
-                and platform
-                or None
+                type(platform) == str and platform or None
                 for platform in data["meta"].get("platforms", [])
             ]
 
             attr_set = None
             if "." in attr_name:
                 attr_set = attr_name.split(".")[0]
-                if not attr_set.endswith("Packages") and not attr_set.endswith("Plugins"):
+                if not attr_set.endswith("Packages") and not attr_set.endswith(
+                    "Plugins"
+                ):
                     attr_set = None
 
             doc = dict(
@@ -161,7 +175,9 @@ def get_packages(evaluation):
 
 def get_options(evaluation):
     result = subprocess.run(
-        shlex.split(f"nix-build <nixpkgs/nixos/release.nix> --no-out-link -A options -I nixpkgs=https://github.com/NixOS/nixpkgs-channels/archive/{evaluation['git_revision']}.tar.gz"),
+        shlex.split(
+            f"nix-build <nixpkgs/nixos/release.nix> --no-out-link -A options -I nixpkgs=https://github.com/NixOS/nixpkgs-channels/archive/{evaluation['git_revision']}.tar.gz"
+        ),
         stdout=subprocess.PIPE,
         check=True,
     )
@@ -176,9 +192,11 @@ def get_options(evaluation):
     def gen():
         for name, option in options:
             example = option.get("example")
-            if example and \
-                    type(example) == dict and \
-                    example.get("_type") == "literalExample":
+            if (
+                example
+                and type(example) == dict
+                and example.get("_type") == "literalExample"
+            ):
                 example = str(example["text"])
             yield dict(
                 id=name,
@@ -205,11 +223,7 @@ def recreate_index(es, channel):
                     attr_name=dict(
                         type="text",
                         analyzer="nixAttrName",
-                        fields={
-                            "raw": {
-                                "type": "keyword",
-                            }
-                        },
+                        fields={"raw": {"type": "keyword"}},
                     ),
                     attr_set=dict(type="keyword"),
                     pname=dict(type="keyword"),
@@ -219,8 +233,7 @@ def recreate_index(es, channel):
                     license=dict(
                         type="nested",
                         properties=dict(
-                            fullName=dict(type="text"),
-                            url=dict(type="text"),
+                            fullName=dict(type="text"), url=dict(type="text"),
                         ),
                     ),
                     maintainers=dict(
@@ -268,30 +281,26 @@ def main(es_url, channel):
 
     # write packages
     number_of_packages, gen_packages = get_packages(evaluation)
-    packages = list(gen_packages())
     if number_of_packages:
         click.echo("Indexing packages...")
         progress = tqdm.tqdm(unit="packages", total=number_of_packages)
         successes = 0
         for ok, action in elasticsearch.helpers.streaming_bulk(
-                client=es,
-                index=f"{channel}-packages",
-                actions=gen_packages()):
+            client=es, index=f"{channel}-packages", actions=gen_packages()
+        ):
             progress.update(1)
             successes += ok
         print("Indexed %d/%d packages" % (successes, number_of_packages))
 
     # write options
     number_of_options, gen_options = get_options(evaluation)
-    options = list(gen_options())
     if number_of_options:
         click.echo("Indexing options...")
         progress = tqdm.tqdm(unit="options", total=number_of_options)
         successes = 0
         for ok, action in elasticsearch.helpers.streaming_bulk(
-                client=es,
-                index=f"{channel}-options",
-                actions=gen_options()):
+            client=es, index=f"{channel}-options", actions=gen_options()
+        ):
             progress.update(1)
             successes += ok
         print("Indexed %d/%d options" % (successes, number_of_options))
