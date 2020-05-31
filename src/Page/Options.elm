@@ -9,7 +9,6 @@ module Page.Options exposing
     )
 
 import Browser.Navigation
-import ElasticSearch
 import Html
     exposing
         ( Html
@@ -41,7 +40,10 @@ import Html.Events
         )
 import Html.Parser
 import Html.Parser.Util
+import Http
 import Json.Decode
+import Json.Encode
+import Search
 
 
 
@@ -49,11 +51,11 @@ import Json.Decode
 
 
 type alias Model =
-    ElasticSearch.Model ResultItemSource
+    Search.Model ResultItemSource
 
 
 type alias ResultItemSource =
-    { option_name : String
+    { name : String
     , description : String
     , type_ : String
     , default : String
@@ -70,7 +72,7 @@ init :
     -> Maybe Int
     -> ( Model, Cmd Msg )
 init =
-    ElasticSearch.init
+    Search.init
 
 
 
@@ -78,7 +80,7 @@ init =
 
 
 type Msg
-    = SearchMsg (ElasticSearch.Msg ResultItemSource)
+    = SearchMsg (Search.Msg ResultItemSource)
 
 
 update : Browser.Navigation.Key -> Msg -> Model -> ( Model, Cmd Msg )
@@ -87,7 +89,7 @@ update navKey msg model =
         SearchMsg subMsg ->
             let
                 ( newModel, newCmd ) =
-                    ElasticSearch.update "options" navKey subMsg model
+                    Search.update "options" navKey subMsg model
             in
             ( newModel, Cmd.map SearchMsg newCmd )
 
@@ -98,7 +100,7 @@ update navKey msg model =
 
 view : Model -> Html Msg
 view model =
-    ElasticSearch.view
+    Search.view
         "options"
         "Search NixOS options"
         model
@@ -108,7 +110,7 @@ view model =
 
 viewSuccess :
     Maybe String
-    -> ElasticSearch.Result ResultItemSource
+    -> Search.Result ResultItemSource
     -> Html Msg
 viewSuccess showDetailsFor result =
     div [ class "search-result" ]
@@ -130,7 +132,7 @@ viewSuccess showDetailsFor result =
 
 viewResultItem :
     Maybe String
-    -> ElasticSearch.ResultItem ResultItemSource
+    -> Search.ResultItem ResultItemSource
     -> List (Html Msg)
 viewResultItem showDetailsFor item =
     let
@@ -142,14 +144,14 @@ viewResultItem showDetailsFor item =
             else
                 []
     in
-    tr [ onClick (SearchMsg (ElasticSearch.ShowDetails item.id)) ]
-        [ td [] [ text item.source.option_name ]
+    tr [ onClick (SearchMsg (Search.ShowDetails item.id)) ]
+        [ td [] [ text item.source.name ]
         ]
         :: packageDetails
 
 
 viewResultItemDetails :
-    ElasticSearch.ResultItem ResultItemSource
+    Search.ResultItem ResultItemSource
     -> Html Msg
 viewResultItemDetails item =
     let
@@ -209,17 +211,86 @@ viewResultItemDetails item =
 -- API
 
 
+makeRequestBody :
+    String
+    -> Int
+    -> Int
+    -> Http.Body
+makeRequestBody query from size =
+    -- Prefix Query
+    --   example query for "python"
+    -- {
+    --   "from": 0,
+    --   "size": 10,
+    --   "query": {
+    --     "bool": {
+    --       "filter": {
+    --         "match": {
+    --           "type": "package"
+    --         },
+    --       },
+    --       "should": [
+    --       ]
+    --     }
+    --   }
+    -- }
+    let
+        listIn name type_ value =
+            [ ( name, Json.Encode.list type_ value ) ]
+
+        objectIn name value =
+            [ ( name, Json.Encode.object value ) ]
+
+        encodeTerm ( name, boost ) =
+            [ ( "term"
+              , Json.Encode.object
+                    [ ( name
+                      , Json.Encode.object
+                            [ ( "value", Json.Encode.string query )
+                            , ( "boost", Json.Encode.float boost )
+                            ]
+                      )
+                    ]
+              )
+            ]
+    in
+    [ ( "option_name", 2.0 )
+    , ( "option_description", 0.3 )
+    ]
+        |> List.map encodeTerm
+        |> listIn "should" Json.Encode.object
+        |> List.append
+            [ ( "filter"
+              , Json.Encode.object
+                    [ ( "match"
+                      , Json.Encode.object
+                            [ ( "type", Json.Encode.string "option" )
+                            ]
+                      )
+                    ]
+              )
+            ]
+        |> objectIn "bool"
+        |> objectIn "query"
+        |> List.append
+            [ ( "from", Json.Encode.int from )
+            , ( "size", Json.Encode.int size )
+            ]
+        |> Json.Encode.object
+        |> Http.jsonBody
+
+
 makeRequest :
-    ElasticSearch.Options
+    Search.Options
     -> String
     -> String
     -> Int
     -> Int
     -> Cmd Msg
 makeRequest options channel query from size =
-    ElasticSearch.makeRequest
-        "option_name"
-        ("latest-nixos-" ++ channel ++ "-options")
+    Search.makeRequest
+        (makeRequestBody query from size)
+        ("latest-nixos-" ++ channel)
         decodeResultItemSource
         options
         query
@@ -236,8 +307,8 @@ decodeResultItemSource : Json.Decode.Decoder ResultItemSource
 decodeResultItemSource =
     Json.Decode.map6 ResultItemSource
         (Json.Decode.field "option_name" Json.Decode.string)
-        (Json.Decode.field "description" Json.Decode.string)
-        (Json.Decode.field "type" Json.Decode.string)
-        (Json.Decode.field "default" Json.Decode.string)
-        (Json.Decode.field "example" Json.Decode.string)
-        (Json.Decode.field "source" Json.Decode.string)
+        (Json.Decode.field "option_description" Json.Decode.string)
+        (Json.Decode.field "option_type" Json.Decode.string)
+        (Json.Decode.field "option_default" Json.Decode.string)
+        (Json.Decode.field "option_example" Json.Decode.string)
+        (Json.Decode.field "option_source" Json.Decode.string)

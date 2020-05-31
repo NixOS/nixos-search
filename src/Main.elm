@@ -4,7 +4,7 @@ module Main exposing (main)
 
 import Browser
 import Browser.Navigation
-import ElasticSearch
+import Search
 import Html
     exposing
         ( Html
@@ -46,7 +46,7 @@ type alias Flags =
 type alias Model =
     { navKey : Browser.Navigation.Key
     , url : Url.Url
-    , elasticsearch : ElasticSearch.Options
+    , elasticsearch : Search.Options
     , page : Page
     }
 
@@ -69,7 +69,7 @@ init flags url navKey =
             { navKey = navKey
             , url = url
             , elasticsearch =
-                ElasticSearch.Options
+                Search.Options
                     flags.elasticsearchUrl
                     flags.elasticsearchUsername
                     flags.elasticsearchPassword
