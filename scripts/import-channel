@@ -308,7 +308,8 @@ def update_alias(es, name, index):
     if index not in indexes:
         actions.append({"add": {"index": index, "alias": name}})
 
-    es.indices.update_aliases({"actions": actions})
+    if actions:
+        es.indices.update_aliases({"actions": actions})
 
     indexes = ", ".join(es.indices.get_alias(name=name).keys())
     logger.debug(f"'{name}' alias now points to '{indexes}' index")
