@@ -76,11 +76,7 @@ MAPPING = {
         "package_attr_name": {
             "type": "text",
             "analyzer": "nixAttrName",
-            "fields": {
-                "raw": {
-                    "type": "keyword"
-                },
-            },
+            "fields": {"raw": {"type": "keyword"}},
         },
         "package_attr_set": {"type": "keyword"},
         "package_pname": {"type": "keyword"},
@@ -89,10 +85,7 @@ MAPPING = {
         "package_longDescription": {"type": "text"},
         "package_license": {
             "type": "nested",
-            "properties": {
-                "fullName": {"type": "text"},
-                "url": {"type": "text"},
-            },
+            "properties": {"fullName": {"type": "text"}, "url": {"type": "text"}},
         },
         "package_maintainers": {
             "type": "nested",
@@ -291,7 +284,7 @@ def ensure_index(es, index, mapping):
         },
     )
     logger.debug(f"ensure_index: index '{index}' was created")
-    
+
     return True
 
 
@@ -303,8 +296,23 @@ def create_index_name(channel, evaluation):
 
 
 def update_alias(es, name, index):
-    es.indices.put_alias(index=index, name=name)
-    logger.debug(f"'{name}' alias now points to '{index}' index")
+    indexes = set(es.indices.get_alias(name=name).keys())
+
+    # indexes to remove from alias
+    actions = [
+        {"remove": {"index": item, "alias": name}}
+        for item in indexes.difference(set([index]))
+    ]
+
+    # add index if does not exists in alias
+    if index not in indexes:
+        actions.append({"add": {"index": index, "alias": name}})
+
+    if actions:
+        es.indices.update_aliases({"actions": actions})
+
+    indexes = ", ".join(es.indices.get_alias(name=name).keys())
+    logger.debug(f"'{name}' alias now points to '{indexes}' index")
 
 
 def write(unit, es, index_name, number_of_items, item_generator):
@@ -346,7 +354,8 @@ def main(es_url, channel, verbose):
     if index_created:
         write("packages", es, index_name, *get_packages(evaluation))
         write("options", es, index_name, *get_options(evaluation))
-        update_alias(es, alias_name, index_name)
+
+    update_alias(es, alias_name, index_name)
 
 
 if __name__ == "__main__":
