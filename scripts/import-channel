@@ -69,43 +69,51 @@ ANALYSIS = {
         },
     },
 }
-PACKAGES_MAPPING = dict(
-    properties=dict(
-        attr_name=dict(
-            type="text", analyzer="nixAttrName", fields={"raw": {"type": "keyword"}},
-        ),
-        attr_set=dict(type="keyword"),
-        pname=dict(type="keyword"),
-        pversion=dict(type="keyword"),
-        description=dict(type="text"),
-        longDescription=dict(type="text"),
-        license=dict(
-            type="nested",
-            properties=dict(fullName=dict(type="text"), url=dict(type="text"),),
-        ),
-        maintainers=dict(
-            type="nested",
-            properties=dict(
-                name=dict(type="text"),
-                email=dict(type="text"),
-                github=dict(type="text"),
-            ),
-        ),
-        platforms=dict(type="keyword"),
-        position=dict(type="text"),
-        homepage=dict(type="keyword"),
-    ),
-)
-OPTIONS_MAPPING = dict(
-    properties=dict(
-        option_name=dict(type="keyword"),
-        description=dict(type="text"),
-        type=dict(type="keyword"),
-        default=dict(type="text"),
-        example=dict(type="text"),
-        source=dict(type="keyword"),
-    ),
-)
+MAPPING = {
+    "properties": {
+        "type": {"type": "keyword"},
+        # Package fields
+        "package_attr_name": {
+            "type": "text",
+            "analyzer": "nixAttrName",
+            "fields": {
+                "raw": {
+                    "type": "keyword"
+                },
+            },
+        },
+        "package_attr_set": {"type": "keyword"},
+        "package_pname": {"type": "keyword"},
+        "package_pversion": {"type": "keyword"},
+        "package_description": {"type": "text"},
+        "package_longDescription": {"type": "text"},
+        "package_license": {
+            "type": "nested",
+            "properties": {
+                "fullName": {"type": "text"},
+                "url": {"type": "text"},
+            },
+        },
+        "package_maintainers": {
+            "type": "nested",
+            "properties": {
+                "name": {"type": "text"},
+                "email": {"type": "text"},
+                "github": {"type": "text"},
+            },
+        },
+        "package_platforms": {"type": "keyword"},
+        "package_position": {"type": "text"},
+        "package_homepage": {"type": "keyword"},
+        # Options fields
+        "option_name": {"type": "keyword"},
+        "option_description": {"type": "text"},
+        "option_type": {"type": "keyword"},
+        "option_default": {"type": "text"},
+        "option_example": {"type": "text"},
+        "option_source": {"type": "keyword"},
+    },
+}
 
 
 def get_last_evaluation(channel):
@@ -213,21 +221,20 @@ def get_packages(evaluation):
                 ):
                     attr_set = None
 
-            doc = dict(
-                id=attr_name,
-                attr_name=attr_name,
-                attr_set=attr_set,
-                pname=data["pname"],
-                pversion=data["version"],
-                description=data["meta"].get("description"),
-                longDescription=data["meta"].get("longDescription", ""),
-                license=licenses,
-                maintainers=maintainers,
-                platforms=[i for i in platforms if i],
-                position=position,
-                homepage=data["meta"].get("homepage"),
+            yield dict(
+                type="package",
+                package_attr_name=attr_name,
+                package_attr_set=attr_set,
+                package_pname=data["pname"],
+                package_pversion=data["version"],
+                package_description=data["meta"].get("description"),
+                package_longDescription=data["meta"].get("longDescription", ""),
+                package_license=licenses,
+                package_maintainers=maintainers,
+                package_platforms=[i for i in platforms if i],
+                package_position=position,
+                package_homepage=data["meta"].get("homepage"),
             )
-            yield doc
 
     logger.debug(f"get_packages: Found {len(packages)} packages")
     return len(packages), gen
@@ -259,13 +266,13 @@ def get_options(evaluation):
             ):
                 example = str(example["text"])
             yield dict(
-                id=name,
+                type="option",
                 option_name=name,
-                description=option.get("description"),
-                type=option.get("type"),
-                default=str(option.get("default")),
-                example=str(example),
-                source=option.get("declarations", [None])[0],
+                option_description=option.get("description"),
+                option_type=option.get("type"),
+                option_default=str(option.get("default")),
+                option_example=str(example),
+                option_source=option.get("declarations", [None])[0],
             )
 
     return len(options), gen
@@ -288,16 +295,29 @@ def ensure_index(es, index, mapping):
     return True
 
 
-def ensure_index_name(type_, channel, evaluation):
+def create_index_name(channel, evaluation):
     return (
-        f"latest-{channel}-{type_}",
-        f"evaluation-{INDEX_SCHEMA_VERSION}-{channel}-{evaluation['revisions_since_start']}-{evaluation['git_revision']}-{type_}",
+        f"latest-{channel}",
+        f"evaluation-{INDEX_SCHEMA_VERSION}-{channel}-{evaluation['revisions_since_start']}-{evaluation['git_revision']}",
     )
 
 
 def update_alias(es, name, index):
     es.indices.put_alias(index=index, name=name)
     logger.debug(f"'{name}' alias now points to '{index}' index")
+
+
+def write(unit, es, index_name, number_of_items, item_generator):
+    if number_of_items:
+        click.echo(f"Indexing {unit}...")
+        progress = tqdm.tqdm(unit=unit, total=number_of_items)
+        successes = 0
+        for ok, action in elasticsearch.helpers.streaming_bulk(
+            client=es, index=index_name, actions=item_generator()
+        ):
+            progress.update(1)
+            successes += ok
+        click.echo(f"Indexed {successes}/{number_of_items} {unit}")
 
 
 @click.command()
@@ -320,44 +340,13 @@ def main(es_url, channel, verbose):
     es = elasticsearch.Elasticsearch([es_url])
 
     # ensure indexes exist
-    options_alias, options_index = ensure_index_name("options", channel, evaluation)
-    packages_alias, packages_index = ensure_index_name("packages", channel, evaluation)
-    packages_index_created = ensure_index(es, packages_index, PACKAGES_MAPPING)
-    options_index_created = ensure_index(es, options_index, OPTIONS_MAPPING)
+    alias_name, index_name = create_index_name(channel, evaluation)
+    index_created = ensure_index(es, index_name, MAPPING)
 
-    # write packages
-    if packages_index_created:
-        number_of_packages, gen_packages = get_packages(evaluation)
-        if number_of_packages:
-            click.echo("Indexing packages...")
-            progress = tqdm.tqdm(unit="packages", total=number_of_packages)
-            successes = 0
-            for ok, action in elasticsearch.helpers.streaming_bulk(
-                client=es, index=packages_index, actions=gen_packages()
-            ):
-                progress.update(1)
-                successes += ok
-            click.echo("Indexed %d/%d packages" % (successes, number_of_packages))
-
-    # write options
-    if options_index_created:
-        number_of_options, gen_options = get_options(evaluation)
-        if number_of_options:
-            click.echo("Indexing options...")
-            progress = tqdm.tqdm(unit="options", total=number_of_options)
-            successes = 0
-            for ok, action in elasticsearch.helpers.streaming_bulk(
-                client=es, index=options_index, actions=gen_options()
-            ):
-                progress.update(1)
-                successes += ok
-            print("Indexed %d/%d options" % (successes, number_of_options))
-
-    # update alias
-    if packages_index_created:
-        update_alias(es, packages_alias, packages_index)
-    if options_index_created:
-        update_alias(es, options_alias, options_index)
+    if index_created:
+        write("packages", es, index_name, *get_packages(evaluation))
+        write("options", es, index_name, *get_options(evaluation))
+        update_alias(es, alias_name, index_name)
 
 
 if __name__ == "__main__":
