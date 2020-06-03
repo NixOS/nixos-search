@@ -76,11 +76,7 @@ MAPPING = {
         "package_attr_name": {
             "type": "text",
             "analyzer": "nixAttrName",
-            "fields": {
-                "raw": {
-                    "type": "keyword"
-                },
-            },
+            "fields": {"raw": {"type": "keyword"}},
         },
         "package_attr_set": {"type": "keyword"},
         "package_pname": {"type": "keyword"},
@@ -89,10 +85,7 @@ MAPPING = {
         "package_longDescription": {"type": "text"},
         "package_license": {
             "type": "nested",
-            "properties": {
-                "fullName": {"type": "text"},
-                "url": {"type": "text"},
-            },
+            "properties": {"fullName": {"type": "text"}, "url": {"type": "text"}},
         },
         "package_maintainers": {
             "type": "nested",
@@ -291,7 +284,7 @@ def ensure_index(es, index, mapping):
         },
     )
     logger.debug(f"ensure_index: index '{index}' was created")
-    
+
     return True
 
 
@@ -307,7 +300,7 @@ def update_alias(es, name, index):
 
     # indexes to remove from alias
     actions = [
-        {"remove": {"index": item, "alias": name}} 
+        {"remove": {"index": item, "alias": name}}
         for item in indexes.difference(set([index]))
     ]
 
