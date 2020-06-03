@@ -376,19 +376,6 @@ def write(unit, es, index_name, number_of_items, item_generator):
         click.echo(f"Indexed {successes}/{number_of_items} {unit}")
 
 
-def write(unit, es, index_name, number_of_items, item_generator):
-    if number_of_items:
-        click.echo(f"Indexing {unit}...")
-        progress = tqdm.tqdm(unit=unit, total=number_of_items)
-        successes = 0
-        for ok, action in elasticsearch.helpers.streaming_bulk(
-            client=es, index=index_name, actions=item_generator()
-        ):
-            progress.update(1)
-            successes += ok
-        click.echo(f"Indexed {successes}/{number_of_items} {unit}")
-
-
 @click.command()
 @click.option("-u", "--es-url", help="Elasticsearch connection url")
 @click.option("-c", "--channel", help="NixOS channel name")
