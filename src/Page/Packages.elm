@@ -292,11 +292,6 @@ makeRequestBody query from size =
     --   "size": 10,
     --   "query": {
     --     "bool": {
-    --       "filter": {
-    --         "match": {
-    --           "type": "package"
-    --         },
-    --       },
     --       "should": [
     --         {
     --           "multi_match": {
@@ -307,6 +302,14 @@ makeRequestBody query from size =
     --               "package_attr_name"
     --             ],
     --             "type": "most_fields"
+    --           }
+    --         },
+    --         {
+    --           "term": {
+    --             "type": {
+    --               "value": "package",
+    --               "boost": 0
+    --             }
     --           }
     --         },
     --         {
@@ -353,17 +356,11 @@ makeRequestBody query from size =
             [ ( name, Json.Encode.object value ) ]
 
         encodeTerm ( name, boost ) =
-            [ ( "term"
-              , Json.Encode.object
-                    [ ( name
-                      , Json.Encode.object
-                            [ ( "value", Json.Encode.string query )
-                            , ( "boost", Json.Encode.float boost )
-                            ]
-                      )
-                    ]
-              )
+            [ ( "value", Json.Encode.string query )
+            , ( "boost", Json.Encode.float boost )
             ]
+                |> objectIn name
+                |> objectIn "term"
     in
     [ ( "package_pname", 2.0 )
     , ( "package_pversion", 0.2 )
@@ -381,19 +378,12 @@ makeRequestBody query from size =
                     , ( "boost", Json.Encode.float 1.0 )
                     ]
                 |> objectIn "multi_match"
+
+            --, [ ( "type", Json.Encode.string "package" )
+            --  ]
+            --    |> objectIn "term"
             ]
         |> listIn "should" Json.Encode.object
-        |> List.append
-            [ ( "filter"
-              , Json.Encode.object
-                    [ ( "match"
-                      , Json.Encode.object
-                            [ ( "type", Json.Encode.string "package" )
-                            ]
-                      )
-                    ]
-              )
-            ]
         |> objectIn "bool"
         |> objectIn "query"
         |> List.append
