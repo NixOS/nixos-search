@@ -29,13 +29,23 @@ click_log.basic_config(logger)
 
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-INDEX_SCHEMA_VERSION = 1
+INDEX_SCHEMA_VERSION = 2
 ANALYSIS = {
     "analyzer": {
         "nixAttrName": {
             "type": "custom",
             "tokenizer": "nix_attrname",
             "filter": ["lowercase", "nix_stopwords"],
+        },
+        "nixOptionName": {
+            "type": "custom",
+            "tokenizer": "nix_option_name",
+            "filter": ["lowercase"],
+        },
+        "nixOptionNameGranular": {
+            "type": "custom",
+            "tokenizer": "nix_option_name_granular",
+            "filter": ["lowercase"],
         },
     },
     "tokenizer": {
@@ -46,6 +56,31 @@ ANALYSIS = {
                 [
                     "[_.-]",  # Common separators like underscores, dots and dashes
                     "\\d+?Packages",  # python37Packages -> python
+                    # Camelcase tokenizer adapted from
+                    # https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-pattern-analyzer.html
+                    "".join(
+                        [
+                            "(?<=[\\p{L}&&[^\\p{Lu}]])"  # lower case
+                            "(?=\\p{Lu})",  # followed by upper case
+                            "|",
+                            "(?<=\\p{Lu})"  # or upper case
+                            "(?=\\p{Lu}[\\p{L}&&[^\\p{Lu}]])",  # followed by lower case
+                        ]
+                    ),
+                ]
+            ),
+        },
+        "nix_option_name": {
+            "type": "pattern",
+            "pattern": "[.]",
+        },
+        # Lower priority (virtualHost -> [virtual, host])
+        "nix_option_name_granular": {
+            "type": "pattern",
+            # Split on attrname separators like _, .
+            "pattern": "|".join(
+                [
+                    "[_.-]",  # Common separators like underscores, dots and dashes
                     # Camelcase tokenizer adapted from
                     # https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-pattern-analyzer.html
                     "".join(
@@ -99,7 +134,20 @@ MAPPING = {
         "package_position": {"type": "text"},
         "package_homepage": {"type": "keyword"},
         # Options fields
-        "option_name": {"type": "keyword"},
+        "option_name": {
+            "type": "text",
+            "analyzer": "nixOptionName",
+            "fielddata": True,
+            "fields": {
+                "raw": {
+                    "type": "keyword"
+                },
+                "granular": {
+                    "type": "text",
+                    "analyzer": "nixOptionNameGranular",
+                },
+            },
+        },
         "option_description": {"type": "text"},
         "option_type": {"type": "keyword"},
         "option_default": {"type": "text"},
@@ -290,26 +338,29 @@ def ensure_index(es, index, mapping):
 
 def create_index_name(channel, evaluation):
     return (
-        f"latest-{channel}",
+        f"latest-{INDEX_SCHEMA_VERSION}-{channel}",
         f"evaluation-{INDEX_SCHEMA_VERSION}-{channel}-{evaluation['revisions_since_start']}-{evaluation['git_revision']}",
     )
 
 
 def update_alias(es, name, index):
-    indexes = set(es.indices.get_alias(name=name).keys())
+    if es.indices.exists_alias(name=name):
+        indexes = set(es.indices.get_alias(name=name).keys())
 
-    # indexes to remove from alias
-    actions = [
-        {"remove": {"index": item, "alias": name}}
-        for item in indexes.difference(set([index]))
-    ]
+        # indexes to remove from alias
+        actions = [
+            {"remove": {"index": item, "alias": name}}
+            for item in indexes.difference(set([index]))
+        ]
 
-    # add index if does not exists in alias
-    if index not in indexes:
-        actions.append({"add": {"index": index, "alias": name}})
+        # add index if does not exists in alias
+        if index not in indexes:
+            actions.append({"add": {"index": index, "alias": name}})
 
-    if actions:
-        es.indices.update_aliases({"actions": actions})
+        if actions:
+            es.indices.update_aliases({"actions": actions})
+    else:
+        es.indices.put_alias(index=index, name=name)
 
     indexes = ", ".join(es.indices.get_alias(name=name).keys())
     logger.debug(f"'{name}' alias now points to '{indexes}' index")
