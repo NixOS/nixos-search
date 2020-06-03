@@ -292,59 +292,68 @@ makeRequestBody query from size =
     --   "size": 10,
     --   "query": {
     --     "bool": {
-    --       "should": [
-    --         {
-    --           "multi_match": {
-    --             "query": "python",
-    --             "boost": 1,
-    --             "fields": [
-    --               "package_attr_name.raw",
-    --               "package_attr_name"
-    --             ],
-    --             "type": "most_fields"
-    --           }
-    --         },
-    --         {
-    --           "term": {
-    --             "type": {
-    --               "value": "package",
-    --               "boost": 0
-    --             }
-    --           }
-    --         },
-    --         {
-    --           "term": {
-    --             "package_pname": {
-    --               "value": "python",
-    --               "boost": 2
-    --             }
-    --           }
-    --         },
-    --         {
-    --           "term": {
-    --             "package_pversion": {
-    --               "value": "python",
-    --               "boost": 0.2
-    --             }
-    --           }
-    --         },
-    --         {
-    --           "term": {
-    --             "package_description": {
-    --               "value": "python",
-    --               "boost": 0.3
-    --             }
-    --           }
-    --         },
-    --         {
-    --           "term": {
-    --             "package_longDescription": {
-    --               "value": "python",
-    --               "boost": 0.1
-    --             }
-    --           }
+    --       "filter": {
+    --         "match": {
+    --           "type": "package"
     --         }
-    --       ]
+    --       },
+    --       "must": {
+    --         "bool": {
+    --           "should": [
+    --             {
+    --               "multi_match": {
+    --                 "query": "python",
+    --                 "boost": 1,
+    --                 "fields": [
+    --                   "package_attr_name.raw",
+    --                   "package_attr_name"
+    --                 ],
+    --                 "type": "most_fields"
+    --               }
+    --             },
+    --             {
+    --               "term": {
+    --                 "type": {
+    --                   "value": "package",
+    --                   "boost": 0
+    --                 }
+    --               }
+    --             },
+    --             {
+    --               "term": {
+    --                 "package_pname": {
+    --                   "value": "python",
+    --                   "boost": 2
+    --                 }
+    --               }
+    --             },
+    --             {
+    --               "term": {
+    --                 "package_pversion": {
+    --                   "value": "python",
+    --                   "boost": 0.2
+    --                 }
+    --               }
+    --             },
+    --             {
+    --               "term": {
+    --                 "package_description": {
+    --                   "value": "python",
+    --                   "boost": 0.3
+    --                 }
+    --               }
+    --             },
+    --             {
+    --               "term": {
+    --                 "package_longDescription": {
+    --                   "value": "python",
+    --                   "boost": 0.1
+    --                 }
+    --               }
+    --             }
+    --           ]
+    --         }
+    --       }
     --     }
     --   }
     -- }
@@ -378,12 +387,15 @@ makeRequestBody query from size =
                     , ( "boost", Json.Encode.float 1.0 )
                     ]
                 |> objectIn "multi_match"
-
-            --, [ ( "type", Json.Encode.string "package" )
-            --  ]
-            --    |> objectIn "term"
             ]
         |> listIn "should" Json.Encode.object
+        |> objectIn "bool"
+        |> objectIn "must"
+        |> ([ ( "type", Json.Encode.string "package" ) ]
+                |> objectIn "match"
+                |> objectIn "filter"
+                |> List.append
+           )
         |> objectIn "bool"
         |> objectIn "query"
         |> List.append
