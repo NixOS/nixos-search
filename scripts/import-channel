@@ -37,6 +37,16 @@ ANALYSIS = {
             "tokenizer": "nix_attrname",
             "filter": ["lowercase", "nix_stopwords"],
         },
+        "nixOptionName": {
+            "type": "custom",
+            "tokenizer": "nix_option_name",
+            "filter": ["lowercase"],
+        },
+        "nixOptionNameGranular": {
+            "type": "custom",
+            "tokenizer": "nix_option_name_granular",
+            "filter": ["lowercase"],
+        },
     },
     "tokenizer": {
         "nix_attrname": {
@@ -46,6 +56,31 @@ ANALYSIS = {
                 [
                     "[_.-]",  # Common separators like underscores, dots and dashes
                     "\\d+?Packages",  # python37Packages -> python
+                    # Camelcase tokenizer adapted from
+                    # https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-pattern-analyzer.html
+                    "".join(
+                        [
+                            "(?<=[\\p{L}&&[^\\p{Lu}]])"  # lower case
+                            "(?=\\p{Lu})",  # followed by upper case
+                            "|",
+                            "(?<=\\p{Lu})"  # or upper case
+                            "(?=\\p{Lu}[\\p{L}&&[^\\p{Lu}]])",  # followed by lower case
+                        ]
+                    ),
+                ]
+            ),
+        },
+        "nix_option_name": {
+            "type": "pattern",
+            "pattern": "[.]",
+        },
+        # Lower priority (virtualHost -> [virtual, host])
+        "nix_option_name_granular": {
+            "type": "pattern",
+            # Split on attrname separators like _, .
+            "pattern": "|".join(
+                [
+                    "[_.-]",  # Common separators like underscores, dots and dashes
                     # Camelcase tokenizer adapted from
                     # https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-pattern-analyzer.html
                     "".join(
@@ -99,7 +134,20 @@ MAPPING = {
         "package_position": {"type": "text"},
         "package_homepage": {"type": "keyword"},
         # Options fields
-        "option_name": {"type": "keyword"},
+        "option_name": {
+            "type": "text",
+            "analyzer": "nixOptionName",
+            "fielddata": True,
+            "fields": {
+                "raw": {
+                    "type": "keyword"
+                },
+                "granular": {
+                    "type": "text",
+                    "analyzer": "nixOptionNameGranular",
+                },
+            },
+        },
         "option_description": {"type": "text"},
         "option_type": {"type": "keyword"},
         "option_default": {"type": "text"},
