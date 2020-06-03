@@ -4,7 +4,6 @@ module Main exposing (main)
 
 import Browser
 import Browser.Navigation
-import Search
 import Html
     exposing
         ( Html
@@ -29,6 +28,7 @@ import Page.Options
 import Page.Packages
 import RemoteData
 import Route
+import Search
 import Url
 
 
@@ -37,7 +37,8 @@ import Url
 
 
 type alias Flags =
-    { elasticsearchUrl : String
+    { elasticsearchMappingSchemaVersion : Int
+    , elasticsearchUrl : String
     , elasticsearchUsername : String
     , elasticsearchPassword : String
     }
@@ -70,6 +71,7 @@ init flags url navKey =
             , url = url
             , elasticsearch =
                 Search.Options
+                    flags.elasticsearchMappingSchemaVersion
                     flags.elasticsearchUrl
                     flags.elasticsearchUsername
                     flags.elasticsearchPassword

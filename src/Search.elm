@@ -429,7 +429,8 @@ viewPager outMsg model result path =
 
 
 type alias Options =
-    { url : String
+    { mappingSchemaVersion : Int
+    , url : String
     , username : String
     , password : String
     }

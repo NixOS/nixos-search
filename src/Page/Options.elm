@@ -221,20 +221,85 @@ makeRequestBody query from size =
     --   example query for "python"
     -- {
     --   "from": 0,
-    --   "size": 10,
+    --   "size": 1000,
     --   "query": {
     --     "bool": {
-    --       "filter": {
-    --         "match": {
-    --           "type": "package"
-    --         },
+    --       "must": {
+    --           "bool": {
+    --               "should": [
+    --                   {
+    --                       "term": {
+    --                           "option_name.raw": {
+    --                               "value": "nginx",
+    --                               "boost": 2.0
+    --                           }
+    --                       }
+    --                   },
+    --                   {
+    --                       "term": {
+    --                           "option_name": {
+    --                               "value": "nginx",
+    --                               "boost": 1.0
+    --                           }
+    --                       }
+    --                   },
+    --                   {
+    --                       "term": {
+    --                           "option_name.granular": {
+    --                               "value": "nginx",
+    --                               "boost": 0.6
+    --                           }
+    --                       }
+    --                   },
+    --                   {
+    --                       "term": {
+    --                           "option_description": {
+    --                               "value": "nginx",
+    --                               "boost": 0.3
+    --                           }
+    --                       }
+    --                   }
+    --               ]
+    --           }
     --       },
-    --       "should": [
+    --       "filter": [
+    --         {
+    --           "match": {
+    --             "type": "option"
+    --           }
+    --         }
     --       ]
     --     }
+    --   },
+    --   "rescore" : {
+    --       "window_size": 500,
+    --       "query" : {
+    --          "score_mode": "total",
+    --          "rescore_query" : {
+    --           "function_score" : {
+    --              "script_score": {
+    --                 "script": {
+    --                   "source": "
+    --                     int i = 1;
+    --                     for (token in doc['option_name.raw'][0].splitOnToken('.')) {
+    --                        if (token == \"nginx\") {
+    --                           return 10000 - (i * 100);
+    --                        }
+    --                        i++;
+    --                     }
+    --                     return 10;
+    --                   "
+    --                 }
+    --              }
+    --           }
+    --        }
+    --      }
     --   }
     -- }
     let
+        stringIn name value =
+            [ ( name, Json.Encode.string value ) ]
+
         listIn name type_ value =
             [ ( name, Json.Encode.list type_ value ) ]
 
@@ -254,24 +319,44 @@ makeRequestBody query from size =
               )
             ]
     in
-    [ ( "option_name", 2.0 )
+    [ ( "option_name.raw", 2.0 )
+    , ( "option_name", 1.0 )
+    , ( "option_name.granular", 0.6 )
     , ( "option_description", 0.3 )
     ]
         |> List.map encodeTerm
         |> listIn "should" Json.Encode.object
-        |> List.append
-            [ ( "filter"
-              , Json.Encode.object
-                    [ ( "match"
-                      , Json.Encode.object
-                            [ ( "type", Json.Encode.string "option" )
-                            ]
-                      )
-                    ]
-              )
-            ]
+        |> objectIn "bool"
+        |> objectIn "must"
+        |> ([ ( "type", Json.Encode.string "option" ) ]
+                |> objectIn "match"
+                |> objectIn "filter"
+                |> List.append
+           )
         |> objectIn "bool"
         |> objectIn "query"
+        |> List.append
+            ("""int i = 1;
+                for (token in doc['option_name.raw'][0].splitOnToken('.')) {
+                   if (token == '"""
+                ++ query
+                ++ """') {
+                      return 10000 - (i * 100);
+                   }
+                   i++;
+                }
+                return 10;
+                """
+                |> stringIn "source"
+                |> objectIn "script"
+                |> objectIn "script_score"
+                |> objectIn "function_score"
+                |> objectIn "rescore_query"
+                |> List.append ("total" |> stringIn "score_mode")
+                |> objectIn "query"
+                |> List.append [ ( "window_size", Json.Encode.int 1000 ) ]
+                |> objectIn "rescore"
+            )
         |> List.append
             [ ( "from", Json.Encode.int from )
             , ( "size", Json.Encode.int size )
@@ -290,7 +375,7 @@ makeRequest :
 makeRequest options channel query from size =
     Search.makeRequest
         (makeRequestBody query from size)
-        ("latest-nixos-" ++ channel)
+        ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-nixos-" ++ channel)
         decodeResultItemSource
         options
         query
