@@ -13,6 +13,7 @@ import Html
         , header
         , img
         , li
+        , span
         , text
         , ul
         )
@@ -21,6 +22,7 @@ import Html.Attributes
         ( class
         , classList
         , href
+        , id
         , src
         )
 import Page.Home
@@ -245,8 +247,18 @@ view model =
                 ]
             ]
         , div [ class "container main" ]
-            [ viewPage model
-            , footer [] []
+            [ div [ id "content" ] [ viewPage model ]
+            , footer
+                [ class "container text-center" ]
+                [ div []
+                    [ span [] [ text "Elasticsearch instance graciously provided by " ]
+                    , a [ href "https://bonsai.io" ] [ text "Bonsai" ]
+                    , span [] [ text "." ]
+                    ]
+                , div []
+                    [ span [] [ text "❤️  Thank you ❤️ " ]
+                    ]
+                ]
             ]
         ]
 
