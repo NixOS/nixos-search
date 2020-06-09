@@ -190,9 +190,8 @@ viewResultItemDetails channel item =
         asLink value =
             a [ href value ] [ text value ]
 
-        -- TODO: this should take channel into account as well
-        githubUrlPrefix =
-            "https://github.com/NixOS/nixpkgs-channels/blob/nixos-unstable/"
+        githubUrlPrefix branch =
+            "https://github.com/NixOS/nixpkgs-channels/blob/" ++ branch ++ "/"
 
         cleanPosition value =
             if String.startsWith "source/" value then
@@ -202,9 +201,14 @@ viewResultItemDetails channel item =
                 value
 
         asGithubLink value =
-            a
-                [ href <| githubUrlPrefix ++ (value |> String.replace ":" "#L" |> cleanPosition) ]
-                [ text <| cleanPosition value ]
+            case Search.channelDetailsFromId channel of
+                Just channelDetails ->
+                    a
+                        [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L" |> cleanPosition) ]
+                        [ text <| cleanPosition value ]
+
+                Nothing ->
+                    text <| cleanPosition value
 
         withDefault wrapWith maybe =
             case maybe of
@@ -217,15 +221,6 @@ viewResultItemDetails channel item =
                 Just value ->
                     wrapWith value
 
-        convertToGithubUrl value =
-            if String.startsWith "source/" value then
-                githubUrlPrefix ++ String.dropLeft 7 value
-
-            else
-                githubUrlPrefix ++ value
-
-        -- TODO: add links to hydra for hydra_platforms
-        -- example: https://hydra.nixos.org/job/nixos/release-20.03/nixpkgs.gnome3.accerciser.i686-linux
         allowedPlatforms platform =
             List.member platform
                 [ "x86_64-linux"
@@ -287,8 +282,6 @@ viewResultItemDetails channel item =
         [ dt [] [ text "Install command" ]
         , dd [] [ code [] [ text <| "nix-env -iA nixos." ++ item.source.attr_name ] ]
         , dt [] [ text <| "Nix expression" ]
-
-        -- TODO: point to correct branch/channel
         , dd [] [ withDefault asGithubLink item.source.position ]
         , dt [] [ text "Platforms" ]
         , dd [] [ ul [ class "inline" ] <| showPlatforms item.source.platforms ]
