@@ -239,7 +239,7 @@ viewResultItemDetails channel item =
                 [ case Search.channelDetailsFromId channel of
                     Just channelDetails ->
                         a
-                            [ href <| "https://hydra.nixos.org/job/" ++ channelDetails.jobset ++ "/" ++ item.source.attr_name ++ "." ++ item.source.system
+                            [ href <| "https://hydra.nixos.org/job/" ++ channelDetails.jobset ++ "/nixpkgs." ++ item.source.attr_name ++ "." ++ item.source.system
                             ]
                             [ text platform
                             ]
