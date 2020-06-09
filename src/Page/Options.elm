@@ -109,10 +109,11 @@ view model =
 
 
 viewSuccess :
-    Maybe String
+    String
+    -> Maybe String
     -> Search.Result ResultItemSource
     -> Html Msg
-viewSuccess showDetailsFor result =
+viewSuccess channel showDetailsFor result =
     div [ class "search-result" ]
         [ table [ class "table table-hover" ]
             [ thead []
