@@ -245,7 +245,10 @@ def get_evaluation_builds(evaluation_id):
         ) as f:
             for chunk in r.iter_content(chunk_size=4096):
                 f.write(chunk)
-    builds = json.load(open(filename))
+
+    with open(filename) as f:
+        builds = json.loads(f.read())
+
     return {
         f"{build['nixname']}.{build['system']}": build 
         for build in builds
