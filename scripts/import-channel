@@ -148,6 +148,12 @@ MAPPING = {
                 },
             },
         },
+        "option_name_completion": {
+            "analyzer": "nixOptionName",
+            "search_analyzer": "nixOptionName",
+            "preserve_position_increments": False,
+            "type": "completion"
+        },
         "option_description": {"type": "text"},
         "option_type": {"type": "keyword"},
         "option_default": {"type": "text"},
@@ -155,6 +161,28 @@ MAPPING = {
         "option_source": {"type": "keyword"},
     },
 }
+
+
+def parse_option_name_completion(name: str):
+    results = []
+    for i in range(len(name.split('.'))):
+        tokens = name.split(".")[i:]
+
+        result = []
+        for idx, token in enumerate(tokens, start=1):
+            try:
+                prev = result[-1]
+            except IndexError:
+                prev = ""
+
+            if idx == len(tokens):
+                suffix = ""
+            else:
+                suffix = "."
+
+            result.append(prev + token + suffix)
+        results.extend(result)
+    return results
 
 
 def get_last_evaluation(channel):
@@ -309,6 +337,7 @@ def get_options(evaluation):
             yield dict(
                 type="option",
                 option_name=name,
+                option_name_completion=parse_option_name_completion(name),
                 option_description=option.get("description"),
                 option_type=option.get("type"),
                 option_default=str(option.get("default")),
