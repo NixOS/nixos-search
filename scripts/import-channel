@@ -1,5 +1,5 @@
 #! /usr/bin/env nix-shell
-#! nix-shell -i python3 -p python3 python3Packages.click python3Packages.click-log python3Packages.elasticsearch python3Packages.boto3 python3Packages.tqdm
+#! nix-shell -i python3 -p python3 python3Packages.requests python3Packages.click python3Packages.click-log python3Packages.elasticsearch python3Packages.boto3 python3Packages.tqdm
 
 # develop:
 # $ nix-shell -p python3Packages.black python3Packages.mypy python3Packages.flake8
@@ -16,6 +16,7 @@ import logging
 import click_log
 import elasticsearch
 import elasticsearch.helpers
+import requests
 import json
 import os.path
 import shlex
@@ -29,7 +30,7 @@ click_log.basic_config(logger)
 
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-INDEX_SCHEMA_VERSION = 2
+INDEX_SCHEMA_VERSION = 3
 ANALYSIS = {
     "analyzer": {
         "nixAttrName": {
@@ -108,6 +109,19 @@ MAPPING = {
     "properties": {
         "type": {"type": "keyword"},
         # Package fields
+        "package_hydra_build_id": {"type": "keyword"},
+        "package_hydra_build_status": {"type": "keyword"},
+        "package_hydra_project": {"type": "keyword"},
+        "package_hydra_job": {"type": "keyword"},
+        "package_hydra_jobset": {"type": "keyword"},
+        "package_hydra_path": {
+            "type": "nested",
+            "properties": {
+                "output": {"type": "keyword"},
+                "path": {"type": "keyword"}
+            }
+        },
+        "package_hydra_drvpath": {"type": "keyword"},
         "package_attr_name": {
             "type": "text",
             "analyzer": "nixAttrName",
@@ -202,11 +216,46 @@ def get_last_evaluation(channel):
     )
     evaluations = sorted(evaluations, key=lambda i: i["revisions_since_start"])
 
-    logger.debug(f"get_last_evaluation: last evaluation is: {evaluations[-1]}")
-    return evaluations[-1]
+    evaluation = evaluations[-1]
+
+    result = s3.get_object(Bucket=bucket, Key=f"{evaluation['prefix']}src-url")
+    evaluation['id'] = result.get("Body").read().decode()[len("https://hydra.nixos.org/eval/"):]
+
+    logger.debug(f"get_last_evaluation: last evaluation is: {evaluation}")
+
+    return evaluation
 
 
-def get_packages(evaluation):
+def get_evaluation_builds(evaluation_id):
+    logger.debug(f"get_evaluation_builds: Retriving list of builds for {evaluation_id} evaluation id")
+    filename = f"eval-{evaluation_id}.json"
+    if not os.path.exists(filename):
+        url = f"https://hydra.nixos.org/eval/{evaluation_id}/builds"
+        logger.debug(f"get_evaluation_builds: Fetching builds from {url} url.")
+        headers = {
+            "Content-Type": "application/json"
+        }
+        r = requests.get(url, headers=headers, stream=True)
+        with tqdm.tqdm.wrapattr(
+            open(filename, "wb"),
+            "write",
+            miniters=1,
+            total=int(r.headers.get('content-length', 0)),
+            desc=filename
+        ) as f:
+            for chunk in r.iter_content(chunk_size=4096):
+                f.write(chunk)
+
+    with open(filename) as f:
+        builds = json.loads(f.read())
+
+    return {
+        f"{build['nixname']}.{build['system']}": build 
+        for build in builds
+    }
+
+
+def get_packages(evaluation, evaluation_builds):
     logger.debug(
         f"get_packages: Retriving list of packages for '{evaluation['git_revision']}' revision"
     )
@@ -225,6 +274,7 @@ def get_packages(evaluation):
             position = data["meta"].get("position")
             if position and position.startswith("/nix/store"):
                 position = position[44:]
+
             licenses = data["meta"].get("license")
             if licenses:
                 if type(licenses) == str:
@@ -239,6 +289,7 @@ def get_packages(evaluation):
                 ]
             else:
                 licenses = []
+
             maintainers = [
                 type(maintainer) == str
                 and dict(name=maintainer, email=None, github=None)
@@ -249,6 +300,7 @@ def get_packages(evaluation):
                 )
                 for maintainer in data["meta"].get("maintainers", [])
             ]
+
             platforms = [
                 type(platform) == str and platform or None
                 for platform in data["meta"].get("platforms", [])
@@ -262,8 +314,38 @@ def get_packages(evaluation):
                 ):
                     attr_set = None
 
+            hydra_build_id = None
+            hydra_build_status = None
+            hydra_job = None
+            hydra_jobset = None
+            hydra_path = None
+            hydra_drvpath = None
+            build_key = f"{data['name']}.{data['system']}"
+            if build_key in evaluation_builds:
+                build = evaluation_builds[build_key]
+                hydra_build_id = build['id']
+                hydra_build_status = build['buildstatus']
+                hydra_project = build['project']
+                hydra_job = build['job']
+                hydra_jobset = build['jobset']
+                hydra_path = [
+                    {
+                        "output": output,
+                        "path": item['path'],
+                    }
+                    for output, item in build['buildoutputs'].items()
+                ]
+                hydra_drvpath = build['drvpath']
+
             yield dict(
                 type="package",
+                package_hydra_build_id=hydra_build_id,
+                package_hydra_build_status=hydra_build_status,
+                package_hydra_project=hydra_project,
+                package_hydra_job=hydra_job,
+                package_hydra_jobset=hydra_jobset,
+                package_hydra_path=hydra_path,
+                package_hydra_drvpath=hydra_drvpath,
                 package_attr_name=attr_name,
                 package_attr_set=attr_set,
                 package_pname=data["pname"],
@@ -339,7 +421,7 @@ def ensure_index(es, index, mapping):
 def create_index_name(channel, evaluation):
     return (
         f"latest-{INDEX_SCHEMA_VERSION}-{channel}",
-        f"evaluation-{INDEX_SCHEMA_VERSION}-{channel}-{evaluation['revisions_since_start']}-{evaluation['git_revision']}",
+        f"evaluation-{INDEX_SCHEMA_VERSION}-{channel}-{evaluation['id']}-{evaluation['revisions_since_start']}-{evaluation['git_revision']}",
     )
 
 
@@ -396,6 +478,8 @@ def main(es_url, channel, verbose):
     logger.debug(f"Logging set to {logging_level}")
 
     evaluation = get_last_evaluation(channel)
+    evaluation_builds = get_evaluation_builds(evaluation['id'])
+
     es = elasticsearch.Elasticsearch([es_url])
 
     # ensure indexes exist
@@ -403,7 +487,7 @@ def main(es_url, channel, verbose):
     index_created = ensure_index(es, index_name, MAPPING)
 
     if index_created:
-        write("packages", es, index_name, *get_packages(evaluation))
+        write("packages", es, index_name, *get_packages(evaluation, evaluation_builds))
         write("options", es, index_name, *get_options(evaluation))
 
     update_alias(es, alias_name, index_name)
