@@ -64,6 +64,7 @@ type alias ResultItemSource =
     , platforms : List String
     , position : Maybe String
     , homepage : Maybe String
+    , system : String
     }
 
 
@@ -125,10 +126,11 @@ view model =
 
 
 viewSuccess :
-    Maybe String
+    String
+    -> Maybe String
     -> Search.Result ResultItemSource
     -> Html Msg
-viewSuccess showDetailsFor result =
+viewSuccess channel showDetailsFor result =
     div [ class "search-result" ]
         [ table [ class "table table-hover" ]
             [ thead []
@@ -142,7 +144,7 @@ viewSuccess showDetailsFor result =
             , tbody
                 []
                 (List.concatMap
-                    (viewResultItem showDetailsFor)
+                    (viewResultItem channel showDetailsFor)
                     result.hits.hits
                 )
             ]
@@ -150,14 +152,15 @@ viewSuccess showDetailsFor result =
 
 
 viewResultItem :
-    Maybe String
+    String
+    -> Maybe String
     -> Search.ResultItem ResultItemSource
     -> List (Html Msg)
-viewResultItem showDetailsFor item =
+viewResultItem channel showDetailsFor item =
     let
         packageDetails =
             if Just item.id == showDetailsFor then
-                [ td [ colspan 4 ] [ viewResultItemDetails item ]
+                [ td [ colspan 4 ] [ viewResultItemDetails channel item ]
                 ]
 
             else
@@ -173,9 +176,10 @@ viewResultItem showDetailsFor item =
 
 
 viewResultItemDetails :
-    Search.ResultItem ResultItemSource
+    String
+    -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItemDetails item =
+viewResultItemDetails channel item =
     let
         default =
             "Not specified"
@@ -222,8 +226,32 @@ viewResultItemDetails item =
 
         -- TODO: add links to hydra for hydra_platforms
         -- example: https://hydra.nixos.org/job/nixos/release-20.03/nixpkgs.gnome3.accerciser.i686-linux
+        allowedPlatforms platform =
+            List.member platform
+                [ "x86_64-linux"
+                , "aarch64-linux"
+                , "x86_64-darwin"
+                , "i686-linux"
+                ]
+
+        showPlatforms platforms =
+            platforms
+                |> List.filter allowedPlatforms
+                |> List.map showPlatform
+
         showPlatform platform =
-            li [] [ text platform ]
+            li []
+                [ case Search.channelDetailsFromId channel of
+                    Just channelDetails ->
+                        a
+                            [ href <| "https://hydra.nixos.org/job/" ++ channelDetails.jobset ++ "/" ++ item.source.attr_name ++ "." ++ item.source.system
+                            ]
+                            [ text platform
+                            ]
+
+                    Nothing ->
+                        text platform
+                ]
 
         showLicence license =
             li []
@@ -263,7 +291,7 @@ viewResultItemDetails item =
         -- TODO: point to correct branch/channel
         , dd [] [ withDefault asGithubLink item.source.position ]
         , dt [] [ text "Platforms" ]
-        , dd [] [ ul [ class "inline" ] <| List.map showPlatform item.source.platforms ]
+        , dd [] [ ul [ class "inline" ] <| showPlatforms item.source.platforms ]
         , dt [] [ text "Homepage" ]
         , dd [] [ withDefault asLink item.source.homepage ]
         , dt [] [ text "Licenses" ]
@@ -442,6 +470,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.required "package_platforms" (Json.Decode.list Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_position" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_homepage" (Json.Decode.nullable Json.Decode.string)
+        |> Json.Decode.Pipeline.required "package_system" Json.Decode.string
 
 
 decodeResultPackageLicense : Json.Decode.Decoder ResultPackageLicense

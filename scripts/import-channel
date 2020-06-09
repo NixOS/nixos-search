@@ -30,7 +30,7 @@ click_log.basic_config(logger)
 
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-INDEX_SCHEMA_VERSION = 3
+INDEX_SCHEMA_VERSION = 4
 ANALYSIS = {
     "analyzer": {
         "nixAttrName": {
@@ -147,6 +147,7 @@ MAPPING = {
         "package_platforms": {"type": "keyword"},
         "package_position": {"type": "text"},
         "package_homepage": {"type": "keyword"},
+        "package_system": {"type": "keyword"},
         # Options fields
         "option_name": {
             "type": "text",
@@ -357,6 +358,7 @@ def get_packages(evaluation, evaluation_builds):
                 package_platforms=[i for i in platforms if i],
                 package_position=position,
                 package_homepage=data["meta"].get("homepage"),
+                package_system=data["system"],
             )
 
     logger.debug(f"get_packages: Found {len(packages)} packages")

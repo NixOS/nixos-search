@@ -4,6 +4,7 @@ module Search exposing
     , Options
     , Result
     , ResultItem
+    , channelDetailsFromId
     , decodeResult
     , init
     , makeRequest
@@ -221,11 +222,67 @@ createUrl path channel query showDetailsFor from size =
 -- VIEW
 
 
+type Channel
+    = Unstable
+    | Release_19_09
+    | Release_20_03
+
+
+type alias ChannelDetails =
+    { id : String
+    , title : String
+    , jobset : String
+    }
+
+
+channelDetails : Channel -> ChannelDetails
+channelDetails channel =
+    case channel of
+        Unstable ->
+            ChannelDetails "unstable" "unstable" "nixos/trunk-combined"
+
+        Release_19_09 ->
+            ChannelDetails "19.09" "19.09" "nixos/release-19.09"
+
+        Release_20_03 ->
+            ChannelDetails "20.03" "20.03" "nixos/release-20.03"
+
+
+channelFromId : String -> Maybe Channel
+channelFromId channel_id =
+    case channel_id of
+        "unstable" ->
+            Just Unstable
+
+        "19.09" ->
+            Just Release_19_09
+
+        "20.03" ->
+            Just Release_20_03
+
+        _ ->
+            Nothing
+
+
+channelDetailsFromId : String -> Maybe ChannelDetails
+channelDetailsFromId channel_id =
+    channelFromId channel_id
+        |> Maybe.map channelDetails
+
+
+channels : List String
+channels =
+    [ "unstable"
+    , "20.03"
+    , "19.09"
+    ]
+
+
 view :
     String
     -> String
     -> Model a
-    -> (Maybe String -> Result a -> Html b)
+    -> (String -> Maybe String -> Result a -> Html b)
     -> (Msg a -> b)
     -> Html b
 view path title model viewSuccess outMsg =
@@ -249,16 +306,19 @@ view path title model viewSuccess outMsg =
                         [ text " in " ]
                     , select
                         [ onInput (\x -> outMsg (ChannelChange x)) ]
-                        [ option
-                            [ value "unstable" ]
-                            [ text "unstable" ]
-                        , option
-                            [ value "20.03" ]
-                            [ text "20.03" ]
-                        , option
-                            [ value "19.09" ]
-                            [ text "19.09" ]
-                        ]
+                        (List.filterMap
+                            (\channel_id ->
+                                channelDetailsFromId channel_id
+                                    |> Maybe.map
+                                        (\channel ->
+                                            option
+                                                [ value channel.id
+                                                ]
+                                                [ text channel.title ]
+                                        )
+                            )
+                            channels
+                        )
                     , strong []
                         [ text " channel." ]
                     ]
@@ -299,7 +359,7 @@ view path title model viewSuccess outMsg =
                                 ]
                             ]
                         , viewPager outMsg model result path
-                        , viewSuccess model.showDetailsFor result
+                        , viewSuccess model.channel model.showDetailsFor result
                         , viewPager outMsg model result path
                         ]
 
