@@ -227,24 +227,29 @@ def get_last_evaluation(channel):
 
 
 def get_evaluation_builds(evaluation_id):
+    logger.debug(f"get_evaluation_builds: Retriving list of builds for {evaluation_id} evaluation id")
     filename = f"eval-{evaluation_id}.json"
     if not os.path.exists(filename):
-        r = requests.get(f"https://hydra.nixos.org/eval/{evaluation_id}/builds", stream=True)
-        with tqdm.wrapattr(
+        url = f"https://hydra.nixos.org/eval/{evaluation_id}/builds"
+        logger.debug(f"get_evaluation_builds: Fetching builds from {url} url.")
+        headers = {
+            "Content-Type": "application/json"
+        }
+        r = requests.get(url, headers=headers, stream=True)
+        with tqdm.tqdm.wrapattr(
             open(filename, "wb"),
             "write",
             miniters=1,
             total=int(r.headers.get('content-length', 0)),
             desc=filename
         ) as f:
-            for chunk in response.iter_content(chunk_size=4096):
+            for chunk in r.iter_content(chunk_size=4096):
                 f.write(chunk)
     builds = json.load(open(filename))
     return {
         f"{build['nixname']}.{build['system']}": build 
         for build in builds
     }
-
 
 
 def get_packages(evaluation, evaluation_builds):
