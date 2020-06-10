@@ -141,8 +141,18 @@ update path navKey msg model =
             )
 
         ChannelChange channel ->
-            ( { model | channel = channel }
-            , Cmd.none
+            ( { model
+                | channel = channel
+                , result = RemoteData.Loading
+              }
+            , createUrl
+                path
+                channel
+                model.query
+                model.showDetailsFor
+                0
+                model.size
+                |> Browser.Navigation.pushUrl navKey
             )
 
         QueryInput query ->
@@ -151,7 +161,7 @@ update path navKey msg model =
             )
 
         QuerySubmit ->
-            ( model
+            ( { model | result = RemoteData.Loading }
             , createUrl
                 path
                 model.channel
