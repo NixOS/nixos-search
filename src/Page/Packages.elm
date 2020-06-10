@@ -149,7 +149,7 @@ viewSuccess :
     -> Maybe String
     -> Search.Result ResultItemSource
     -> Html Msg
-viewSuccess channel showDetailsFor result =
+viewSuccess channel show result =
     div [ class "search-result" ]
         [ table [ class "table table-hover" ]
             [ thead []
@@ -163,7 +163,7 @@ viewSuccess channel showDetailsFor result =
             , tbody
                 []
                 (List.concatMap
-                    (viewResultItem channel showDetailsFor)
+                    (viewResultItem channel show)
                     result.hits.hits
                 )
             ]
@@ -175,10 +175,10 @@ viewResultItem :
     -> Maybe String
     -> Search.ResultItem ResultItemSource
     -> List (Html Msg)
-viewResultItem channel showDetailsFor item =
+viewResultItem channel show item =
     let
         packageDetails =
-            if Just item.source.attr_name == showDetailsFor then
+            if Just item.source.attr_name == show then
                 [ td [ colspan 4 ] [ viewResultItemDetails channel item ]
                 ]
 

@@ -177,13 +177,13 @@ changeRouteTo model url =
             -- on the home page
             ( newModel, Browser.Navigation.pushUrl newModel.navKey "/packages" )
 
-        Just (Route.Packages channel query showDetailsFor from size) ->
-            Page.Packages.init channel query showDetailsFor from size
+        Just (Route.Packages channel query show from size) ->
+            Page.Packages.init channel query show from size
                 |> updateWith Packages PackagesMsg newModel
                 |> submitQuery newModel
 
-        Just (Route.Options channel query showDetailsFor from size) ->
-            Page.Options.init channel query showDetailsFor from size
+        Just (Route.Options channel query show from size) ->
+            Page.Options.init channel query show from size
                 |> updateWith Options OptionsMsg newModel
                 |> submitQuery newModel
 
