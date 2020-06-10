@@ -178,14 +178,14 @@ viewResultItem :
 viewResultItem channel showDetailsFor item =
     let
         packageDetails =
-            if Just item.id == showDetailsFor then
+            if Just item.source.attr_name == showDetailsFor then
                 [ td [ colspan 4 ] [ viewResultItemDetails channel item ]
                 ]
 
             else
                 []
     in
-    tr [ onClick (SearchMsg (Search.ShowDetails item.id)) ]
+    tr [ onClick (SearchMsg (Search.ShowDetails item.source.attr_name)) ]
         [ td [] [ text item.source.attr_name ]
         , td [] [ text item.source.pname ]
         , td [] [ text item.source.pversion ]

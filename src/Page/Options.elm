@@ -32,7 +32,6 @@ import Html.Attributes
         ( class
         , colspan
         , href
-        , property
         )
 import Html.Events
     exposing
@@ -138,14 +137,14 @@ viewResultItem :
 viewResultItem showDetailsFor item =
     let
         packageDetails =
-            if Just item.id == showDetailsFor then
+            if Just item.source.name == showDetailsFor then
                 [ td [ colspan 1 ] [ viewResultItemDetails item ]
                 ]
 
             else
                 []
     in
-    tr [ onClick (SearchMsg (Search.ShowDetails item.id)) ]
+    tr [ onClick (SearchMsg (Search.ShowDetails item.source.name)) ]
         [ td [] [ text item.source.name ]
         ]
         :: packageDetails
