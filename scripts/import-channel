@@ -124,19 +124,25 @@ MAPPING = {
     "properties": {
         "type": {"type": "keyword"},
         # Package fields
-        "package_hydra_build_id": {"type": "keyword"},
-        "package_hydra_build_status": {"type": "keyword"},
-        "package_hydra_project": {"type": "keyword"},
-        "package_hydra_job": {"type": "keyword"},
-        "package_hydra_jobset": {"type": "keyword"},
-        "package_hydra_path": {
+        "package_hydra_build": {
             "type": "nested",
             "properties": {
-                "output": {"type": "keyword"},
-                "path": {"type": "keyword"}
-            }
+                "build_id": {"type": "keyword"},
+                "build_status": {"type": "keyword"},
+                "platform": {"type": "keyword"},
+                "project": {"type": "keyword"},
+                "jobset": {"type": "keyword"},
+                "job": {"type": "keyword"},
+                "path": {
+                    "type": "nested",
+                    "properties": {
+                        "output": {"type": "keyword"},
+                        "path": {"type": "keyword"}
+                    },
+                },
+                "drv_path": {"type": "keyword"},
+            },
         },
-        "package_hydra_drvpath": {"type": "keyword"},
         "package_attr_name": {
             "type": "text",
             "analyzer": "nixAttrName",
@@ -246,10 +252,12 @@ def get_evaluation_builds(evaluation_id):
     with open(filename) as f:
         builds = json.loads(f.read())
 
-    return {
-        f"{build['nixname']}.{build['system']}": build 
-        for build in builds
-    }
+    result = {}
+    for build in builds:
+        result.setdefault(build['nixname'], {})
+        result[build['nixname']][build['system']] = build
+
+    return result
 
 
 def get_packages(evaluation, evaluation_builds):
@@ -311,38 +319,30 @@ def get_packages(evaluation, evaluation_builds):
                 ):
                     attr_set = None
 
-            hydra_build_id = None
-            hydra_build_status = None
-            hydra_job = None
-            hydra_jobset = None
-            hydra_path = None
-            hydra_drvpath = None
-            build_key = f"{data['name']}.{data['system']}"
-            if build_key in evaluation_builds:
-                build = evaluation_builds[build_key]
-                hydra_build_id = build['id']
-                hydra_build_status = build['buildstatus']
-                hydra_project = build['project']
-                hydra_job = build['job']
-                hydra_jobset = build['jobset']
-                hydra_path = [
-                    {
-                        "output": output,
-                        "path": item['path'],
-                    }
-                    for output, item in build['buildoutputs'].items()
-                ]
-                hydra_drvpath = build['drvpath']
+            hydra = None
+            if data['name'] in evaluation_builds:
+                hydra = []
+                for platform, build in evaluation_builds[data['name']].items():
+                    hydra.append({
+                        "build_id": build['id'],
+                        "build_status":  build['buildstatus'],
+                        "platform": build['system'],
+                        "project": build['project'],
+                        "jobset": build['jobset'],
+                        "job": build['job'],
+                        "path": [
+                            {
+                                "output": output,
+                                "path": item['path'],
+                            }
+                            for output, item in build['buildoutputs'].items()
+                        ],
+                        "drv_path": build['drvpath'],
+                    })
 
             yield dict(
                 type="package",
-                package_hydra_build_id=hydra_build_id,
-                package_hydra_build_status=hydra_build_status,
-                package_hydra_project=hydra_project,
-                package_hydra_job=hydra_job,
-                package_hydra_jobset=hydra_jobset,
-                package_hydra_path=hydra_path,
-                package_hydra_drvpath=hydra_drvpath,
+                package_hydra=hydra,
                 package_attr_name=attr_name,
                 package_attr_set=attr_set,
                 package_pname=data["pname"],
@@ -474,7 +474,7 @@ def write(unit, es, index_name, number_of_items, item_generator):
 @click.command()
 @click.option("-u", "--es-url", help="Elasticsearch connection url.")
 @click.option("-c", "--channel", type=click.Choice(CHANNELS.keys()), help="Channel.")
-@click.option("-f", "--force", help="Force channel recreation.")
+@click.option("-f", "--force", is_flag=True, help="Force channel recreation.")
 @click.option("-v", "--verbose", count=True)
 def main(es_url, channel, force, verbose):
 
@@ -492,7 +492,6 @@ def main(es_url, channel, force, verbose):
     evaluation_options = get_last_evaluation(CHANNELS[channel]['options'])
     evaluation_packages_builds = get_evaluation_builds(evaluation_packages['id'])
 
-    __import__('pdb').set_trace()
     es = elasticsearch.Elasticsearch([es_url])
 
     alias_name, index_name = create_index_name(channel, evaluation_packages, evaluation_options)

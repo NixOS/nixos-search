@@ -376,7 +376,7 @@ makeRequest :
 makeRequest options channel query from size =
     Search.makeRequest
         (makeRequestBody query from size)
-        ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-nixos-" ++ channel)
+        ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
         decodeResultItemSource
         options
         query

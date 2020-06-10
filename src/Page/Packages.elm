@@ -65,6 +65,7 @@ type alias ResultItemSource =
     , position : Maybe String
     , homepage : Maybe String
     , system : String
+    , hydra : Maybe (List ResultPackageHydra)
     }
 
 
@@ -78,6 +79,24 @@ type alias ResultPackageMaintainer =
     { name : String
     , email : String
     , github : Maybe String
+    }
+
+
+type alias ResultPackageHydra =
+    { build_id : Int
+    , build_status : Int
+    , platform : String
+    , project : String
+    , jobset : String
+    , job : String
+    , path : List ResultPackageHydraPath
+    , drv_path : String
+    }
+
+
+type alias ResultPackageHydraPath =
+    { output : String
+    , path : String
     }
 
 
@@ -221,7 +240,7 @@ viewResultItemDetails channel item =
                 Just value ->
                     wrapWith value
 
-        allowedPlatforms platform =
+        mainPlatforms platform =
             List.member platform
                 [ "x86_64-linux"
                 , "aarch64-linux"
@@ -229,22 +248,42 @@ viewResultItemDetails channel item =
                 , "i686-linux"
                 ]
 
-        showPlatforms platforms =
-            platforms
-                |> List.filter allowedPlatforms
-                |> List.map showPlatform
+        getHydraDetailsForPlatform hydra platform =
+            hydra
+                |> Maybe.andThen
+                    (\hydras ->
+                        hydras
+                            |> List.filter (\x -> x.platform == platform)
+                            |> List.head
+                    )
 
-        showPlatform platform =
+        showPlatforms hydra platforms =
+            platforms
+                |> List.filter mainPlatforms
+                |> List.map (showPlatform hydra)
+
+        showPlatform hydra platform =
             li []
-                [ case Search.channelDetailsFromId channel of
-                    Just channelDetails ->
+                [ case
+                    ( getHydraDetailsForPlatform hydra platform
+                    , Search.channelDetailsFromId channel
+                    )
+                  of
+                    ( Just hydraDetails, _ ) ->
                         a
-                            [ href <| "https://hydra.nixos.org/job/" ++ channelDetails.jobset ++ "/nixpkgs." ++ item.source.attr_name ++ "." ++ item.source.system
+                            [ href <| "https://hydra.nixos.org/build/" ++ String.fromInt hydraDetails.build_id
                             ]
                             [ text platform
                             ]
 
-                    Nothing ->
+                    ( Nothing, Just channelDetails ) ->
+                        a
+                            [ href <| "https://hydra.nixos.org/job/" ++ channelDetails.jobset ++ "/nixpkgs." ++ item.source.attr_name ++ "." ++ platform
+                            ]
+                            [ text platform
+                            ]
+
+                    ( _, _ ) ->
                         text platform
                 ]
 
@@ -284,7 +323,7 @@ viewResultItemDetails channel item =
         , dt [] [ text <| "Nix expression" ]
         , dd [] [ withDefault asGithubLink item.source.position ]
         , dt [] [ text "Platforms" ]
-        , dd [] [ ul [ class "inline" ] <| showPlatforms item.source.platforms ]
+        , dd [] [ ul [ class "inline" ] <| showPlatforms item.source.hydra item.source.platforms ]
         , dt [] [ text "Homepage" ]
         , dd [] [ withDefault asLink item.source.homepage ]
         , dt [] [ text "Licenses" ]
@@ -437,7 +476,7 @@ makeRequest :
 makeRequest options channel query from size =
     Search.makeRequest
         (makeRequestBody query from size)
-        ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-nixos-" ++ channel)
+        ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
         decodeResultItemSource
         options
         query
@@ -464,6 +503,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.required "package_position" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_homepage" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_system" Json.Decode.string
+        |> Json.Decode.Pipeline.required "package_hydra" (Json.Decode.nullable (Json.Decode.list decodeResultPackageHydra))
 
 
 decodeResultPackageLicense : Json.Decode.Decoder ResultPackageLicense
@@ -479,3 +519,24 @@ decodeResultPackageMaintainer =
         (Json.Decode.field "name" Json.Decode.string)
         (Json.Decode.field "email" Json.Decode.string)
         (Json.Decode.field "github" (Json.Decode.nullable Json.Decode.string))
+
+
+decodeResultPackageHydra : Json.Decode.Decoder ResultPackageHydra
+decodeResultPackageHydra =
+    Json.Decode.succeed ResultPackageHydra
+        |> Json.Decode.Pipeline.required "build_id" Json.Decode.int
+        |> Json.Decode.Pipeline.required "build_status" Json.Decode.int
+        |> Json.Decode.Pipeline.required "platform" Json.Decode.string
+        |> Json.Decode.Pipeline.required "project" Json.Decode.string
+        |> Json.Decode.Pipeline.required "jobset" Json.Decode.string
+        |> Json.Decode.Pipeline.required "job" Json.Decode.string
+        |> Json.Decode.Pipeline.required "path" (Json.Decode.list decodeResultPackageHydraPath)
+        |> Json.Decode.Pipeline.required "drv_path" Json.Decode.string
+
+
+decodeResultPackageHydraPath : Json.Decode.Decoder ResultPackageHydraPath
+decodeResultPackageHydraPath =
+    Json.Decode.map2 ResultPackageHydraPath
+        (Json.Decode.field "output" Json.Decode.string)
+        (Json.Decode.field "path" Json.Decode.string)
+
