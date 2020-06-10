@@ -32,7 +32,6 @@ import Html.Attributes
         ( class
         , colspan
         , href
-        , property
         )
 import Html.Events
     exposing
@@ -113,7 +112,7 @@ viewSuccess :
     -> Maybe String
     -> Search.Result ResultItemSource
     -> Html Msg
-viewSuccess channel showDetailsFor result =
+viewSuccess channel show result =
     div [ class "search-result" ]
         [ table [ class "table table-hover" ]
             [ thead []
@@ -124,7 +123,7 @@ viewSuccess channel showDetailsFor result =
             , tbody
                 []
                 (List.concatMap
-                    (viewResultItem showDetailsFor)
+                    (viewResultItem show)
                     result.hits.hits
                 )
             ]
@@ -135,17 +134,17 @@ viewResultItem :
     Maybe String
     -> Search.ResultItem ResultItemSource
     -> List (Html Msg)
-viewResultItem showDetailsFor item =
+viewResultItem show item =
     let
         packageDetails =
-            if Just item.id == showDetailsFor then
+            if Just item.source.name == show then
                 [ td [ colspan 1 ] [ viewResultItemDetails item ]
                 ]
 
             else
                 []
     in
-    tr [ onClick (SearchMsg (Search.ShowDetails item.id)) ]
+    tr [ onClick (SearchMsg (Search.ShowDetails item.source.name)) ]
         [ td [] [ text item.source.name ]
         ]
         :: packageDetails

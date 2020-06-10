@@ -61,7 +61,7 @@ type alias Model a =
     { channel : String
     , query : Maybe String
     , result : RemoteData.WebData (Result a)
-    , showDetailsFor : Maybe String
+    , show : Maybe String
     , from : Int
     , size : Int
     }
@@ -100,11 +100,11 @@ init :
     -> Maybe Int
     -> Maybe Int
     -> ( Model a, Cmd msg )
-init channel query showDetailsFor from size =
+init channel query show from size =
     ( { channel = Maybe.withDefault "unstable" channel
       , query = query
       , result = RemoteData.NotAsked
-      , showDetailsFor = showDetailsFor
+      , show = show
       , from = Maybe.withDefault 0 from
       , size = Maybe.withDefault 15 size
       }
@@ -149,7 +149,7 @@ update path navKey msg model =
                 path
                 channel
                 model.query
-                model.showDetailsFor
+                model.show
                 0
                 model.size
                 |> Browser.Navigation.pushUrl navKey
@@ -166,7 +166,7 @@ update path navKey msg model =
                 path
                 model.channel
                 model.query
-                model.showDetailsFor
+                model.show
                 0
                 model.size
                 |> Browser.Navigation.pushUrl navKey
@@ -183,7 +183,7 @@ update path navKey msg model =
                 path
                 model.channel
                 model.query
-                (if model.showDetailsFor == Just selected then
+                (if model.show == Just selected then
                     Nothing
 
                  else
@@ -203,7 +203,7 @@ createUrl :
     -> Int
     -> Int
     -> String
-createUrl path channel query showDetailsFor from size =
+createUrl path channel query show from size =
     [ Url.Builder.int "from" from
     , Url.Builder.int "size" size
     , Url.Builder.string "channel" channel
@@ -217,10 +217,10 @@ createUrl path channel query showDetailsFor from size =
                 |> Maybe.withDefault []
             )
         |> List.append
-            (showDetailsFor
+            (show
                 |> Maybe.map
                     (\x ->
-                        [ Url.Builder.string "showDetailsFor" x
+                        [ Url.Builder.string "show" x
                         ]
                     )
                 |> Maybe.withDefault []
@@ -370,7 +370,7 @@ view path title model viewSuccess outMsg =
                                 ]
                             ]
                         , viewPager outMsg model result path
-                        , viewSuccess model.channel model.showDetailsFor result
+                        , viewSuccess model.channel model.show result
                         , viewPager outMsg model result path
                         ]
 
@@ -423,7 +423,7 @@ viewPager outMsg model result path =
                             path
                             model.channel
                             model.query
-                            model.showDetailsFor
+                            model.show
                             0
                             model.size
                 ]
@@ -444,7 +444,7 @@ viewPager outMsg model result path =
                             path
                             model.channel
                             model.query
-                            model.showDetailsFor
+                            model.show
                             (model.from - model.size)
                             model.size
                 ]
@@ -465,7 +465,7 @@ viewPager outMsg model result path =
                             path
                             model.channel
                             model.query
-                            model.showDetailsFor
+                            model.show
                             (model.from + model.size)
                             model.size
                 ]
@@ -486,7 +486,7 @@ viewPager outMsg model result path =
                             path
                             model.channel
                             model.query
-                            model.showDetailsFor
+                            model.show
                             ((result.hits.total.value // model.size) * model.size)
                             model.size
                 ]
