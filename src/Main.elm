@@ -28,10 +28,10 @@ import Html.Attributes
 import Page.Home
 import Page.Options
 import Page.Packages
-import RemoteData
 import Route
 import Search
 import Url
+import Url.Builder
 
 
 
@@ -113,7 +113,7 @@ submitQuery :
     -> ( Model, Cmd Msg )
 submitQuery old ( new, cmd ) =
     let
-        triggerSearch oldModel newModel msg makeRequest =
+        triggerSearch _ newModel msg makeRequest =
             if newModel.query /= Nothing then
                 ( new
                 , Cmd.batch
@@ -241,7 +241,7 @@ view model =
                         [ a [ class "brand", href "https://search.nixos.org" ]
                             [ img [ src "https://nixos.org/logo/nix-wiki.png", class "logo" ] []
                             ]
-                        , viewNavigation model.url
+                        , viewNavigation model.page model.url
                         ]
                     ]
                 ]
@@ -263,13 +263,36 @@ view model =
         ]
 
 
-viewNavigation : Url.Url -> Html Msg
-viewNavigation url =
+viewNavigation : Page -> Url.Url -> Html Msg
+viewNavigation page url =
+    let
+        preserveSearchOptions =
+            case page of
+                Packages model ->
+                    model.query
+                        |> Maybe.map (\q -> [ Url.Builder.string "query" q ])
+                        |> Maybe.withDefault []
+                        |> List.append [ Url.Builder.string "channel" model.channel ]
+
+                Options model ->
+                    model.query
+                        |> Maybe.map (\q -> [ Url.Builder.string "query" q ])
+                        |> Maybe.withDefault []
+                        |> List.append [ Url.Builder.string "channel" model.channel ]
+
+                _ ->
+                    []
+
+        createUrl path =
+            []
+                |> List.append preserveSearchOptions
+                |> Url.Builder.absolute [ path ]
+    in
     ul [ class "nav" ]
         (List.map
             (viewNavigationItem url)
-            [ ( "/packages", "Packages" )
-            , ( "/options", "Options" )
+            [ ( createUrl "packages", "Packages" )
+            , ( createUrl "options", "Options" )
             ]
         )
 
