@@ -39,11 +39,11 @@ CHANNELS = {
     },
     "19.09": {
         "packages": "nixpkgs/nixpkgs-19.09pre",
-        "options": "nixos/19.09/",
+        "options": "nixos/19.09/nixos-19.09.",
     },
     "20.03": {
         "packages": "nixpkgs/nixpkgs-19.09pre",
-        "options": "nixos/20.03/",
+        "options": "nixos/20.03/nixos-20.03.",
     },
 }
 ANALYSIS = {
@@ -205,7 +205,10 @@ def get_last_evaluation(prefix):
         if not item:
             continue
         logger.debug(f"get_last_evaluation: evaluation in raw {item}")
-        revisions_since_start, git_revision = item['Prefix'][len(prefix):].rstrip('/').split('.')
+        try:
+            revisions_since_start, git_revision = item['Prefix'][len(prefix):].rstrip('/').split('.')
+        except: 
+            __import__('pdb').set_trace()
         evaluation = {
             "revisions_since_start": int(revisions_since_start),
             "git_revision": git_revision,
