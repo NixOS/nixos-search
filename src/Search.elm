@@ -232,6 +232,7 @@ type alias ChannelDetails =
     { id : String
     , title : String
     , jobset : String
+    , branch : String
     }
 
 
@@ -239,13 +240,13 @@ channelDetails : Channel -> ChannelDetails
 channelDetails channel =
     case channel of
         Unstable ->
-            ChannelDetails "unstable" "unstable" "nixos/trunk-combined"
+            ChannelDetails "unstable" "unstable" "nixos/trunk-combined" "nixos-unstable"
 
         Release_19_09 ->
-            ChannelDetails "19.09" "19.09" "nixos/release-19.09"
+            ChannelDetails "19.09" "19.09" "nixos/release-19.09" "nixos-19.09"
 
         Release_20_03 ->
-            ChannelDetails "20.03" "20.03" "nixos/release-20.03"
+            ChannelDetails "20.03" "20.03" "nixos/release-20.03" "nixos-20.03"
 
 
 channelFromId : String -> Maybe Channel
