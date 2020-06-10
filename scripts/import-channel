@@ -29,8 +29,23 @@ logger = logging.getLogger("import-channel")
 click_log.basic_config(logger)
 
 
+S3_BUCKET = "nix-releases"
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-INDEX_SCHEMA_VERSION = 4
+INDEX_SCHEMA_VERSION = 5
+CHANNELS = {
+    "unstable": {
+        "packages": "nixpkgs/nixpkgs-20.09pre",
+        "options": "nixos/unstable/nixos-20.09pre",
+    },
+    "19.09": {
+        "packages": "nixpkgs/nixpkgs-19.09pre",
+        "options": "nixos/19.09/",
+    },
+    "20.03": {
+        "packages": "nixpkgs/nixpkgs-19.09pre",
+        "options": "nixos/20.03/",
+    },
+}
 ANALYSIS = {
     "analyzer": {
         "nixAttrName": {
@@ -172,54 +187,35 @@ MAPPING = {
 }
 
 
-def get_last_evaluation(channel):
-    logger.debug(f"Retriving last evaluation for {channel} channel")
-
-    project, project_version = channel.split("-", 1)
-    logger.debug(f"get_last_evaluation: project='{project}'")
-    logger.debug(f"get_last_evaluation: project_version='{project_version}'")
-
-    bucket = "nix-releases"
-    prefix = f"{project}/{project_version}/"
-    logger.debug(
-        f"get_last_evaluation: list all evaluation in '{bucket}' bucker under '{prefix}' prefix"
-    )
+def get_last_evaluation(prefix):
+    logger.debug(f"Retriving last evaluation for {prefix} prefix.")
 
     s3 = boto3.client(
         "s3", config=botocore.client.Config(signature_version=botocore.UNSIGNED)
     )
-    s3_result = s3.list_objects(Bucket=bucket, Prefix=prefix, Delimiter="/",)
+    s3_result = s3.list_objects(Bucket=S3_BUCKET, Prefix=prefix, Delimiter="/",)
     evaluations = []
     for item in s3_result.get("CommonPrefixes"):
         if not item:
             continue
         logger.debug(f"get_last_evaluation: evaluation in raw {item}")
-        prefix = item.get("Prefix")
-        evaluation = prefix[len(f"{project}/{project_version}/{channel}") :]
-        if evaluation.startswith("beta"):
-            evaluation = evaluation[len("beta") :]
-        try:
-            revisions_since_start, git_revision = (
-                evaluation.lstrip(".").rstrip("/").split(".")
-            )
-        except Exception as e:  # noqa
-            continue
+        revisions_since_start, git_revision = item['Prefix'][len(prefix):].rstrip('/').split('.')
         evaluation = {
             "revisions_since_start": int(revisions_since_start),
             "git_revision": git_revision,
-            "prefix": prefix,
+            "prefix": item['Prefix'].rstrip('/'),
         }
         logger.debug(f"get_last_evaluation: evaluation {evaluation}")
         evaluations.append(evaluation)
 
     logger.debug(
-        f"get_last_evaluation: {len(evaluations)} evaluations found for {channel} channel"
+        f"get_last_evaluation: {len(evaluations)} evaluations found for {prefix} prefix"
     )
     evaluations = sorted(evaluations, key=lambda i: i["revisions_since_start"])
 
     evaluation = evaluations[-1]
 
-    result = s3.get_object(Bucket=bucket, Key=f"{evaluation['prefix']}src-url")
+    result = s3.get_object(Bucket=S3_BUCKET, Key=f"{evaluation['prefix']}/src-url")
     evaluation['id'] = result.get("Body").read().decode()[len("https://hydra.nixos.org/eval/"):]
 
     logger.debug(f"get_last_evaluation: last evaluation is: {evaluation}")
@@ -403,10 +399,14 @@ def get_options(evaluation):
     return len(options), gen
 
 
-def ensure_index(es, index, mapping):
+def ensure_index(es, index, mapping, force=False):
     if es.indices.exists(index):
         logger.debug(f"ensure_index: index '{index}' already exists")
-        return False
+        if not force:
+            return False
+
+        logger.debug(f"ensure_index: Deleting index '{index}'")
+        es.indices.delete(index)
 
     es.indices.create(
         index=index,
@@ -420,10 +420,18 @@ def ensure_index(es, index, mapping):
     return True
 
 
-def create_index_name(channel, evaluation):
+def create_index_name(channel, evaluation_packages, evaluation_options):
+    evaluation_name = '-'.join([
+        evaluation_packages['id'],
+        str(evaluation_packages['revisions_since_start']),
+        evaluation_packages['git_revision'],
+        evaluation_options['id'],
+        str(evaluation_options['revisions_since_start']),
+        evaluation_options['git_revision'],
+    ])
     return (
         f"latest-{INDEX_SCHEMA_VERSION}-{channel}",
-        f"evaluation-{INDEX_SCHEMA_VERSION}-{channel}-{evaluation['id']}-{evaluation['revisions_since_start']}-{evaluation['git_revision']}",
+        f"evaluation-{INDEX_SCHEMA_VERSION}-{channel}-{evaluation_name}",
     )
 
 
@@ -464,10 +472,11 @@ def write(unit, es, index_name, number_of_items, item_generator):
 
 
 @click.command()
-@click.option("-u", "--es-url", help="Elasticsearch connection url")
-@click.option("-c", "--channel", help="NixOS channel name")
+@click.option("-u", "--es-url", help="Elasticsearch connection url.")
+@click.option("-c", "--channel", type=click.Choice(CHANNELS.keys()), help="Channel.")
+@click.option("-f", "--force", help="Force channel recreation.")
 @click.option("-v", "--verbose", count=True)
-def main(es_url, channel, verbose):
+def main(es_url, channel, force, verbose):
 
     logging_level = "CRITICAL"
     if verbose == 1:
@@ -479,18 +488,19 @@ def main(es_url, channel, verbose):
     logger.debug(f"Verbosity is {verbose}")
     logger.debug(f"Logging set to {logging_level}")
 
-    evaluation = get_last_evaluation(channel)
-    evaluation_builds = get_evaluation_builds(evaluation['id'])
+    evaluation_packages = get_last_evaluation(CHANNELS[channel]['packages'])
+    evaluation_options = get_last_evaluation(CHANNELS[channel]['options'])
+    evaluation_packages_builds = get_evaluation_builds(evaluation_packages['id'])
 
+    __import__('pdb').set_trace()
     es = elasticsearch.Elasticsearch([es_url])
 
-    # ensure indexes exist
-    alias_name, index_name = create_index_name(channel, evaluation)
-    index_created = ensure_index(es, index_name, MAPPING)
+    alias_name, index_name = create_index_name(channel, evaluation_packages, evaluation_options)
+    index_created = ensure_index(es, index_name, MAPPING, force)
 
     if index_created:
-        write("packages", es, index_name, *get_packages(evaluation, evaluation_builds))
-        write("options", es, index_name, *get_options(evaluation))
+        write("packages", es, index_name, *get_packages(evaluation_packages, evaluation_packages_builds))
+        write("options", es, index_name, *get_options(evaluation_options))
 
     update_alias(es, alias_name, index_name)
 
