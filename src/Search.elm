@@ -375,7 +375,7 @@ view path title model viewSuccess outMsg =
                                 ( "Timeout!", "Request to the server timeout." )
 
                             Http.NetworkError ->
-                                ( "Network Error!", "Please check your network connection." )
+                                ( "Network Error!", "A network request bonsaisearch.net domain failed. This is either due to a content blocker or a networking issue." )
 
                             Http.BadStatus code ->
                                 ( "Bad Status", "Server returned " ++ String.fromInt code )
