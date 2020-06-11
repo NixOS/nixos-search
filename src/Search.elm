@@ -99,14 +99,34 @@ init :
     -> Maybe String
     -> Maybe Int
     -> Maybe Int
+    -> Maybe (Model a)
     -> ( Model a, Cmd msg )
-init channel query show from size =
-    ( { channel = Maybe.withDefault "unstable" channel
+init channel query show from size model =
+    let
+        defaultChannel =
+            model
+                |> Maybe.map (\x -> x.channel)
+                |> Maybe.withDefault "unstable"
+
+        defaultFrom =
+            model
+                |> Maybe.map (\x -> x.from)
+                |> Maybe.withDefault 0
+
+        defaultSize =
+            model
+                |> Maybe.map (\x -> x.size)
+                |> Maybe.withDefault 15
+    in
+    ( { channel = Maybe.withDefault defaultChannel channel
       , query = query
-      , result = RemoteData.NotAsked
+      , result =
+            model
+                |> Maybe.map (\x -> x.result)
+                |> Maybe.withDefault RemoteData.NotAsked
       , show = show
-      , from = Maybe.withDefault 0 from
-      , size = Maybe.withDefault 15 size
+      , from = Maybe.withDefault defaultFrom from
+      , size = Maybe.withDefault defaultSize size
       }
     , Cmd.none
     )

@@ -106,6 +106,7 @@ init :
     -> Maybe String
     -> Maybe Int
     -> Maybe Int
+    -> Maybe Model
     -> ( Model, Cmd Msg )
 init =
     Search.init
