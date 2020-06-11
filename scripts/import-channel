@@ -386,15 +386,14 @@ def get_options(evaluation):
         for name, option in options:
             default = option.get("default")
             if default is not None:
-                default = str(default)
-
+                default = json.dumps(default)
 
             example = option.get("example")
             if example is not None:
                 if (type(example) == dict and example.get("_type") == "literalExample"):
-                    example = str(example["text"])
+                    example = json.dumps(example["text"])
                 else:
-                    example = str(example)
+                    example = json.dumps(example)
 
             description = option.get("description")
             if description is not None:
