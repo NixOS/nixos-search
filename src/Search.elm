@@ -360,7 +360,7 @@ view path title model viewSuccess outMsg =
                 div [] [ text "" ]
 
             RemoteData.Loading ->
-                div [] [ text "Loading" ]
+                div [ class "loader" ] [ text "Loading..." ]
 
             RemoteData.Success result ->
                 if result.hits.total.value == 0 then
