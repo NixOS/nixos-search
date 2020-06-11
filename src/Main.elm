@@ -148,7 +148,10 @@ submitQuery old ( new, cmd ) =
             ( new, cmd )
 
 
-changeRouteTo : Model -> Url.Url -> ( Model, Cmd Msg )
+changeRouteTo :
+    Model
+    -> Url.Url
+    -> ( Model, Cmd Msg )
 changeRouteTo model url =
     let
         newModel =
@@ -178,12 +181,30 @@ changeRouteTo model url =
             ( newModel, Browser.Navigation.pushUrl newModel.navKey "/packages" )
 
         Just (Route.Packages channel query show from size) ->
-            Page.Packages.init channel query show from size
+            let
+                modelPage =
+                    case newModel.page of
+                        Packages x ->
+                            Just x
+
+                        _ ->
+                            Nothing
+            in
+            Page.Packages.init channel query show from size modelPage
                 |> updateWith Packages PackagesMsg newModel
                 |> submitQuery newModel
 
         Just (Route.Options channel query show from size) ->
-            Page.Options.init channel query show from size
+            let
+                modelPage =
+                    case newModel.page of
+                        Options x ->
+                            Just x
+
+                        _ ->
+                            Nothing
+            in
+            Page.Options.init channel query show from size modelPage
                 |> updateWith Options OptionsMsg newModel
                 |> submitQuery newModel
 
