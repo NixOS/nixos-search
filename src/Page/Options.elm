@@ -55,11 +55,11 @@ type alias Model =
 
 type alias ResultItemSource =
     { name : String
-    , description : String
-    , type_ : String
-    , default : String
-    , example : String
-    , source : String
+    , description : Maybe String
+    , type_ : Maybe String
+    , default : Maybe String
+    , example : Maybe String
+    , source : Maybe String
     }
 
 
@@ -182,28 +182,45 @@ viewResultItemDetails item =
                 [ href <| githubUrlPrefix ++ (value |> String.replace ":" "#L") ]
                 [ text <| value ]
 
-        withDefault wrapWith value =
+        wrapped wrapWith value =
             case value of
                 "" ->
-                    text default
-
-                "None" ->
-                    text default
+                    wrapWith <| "\"" ++ value ++ "\""
 
                 _ ->
                     wrapWith value
     in
     dl [ class "dl-horizontal" ]
         [ dt [] [ text "Description" ]
-        , dd [] [ withDefault asText item.source.description ]
+        , dd []
+            [ item.source.description
+                |> Maybe.withDefault default
+                |> asText
+            ]
         , dt [] [ text "Default value" ]
-        , dd [] [ withDefault asCode item.source.default ]
+        , dd []
+            [ item.source.default
+                |> Maybe.withDefault default
+                |> wrapped asCode
+            ]
         , dt [] [ text "Type" ]
-        , dd [] [ withDefault asCode item.source.type_ ]
+        , dd []
+            [ item.source.type_
+                |> Maybe.withDefault default
+                |> asCode
+            ]
         , dt [] [ text "Example value" ]
-        , dd [] [ withDefault asCode item.source.example ]
+        , dd []
+            [ item.source.example
+                |> Maybe.withDefault default
+                |> wrapped asCode
+            ]
         , dt [] [ text "Declared in" ]
-        , dd [] [ withDefault asGithubLink item.source.source ]
+        , dd []
+            [ item.source.source
+                |> Maybe.withDefault default
+                |> asGithubLink
+            ]
         ]
 
 
@@ -392,8 +409,8 @@ decodeResultItemSource : Json.Decode.Decoder ResultItemSource
 decodeResultItemSource =
     Json.Decode.map6 ResultItemSource
         (Json.Decode.field "option_name" Json.Decode.string)
-        (Json.Decode.field "option_description" Json.Decode.string)
-        (Json.Decode.field "option_type" Json.Decode.string)
-        (Json.Decode.field "option_default" Json.Decode.string)
-        (Json.Decode.field "option_example" Json.Decode.string)
-        (Json.Decode.field "option_source" Json.Decode.string)
+        (Json.Decode.field "option_description" (Json.Decode.nullable Json.Decode.string))
+        (Json.Decode.field "option_type" (Json.Decode.nullable Json.Decode.string))
+        (Json.Decode.field "option_default" (Json.Decode.nullable Json.Decode.string))
+        (Json.Decode.field "option_example" (Json.Decode.nullable Json.Decode.string))
+        (Json.Decode.field "option_source" (Json.Decode.nullable Json.Decode.string))

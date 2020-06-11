@@ -1,5 +1,5 @@
 #! /usr/bin/env nix-shell
-#! nix-shell -i python3 -p python3 python3Packages.requests python3Packages.click python3Packages.click-log python3Packages.elasticsearch python3Packages.boto3 python3Packages.tqdm
+#! nix-shell -i python3 -p python3 python3Packages.requests python3Packages.click python3Packages.click-log python3Packages.elasticsearch python3Packages.boto3 python3Packages.tqdm python3Packages.pypandoc
 
 # develop:
 # $ nix-shell -p python3Packages.black python3Packages.mypy python3Packages.flake8
@@ -11,19 +11,21 @@
 # $ nix-shell -p python3Packages.flake8 --command "flake8 --ignore E501,E265 import-channel"
 
 import boto3
+import botocore
+import botocore.client
+import xml.etree.ElementTree
 import click
-import logging
 import click_log
 import elasticsearch
 import elasticsearch.helpers
-import requests
 import json
+import logging
 import os.path
+import pypandoc
+import requests
 import shlex
 import subprocess
 import tqdm
-import botocore.client
-import botocore
 
 logger = logging.getLogger("import-channel")
 click_log.basic_config(logger)
@@ -382,20 +384,42 @@ def get_options(evaluation):
 
     def gen():
         for name, option in options:
+            default = option.get("default")
+            if default is not None:
+                default = str(default)
+
+
             example = option.get("example")
-            if (
-                example
-                and type(example) == dict
-                and example.get("_type") == "literalExample"
-            ):
-                example = str(example["text"])
+            if example is not None:
+                if (type(example) == dict and example.get("_type") == "literalExample"):
+                    example = str(example["text"])
+                else:
+                    example = str(example)
+
+            description = option.get("description")
+            if description is not None:
+                xml_description = (
+                        f"<xml xmlns:xlink=\"http://www.w3.org/1999/xlink\">"
+                        f"<para>{description}</para>"
+                        f"</xml>"
+                    )
+                # we first check if there are some xml elements before using pypandoc
+                # since pypandoc calls are quite slow
+                root = xml.etree.ElementTree.fromstring(xml_description)
+                if len(root.find('para').getchildren()) > 0:
+                    description = pypandoc.convert_text(
+                        xml_description,
+                        "html",
+                        format="docbook",
+                    )
+
             yield dict(
                 type="option",
                 option_name=name,
-                option_description=option.get("description"),
+                option_description=description,
                 option_type=option.get("type"),
-                option_default=str(option.get("default")),
-                option_example=str(example),
+                option_default=default,
+                option_example=example,
                 option_source=option.get("declarations", [None])[0],
             )
 
