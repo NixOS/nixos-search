@@ -14,16 +14,18 @@ footer {
   height: 4rem;
 }
 
-header .navbar {
-  a.brand {
-    line-height: 1.5em;
+header .navbar.navbar-static-top {
+  .brand {
+    padding-bottom: 0;
   }
   img.logo {
-    height: 1.5em;
-    margin-right: 0.5em;
+    margin-top: -5px;
+    padding-right: 5px;
+    line-height: 25px;
+    height: 25px;
   }
-  ul.nav > li > a {
-    line-height: 2.5em;
+  ul.nav > li {
+    line-height: 20px;
   }
 }
 
