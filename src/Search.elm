@@ -482,12 +482,20 @@ viewPager outMsg model result path =
                         "#disabled"
 
                     else
+                        let
+                            remainder =
+                                if remainderBy model.size result.hits.total.value == 0 then
+                                    1
+
+                                else
+                                    0
+                        in
                         createUrl
                             path
                             model.channel
                             model.query
                             model.show
-                            ((result.hits.total.value // model.size) * model.size)
+                            (((result.hits.total.value // model.size) - remainder) * model.size)
                             model.size
                 ]
                 [ text "Last" ]
