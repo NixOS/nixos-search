@@ -238,10 +238,13 @@ view model =
             [ div [ class "navbar navbar-static-top" ]
                 [ div [ class "navbar-inner" ]
                     [ div [ class "container" ]
-                        [ a [ class "brand", href "https://search.nixos.org" ]
+                        [ a [ class "brand", href "https://nixos.org" ]
                             [ img [ src "https://nixos.org/logo/nix-wiki.png", class "logo" ] []
                             ]
-                        , viewNavigation model.page model.url
+                        , div [ class "nav-collapse collapse" ]
+                            [ ul [ class "nav pull-left" ]
+                                (viewNavigation model.page model.url)
+                            ]
                         ]
                     ]
                 ]
@@ -263,7 +266,7 @@ view model =
         ]
 
 
-viewNavigation : Page -> Url.Url -> Html Msg
+viewNavigation : Page -> Url.Url -> List (Html Msg)
 viewNavigation page url =
     let
         preserveSearchOptions =
@@ -288,13 +291,12 @@ viewNavigation page url =
                 |> List.append preserveSearchOptions
                 |> Url.Builder.absolute [ path ]
     in
-    ul [ class "nav" ]
-        (List.map
-            (viewNavigationItem url)
-            [ ( createUrl "packages", "Packages" )
-            , ( createUrl "options", "Options" )
-            ]
-        )
+    List.map
+        (viewNavigationItem url)
+        [ ( "https://nixos.org", "Back to nixos.org" )
+        , ( createUrl "packages", "Packages" )
+        , ( createUrl "options", "Options" )
+        ]
 
 
 viewNavigationItem :
