@@ -36,7 +36,8 @@ import Html
         )
 import Html.Attributes
     exposing
-        ( class
+        ( attribute
+        , class
         , classList
         , href
         , type_
@@ -163,16 +164,25 @@ update path navKey msg model =
         ChannelChange channel ->
             ( { model
                 | channel = channel
-                , result = RemoteData.Loading
+                , result =
+                    if model.query == Nothing || model.query == Just "" then
+                        RemoteData.NotAsked
+
+                    else
+                        RemoteData.Loading
               }
-            , createUrl
-                path
-                channel
-                model.query
-                model.show
-                0
-                model.size
-                |> Browser.Navigation.pushUrl navKey
+            , if model.query == Nothing || model.query == Just "" then
+                Cmd.none
+
+              else
+                createUrl
+                    path
+                    channel
+                    model.query
+                    model.show
+                    0
+                    model.size
+                    |> Browser.Navigation.pushUrl navKey
             )
 
         QueryInput query ->
@@ -321,7 +331,36 @@ view path title model viewSuccess outMsg =
         [ h1 [ class "page-header" ] [ text title ]
         , div [ class "search-input" ]
             [ form [ onSubmit (outMsg QuerySubmit) ]
-                [ div [ class "input-append" ]
+                [ p
+                    []
+                    [ strong []
+                        [ text "Channel: " ]
+                    , div
+                        [ class "btn-group"
+                        , attribute "data-toggle" "buttons-radio"
+                        ]
+                        (List.filterMap
+                            (\channel_id ->
+                                channelDetailsFromId channel_id
+                                    |> Maybe.map
+                                        (\channel ->
+                                            button
+                                                [ type_ "button"
+                                                , classList
+                                                    [ ( "btn", True )
+                                                    , ( "active", channel.id == model.channel )
+                                                    ]
+                                                , onClick <| outMsg (ChannelChange channel.id)
+                                                ]
+                                                [ text channel.title ]
+                                        )
+                            )
+                            channels
+                        )
+                    ]
+                , p
+                    [ class "input-append"
+                    ]
                     [ input
                         [ type_ "text"
                         , onInput (\x -> outMsg (QueryInput x))
@@ -331,27 +370,6 @@ view path title model viewSuccess outMsg =
                     , div [ class "btn-group" ]
                         [ button [ class "btn" ] [ text "Search" ]
                         ]
-                    ]
-                , span []
-                    [ strong []
-                        [ text " in " ]
-                    , select
-                        [ onInput (\x -> outMsg (ChannelChange x)) ]
-                        (List.filterMap
-                            (\channel_id ->
-                                channelDetailsFromId channel_id
-                                    |> Maybe.map
-                                        (\channel ->
-                                            option
-                                                [ value channel.id
-                                                ]
-                                                [ text channel.title ]
-                                        )
-                            )
-                            channels
-                        )
-                    , strong []
-                        [ text " channel." ]
                     ]
                 ]
             ]
