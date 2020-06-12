@@ -402,8 +402,13 @@ view path title model viewSuccess outMsg =
                                                 model.from + model.size
                                             )
                                         ++ " of "
-                                        ++ String.fromInt result.hits.total.value
-                                        ++ "."
+                                        ++ (if result.hits.total.value == 10000 then
+                                                "more then 10000. You have reached the maximum of search results we can show."
+
+                                            else
+                                                String.fromInt result.hits.total.value
+                                                    ++ "."
+                                           )
                                     )
                                 ]
                             ]
@@ -511,7 +516,7 @@ viewPager outMsg model result path =
             ]
         , li
             [ classList
-                [ ( "disabled", model.from + model.size >= result.hits.total.value )
+                [ ( "disabled", result.hits.total.value == 10000 || model.from + model.size >= result.hits.total.value )
                 ]
             ]
             [ a
