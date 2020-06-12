@@ -40,6 +40,11 @@
         version = "2.0.0";
       };
 
+      "sporto/elm-select" = {
+        sha256 = "0skqwf0phkvh9f3zvjr91jpifllqsbddvzk7157nbmp1i7m9x7l5";
+        version = "3.2.0";
+      };
+
       "NoRedInk/elm-json-decode-pipeline" = {
         sha256 = "0y25xn0yx1q2xlg1yx1i0hg4xq1yxx6yfa99g272z8162si75hnl";
         version = "1.0.0";
@@ -63,6 +68,11 @@
       "elm/regex" = {
         sha256 = "0lijsp50w7n1n57mjg6clpn9phly8vvs07h0qh2rqcs0f1jqvsa2";
         version = "1.0.0";
+      };
+
+      "elm/svg" = {
+        sha256 = "1cwcj73p61q45wqwgqvrvz3aypjyy3fw732xyxdyj6s256hwkn0k";
+        version = "1.0.1";
       };
 
       "rtfeldman/elm-hex" = {
