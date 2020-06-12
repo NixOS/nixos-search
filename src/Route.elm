@@ -33,7 +33,7 @@ parser =
             (Url.Parser.s "packages"
                 <?> Url.Parser.Query.string "channel"
                 <?> Url.Parser.Query.string "query"
-                <?> Url.Parser.Query.string "showDetailsFor"
+                <?> Url.Parser.Query.string "show"
                 <?> Url.Parser.Query.int "from"
                 <?> Url.Parser.Query.int "size"
             )
@@ -42,7 +42,7 @@ parser =
             (Url.Parser.s "options"
                 <?> Url.Parser.Query.string "channel"
                 <?> Url.Parser.Query.string "query"
-                <?> Url.Parser.Query.string "showDetailsFor"
+                <?> Url.Parser.Query.string "show"
                 <?> Url.Parser.Query.int "from"
                 <?> Url.Parser.Query.int "size"
             )
@@ -94,21 +94,21 @@ routeToPieces page =
         NotFound ->
             ( [ "not-found" ], [] )
 
-        Packages channel query showDetailsFor from size ->
+        Packages channel query show from size ->
             ( [ "packages" ]
             , [ channel
               , query
-              , showDetailsFor
+              , show
               , Maybe.map String.fromInt from
               , Maybe.map String.fromInt size
               ]
             )
 
-        Options channel query showDetailsFor from size ->
+        Options channel query show from size ->
             ( [ "options" ]
             , [ channel
               , query
-              , showDetailsFor
+              , show
               , Maybe.map String.fromInt from
               , Maybe.map String.fromInt size
               ]

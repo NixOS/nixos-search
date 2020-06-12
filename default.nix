@@ -62,15 +62,13 @@ in pkgs.stdenv.mkDerivation {
       elm-analyse
     ]);
 
-  # TODO: elm-webpack-loader is trying to download the packages instead of using 
-  # configurePhase = pkgs.elmPackages.fetchElmDeps {
-  #   elmPackages = import ./elm-srcs.nix;
-  #   elmVersion = pkgs.elmPackages.elm.version;
-  #   registryDat = ./registry.dat;
-  # };
+  configurePhase = pkgs.elmPackages.fetchElmDeps {
+    elmPackages = import ./elm-srcs.nix;
+    elmVersion = pkgs.elmPackages.elm.version;
+    registryDat = ./registry.dat;
+  };
 
   patchPhase = ''
-    rm -rf elm-stuff
     rm -rf node_modules
     ln -sf ${yarnPkg}/libexec/${package.name}/node_modules .
   '';
@@ -84,6 +82,7 @@ in pkgs.stdenv.mkDerivation {
   installPhase = ''
     mkdir -p $out
     cp -R ./dist/* $out/
+    cp netlify.toml $out/
   '';
   shellHook = ''
     rm -rf node_modules

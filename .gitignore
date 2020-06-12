@@ -28,5 +28,6 @@ example/dist
 
 ignore
 dist
-tests/VerifyExamples
 package-lock.json
+result
+scripts/eval-*

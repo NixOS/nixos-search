@@ -28,10 +28,10 @@ import Html.Attributes
 import Page.Home
 import Page.Options
 import Page.Packages
-import RemoteData
 import Route
 import Search
 import Url
+import Url.Builder
 
 
 
@@ -113,8 +113,8 @@ submitQuery :
     -> ( Model, Cmd Msg )
 submitQuery old ( new, cmd ) =
     let
-        triggerSearch oldModel newModel msg makeRequest =
-            if newModel.query /= Nothing then
+        triggerSearch _ newModel msg makeRequest =
+            if newModel.query /= Nothing && newModel.query /= Just "" then
                 ( new
                 , Cmd.batch
                     [ cmd
@@ -148,7 +148,10 @@ submitQuery old ( new, cmd ) =
             ( new, cmd )
 
 
-changeRouteTo : Model -> Url.Url -> ( Model, Cmd Msg )
+changeRouteTo :
+    Model
+    -> Url.Url
+    -> ( Model, Cmd Msg )
 changeRouteTo model url =
     let
         newModel =
@@ -177,13 +180,31 @@ changeRouteTo model url =
             -- on the home page
             ( newModel, Browser.Navigation.pushUrl newModel.navKey "/packages" )
 
-        Just (Route.Packages channel query showDetailsFor from size) ->
-            Page.Packages.init channel query showDetailsFor from size
+        Just (Route.Packages channel query show from size) ->
+            let
+                modelPage =
+                    case newModel.page of
+                        Packages x ->
+                            Just x
+
+                        _ ->
+                            Nothing
+            in
+            Page.Packages.init channel query show from size modelPage
                 |> updateWith Packages PackagesMsg newModel
                 |> submitQuery newModel
 
-        Just (Route.Options channel query showDetailsFor from size) ->
-            Page.Options.init channel query showDetailsFor from size
+        Just (Route.Options channel query show from size) ->
+            let
+                modelPage =
+                    case newModel.page of
+                        Options x ->
+                            Just x
+
+                        _ ->
+                            Nothing
+            in
+            Page.Options.init channel query show from size modelPage
                 |> updateWith Options OptionsMsg newModel
                 |> submitQuery newModel
 
@@ -231,47 +252,93 @@ update msg model =
 -- VIEW
 
 
-view : Model -> Html Msg
+view :
+    Model
+    ->
+        { title : String
+        , body : List (Html Msg)
+        }
 view model =
-    div []
-        [ header []
-            [ div [ class "navbar navbar-static-top" ]
-                [ div [ class "navbar-inner" ]
-                    [ div [ class "container" ]
-                        [ a [ class "brand", href "https://search.nixos.org" ]
-                            [ img [ src "https://nixos.org/logo/nix-wiki.png", class "logo" ] []
+    let
+        title =
+            case model.page of
+                Packages _ ->
+                    "NixOS Search - Packages"
+
+                Options _ ->
+                    "NixOS Search - Options"
+
+                _ ->
+                    "NixOS Search"
+    in
+    { title = title
+    , body =
+        [ div []
+            [ header []
+                [ div [ class "navbar navbar-static-top" ]
+                    [ div [ class "navbar-inner" ]
+                        [ div [ class "container" ]
+                            [ a [ class "brand", href "https://nixos.org" ]
+                                [ img [ src "https://nixos.org/logo/nix-wiki.png", class "logo" ] []
+                                ]
+                            , div [ class "nav-collapse collapse" ]
+                                [ ul [ class "nav pull-left" ]
+                                    (viewNavigation model.page model.url)
+                                ]
                             ]
-                        , viewNavigation model.url
+                        ]
+                    ]
+                ]
+            , div [ class "container main" ]
+                [ div [ id "content" ] [ viewPage model ]
+                , footer
+                    [ class "container text-center" ]
+                    [ div []
+                        [ span [] [ text "Elasticsearch instance graciously provided by " ]
+                        , a [ href "https://bonsai.io" ] [ text "Bonsai" ]
+                        , span [] [ text "." ]
+                        ]
+                    , div []
+                        [ span [] [ text "❤️  Thank you ❤️ " ]
                         ]
                     ]
                 ]
             ]
-        , div [ class "container main" ]
-            [ div [ id "content" ] [ viewPage model ]
-            , footer
-                [ class "container text-center" ]
-                [ div []
-                    [ span [] [ text "Elasticsearch instance graciously provided by " ]
-                    , a [ href "https://bonsai.io" ] [ text "Bonsai" ]
-                    , span [] [ text "." ]
-                    ]
-                , div []
-                    [ span [] [ text "❤️  Thank you ❤️ " ]
-                    ]
-                ]
-            ]
         ]
+    }
 
 
-viewNavigation : Url.Url -> Html Msg
-viewNavigation url =
-    ul [ class "nav" ]
-        (List.map
-            (viewNavigationItem url)
-            [ ( "/packages", "Packages" )
-            , ( "/options", "Options" )
-            ]
-        )
+viewNavigation : Page -> Url.Url -> List (Html Msg)
+viewNavigation page url =
+    let
+        preserveSearchOptions =
+            case page of
+                Packages model ->
+                    model.query
+                        |> Maybe.map (\q -> [ Url.Builder.string "query" q ])
+                        |> Maybe.withDefault []
+                        |> List.append [ Url.Builder.string "channel" model.channel ]
+
+                Options model ->
+                    model.query
+                        |> Maybe.map (\q -> [ Url.Builder.string "query" q ])
+                        |> Maybe.withDefault []
+                        |> List.append [ Url.Builder.string "channel" model.channel ]
+
+                _ ->
+                    []
+
+        createUrl path =
+            []
+                |> List.append preserveSearchOptions
+                |> Url.Builder.absolute [ path ]
+    in
+    List.map
+        (viewNavigationItem url)
+        [ ( "https://nixos.org", "Back to nixos.org" )
+        , ( createUrl "packages", "Packages" )
+        , ( createUrl "options", "Options" )
+        ]
 
 
 viewNavigationItem :
@@ -321,9 +388,5 @@ main =
         , onUrlChange = ChangedUrl
         , subscriptions = subscriptions
         , update = update
-        , view =
-            \m ->
-                { title = "NixOS Search"
-                , body = [ view m ]
-                }
+        , view = view
         }

@@ -4,6 +4,7 @@ module Search exposing
     , Options
     , Result
     , ResultItem
+    , channelDetailsFromId
     , decodeResult
     , init
     , makeRequest
@@ -35,7 +36,8 @@ import Html
         )
 import Html.Attributes
     exposing
-        ( class
+        ( attribute
+        , class
         , classList
         , href
         , type_
@@ -60,7 +62,7 @@ type alias Model a =
     { channel : String
     , query : Maybe String
     , result : RemoteData.WebData (Result a)
-    , showDetailsFor : Maybe String
+    , show : Maybe String
     , from : Int
     , size : Int
     }
@@ -98,14 +100,34 @@ init :
     -> Maybe String
     -> Maybe Int
     -> Maybe Int
+    -> Maybe (Model a)
     -> ( Model a, Cmd msg )
-init channel query showDetailsFor from size =
-    ( { channel = Maybe.withDefault "unstable" channel
+init channel query show from size model =
+    let
+        defaultChannel =
+            model
+                |> Maybe.map (\x -> x.channel)
+                |> Maybe.withDefault "unstable"
+
+        defaultFrom =
+            model
+                |> Maybe.map (\x -> x.from)
+                |> Maybe.withDefault 0
+
+        defaultSize =
+            model
+                |> Maybe.map (\x -> x.size)
+                |> Maybe.withDefault 15
+    in
+    ( { channel = Maybe.withDefault defaultChannel channel
       , query = query
-      , result = RemoteData.NotAsked
-      , showDetailsFor = showDetailsFor
-      , from = Maybe.withDefault 0 from
-      , size = Maybe.withDefault 15 size
+      , result =
+            model
+                |> Maybe.map (\x -> x.result)
+                |> Maybe.withDefault RemoteData.NotAsked
+      , show = show
+      , from = Maybe.withDefault defaultFrom from
+      , size = Maybe.withDefault defaultSize size
       }
     , Cmd.none
     )
@@ -140,8 +162,27 @@ update path navKey msg model =
             )
 
         ChannelChange channel ->
-            ( { model | channel = channel }
-            , Cmd.none
+            ( { model
+                | channel = channel
+                , result =
+                    if model.query == Nothing || model.query == Just "" then
+                        RemoteData.NotAsked
+
+                    else
+                        RemoteData.Loading
+              }
+            , if model.query == Nothing || model.query == Just "" then
+                Cmd.none
+
+              else
+                createUrl
+                    path
+                    channel
+                    model.query
+                    model.show
+                    0
+                    model.size
+                    |> Browser.Navigation.pushUrl navKey
             )
 
         QueryInput query ->
@@ -150,12 +191,12 @@ update path navKey msg model =
             )
 
         QuerySubmit ->
-            ( model
+            ( { model | result = RemoteData.Loading }
             , createUrl
                 path
                 model.channel
                 model.query
-                model.showDetailsFor
+                model.show
                 0
                 model.size
                 |> Browser.Navigation.pushUrl navKey
@@ -172,7 +213,7 @@ update path navKey msg model =
                 path
                 model.channel
                 model.query
-                (if model.showDetailsFor == Just selected then
+                (if model.show == Just selected then
                     Nothing
 
                  else
@@ -192,7 +233,7 @@ createUrl :
     -> Int
     -> Int
     -> String
-createUrl path channel query showDetailsFor from size =
+createUrl path channel query show from size =
     [ Url.Builder.int "from" from
     , Url.Builder.int "size" size
     , Url.Builder.string "channel" channel
@@ -206,10 +247,10 @@ createUrl path channel query showDetailsFor from size =
                 |> Maybe.withDefault []
             )
         |> List.append
-            (showDetailsFor
+            (show
                 |> Maybe.map
                     (\x ->
-                        [ Url.Builder.string "showDetailsFor" x
+                        [ Url.Builder.string "show" x
                         ]
                     )
                 |> Maybe.withDefault []
@@ -221,11 +262,68 @@ createUrl path channel query showDetailsFor from size =
 -- VIEW
 
 
+type Channel
+    = Unstable
+    | Release_19_09
+    | Release_20_03
+
+
+type alias ChannelDetails =
+    { id : String
+    , title : String
+    , jobset : String
+    , branch : String
+    }
+
+
+channelDetails : Channel -> ChannelDetails
+channelDetails channel =
+    case channel of
+        Unstable ->
+            ChannelDetails "unstable" "unstable" "nixos/trunk-combined" "nixos-unstable"
+
+        Release_19_09 ->
+            ChannelDetails "19.09" "19.09" "nixos/release-19.09" "nixos-19.09"
+
+        Release_20_03 ->
+            ChannelDetails "20.03" "20.03" "nixos/release-20.03" "nixos-20.03"
+
+
+channelFromId : String -> Maybe Channel
+channelFromId channel_id =
+    case channel_id of
+        "unstable" ->
+            Just Unstable
+
+        "19.09" ->
+            Just Release_19_09
+
+        "20.03" ->
+            Just Release_20_03
+
+        _ ->
+            Nothing
+
+
+channelDetailsFromId : String -> Maybe ChannelDetails
+channelDetailsFromId channel_id =
+    channelFromId channel_id
+        |> Maybe.map channelDetails
+
+
+channels : List String
+channels =
+    [ "unstable"
+    , "20.03"
+    , "19.09"
+    ]
+
+
 view :
     String
     -> String
     -> Model a
-    -> (Maybe String -> Result a -> Html b)
+    -> (String -> Maybe String -> Result a -> Html b)
     -> (Msg a -> b)
     -> Html b
 view path title model viewSuccess outMsg =
@@ -233,7 +331,36 @@ view path title model viewSuccess outMsg =
         [ h1 [ class "page-header" ] [ text title ]
         , div [ class "search-input" ]
             [ form [ onSubmit (outMsg QuerySubmit) ]
-                [ div [ class "input-append" ]
+                [ p
+                    []
+                    [ strong []
+                        [ text "Channel: " ]
+                    , div
+                        [ class "btn-group"
+                        , attribute "data-toggle" "buttons-radio"
+                        ]
+                        (List.filterMap
+                            (\channel_id ->
+                                channelDetailsFromId channel_id
+                                    |> Maybe.map
+                                        (\channel ->
+                                            button
+                                                [ type_ "button"
+                                                , classList
+                                                    [ ( "btn", True )
+                                                    , ( "active", channel.id == model.channel )
+                                                    ]
+                                                , onClick <| outMsg (ChannelChange channel.id)
+                                                ]
+                                                [ text channel.title ]
+                                        )
+                            )
+                            channels
+                        )
+                    ]
+                , p
+                    [ class "input-append"
+                    ]
                     [ input
                         [ type_ "text"
                         , onInput (\x -> outMsg (QueryInput x))
@@ -244,24 +371,6 @@ view path title model viewSuccess outMsg =
                         [ button [ class "btn" ] [ text "Search" ]
                         ]
                     ]
-                , span []
-                    [ strong []
-                        [ text " in " ]
-                    , select
-                        [ onInput (\x -> outMsg (ChannelChange x)) ]
-                        [ option
-                            [ value "unstable" ]
-                            [ text "unstable" ]
-                        , option
-                            [ value "20.03" ]
-                            [ text "20.03" ]
-                        , option
-                            [ value "19.09" ]
-                            [ text "19.09" ]
-                        ]
-                    , strong []
-                        [ text " channel." ]
-                    ]
                 ]
             ]
         , case model.result of
@@ -269,7 +378,7 @@ view path title model viewSuccess outMsg =
                 div [] [ text "" ]
 
             RemoteData.Loading ->
-                div [] [ text "Loading" ]
+                div [ class "loader" ] [ text "Loading..." ]
 
             RemoteData.Success result ->
                 if result.hits.total.value == 0 then
@@ -299,7 +408,7 @@ view path title model viewSuccess outMsg =
                                 ]
                             ]
                         , viewPager outMsg model result path
-                        , viewSuccess model.showDetailsFor result
+                        , viewSuccess model.channel model.show result
                         , viewPager outMsg model result path
                         ]
 
@@ -314,7 +423,7 @@ view path title model viewSuccess outMsg =
                                 ( "Timeout!", "Request to the server timeout." )
 
                             Http.NetworkError ->
-                                ( "Network Error!", "Please check your network connection." )
+                                ( "Network Error!", "A network request bonsaisearch.net domain failed. This is either due to a content blocker or a networking issue." )
 
                             Http.BadStatus code ->
                                 ( "Bad Status", "Server returned " ++ String.fromInt code )
@@ -352,7 +461,7 @@ viewPager outMsg model result path =
                             path
                             model.channel
                             model.query
-                            model.showDetailsFor
+                            model.show
                             0
                             model.size
                 ]
@@ -373,7 +482,7 @@ viewPager outMsg model result path =
                             path
                             model.channel
                             model.query
-                            model.showDetailsFor
+                            model.show
                             (model.from - model.size)
                             model.size
                 ]
@@ -394,7 +503,7 @@ viewPager outMsg model result path =
                             path
                             model.channel
                             model.query
-                            model.showDetailsFor
+                            model.show
                             (model.from + model.size)
                             model.size
                 ]
@@ -411,12 +520,20 @@ viewPager outMsg model result path =
                         "#disabled"
 
                     else
+                        let
+                            remainder =
+                                if remainderBy model.size result.hits.total.value == 0 then
+                                    1
+
+                                else
+                                    0
+                        in
                         createUrl
                             path
                             model.channel
                             model.query
-                            model.showDetailsFor
-                            ((result.hits.total.value // model.size) * model.size)
+                            model.show
+                            (((result.hits.total.value // model.size) - remainder) * model.size)
                             model.size
                 ]
                 [ text "Last" ]

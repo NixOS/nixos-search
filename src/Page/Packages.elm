@@ -64,6 +64,8 @@ type alias ResultItemSource =
     , platforms : List String
     , position : Maybe String
     , homepage : Maybe String
+    , system : String
+    , hydra : Maybe (List ResultPackageHydra)
     }
 
 
@@ -80,12 +82,31 @@ type alias ResultPackageMaintainer =
     }
 
 
+type alias ResultPackageHydra =
+    { build_id : Int
+    , build_status : Int
+    , platform : String
+    , project : String
+    , jobset : String
+    , job : String
+    , path : List ResultPackageHydraPath
+    , drv_path : String
+    }
+
+
+type alias ResultPackageHydraPath =
+    { output : String
+    , path : String
+    }
+
+
 init :
     Maybe String
     -> Maybe String
     -> Maybe String
     -> Maybe Int
     -> Maybe Int
+    -> Maybe Model
     -> ( Model, Cmd Msg )
 init =
     Search.init
@@ -125,10 +146,11 @@ view model =
 
 
 viewSuccess :
-    Maybe String
+    String
+    -> Maybe String
     -> Search.Result ResultItemSource
     -> Html Msg
-viewSuccess showDetailsFor result =
+viewSuccess channel show result =
     div [ class "search-result" ]
         [ table [ class "table table-hover" ]
             [ thead []
@@ -142,7 +164,7 @@ viewSuccess showDetailsFor result =
             , tbody
                 []
                 (List.concatMap
-                    (viewResultItem showDetailsFor)
+                    (viewResultItem channel show)
                     result.hits.hits
                 )
             ]
@@ -150,20 +172,21 @@ viewSuccess showDetailsFor result =
 
 
 viewResultItem :
-    Maybe String
+    String
+    -> Maybe String
     -> Search.ResultItem ResultItemSource
     -> List (Html Msg)
-viewResultItem showDetailsFor item =
+viewResultItem channel show item =
     let
         packageDetails =
-            if Just item.id == showDetailsFor then
-                [ td [ colspan 4 ] [ viewResultItemDetails item ]
+            if Just item.source.attr_name == show then
+                [ td [ colspan 4 ] [ viewResultItemDetails channel item ]
                 ]
 
             else
                 []
     in
-    tr [ onClick (SearchMsg (Search.ShowDetails item.id)) ]
+    tr [ onClick (SearchMsg (Search.ShowDetails item.source.attr_name)) ]
         [ td [] [ text item.source.attr_name ]
         , td [] [ text item.source.pname ]
         , td [] [ text item.source.pversion ]
@@ -173,9 +196,10 @@ viewResultItem showDetailsFor item =
 
 
 viewResultItemDetails :
-    Search.ResultItem ResultItemSource
+    String
+    -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItemDetails item =
+viewResultItemDetails channel item =
     let
         default =
             "Not specified"
@@ -186,9 +210,8 @@ viewResultItemDetails item =
         asLink value =
             a [ href value ] [ text value ]
 
-        -- TODO: this should take channel into account as well
-        githubUrlPrefix =
-            "https://github.com/NixOS/nixpkgs-channels/blob/nixos-unstable/"
+        githubUrlPrefix branch =
+            "https://github.com/NixOS/nixpkgs-channels/blob/" ++ branch ++ "/"
 
         cleanPosition value =
             if String.startsWith "source/" value then
@@ -198,9 +221,14 @@ viewResultItemDetails item =
                 value
 
         asGithubLink value =
-            a
-                [ href <| githubUrlPrefix ++ (value |> String.replace ":" "#L" |> cleanPosition) ]
-                [ text <| cleanPosition value ]
+            case Search.channelDetailsFromId channel of
+                Just channelDetails ->
+                    a
+                        [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L" |> cleanPosition) ]
+                        [ text <| cleanPosition value ]
+
+                Nothing ->
+                    text <| cleanPosition value
 
         withDefault wrapWith maybe =
             case maybe of
@@ -213,17 +241,52 @@ viewResultItemDetails item =
                 Just value ->
                     wrapWith value
 
-        convertToGithubUrl value =
-            if String.startsWith "source/" value then
-                githubUrlPrefix ++ String.dropLeft 7 value
+        mainPlatforms platform =
+            List.member platform
+                [ "x86_64-linux"
+                , "aarch64-linux"
+                , "x86_64-darwin"
+                , "i686-linux"
+                ]
 
-            else
-                githubUrlPrefix ++ value
+        getHydraDetailsForPlatform hydra platform =
+            hydra
+                |> Maybe.andThen
+                    (\hydras ->
+                        hydras
+                            |> List.filter (\x -> x.platform == platform)
+                            |> List.head
+                    )
 
-        -- TODO: add links to hydra for hydra_platforms
-        -- example: https://hydra.nixos.org/job/nixos/release-20.03/nixpkgs.gnome3.accerciser.i686-linux
-        showPlatform platform =
-            li [] [ text platform ]
+        showPlatforms hydra platforms =
+            platforms
+                |> List.filter mainPlatforms
+                |> List.map (showPlatform hydra)
+
+        showPlatform hydra platform =
+            li []
+                [ case
+                    ( getHydraDetailsForPlatform hydra platform
+                    , Search.channelDetailsFromId channel
+                    )
+                  of
+                    ( Just hydraDetails, _ ) ->
+                        a
+                            [ href <| "https://hydra.nixos.org/build/" ++ String.fromInt hydraDetails.build_id
+                            ]
+                            [ text platform
+                            ]
+
+                    ( Nothing, Just channelDetails ) ->
+                        a
+                            [ href <| "https://hydra.nixos.org/job/" ++ channelDetails.jobset ++ "/nixpkgs." ++ item.source.attr_name ++ "." ++ platform
+                            ]
+                            [ text platform
+                            ]
+
+                    ( _, _ ) ->
+                        text platform
+                ]
 
         showLicence license =
             li []
@@ -259,11 +322,9 @@ viewResultItemDetails item =
         [ dt [] [ text "Install command" ]
         , dd [] [ code [] [ text <| "nix-env -iA nixos." ++ item.source.attr_name ] ]
         , dt [] [ text <| "Nix expression" ]
-
-        -- TODO: point to correct branch/channel
         , dd [] [ withDefault asGithubLink item.source.position ]
         , dt [] [ text "Platforms" ]
-        , dd [] [ ul [ class "inline" ] <| List.map showPlatform item.source.platforms ]
+        , dd [] [ ul [ class "inline" ] <| showPlatforms item.source.hydra item.source.platforms ]
         , dt [] [ text "Homepage" ]
         , dd [] [ withDefault asLink item.source.homepage ]
         , dt [] [ text "Licenses" ]
@@ -416,7 +477,7 @@ makeRequest :
 makeRequest options channel query from size =
     Search.makeRequest
         (makeRequestBody query from size)
-        ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-nixos-" ++ channel)
+        ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
         decodeResultItemSource
         options
         query
@@ -442,6 +503,8 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.required "package_platforms" (Json.Decode.list Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_position" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_homepage" (Json.Decode.nullable Json.Decode.string)
+        |> Json.Decode.Pipeline.required "package_system" Json.Decode.string
+        |> Json.Decode.Pipeline.required "package_hydra" (Json.Decode.nullable (Json.Decode.list decodeResultPackageHydra))
 
 
 decodeResultPackageLicense : Json.Decode.Decoder ResultPackageLicense
@@ -457,3 +520,24 @@ decodeResultPackageMaintainer =
         (Json.Decode.field "name" Json.Decode.string)
         (Json.Decode.field "email" Json.Decode.string)
         (Json.Decode.field "github" (Json.Decode.nullable Json.Decode.string))
+
+
+decodeResultPackageHydra : Json.Decode.Decoder ResultPackageHydra
+decodeResultPackageHydra =
+    Json.Decode.succeed ResultPackageHydra
+        |> Json.Decode.Pipeline.required "build_id" Json.Decode.int
+        |> Json.Decode.Pipeline.required "build_status" Json.Decode.int
+        |> Json.Decode.Pipeline.required "platform" Json.Decode.string
+        |> Json.Decode.Pipeline.required "project" Json.Decode.string
+        |> Json.Decode.Pipeline.required "jobset" Json.Decode.string
+        |> Json.Decode.Pipeline.required "job" Json.Decode.string
+        |> Json.Decode.Pipeline.required "path" (Json.Decode.list decodeResultPackageHydraPath)
+        |> Json.Decode.Pipeline.required "drv_path" Json.Decode.string
+
+
+decodeResultPackageHydraPath : Json.Decode.Decoder ResultPackageHydraPath
+decodeResultPackageHydraPath =
+    Json.Decode.map2 ResultPackageHydraPath
+        (Json.Decode.field "output" Json.Decode.string)
+        (Json.Decode.field "path" Json.Decode.string)
+

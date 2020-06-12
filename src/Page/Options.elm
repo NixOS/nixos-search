@@ -32,7 +32,6 @@ import Html.Attributes
         ( class
         , colspan
         , href
-        , property
         )
 import Html.Events
     exposing
@@ -56,11 +55,11 @@ type alias Model =
 
 type alias ResultItemSource =
     { name : String
-    , description : String
-    , type_ : String
-    , default : String
-    , example : String
-    , source : String
+    , description : Maybe String
+    , type_ : Maybe String
+    , default : Maybe String
+    , example : Maybe String
+    , source : Maybe String
     }
 
 
@@ -70,6 +69,7 @@ init :
     -> Maybe String
     -> Maybe Int
     -> Maybe Int
+    -> Maybe Model
     -> ( Model, Cmd Msg )
 init =
     Search.init
@@ -109,10 +109,11 @@ view model =
 
 
 viewSuccess :
-    Maybe String
+    String
+    -> Maybe String
     -> Search.Result ResultItemSource
     -> Html Msg
-viewSuccess showDetailsFor result =
+viewSuccess channel show result =
     div [ class "search-result" ]
         [ table [ class "table table-hover" ]
             [ thead []
@@ -123,7 +124,7 @@ viewSuccess showDetailsFor result =
             , tbody
                 []
                 (List.concatMap
-                    (viewResultItem showDetailsFor)
+                    (viewResultItem show)
                     result.hits.hits
                 )
             ]
@@ -134,17 +135,17 @@ viewResultItem :
     Maybe String
     -> Search.ResultItem ResultItemSource
     -> List (Html Msg)
-viewResultItem showDetailsFor item =
+viewResultItem show item =
     let
         packageDetails =
-            if Just item.id == showDetailsFor then
+            if Just item.source.name == show then
                 [ td [ colspan 1 ] [ viewResultItemDetails item ]
                 ]
 
             else
                 []
     in
-    tr [ onClick (SearchMsg (Search.ShowDetails item.id)) ]
+    tr [ onClick (SearchMsg (Search.ShowDetails item.source.name)) ]
         [ td [] [ text item.source.name ]
         ]
         :: packageDetails
@@ -182,28 +183,45 @@ viewResultItemDetails item =
                 [ href <| githubUrlPrefix ++ (value |> String.replace ":" "#L") ]
                 [ text <| value ]
 
-        withDefault wrapWith value =
+        wrapped wrapWith value =
             case value of
                 "" ->
-                    text default
-
-                "None" ->
-                    text default
+                    wrapWith <| "\"" ++ value ++ "\""
 
                 _ ->
                     wrapWith value
     in
     dl [ class "dl-horizontal" ]
         [ dt [] [ text "Description" ]
-        , dd [] [ withDefault asText item.source.description ]
+        , dd []
+            [ item.source.description
+                |> Maybe.withDefault default
+                |> asText
+            ]
         , dt [] [ text "Default value" ]
-        , dd [] [ withDefault asCode item.source.default ]
+        , dd []
+            [ item.source.default
+                |> Maybe.withDefault default
+                |> wrapped asCode
+            ]
         , dt [] [ text "Type" ]
-        , dd [] [ withDefault asCode item.source.type_ ]
+        , dd []
+            [ item.source.type_
+                |> Maybe.withDefault default
+                |> asCode
+            ]
         , dt [] [ text "Example value" ]
-        , dd [] [ withDefault asCode item.source.example ]
+        , dd []
+            [ item.source.example
+                |> Maybe.withDefault default
+                |> wrapped asCode
+            ]
         , dt [] [ text "Declared in" ]
-        , dd [] [ withDefault asGithubLink item.source.source ]
+        , dd []
+            [ item.source.source
+                |> Maybe.withDefault default
+                |> asGithubLink
+            ]
         ]
 
 
@@ -375,7 +393,7 @@ makeRequest :
 makeRequest options channel query from size =
     Search.makeRequest
         (makeRequestBody query from size)
-        ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-nixos-" ++ channel)
+        ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
         decodeResultItemSource
         options
         query
@@ -392,8 +410,8 @@ decodeResultItemSource : Json.Decode.Decoder ResultItemSource
 decodeResultItemSource =
     Json.Decode.map6 ResultItemSource
         (Json.Decode.field "option_name" Json.Decode.string)
-        (Json.Decode.field "option_description" Json.Decode.string)
-        (Json.Decode.field "option_type" Json.Decode.string)
-        (Json.Decode.field "option_default" Json.Decode.string)
-        (Json.Decode.field "option_example" Json.Decode.string)
-        (Json.Decode.field "option_source" Json.Decode.string)
+        (Json.Decode.field "option_description" (Json.Decode.nullable Json.Decode.string))
+        (Json.Decode.field "option_type" (Json.Decode.nullable Json.Decode.string))
+        (Json.Decode.field "option_default" (Json.Decode.nullable Json.Decode.string))
+        (Json.Decode.field "option_example" (Json.Decode.nullable Json.Decode.string))
+        (Json.Decode.field "option_source" (Json.Decode.nullable Json.Decode.string))

@@ -16,8 +16,9 @@ jobs:
       uses: cachix/install-nix-action@v8
     - name: Building search.nixos.org
       run: |
-        nix-shell --run "yarn prod"
-        cp netlify.toml ./dist/
+        nix-build
+        mkdir ./dist
+        cp -RL ./result/* ./dist/
     - name: Deploy to Netlify
       uses: nwtgck/actions-netlify@v1.0.5
       env:
