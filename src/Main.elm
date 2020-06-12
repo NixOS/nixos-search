@@ -252,39 +252,60 @@ update msg model =
 -- VIEW
 
 
-view : Model -> Html Msg
+view :
+    Model
+    ->
+        { title : String
+        , body : List (Html Msg)
+        }
 view model =
-    div []
-        [ header []
-            [ div [ class "navbar navbar-static-top" ]
-                [ div [ class "navbar-inner" ]
-                    [ div [ class "container" ]
-                        [ a [ class "brand", href "https://nixos.org" ]
-                            [ img [ src "https://nixos.org/logo/nix-wiki.png", class "logo" ] []
-                            ]
-                        , div [ class "nav-collapse collapse" ]
-                            [ ul [ class "nav pull-left" ]
-                                (viewNavigation model.page model.url)
+    let
+        title =
+            case model.page of
+                Packages _ ->
+                    "NixOS Search - Packages"
+
+                Options _ ->
+                    "NixOS Search - Options"
+
+                _ ->
+                    "NixOS Search"
+    in
+    { title = title
+    , body =
+        [ div []
+            [ header []
+                [ div [ class "navbar navbar-static-top" ]
+                    [ div [ class "navbar-inner" ]
+                        [ div [ class "container" ]
+                            [ a [ class "brand", href "https://nixos.org" ]
+                                [ img [ src "https://nixos.org/logo/nix-wiki.png", class "logo" ] []
+                                ]
+                            , div [ class "nav-collapse collapse" ]
+                                [ ul [ class "nav pull-left" ]
+                                    (viewNavigation model.page model.url)
+                                ]
                             ]
                         ]
                     ]
                 ]
-            ]
-        , div [ class "container main" ]
-            [ div [ id "content" ] [ viewPage model ]
-            , footer
-                [ class "container text-center" ]
-                [ div []
-                    [ span [] [ text "Elasticsearch instance graciously provided by " ]
-                    , a [ href "https://bonsai.io" ] [ text "Bonsai" ]
-                    , span [] [ text "." ]
-                    ]
-                , div []
-                    [ span [] [ text "❤️  Thank you ❤️ " ]
+            , div [ class "container main" ]
+                [ div [ id "content" ] [ viewPage model ]
+                , footer
+                    [ class "container text-center" ]
+                    [ div []
+                        [ span [] [ text "Elasticsearch instance graciously provided by " ]
+                        , a [ href "https://bonsai.io" ] [ text "Bonsai" ]
+                        , span [] [ text "." ]
+                        ]
+                    , div []
+                        [ span [] [ text "❤️  Thank you ❤️ " ]
+                        ]
                     ]
                 ]
             ]
         ]
+    }
 
 
 viewNavigation : Page -> Url.Url -> List (Html Msg)
@@ -367,9 +388,5 @@ main =
         , onUrlChange = ChangedUrl
         , subscriptions = subscriptions
         , update = update
-        , view =
-            \m ->
-                { title = "NixOS Search"
-                , body = [ view m ]
-                }
+        , view = view
         }
