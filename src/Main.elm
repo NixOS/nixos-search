@@ -114,7 +114,7 @@ submitQuery :
 submitQuery old ( new, cmd ) =
     let
         triggerSearch _ newModel msg makeRequest =
-            if newModel.query /= Nothing then
+            if newModel.query /= Nothing && newModel.query /= Just "" then
                 ( new
                 , Cmd.batch
                     [ cmd

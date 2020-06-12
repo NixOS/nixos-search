@@ -35,14 +35,18 @@ header .navbar.navbar-static-top {
     .input-append input {
       font-size: 24px;
       height: 40px;
-      width: 10em;
+      width: auto;
+      max-width: 15em;
     }
     .input-append button {
       font-size: 24px;
       height: 50px;
+      min-width: 4em;
     }
-    select {
-      width: 100px;
+    form > p > strong {
+      vertical-align: middle;
+      font-size: 1.2em;
+      margin-left: 0.2em;
     }
   }
   .search-result {
