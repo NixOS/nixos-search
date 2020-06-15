@@ -8,9 +8,9 @@ jobs:
     strategy:
       matrix:
         channel:
-          - nixos-unstable
-          - nixos-20.03
-          - nixos-19.09
+          - unstable
+          - 20.03
+          - 19.09
       fail-fast: true
     steps:
     - name: Checking out the repository
