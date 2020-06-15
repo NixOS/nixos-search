@@ -403,7 +403,7 @@ view path title model viewSuccess outMsg =
                                             )
                                         ++ " of "
                                         ++ (if result.hits.total.value == 10000 then
-                                                "more then 10000. You have reached the maximum of search results we can show."
+                                                "more than 10000. You have reached the maximum of search results we can show."
 
                                             else
                                                 String.fromInt result.hits.total.value
