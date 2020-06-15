@@ -402,8 +402,13 @@ view path title model viewSuccess outMsg =
                                                 model.from + model.size
                                             )
                                         ++ " of "
-                                        ++ String.fromInt result.hits.total.value
-                                        ++ "."
+                                        ++ (if result.hits.total.value == 10000 then
+                                                "more than 10000 results, please provide more precise search terms."
+
+                                            else
+                                                String.fromInt result.hits.total.value
+                                                    ++ "."
+                                           )
                                     )
                                 ]
                             ]
@@ -554,7 +559,7 @@ type alias Options =
 
 
 makeRequest :
-    Http.Body
+    (String -> Int -> Int -> Http.Body)
     -> String
     -> Json.Decode.Decoder a
     -> Options
@@ -562,14 +567,23 @@ makeRequest :
     -> Int
     -> Int
     -> Cmd (Msg a)
-makeRequest body index decodeResultItemSource options query from size =
+makeRequest makeRequestBody index decodeResultItemSource options query from sizeRaw =
+    let
+        -- you can not request more then 10000 results otherwise it will return 404
+        size =
+            if from + sizeRaw > 10000 then
+                10000 - from
+
+            else
+                sizeRaw
+    in
     Http.riskyRequest
         { method = "POST"
         , headers =
             [ Http.header "Authorization" ("Basic " ++ Base64.encode (options.username ++ ":" ++ options.password))
             ]
         , url = options.url ++ "/" ++ index ++ "/_search"
-        , body = body
+        , body = makeRequestBody query from size
         , expect =
             Http.expectJson
                 (RemoteData.fromResult >> QueryResponse)

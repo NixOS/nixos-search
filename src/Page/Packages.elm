@@ -476,7 +476,7 @@ makeRequest :
     -> Cmd Msg
 makeRequest options channel query from size =
     Search.makeRequest
-        (makeRequestBody query from size)
+        makeRequestBody
         ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
         decodeResultItemSource
         options
@@ -540,4 +540,3 @@ decodeResultPackageHydraPath =
     Json.Decode.map2 ResultPackageHydraPath
         (Json.Decode.field "output" Json.Decode.string)
         (Json.Decode.field "path" Json.Decode.string)
-
