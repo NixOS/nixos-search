@@ -42,6 +42,7 @@ import Http
 import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
+import Regex
 import Search
 
 
@@ -158,6 +159,7 @@ viewSuccess channel show result =
                     [ th [] [ text "Attribute name" ]
                     , th [] [ text "Name" ]
                     , th [] [ text "Version" ]
+                    , th [] [ text "Score | Queries" ]
                     , th [] [ text "Description" ]
                     ]
                 ]
@@ -180,16 +182,21 @@ viewResultItem channel show item =
     let
         packageDetails =
             if Just item.source.attr_name == show then
-                [ td [ colspan 4 ] [ viewResultItemDetails channel item ]
+                [ td [ colspan 5 ] [ viewResultItemDetails channel item ]
                 ]
 
             else
                 []
+
+        queries =
+            item.matched_queries
+                |> String.join ","
     in
     tr [ onClick (SearchMsg (Search.ShowDetails item.source.attr_name)) ]
-        [ td [] [ text item.source.attr_name ]
+        [ td [] [ text <| item.source.attr_name ]
         , td [] [ text item.source.pname ]
         , td [] [ text item.source.pversion ]
+        , td [] [ text <| String.fromFloat item.score ++ " | " ++ queries ]
         , td [] [ text <| Maybe.withDefault "" item.source.description ]
         ]
         :: packageDetails
@@ -345,110 +352,112 @@ makeRequestBody :
     -> Int
     -> Int
     -> Http.Body
-makeRequestBody query from size =
-    -- Prefix Query
-    --   example query for "python"
-    -- {
-    --   "from": 0,
-    --   "size": 10,
-    --   "query": {
-    --     "bool": {
-    --       "filter": {
-    --         "match": {
-    --           "type": "package"
-    --         }
-    --       },
-    --       "must": {
-    --         "bool": {
-    --           "should": [
-    --             {
-    --               "multi_match": {
-    --                 "query": "python",
-    --                 "boost": 1,
-    --                 "fields": [
-    --                   "package_attr_name.raw",
-    --                   "package_attr_name"
-    --                 ],
-    --                 "type": "most_fields"
-    --               }
-    --             },
-    --             {
-    --               "term": {
-    --                 "type": {
-    --                   "value": "package",
-    --                   "boost": 0
-    --                 }
-    --               }
-    --             },
-    --             {
-    --               "term": {
-    --                 "package_pname": {
-    --                   "value": "python",
-    --                   "boost": 2
-    --                 }
-    --               }
-    --             },
-    --             {
-    --               "term": {
-    --                 "package_pversion": {
-    --                   "value": "python",
-    --                   "boost": 0.2
-    --                 }
-    --               }
-    --             },
-    --             {
-    --               "term": {
-    --                 "package_description": {
-    --                   "value": "python",
-    --                   "boost": 0.3
-    --                 }
-    --               }
-    --             },
-    --             {
-    --               "term": {
-    --                 "package_longDescription": {
-    --                   "value": "python",
-    --                   "boost": 0.1
-    --                 }
-    --               }
-    --             }
-    --           ]
-    --         }
-    --       }
-    --     }
-    --   }
-    -- }
+makeRequestBody queryRaw from size =
+    -- # 1. Example of full attr_name search
+    --
+    -- Query:
+    --   python27Packages.requests
+    -- Result:
+    --   python27Packages.requests
+    --   python37Packages.requests
+    --   python38Packages.requests
+    --   python27Packages.requests_ntlm
+    --
+    -- # 2. Example of
     let
+        query =
+            queryRaw
+                |> String.trim
+                |> String.replace " " "."
+
+        delimiters =
+            Maybe.withDefault Regex.never (Regex.fromString "[. ]")
+
         listIn name type_ value =
             [ ( name, Json.Encode.list type_ value ) ]
 
         objectIn name value =
             [ ( name, Json.Encode.object value ) ]
 
-        encodeTerm ( name, boost ) =
-            [ ( "value", Json.Encode.string query )
+        encodeTerm ( name, boost, title ) =
+            let
+                termQuery =
+                    Regex.split delimiters query
+            in
+            [ ( name, Json.Encode.list Json.Encode.string termQuery )
             , ( "boost", Json.Encode.float boost )
+            , ( "_name", Json.Encode.string title )
+            ]
+                |> objectIn "terms"
+
+        encodeTermForAttrSet ( name, boost, title ) =
+            let
+                maybeTermQuery =
+                    query
+                        |> Regex.split delimiters
+                        |> List.head
+            in
+            case maybeTermQuery of
+                Nothing ->
+                    []
+
+                Just termQuery ->
+                    [ ( "value", Json.Encode.string termQuery )
+                    , ( "boost", Json.Encode.float boost )
+                    , ( "_name", Json.Encode.string title )
+                    ]
+                        |> objectIn name
+                        |> objectIn "term"
+
+        encodeMatchPhaseQuery ( name, boost, title ) =
+            [ ( "query", Json.Encode.string query )
+            , ( "boost", Json.Encode.float boost )
+            , ( "analyzer", Json.Encode.string "nixPackageAttrName" )
+            , ( "_name", Json.Encode.string title )
             ]
                 |> objectIn name
-                |> objectIn "term"
-    in
-    [ ( "package_pname", 2.0 )
-    , ( "package_pversion", 0.2 )
-    , ( "package_description", 0.3 )
-    , ( "package_longDescription", 0.1 )
-    ]
-        |> List.map encodeTerm
-        |> List.append
-            [ [ "package_attr_name.raw"
-              , "package_attr_name"
-              ]
-                |> listIn "fields" Json.Encode.string
-                |> List.append
-                    [ ( "query", Json.Encode.string query )
-                    , ( "boost", Json.Encode.float 1.0 )
-                    ]
-                |> objectIn "multi_match"
+                |> objectIn "match_phrase"
+
+        encodeMatchQuery ( name, boost, title ) =
+            [ ( "query", Json.Encode.string query )
+            , ( "boost", Json.Encode.float boost )
+            , ( "analyzer", Json.Encode.string "nixPackageSimpleAttrName" )
+            , ( "fuzziness", Json.Encode.string "1" )
+            , ( "_name", Json.Encode.string title )
             ]
+                |> objectIn name
+                |> objectIn "match"
+    in
+    []
+        |> List.append
+            (List.map encodeTerm
+                [ ( "package_attr_name.raw", 1000, "term_1" )
+                , ( "package_pname.raw", 600, "term_2" )
+                ]
+            )
+        |> List.append
+            (List.map encodeTermForAttrSet
+                [ ( "package_attr_set", 100, "term_3" )
+                ]
+            )
+        |> List.append
+            (List.map encodeMatchPhaseQuery
+                [ ( "package_attr_name.simple", 70, "match_phrase_1" )
+                , ( "package_attr_name", 50, "match_phrase_2" )
+                , ( "package_pname", 10, "match_phrase_3" )
+                , ( "package_description", 5, "match_phrase_4" )
+                , ( "package_longDescription", 3, "match_phrase_5" )
+                ]
+            )
+        |> List.append
+            (List.map encodeMatchQuery
+                [ ( "package_attr_name.simple", 70, "match_1" )
+                , ( "package_attr_name", 50, "match_1" )
+                , ( "package_pname", 10, "match_2" )
+                , ( "package_description", 5, "match_3" )
+                , ( "package_longDescription", 3, "match_4" )
+                ]
+            )
         |> listIn "should" Json.Encode.object
         |> objectIn "bool"
         |> objectIn "must"

@@ -33,7 +33,7 @@ click_log.basic_config(logger)
 
 S3_BUCKET = "nix-releases"
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-INDEX_SCHEMA_VERSION = 5
+INDEX_SCHEMA_VERSION = 6
 CHANNELS = {
     "unstable": {
         "packages": "nixpkgs/nixpkgs-20.09pre",
@@ -50,9 +50,14 @@ CHANNELS = {
 }
 ANALYSIS = {
     "analyzer": {
-        "nixAttrName": {
+        "nixPackageAttrName": {
             "type": "custom",
-            "tokenizer": "nix_attrname",
+            "tokenizer": "nix_package_attr_name",
+            "filter": ["lowercase", "nix_stopwords"],
+        },
+        "nixPackageSimpleAttrName": {
+            "type": "custom",
+            "tokenizer": "nix_package_simple_attr_name",
             "filter": ["lowercase", "nix_stopwords"],
         },
         "nixOptionName": {
@@ -67,13 +72,27 @@ ANALYSIS = {
         },
     },
     "tokenizer": {
-        "nix_attrname": {
+        "nix_package_simple_attr_name": {
+            "type": "pattern",
+            "pattern": "|".join(
+                [
+                    "[.]",
+                    "\\d+?Packages",
+                    "\\d+?Plugins",
+                    "\\d+?Extensions",
+                ]
+            ),
+        },
+        "nix_package_attr_name": {
             "type": "pattern",
             # Split on attrname separators like _, .
             "pattern": "|".join(
                 [
                     "[_.-]",  # Common separators like underscores, dots and dashes
                     "\\d+?Packages",  # python37Packages -> python
+                    "\\d+?Plugins",  # vimPlugins -> vim
+                    "\\d+?Extensions",  # php74Extensions -> php
+                    "\\d+?Interpreters",  # perlInterpreters -> perl
                     # Camelcase tokenizer adapted from
                     # https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-pattern-analyzer.html
                     "".join(
@@ -118,7 +137,18 @@ ANALYSIS = {
         "nix_stopwords": {
             "type": "stop",
             "ignore_case": True,
-            "stopwords": ["packages", "package", "options", "option"],
+            "stopwords": [
+                "packages",
+                "package",
+                "options",
+                "option",
+                "plugins",
+                "plugin",
+                "extensions",
+                "extension",
+                "interpreters",
+                "interpreter",
+            ],
         },
     },
 }
@@ -147,11 +177,22 @@ MAPPING = {
         },
         "package_attr_name": {
             "type": "text",
-            "analyzer": "nixAttrName",
-            "fields": {"raw": {"type": "keyword"}},
+            "analyzer": "nixPackageAttrName",
+            "fields": {
+                "raw": {"type": "keyword"},
+                "simple": {
+                    "type": "text",
+                    "analyzer": "nixPackageSimpleAttrName"
+                }
+            },
         },
         "package_attr_set": {"type": "keyword"},
-        "package_pname": {"type": "keyword"},
+        "package_pname": {
+            "type": "text",
+            "fields": {
+                "raw": {"type": "keyword"}
+            }
+        },
         "package_pversion": {"type": "keyword"},
         "package_description": {"type": "text"},
         "package_longDescription": {"type": "text"},
@@ -265,6 +306,62 @@ def get_evaluation_builds(evaluation_id):
     return result
 
 
+def get_maintainer(maintainer):
+    maintainers = []
+
+    if type(maintainer) == str:
+        maintainers.append(dict(
+            name=maintainer,
+            email=None,
+            github=None,
+        ))
+
+    elif type(maintainer) == dict:
+        maintainers.append(dict(
+            name=maintainer.get("name"),
+            email=maintainer.get("email"),
+            github=maintainer.get("github"),
+        ))
+
+    elif type(maintainer) == list:
+        for item in maintainer:
+            maintainers += get_maintainer(item)
+
+    else:
+        logger.error(f"maintainer  can not be recognized from: {maintainer}")
+        sys.exit(1)
+
+    return maintainers
+
+
+def remove_attr_set(name):
+    # some package sets the prefix is included in pname
+    sets = [
+        # Packages
+        "emscripten",
+        "lua",
+        "php",
+        "pure",
+        "python",
+        "lisp",
+        "perl",
+        "ruby",
+        # Plugins
+        "elasticsearch",
+        "graylog",
+        "tmuxplugin"
+        "vimplugin"
+    ]
+    if any([name.startswith(i) for i in sets]):
+        name = "-".join(name.split("-")[1:])
+
+    # node does things a bit different
+    elif name.startswith("node_"):
+        name = name[len("node_"):]
+
+    return name
+
+
 def get_packages(evaluation, evaluation_builds):
     logger.debug(
         f"get_packages: Retriving list of packages for '{evaluation['git_revision']}' revision"
@@ -300,16 +397,7 @@ def get_packages(evaluation, evaluation_builds):
             else:
                 licenses = []
 
-            maintainers = [
-                type(maintainer) == str
-                and dict(name=maintainer, email=None, github=None)
-                or dict(
-                    name=maintainer.get("name"),
-                    email=maintainer.get("email"),
-                    github=maintainer.get("github"),
-                )
-                for maintainer in data["meta"].get("maintainers", [])
-            ]
+            maintainers = get_maintainer(data["meta"].get("maintainers", []))
 
             platforms = [
                 type(platform) == str and platform or None
@@ -319,9 +407,9 @@ def get_packages(evaluation, evaluation_builds):
             attr_set = None
             if "." in attr_name:
                 attr_set = attr_name.split(".")[0]
-                if not attr_set.endswith("Packages") and not attr_set.endswith(
-                    "Plugins"
-                ):
+                if not attr_set.endswith("Packages") and \
+                        not attr_set.endswith("Plugins") and \
+                        not attr_set.endswith("Extensions"):
                     attr_set = None
 
             hydra = None
@@ -350,7 +438,7 @@ def get_packages(evaluation, evaluation_builds):
                 package_hydra=hydra,
                 package_attr_name=attr_name,
                 package_attr_set=attr_set,
-                package_pname=data["pname"],
+                package_pname=remove_attr_set(data["pname"]),
                 package_pversion=data["version"],
                 package_description=data["meta"].get("description"),
                 package_longDescription=data["meta"].get("longDescription", ""),

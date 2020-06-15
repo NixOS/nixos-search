@@ -91,6 +91,7 @@ type alias ResultItem a =
     , id : String
     , score : Float
     , source : a
+    , matched_queries : List String
     }
 
 
@@ -622,8 +623,9 @@ decodeResultHitsTotal =
 
 decodeResultItem : Json.Decode.Decoder a -> Json.Decode.Decoder (ResultItem a)
 decodeResultItem decodeResultItemSource =
-    Json.Decode.map4 ResultItem
+    Json.Decode.map5 ResultItem
         (Json.Decode.field "_index" Json.Decode.string)
         (Json.Decode.field "_id" Json.Decode.string)
         (Json.Decode.field "_score" Json.Decode.float)
         (Json.Decode.field "_source" decodeResultItemSource)
+        (Json.Decode.field "matched_queries" (Json.Decode.list Json.Decode.string))
