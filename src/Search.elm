@@ -403,7 +403,7 @@ view path title model viewSuccess outMsg =
                                             )
                                         ++ " of "
                                         ++ (if result.hits.total.value == 10000 then
-                                                "more than 10000. You have reached the maximum of search results we can show."
+                                                "more than 10000 results, please provide more precise search terms."
 
                                             else
                                                 String.fromInt result.hits.total.value
@@ -516,7 +516,7 @@ viewPager outMsg model result path =
             ]
         , li
             [ classList
-                [ ( "disabled", result.hits.total.value == 10000 || model.from + model.size >= result.hits.total.value )
+                [ ( "disabled", model.from + model.size >= result.hits.total.value )
                 ]
             ]
             [ a
@@ -567,7 +567,16 @@ makeRequest :
     -> Int
     -> Int
     -> Cmd (Msg a)
-makeRequest body index decodeResultItemSource options query from size =
+makeRequest body index decodeResultItemSource options query from sizeRaw =
+    let
+        -- you can not request more then 10000 results otherwise it will return 404
+        size =
+            if from + sizeRaw > 10000 then
+                10000 - from
+
+            else
+                sizeRaw
+    in
     Http.riskyRequest
         { method = "POST"
         , headers =

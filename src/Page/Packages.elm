@@ -474,16 +474,7 @@ makeRequest :
     -> Int
     -> Int
     -> Cmd Msg
-makeRequest options channel query from sizeRaw =
-    let
-        -- you can not request more then 10000 results otherwise it will return 404
-        size =
-            if from + sizeRaw > 10000 then
-                10000 - from
-
-            else
-                sizeRaw
-    in
+makeRequest options channel query from size =
     Search.makeRequest
         (makeRequestBody query from size)
         ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
