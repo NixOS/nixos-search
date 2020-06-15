@@ -2,8 +2,8 @@ module Search exposing
     ( Model
     , Msg(..)
     , Options
-    , Result
     , ResultItem
+    , SearchResult
     , channelDetailsFromId
     , decodeResult
     , init
@@ -24,6 +24,7 @@ import Html
         , form
         , h1
         , h4
+        , i
         , input
         , li
         , option
@@ -55,20 +56,22 @@ import Http
 import Json.Decode
 import Json.Encode
 import RemoteData
+import Select
 import Url.Builder
 
 
 type alias Model a =
     { channel : String
     , query : Maybe String
-    , result : RemoteData.WebData (Result a)
+    , querySuggest : Select.State
+    , result : RemoteData.WebData (SearchResult a)
     , show : Maybe String
     , from : Int
     , size : Int
     }
 
 
-type alias Result a =
+type alias SearchResult a =
     { hits : ResultHits a
     }
 
@@ -92,6 +95,55 @@ type alias ResultItem a =
     , score : Float
     , source : a
     }
+
+
+itemHtml : Char -> Html Never
+itemHtml char =
+    div []
+        [ i [ class "fa fa-rebel" ] []
+        , text (" " ++ char)
+        ]
+
+
+filter : String -> List a -> Maybe (List a)
+filter query items =
+    if String.length query < 2 then
+        Nothing
+
+    else
+        items
+            --|> Simple.Fuzzy.filter toLabel query
+            |> Just
+
+
+querySuggestConfig : Select.Config (Msg a) Char
+querySuggestConfig =
+    Select.newConfig
+        { onSelect = QueryInputSuggestOnSelect
+        , toLabel = identity
+        , filter = filter
+        }
+        |> Select.withInputWrapperStyles
+            [ ( "padding", "0.4rem" ) ]
+        |> Select.withMenuClass "border border-gray-800 bg-white"
+        |> Select.withItemClass "p-1 border-b border-gray-800"
+        |> Select.withItemStyles [ ( "font-size", "1rem" ) ]
+        |> Select.withNotFoundShown False
+        |> Select.withHighlightedItemClass "bg-gray"
+        |> Select.withHighlightedItemStyles [ ( "color", "black" ) ]
+        |> Select.withPrompt "Select a character"
+        |> Select.withCutoff 12
+        |> Select.withOnQuery QueryInputSuggestOnQuery
+        |> Select.withItemHtml itemHtml
+        |> Select.withUnderlineClass "underline"
+        |> Select.withTransformQuery
+            (\query ->
+                if String.length query < 3 then
+                    ""
+
+                else
+                    query
+            )
 
 
 init :
@@ -121,6 +173,7 @@ init channel query show from size model =
     in
     ( { channel = Maybe.withDefault defaultChannel channel
       , query = query
+      , querySuggest = Select.newState "search-query-suggest"
       , result =
             model
                 |> Maybe.map (\x -> x.result)
@@ -139,12 +192,20 @@ init channel query show from size model =
 -- ---------------------------
 
 
+type alias Char =
+    String
+
+
 type Msg a
     = NoOp
     | ChannelChange String
     | QueryInput String
+    | QueryInputSuggest (Select.Msg Char)
+    | QueryInputSuggestOnSelect (Maybe Char)
+    | QueryInputSuggestOnFetch (Result Http.Error (List Char))
+    | QueryInputSuggestOnQuery String
     | QuerySubmit
-    | QueryResponse (RemoteData.WebData (Result a))
+    | QueryResponse (RemoteData.WebData (SearchResult a))
     | ShowDetails String
 
 
@@ -189,6 +250,22 @@ update path navKey msg model =
             ( { model | query = Just query }
             , Cmd.none
             )
+
+        QueryInputSuggest subMsg ->
+            let
+                ( updated, cmd ) =
+                    Select.update querySuggestConfig subMsg model.querySuggest
+            in
+            ( { model | querySuggest = updated }, cmd )
+
+        QueryInputSuggestOnSelect _ ->
+            ( model, Cmd.none )
+
+        QueryInputSuggestOnFetch _ ->
+            ( model, Cmd.none )
+
+        QueryInputSuggestOnQuery _ ->
+            ( model, Cmd.none )
 
         QuerySubmit ->
             ( { model | result = RemoteData.Loading }
@@ -323,7 +400,7 @@ view :
     String
     -> String
     -> Model a
-    -> (String -> Maybe String -> Result a -> Html b)
+    -> (String -> Maybe String -> SearchResult a -> Html b)
     -> (Msg a -> b)
     -> Html b
 view path title model viewSuccess outMsg =
@@ -358,6 +435,8 @@ view path title model viewSuccess outMsg =
                             channels
                         )
                     ]
+                , p []
+                    []
                 , p
                     [ class "input-append"
                     ]
@@ -441,7 +520,7 @@ view path title model viewSuccess outMsg =
 viewPager :
     (Msg a -> b)
     -> Model a
-    -> Result a
+    -> SearchResult a
     -> String
     -> Html b
 viewPager outMsg model result path =
@@ -585,9 +664,9 @@ makeRequest body index decodeResultItemSource options query from size =
 
 decodeResult :
     Json.Decode.Decoder a
-    -> Json.Decode.Decoder (Result a)
+    -> Json.Decode.Decoder (SearchResult a)
 decodeResult decodeResultItemSource =
-    Json.Decode.map Result
+    Json.Decode.map SearchResult
         (Json.Decode.field "hits" (decodeResultHits decodeResultItemSource))
 
 

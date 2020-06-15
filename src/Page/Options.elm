@@ -111,7 +111,7 @@ view model =
 viewSuccess :
     String
     -> Maybe String
-    -> Search.Result ResultItemSource
+    -> Search.SearchResult ResultItemSource
     -> Html Msg
 viewSuccess channel show result =
     div [ class "search-result" ]
