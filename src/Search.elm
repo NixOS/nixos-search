@@ -559,7 +559,7 @@ type alias Options =
 
 
 makeRequest :
-    Http.Body
+    (String -> Int -> Int -> Http.Body)
     -> String
     -> Json.Decode.Decoder a
     -> Options
@@ -567,7 +567,7 @@ makeRequest :
     -> Int
     -> Int
     -> Cmd (Msg a)
-makeRequest body index decodeResultItemSource options query from sizeRaw =
+makeRequest makeRequestBody index decodeResultItemSource options query from sizeRaw =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -583,7 +583,7 @@ makeRequest body index decodeResultItemSource options query from sizeRaw =
             [ Http.header "Authorization" ("Basic " ++ Base64.encode (options.username ++ ":" ++ options.password))
             ]
         , url = options.url ++ "/" ++ index ++ "/_search"
-        , body = body
+        , body = makeRequestBody query from size
         , expect =
             Http.expectJson
                 (RemoteData.fromResult >> QueryResponse)

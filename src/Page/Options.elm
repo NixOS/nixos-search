@@ -392,7 +392,7 @@ makeRequest :
     -> Cmd Msg
 makeRequest options channel query from size =
     Search.makeRequest
-        (makeRequestBody query from size)
+        makeRequestBody
         ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
         decodeResultItemSource
         options
