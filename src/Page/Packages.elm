@@ -159,8 +159,9 @@ viewSuccess channel show result =
                     [ th [] [ text "Attribute name" ]
                     , th [] [ text "Name" ]
                     , th [] [ text "Version" ]
-                    , th [] [ text "Score | Queries" ]
                     , th [] [ text "Description" ]
+
+                    -- DEBUG: , th [] [ text "Score | Queries" ]
                     ]
                 ]
             , tbody
@@ -187,17 +188,21 @@ viewResultItem channel show item =
 
             else
                 []
-
-        queries =
-            item.matched_queries
-                |> String.join ","
     in
     tr [ onClick (SearchMsg (Search.ShowDetails item.source.attr_name)) ]
         [ td [] [ text <| item.source.attr_name ]
         , td [] [ text item.source.pname ]
         , td [] [ text item.source.pversion ]
-        , td [] [ text <| String.fromFloat item.score ++ " | " ++ queries ]
         , td [] [ text <| Maybe.withDefault "" item.source.description ]
+
+        -- DEBUG: , td []
+        -- DEBUG:     [ text
+        -- DEBUG:         ([ String.fromFloat item.score
+        -- DEBUG:          , String.join "," item.matched_queries
+        -- DEBUG:          ]
+        -- DEBUG:             |> String.join " | "
+        -- DEBUG:         )
+        -- DEBUG:     ]
         ]
         :: packageDetails
 
