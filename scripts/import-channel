@@ -240,27 +240,31 @@ def split_query(text):
     Example:
 
     python37Packages.test_name-test
-     - python37packages.test_name-test
-     - python37packages.test_name
-     - python37packages.test
+     = index: 0
+     - python37Packages.test1_name-test2
+     - python37Packages.test1_name
+     - python37Packages.test1
      - python37
      - python
-     - test_name-test
-     - test_name
-     - test
+     = index: 1
+     - test1_name-test2
+     - test1_name
+     - test1
+     = index: 2
+     - name-test2
+     - name
+     = index: 3
+     - test2
     """
-    regex = re.compile(".+?(?:(?<=[a-z])(?=[1-9A-Z])|(?<=[1-9A-Z])(?=[A-Z][a-z])|[_-]|$)")
-    prev = ""
-    for part in text.split("."):
-        matches = [m.group(0) for m in regex.finditer(part)]
-        for i in range(len(matches)):
-            item = "".join(matches[:len(matches) - i]).rstrip("-._")
-            yield item
-            if prev:
-                yield ".".join([prev, item]).lstrip("_-")
-
-        prev += "." + ("".join(matches).rstrip("-_"))
-        prev = prev.lstrip(".")
+    tokens = []
+    regex = re.compile(".+?(?:(?<=[a-z])(?=[1-9A-Z])|(?<=[1-9A-Z])(?=[A-Z][a-z])|[\._-]|$)")
+    parts =  [m.group(0) for m in regex.finditer(text)]
+    for index in range(len(parts)):
+        prev_parts = ""
+        for part in parts[index:]:
+            tokens.append((prev_parts + part).rstrip("_.-"))
+            prev_parts += part
+    return tokens
 
 
 def get_last_evaluation(prefix):
