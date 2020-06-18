@@ -1,28 +1,38 @@
 module Page.Home exposing (Model, Msg, init, update, view)
 
-import Html exposing (Html, text, div )
+import Html exposing (Html, div, text)
+
+
 
 -- MODEL
 
-type alias Model = ()
+
+type alias Model =
+    ()
 
 
-init : (Model, Cmd Msg)
+init : ( Model, Cmd Msg )
 init =
-  ((), Cmd.none)
+    ( (), Cmd.none )
+
 
 
 -- UPDATE
 
-type Msg = NoOp
+
+type Msg
+    = NoOp
+
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-   (model, Cmd.none)
+    ( model, Cmd.none )
+
+
 
 -- VIEW
 
+
 view : Model -> Html Msg
 view model =
-  div [] [text "Home"]
-
+    div [] [ text "Home" ]
