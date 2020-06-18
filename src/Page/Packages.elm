@@ -19,6 +19,7 @@ import Html
         , dl
         , dt
         , li
+        , p
         , table
         , tbody
         , td
@@ -160,8 +161,6 @@ viewSuccess channel show result =
                     , th [] [ text "Name" ]
                     , th [] [ text "Version" ]
                     , th [] [ text "Description" ]
-
-                    -- DEBUG: , th [] [ text "Score | Queries" ]
                     ]
                 ]
             , tbody
@@ -183,28 +182,39 @@ viewResultItem channel show item =
     let
         packageDetails =
             if Just item.source.attr_name == show then
-                [ td [ colspan 5 ] [ viewResultItemDetails channel item ]
+                [ td [ colspan 4 ] [ viewResultItemDetails channel item ]
                 ]
 
             else
                 []
     in
-    tr [ onClick (SearchMsg (Search.ShowDetails item.source.attr_name)) ]
-        [ td [] [ text <| item.source.attr_name ]
-        , td [] [ text item.source.pname ]
-        , td [] [ text item.source.pversion ]
-        , td [] [ text <| Maybe.withDefault "" item.source.description ]
-
-        -- DEBUG: , td []
-        -- DEBUG:     [ text
-        -- DEBUG:         ([ String.fromFloat item.score
-        -- DEBUG:          , String.join "," item.matched_queries
-        -- DEBUG:          ]
-        -- DEBUG:             |> String.join " | "
-        -- DEBUG:         )
-        -- DEBUG:     ]
-        ]
-        :: packageDetails
+    []
+        |> List.append
+            [ tr []
+                [ td [ colspan 4 ]
+                    [ p [] [ text <| "score: " ++ String.fromFloat item.score ]
+                    , p []
+                        [ text <|
+                            "matched queries: "
+                        , ul []
+                            (item.matched_queries
+                                |> Maybe.withDefault []
+                                |> List.sort
+                                |> List.map (\q -> li [] [ text q ])
+                            )
+                        ]
+                    ]
+                ]
+            ]
+        |> List.append
+            (tr [ onClick (SearchMsg (Search.ShowDetails item.source.attr_name)) ]
+                [ td [] [ text <| item.source.attr_name ]
+                , td [] [ text item.source.pname ]
+                , td [] [ text item.source.pversion ]
+                , td [] [ text <| Maybe.withDefault "" item.source.description ]
+                ]
+                :: packageDetails
+            )
 
 
 viewResultItemDetails :
@@ -358,127 +368,231 @@ makeRequestBody :
     -> Int
     -> Http.Body
 makeRequestBody queryRaw from size =
-    -- # 1. Example of full attr_name search
-    --
-    -- Query:
-    --   python27Packages.requests
-    -- Result:
-    --   python27Packages.requests
-    --   python37Packages.requests
-    --   python38Packages.requests
-    --   python27Packages.requests_ntlm
-    --
-    -- # 2. Example of
     let
         query =
             queryRaw
                 |> String.trim
-                |> String.replace " " "."
 
         delimiters =
             Maybe.withDefault Regex.never (Regex.fromString "[. ]")
 
-        listIn name type_ value =
-            [ ( name, Json.Encode.list type_ value ) ]
-
-        objectIn name value =
-            [ ( name, Json.Encode.object value ) ]
-
-        encodeTerm ( name, boost, title ) =
-            let
-                termQuery =
-                    Regex.split delimiters query
-            in
-            [ ( name, Json.Encode.list Json.Encode.string termQuery )
-            , ( "boost", Json.Encode.float boost )
-            , ( "_name", Json.Encode.string title )
-            ]
-                |> objectIn "terms"
-
-        encodeTermForAttrSet ( name, boost, title ) =
-            let
-                maybeTermQuery =
-                    query
-                        |> Regex.split delimiters
-                        |> List.head
-            in
-            case maybeTermQuery of
-                Nothing ->
-                    []
-
-                Just termQuery ->
-                    [ ( "value", Json.Encode.string termQuery )
-                    , ( "boost", Json.Encode.float boost )
-                    , ( "_name", Json.Encode.string title )
+        should_match boost_base =
+            List.indexedMap
+                (\i ( field, boost ) ->
+                    [ ( "match"
+                      , Json.Encode.object
+                            [ ( field
+                              , Json.Encode.object
+                                    [ ( "query", Json.Encode.string query )
+                                    , ( "boost", Json.Encode.float boost )
+                                    , ( "analyzer", Json.Encode.string "whitespace" )
+                                    , ( "fuzziness", Json.Encode.string "1" )
+                                    , ( "_name"
+                                      , Json.Encode.string <|
+                                            "should_match_"
+                                                ++ String.fromInt (i + 1)
+                                      )
+                                    ]
+                              )
+                            ]
+                      )
                     ]
-                        |> objectIn name
-                        |> objectIn "term"
+                )
+                [ ( "package_attr_name", 1 )
+                , ( "package_attr_name_query", 1 )
+                , ( "package_pname", 1 )
+                , ( "package_description", 1 )
+                , ( "package_longDescription", 1 )
+                ]
 
-        encodeMatchPhaseQuery ( name, boost, title ) =
-            [ ( "query", Json.Encode.string query )
-            , ( "boost", Json.Encode.float boost )
-            , ( "analyzer", Json.Encode.string "nixPackageAttrName" )
-            , ( "_name", Json.Encode.string title )
-            ]
-                |> objectIn name
-                |> objectIn "match_phrase"
+        should_match_bool_prefix boost_base =
+            List.indexedMap
+                (\i ( field, boost ) ->
+                    [ ( "match_bool_prefix"
+                      , Json.Encode.object
+                            [ ( field
+                              , Json.Encode.object
+                                    [ ( "query", Json.Encode.string query )
+                                    , ( "boost", Json.Encode.float boost )
+                                    , ( "analyzer", Json.Encode.string "whitespace" )
+                                    , ( "fuzziness", Json.Encode.string "1" )
+                                    , ( "_name"
+                                      , Json.Encode.string <|
+                                            "should_match_bool_prefix_"
+                                                ++ String.fromInt (i + 1)
+                                      )
+                                    ]
+                              )
+                            ]
+                      )
+                    ]
+                )
+                [ ( "package_attr_name", 1 )
+                , ( "package_attr_name_query", 1 )
+                , ( "package_pname", 1 )
+                ]
 
-        encodeMatchQuery ( name, boost, title ) =
-            [ ( "query", Json.Encode.string query )
-            , ( "boost", Json.Encode.float boost )
-            , ( "analyzer", Json.Encode.string "nixPackageSimpleAttrName" )
-            , ( "fuzziness", Json.Encode.string "1" )
-            , ( "_name", Json.Encode.string title )
-            ]
-                |> objectIn name
-                |> objectIn "match"
+        should_terms boost_base =
+            List.indexedMap
+                (\i ( field, boost ) ->
+                    [ ( "terms"
+                      , Json.Encode.object
+                            [ ( field
+                              , Json.Encode.list Json.Encode.string (Regex.split delimiters query)
+                              )
+                            , ( "boost", Json.Encode.float <| boost_base * boost )
+                            , ( "_name"
+                              , Json.Encode.string <|
+                                    "should_terms_"
+                                        ++ String.fromInt (i + 1)
+                              )
+                            ]
+                      )
+                    ]
+                )
+                [ ( "package_attr_name", 1 )
+                , ( "package_attr_name_query", 1 )
+                , ( "package_pname", 1 )
+                , ( "package_attr_set", 1 )
+                ]
+
+        should_term boost_base =
+            List.indexedMap
+                (\i ( field, boost ) ->
+                    [ ( "term"
+                      , Json.Encode.object
+                            [ ( field
+                              , Json.Encode.object
+                                    [ ( "value", Json.Encode.string query )
+                                    , ( "boost", Json.Encode.float <| boost_base * boost )
+                                    , ( "_name"
+                                      , Json.Encode.string <|
+                                            "should_term_"
+                                                ++ String.fromInt (i + 1)
+                                      )
+                                    ]
+                              )
+                            ]
+                      )
+                    ]
+                )
+                [ ( "package_attr_name", 1 )
+                , ( "package_attr_name_query", 1 )
+                , ( "package_pname", 1 )
+                ]
+
+        filter_packages =
+            ( "term"
+            , Json.Encode.object
+                [ ( "type"
+                  , Json.Encode.object
+                        [ ( "value", Json.Encode.string "package" )
+                        , ( "_name", Json.Encode.string "filter_packages" )
+                        ]
+                  )
+                ]
+            )
+
+        filter_queries =
+            let
+                filterQuery =
+                    query
+                        |> String.replace "." " "
+            in
+            filterQuery
+                |> String.words
+                |> List.indexedMap
+                    (\i query_word ->
+                        let
+                            isLast =
+                                List.length (String.words filterQuery) == i + 1
+                        in
+                        [ if isLast then
+                            ( "bool"
+                            , Json.Encode.object
+                                [ ( "should"
+                                  , Json.Encode.list Json.Encode.object
+                                        [ [ ( "match"
+                                            , Json.Encode.object
+                                                [ ( "package_attr_name_query"
+                                                  , Json.Encode.object
+                                                        [ ( "query", Json.Encode.string query_word )
+                                                        , ( "fuzziness", Json.Encode.string "1" )
+                                                        , ( "_name", Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_should_match" )
+                                                        ]
+                                                  )
+                                                ]
+                                            )
+                                          ]
+                                        , [ ( "match_bool_prefix"
+                                            , Json.Encode.object
+                                                [ ( "package_attr_name_query"
+                                                  , Json.Encode.object
+                                                        [ ( "query", Json.Encode.string query_word )
+                                                        , ( "_name"
+                                                          , Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_should_prefix"
+                                                          )
+                                                        ]
+                                                  )
+                                                ]
+                                            )
+                                          ]
+                                        ]
+                                  )
+                                ]
+                            )
+
+                          else
+                            ( "match_bool_prefix"
+                            , Json.Encode.object
+                                [ ( "package_attr_name_query"
+                                  , Json.Encode.object
+                                        [ ( "query", Json.Encode.string query_word )
+                                        , ( "_name"
+                                          , Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_prefix"
+                                          )
+                                        ]
+                                  )
+                                ]
+                            )
+                        ]
+                    )
     in
-    []
-        |> List.append
-            (List.map encodeTerm
-                [ ( "package_attr_name.raw", 1000, "term_1" )
-                , ( "package_pname.raw", 600, "term_2" )
-                ]
-            )
-        |> List.append
-            (List.map encodeTermForAttrSet
-                [ ( "package_attr_set", 100, "term_3" )
-                ]
-            )
-        |> List.append
-            (List.map encodeMatchPhaseQuery
-                [ ( "package_attr_name.simple", 70, "match_phrase_1" )
-                , ( "package_attr_name", 50, "match_phrase_2" )
-                , ( "package_pname", 10, "match_phrase_3" )
-                , ( "package_description", 5, "match_phrase_4" )
-                , ( "package_longDescription", 3, "match_phrase_5" )
-                ]
-            )
-        |> List.append
-            (List.map encodeMatchQuery
-                [ ( "package_attr_name.simple", 70, "match_1" )
-                , ( "package_attr_name", 50, "match_1" )
-                , ( "package_pname", 10, "match_2" )
-                , ( "package_description", 5, "match_3" )
-                , ( "package_longDescription", 3, "match_4" )
-                ]
-            )
-        |> listIn "should" Json.Encode.object
-        |> objectIn "bool"
-        |> objectIn "must"
-        |> ([ ( "type", Json.Encode.string "package" ) ]
-                |> objectIn "match"
-                |> objectIn "filter"
-                |> List.append
-           )
-        |> objectIn "bool"
-        |> objectIn "query"
-        |> List.append
-            [ ( "from", Json.Encode.int from )
-            , ( "size", Json.Encode.int size )
+    Http.jsonBody
+        (Json.Encode.object
+            [ ( "from"
+              , Json.Encode.int from
+              )
+            , ( "size"
+              , Json.Encode.int size
+              )
+            , ( "query"
+              , Json.Encode.object
+                    [ ( "bool"
+                      , Json.Encode.object
+                            [ ( "filter"
+                              , Json.Encode.list Json.Encode.object
+                                    (List.append
+                                        [ [ filter_packages ] ]
+                                        filter_queries
+                                    )
+                              )
+                            , ( "should"
+                              , Json.Encode.list
+                                    Json.Encode.object
+                                    ([]
+                                        |> List.append (should_term 10000)
+                                        |> List.append (should_terms 1000)
+                                        |> List.append (should_match_bool_prefix 100)
+                                        |> List.append (should_match 10)
+                                    )
+                              )
+                            ]
+                      )
+                    ]
+              )
             ]
-        |> Json.Encode.object
-        |> Http.jsonBody
+        )
 
 
 makeRequest :

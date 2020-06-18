@@ -91,7 +91,7 @@ type alias ResultItem a =
     , id : String
     , score : Float
     , source : a
-    , matched_queries : List String
+    , matched_queries : Maybe (List String)
     }
 
 
@@ -628,4 +628,4 @@ decodeResultItem decodeResultItemSource =
         (Json.Decode.field "_id" Json.Decode.string)
         (Json.Decode.field "_score" Json.Decode.float)
         (Json.Decode.field "_source" decodeResultItemSource)
-        (Json.Decode.field "matched_queries" (Json.Decode.list Json.Decode.string))
+        (Json.Decode.maybe (Json.Decode.field "matched_queries" (Json.Decode.list Json.Decode.string)))

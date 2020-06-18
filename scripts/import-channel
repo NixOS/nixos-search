@@ -13,7 +13,6 @@
 import boto3
 import botocore
 import botocore.client
-import xml.etree.ElementTree
 import click
 import click_log
 import elasticsearch
@@ -22,10 +21,12 @@ import json
 import logging
 import os.path
 import pypandoc
+import re
 import requests
 import shlex
 import subprocess
 import tqdm
+import xml.etree.ElementTree
 
 logger = logging.getLogger("import-channel")
 click_log.basic_config(logger)
@@ -49,16 +50,18 @@ CHANNELS = {
     },
 }
 ANALYSIS = {
+    "normalizer": {
+        "lowercase": {
+            "type": "custom",
+            "char_filter": [],
+            "filter": ["lowercase"],
+        }
+    },
     "analyzer": {
-        "nixPackageAttrName": {
+        "lowercase": {
             "type": "custom",
-            "tokenizer": "nix_package_attr_name",
-            "filter": ["lowercase", "nix_stopwords"],
-        },
-        "nixPackageSimpleAttrName": {
-            "type": "custom",
-            "tokenizer": "nix_package_simple_attr_name",
-            "filter": ["lowercase", "nix_stopwords"],
+            "tokenizer": "keyword",
+            "filter": ["lowercase"],
         },
         "nixOptionName": {
             "type": "custom",
@@ -72,14 +75,11 @@ ANALYSIS = {
         },
     },
     "tokenizer": {
-        "nix_package_simple_attr_name": {
+        "nix_package_query": {
             "type": "pattern",
             "pattern": "|".join(
                 [
-                    "[.]",
-                    "\\d+?Packages",
-                    "\\d+?Plugins",
-                    "\\d+?Extensions",
+                    "[ ]",
                 ]
             ),
         },
@@ -176,22 +176,20 @@ MAPPING = {
             },
         },
         "package_attr_name": {
-            "type": "text",
-            "analyzer": "nixPackageAttrName",
-            "fields": {
-                "raw": {"type": "keyword"},
-                "simple": {
-                    "type": "text",
-                    "analyzer": "nixPackageSimpleAttrName"
-                }
-            },
+            "type": "keyword",
+            "normalizer": "lowercase",
         },
-        "package_attr_set": {"type": "keyword"},
+        "package_attr_name_query": {
+            "type": "keyword",
+            "normalizer": "lowercase",
+        },
+        "package_attr_set": {
+            "type": "keyword",
+            "normalizer": "lowercase",
+        },
         "package_pname": {
-            "type": "text",
-            "fields": {
-                "raw": {"type": "keyword"}
-            }
+            "type": "keyword",
+            "normalizer": "lowercase",
         },
         "package_pversion": {"type": "keyword"},
         "package_description": {"type": "text"},
@@ -234,6 +232,35 @@ MAPPING = {
         "option_source": {"type": "keyword"},
     },
 }
+
+
+def split_query(text):
+    """Tokenize package attr_name
+
+    Example:
+
+    python37Packages.test_name-test
+     - python37packages.test_name-test
+     - python37packages.test_name
+     - python37packages.test
+     - python37
+     - python
+     - test_name-test
+     - test_name
+     - test
+    """
+    regex = re.compile(".+?(?:(?<=[a-z])(?=[1-9A-Z])|(?<=[1-9A-Z])(?=[A-Z][a-z])|[_-]|$)")
+    prev = ""
+    for part in text.split("."):
+        matches = [m.group(0) for m in regex.finditer(part)]
+        for i in range(len(matches)):
+            item = "".join(matches[:len(matches) - i]).rstrip("-._")
+            yield item
+            if prev:
+                yield ".".join([prev, item]).lstrip("_-")
+
+        prev += "." + ("".join(matches).rstrip("-_"))
+        prev = prev.lstrip(".")
 
 
 def get_last_evaluation(prefix):
@@ -352,6 +379,7 @@ def remove_attr_set(name):
         "tmuxplugin"
         "vimplugin"
     ]
+    # TODO: is this correct
     if any([name.startswith(i) for i in sets]):
         name = "-".join(name.split("-")[1:])
 
@@ -378,6 +406,7 @@ def get_packages(evaluation, evaluation_builds):
 
     def gen():
         for attr_name, data in packages:
+
             position = data["meta"].get("position")
             if position and position.startswith("/nix/store"):
                 position = position[44:]
@@ -437,6 +466,7 @@ def get_packages(evaluation, evaluation_builds):
                 type="package",
                 package_hydra=hydra,
                 package_attr_name=attr_name,
+                package_attr_name_query=list(split_query(attr_name)),
                 package_attr_set=attr_set,
                 package_pname=remove_attr_set(data["pname"]),
                 package_pversion=data["version"],
@@ -493,7 +523,7 @@ def get_options(evaluation):
                 # we first check if there are some xml elements before using pypandoc
                 # since pypandoc calls are quite slow
                 root = xml.etree.ElementTree.fromstring(xml_description)
-                if len(root.find('para').getchildren()) > 0:
+                if len(list(root.find('para'))) > 0:
                     description = pypandoc.convert_text(
                         xml_description,
                         "html",
