@@ -29,9 +29,9 @@ jobs:
         nix --version
         cat /etc/nix/nix.conf
 
-    - name: Building import-scripts
+    - name: Building import_scripts
       run: |
-        nix build ./#packages.x86_64-linux.import-scripts
+        nix build ./#packages.x86_64-linux.import_scripts
 
     - name: Import ${{ matrix.channel }} channel
       run: |
