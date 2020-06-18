@@ -18,6 +18,24 @@ For backend we are using Elasticsearch instance which is kindly sponsored by
 [Elm](https://elm-lang.org).
 
 
+## How search works?
+
+The use case we want to solve is that a visitor want to see if a package
+exists or to look up certain package's details.
+
+A user wants to converge to a single result if possible. The more characters
+are added to a search query the more narrow is search is and we should show
+less results.
+
+Very important is also ranking of search results. This will bring more relevant
+search results to the top, since a lot of times it is hard to produce search
+query that will output only one result item.
+
+A less important, but providing better user experience. are suggestions for
+writing better search query. Suggesting feature should guide user to write
+better queries which in turn will produce better results.
+
+
 ## Ideas we want to explore
 
 Apart from searching packages and options we would like to:

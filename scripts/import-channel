@@ -13,7 +13,6 @@
 import boto3
 import botocore
 import botocore.client
-import xml.etree.ElementTree
 import click
 import click_log
 import elasticsearch
@@ -22,10 +21,12 @@ import json
 import logging
 import os.path
 import pypandoc
+import re
 import requests
 import shlex
 import subprocess
 import tqdm
+import xml.etree.ElementTree
 
 logger = logging.getLogger("import-channel")
 click_log.basic_config(logger)
@@ -33,7 +34,7 @@ click_log.basic_config(logger)
 
 S3_BUCKET = "nix-releases"
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-INDEX_SCHEMA_VERSION = 5
+INDEX_SCHEMA_VERSION = 6
 CHANNELS = {
     "unstable": {
         "packages": "nixpkgs/nixpkgs-20.09pre",
@@ -49,11 +50,18 @@ CHANNELS = {
     },
 }
 ANALYSIS = {
-    "analyzer": {
-        "nixAttrName": {
+    "normalizer": {
+        "lowercase": {
             "type": "custom",
-            "tokenizer": "nix_attrname",
-            "filter": ["lowercase", "nix_stopwords"],
+            "char_filter": [],
+            "filter": ["lowercase"],
+        }
+    },
+    "analyzer": {
+        "lowercase": {
+            "type": "custom",
+            "tokenizer": "keyword",
+            "filter": ["lowercase"],
         },
         "nixOptionName": {
             "type": "custom",
@@ -67,13 +75,24 @@ ANALYSIS = {
         },
     },
     "tokenizer": {
-        "nix_attrname": {
+        "nix_package_query": {
+            "type": "pattern",
+            "pattern": "|".join(
+                [
+                    "[ ]",
+                ]
+            ),
+        },
+        "nix_package_attr_name": {
             "type": "pattern",
             # Split on attrname separators like _, .
             "pattern": "|".join(
                 [
                     "[_.-]",  # Common separators like underscores, dots and dashes
                     "\\d+?Packages",  # python37Packages -> python
+                    "\\d+?Plugins",  # vimPlugins -> vim
+                    "\\d+?Extensions",  # php74Extensions -> php
+                    "\\d+?Interpreters",  # perlInterpreters -> perl
                     # Camelcase tokenizer adapted from
                     # https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-pattern-analyzer.html
                     "".join(
@@ -118,7 +137,18 @@ ANALYSIS = {
         "nix_stopwords": {
             "type": "stop",
             "ignore_case": True,
-            "stopwords": ["packages", "package", "options", "option"],
+            "stopwords": [
+                "packages",
+                "package",
+                "options",
+                "option",
+                "plugins",
+                "plugin",
+                "extensions",
+                "extension",
+                "interpreters",
+                "interpreter",
+            ],
         },
     },
 }
@@ -146,12 +176,21 @@ MAPPING = {
             },
         },
         "package_attr_name": {
-            "type": "text",
-            "analyzer": "nixAttrName",
-            "fields": {"raw": {"type": "keyword"}},
+            "type": "keyword",
+            "normalizer": "lowercase",
         },
-        "package_attr_set": {"type": "keyword"},
-        "package_pname": {"type": "keyword"},
+        "package_attr_name_query": {
+            "type": "keyword",
+            "normalizer": "lowercase",
+        },
+        "package_attr_set": {
+            "type": "keyword",
+            "normalizer": "lowercase",
+        },
+        "package_pname": {
+            "type": "keyword",
+            "normalizer": "lowercase",
+        },
         "package_pversion": {"type": "keyword"},
         "package_description": {"type": "text"},
         "package_longDescription": {"type": "text"},
@@ -193,6 +232,39 @@ MAPPING = {
         "option_source": {"type": "keyword"},
     },
 }
+
+
+def split_query(text):
+    """Tokenize package attr_name
+
+    Example:
+
+    python37Packages.test_name-test
+     = index: 0
+     - python37Packages.test1_name-test2
+     - python37Packages.test1_name
+     - python37Packages.test1
+     - python37
+     - python
+     = index: 1
+     - test1_name-test2
+     - test1_name
+     - test1
+     = index: 2
+     - name-test2
+     - name
+     = index: 3
+     - test2
+    """
+    tokens = []
+    regex = re.compile(".+?(?:(?<=[a-z])(?=[1-9A-Z])|(?<=[1-9A-Z])(?=[A-Z][a-z])|[\._-]|$)")
+    parts =  [m.group(0) for m in regex.finditer(text)]
+    for index in range(len(parts)):
+        prev_parts = ""
+        for part in parts[index:]:
+            tokens.append((prev_parts + part).rstrip("_.-"))
+            prev_parts += part
+    return tokens
 
 
 def get_last_evaluation(prefix):
@@ -265,6 +337,63 @@ def get_evaluation_builds(evaluation_id):
     return result
 
 
+def get_maintainer(maintainer):
+    maintainers = []
+
+    if type(maintainer) == str:
+        maintainers.append(dict(
+            name=maintainer,
+            email=None,
+            github=None,
+        ))
+
+    elif type(maintainer) == dict:
+        maintainers.append(dict(
+            name=maintainer.get("name"),
+            email=maintainer.get("email"),
+            github=maintainer.get("github"),
+        ))
+
+    elif type(maintainer) == list:
+        for item in maintainer:
+            maintainers += get_maintainer(item)
+
+    else:
+        logger.error(f"maintainer  can not be recognized from: {maintainer}")
+        sys.exit(1)
+
+    return maintainers
+
+
+def remove_attr_set(name):
+    # some package sets the prefix is included in pname
+    sets = [
+        # Packages
+        "emscripten",
+        "lua",
+        "php",
+        "pure",
+        "python",
+        "lisp",
+        "perl",
+        "ruby",
+        # Plugins
+        "elasticsearch",
+        "graylog",
+        "tmuxplugin"
+        "vimplugin"
+    ]
+    # TODO: is this correct
+    if any([name.startswith(i) for i in sets]):
+        name = "-".join(name.split("-")[1:])
+
+    # node does things a bit different
+    elif name.startswith("node_"):
+        name = name[len("node_"):]
+
+    return name
+
+
 def get_packages(evaluation, evaluation_builds):
     logger.debug(
         f"get_packages: Retriving list of packages for '{evaluation['git_revision']}' revision"
@@ -281,6 +410,7 @@ def get_packages(evaluation, evaluation_builds):
 
     def gen():
         for attr_name, data in packages:
+
             position = data["meta"].get("position")
             if position and position.startswith("/nix/store"):
                 position = position[44:]
@@ -300,16 +430,7 @@ def get_packages(evaluation, evaluation_builds):
             else:
                 licenses = []
 
-            maintainers = [
-                type(maintainer) == str
-                and dict(name=maintainer, email=None, github=None)
-                or dict(
-                    name=maintainer.get("name"),
-                    email=maintainer.get("email"),
-                    github=maintainer.get("github"),
-                )
-                for maintainer in data["meta"].get("maintainers", [])
-            ]
+            maintainers = get_maintainer(data["meta"].get("maintainers", []))
 
             platforms = [
                 type(platform) == str and platform or None
@@ -319,9 +440,9 @@ def get_packages(evaluation, evaluation_builds):
             attr_set = None
             if "." in attr_name:
                 attr_set = attr_name.split(".")[0]
-                if not attr_set.endswith("Packages") and not attr_set.endswith(
-                    "Plugins"
-                ):
+                if not attr_set.endswith("Packages") and \
+                        not attr_set.endswith("Plugins") and \
+                        not attr_set.endswith("Extensions"):
                     attr_set = None
 
             hydra = None
@@ -349,8 +470,9 @@ def get_packages(evaluation, evaluation_builds):
                 type="package",
                 package_hydra=hydra,
                 package_attr_name=attr_name,
+                package_attr_name_query=list(split_query(attr_name)),
                 package_attr_set=attr_set,
-                package_pname=data["pname"],
+                package_pname=remove_attr_set(data["pname"]),
                 package_pversion=data["version"],
                 package_description=data["meta"].get("description"),
                 package_longDescription=data["meta"].get("longDescription", ""),
@@ -405,7 +527,7 @@ def get_options(evaluation):
                 # we first check if there are some xml elements before using pypandoc
                 # since pypandoc calls are quite slow
                 root = xml.etree.ElementTree.fromstring(xml_description)
-                if len(root.find('para').getchildren()) > 0:
+                if len(list(root.find('para'))) > 0:
                     description = pypandoc.convert_text(
                         xml_description,
                         "html",
