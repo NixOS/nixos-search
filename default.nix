@@ -1,15 +1,9 @@
-{ pkgs ? import <nixpkgs> {}
+{ pkgs ? import <nixpkgs> { }
+, version ? "0"
 }:
-
 let
   package = builtins.fromJSON (builtins.readFile ./package.json);
-  yarn2nix = import (pkgs.fetchFromGitHub {
-    owner = "moretea";
-    repo = "yarn2nix";
-    rev = "9e7279edde2a4e0f5ec04c53f5cd64440a27a1ae";
-    sha256 = "sha256-x77mYSvwA4bd/uCwL0rRw+8mwH+dR/UfWnn4YXmm4n8=";
-  }) { inherit pkgs; };
-  yarnPkg = yarn2nix.mkYarnPackage rec {
+  yarnPkg = pkgs.yarn2nix-moretea.mkYarnPackage rec {
     name = "${package.name}-yarn-${package.version}";
     src = null;
     dontUnpack = true;
@@ -28,7 +22,7 @@ let
     '';
     pkgConfig = {
       node-sass = {
-        buildInputs = [ pkgs.python pkgs.libsass pkgs.pkgconfig];
+        buildInputs = [ pkgs.python pkgs.libsass pkgs.pkgconfig ];
         postInstall = ''
           LIBSASS_EXT=auto yarn --offline run build
           rm build/config.gypi
@@ -36,16 +30,19 @@ let
       };
     };
     publishBinsFor =
-      [ "webpack"
+      [
+        "webpack"
         "webpack-dev-server"
       ];
   };
-in pkgs.stdenv.mkDerivation {
+in
+pkgs.stdenv.mkDerivation {
   name = "${package.name}-${package.version}";
   src = pkgs.lib.cleanSource ./.;
 
   buildInputs =
-    [ yarnPkg
+    [
+      yarnPkg
     ] ++
     (with pkgs; [
       nodejs
@@ -76,6 +73,7 @@ in pkgs.stdenv.mkDerivation {
   buildPhase = ''
     # Yarn writes cache directories etc to $HOME.
     export HOME=$PWD/yarn_home
+    sed -i -e "s|process.env.ELASTICSEARCH_MAPPING_SCHEMA_VERSION|${version}|" src/index.js
     yarn prod
   '';
 
@@ -88,6 +86,7 @@ in pkgs.stdenv.mkDerivation {
     rm -rf node_modules
     ln -sf ${yarnPkg}/libexec/${package.name}/node_modules .
     export PATH=$PWD/node_modules/.bin:$PATH
+    export ELASTICSEARCH_MAPPING_SCHEMA_VERSION=${version}
     echo "============================"
     echo "= To develop run: yarn dev ="
     echo "============================"

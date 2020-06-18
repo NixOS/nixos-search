@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "import-scripts"
+version = "0.1.0"
+description = ""
+authors = ["Rok Garbas <rok@garbas.si>"]
+include = [
+  "import_scripts/packages-config.nix"
+]
+
+[tool.poetry.scripts]
+import-channel = 'import_scripts.channel:run'
+
+[tool.poetry.dependencies]
+python = "^3.8"
+requests = "^2.24.0"
+click = "^7.1.2"
+click-log = "^0.3.2"
+elasticsearch = "^7.8.0"
+boto3 = "^1.14.5"
+tqdm = "^4.46.1"
+pypandoc = "^1.5"
+
+[tool.poetry.dev-dependencies]
+ipdb = "^0.13.2"
+black = "^19.10b0"
+flake8 = "^3.8.3"
+mypy = "^0.780"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

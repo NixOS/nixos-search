@@ -17,10 +17,23 @@ jobs:
       uses: actions/checkout@v2
       with:
         fetch-depth: 0
+
     - name: Installing Nix
       uses: cachix/install-nix-action@v8
+
+    - name: Installing NixFlakes
+      run: |
+        nix-env -iA nixpkgs.nixFlakes
+        echo "::add-path::$HOME/.nix-profile/bin"
+        echo 'experimental-features = nix-command flakes' | sudo tee -a /etc/nix/nix.conf
+        nix --version
+        cat /etc/nix/nix.conf
+
+    - name: Building import_scripts
+      run: |
+        nix build ./#packages.x86_64-linux.import_scripts
+
     - name: Import ${{ matrix.channel }} channel
       run: |
-        cd scripts/
-        ./import-channel --es-url ${{ secrets.ELASTICSEARCH_URL }} --channel ${{ matrix.channel }} -vvv
+        ./result/bin/import-channel --es-url ${{ secrets.ELASTICSEARCH_URL }} --channel ${{ matrix.channel }} -vvv
       if: github.repository == 'NixOS/nixos-search'
