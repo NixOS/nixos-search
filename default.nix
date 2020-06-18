@@ -73,7 +73,7 @@ pkgs.stdenv.mkDerivation {
   buildPhase = ''
     # Yarn writes cache directories etc to $HOME.
     export HOME=$PWD/yarn_home
-    export ELASTICSEARCH_MAPPING_SCHEMA_VERSION=${version}
+    sed -i -e "s|process.env.ELASTICSEARCH_MAPPING_SCHEMA_VERSION|${version}|" src/index.js
     yarn prod
   '';
 
@@ -86,6 +86,7 @@ pkgs.stdenv.mkDerivation {
     rm -rf node_modules
     ln -sf ${yarnPkg}/libexec/${package.name}/node_modules .
     export PATH=$PWD/node_modules/.bin:$PATH
+    export ELASTICSEARCH_MAPPING_SCHEMA_VERSION=${version}
     echo "============================"
     echo "= To develop run: yarn dev ="
     echo "============================"
