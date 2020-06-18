@@ -73,6 +73,7 @@ pkgs.stdenv.mkDerivation {
   buildPhase = ''
     # Yarn writes cache directories etc to $HOME.
     export HOME=$PWD/yarn_home
+    export ELASTICSEARCH_MAPPING_SCHEMA_VERSION=${version}
     yarn prod
   '';
 
