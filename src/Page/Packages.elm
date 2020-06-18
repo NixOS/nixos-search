@@ -189,23 +189,23 @@ viewResultItem channel show item =
                 []
     in
     []
-        |> List.append
-            [ tr []
-                [ td [ colspan 4 ]
-                    [ p [] [ text <| "score: " ++ String.fromFloat item.score ]
-                    , p []
-                        [ text <|
-                            "matched queries: "
-                        , ul []
-                            (item.matched_queries
-                                |> Maybe.withDefault []
-                                |> List.sort
-                                |> List.map (\q -> li [] [ text q ])
-                            )
-                        ]
-                    ]
-                ]
-            ]
+        -- DEBUG: |> List.append
+        -- DEBUG:     [ tr []
+        -- DEBUG:         [ td [ colspan 4 ]
+        -- DEBUG:             [ p [] [ text <| "score: " ++ String.fromFloat item.score ]
+        -- DEBUG:             , p []
+        -- DEBUG:                 [ text <|
+        -- DEBUG:                     "matched queries: "
+        -- DEBUG:                 , ul []
+        -- DEBUG:                     (item.matched_queries
+        -- DEBUG:                         |> Maybe.withDefault []
+        -- DEBUG:                         |> List.sort
+        -- DEBUG:                         |> List.map (\q -> li [] [ text q ])
+        -- DEBUG:                     )
+        -- DEBUG:                 ]
+        -- DEBUG:             ]
+        -- DEBUG:         ]
+        -- DEBUG:     ]
         |> List.append
             (tr [ onClick (SearchMsg (Search.ShowDetails item.source.attr_name)) ]
                 [ td [] [ text <| item.source.attr_name ]
