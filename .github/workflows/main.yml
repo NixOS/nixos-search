@@ -1,6 +1,6 @@
 name: "Build & Deploy to Netlify"
 on:
-  #pull_request:
+  pull_request:
   push:
     branches:
       - master
