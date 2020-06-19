@@ -14,11 +14,17 @@ jobs:
           - 19.09
       fail-fast: true
     steps:
+
+    - name: Checking out the repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
     #- name: Download ${{ matrix.channel }} channel artifacts
     #  uses: actions/download-artifact@v2
     #  with:
     #    name: channel-${{ matrix.channel }}
-    #    path: artifacts
+    #    path: ./artifacts
 
     - name: Download latest builds for ${{ matrix.channel }} channel (if needed)
       run: |
@@ -28,18 +34,22 @@ jobs:
           CHANNEL=""
         fi
         sudo apt-get install -y awscli
-        aws s3 cp --no-sign-request "$S3_URL/$(aws s3 ls --no-sign-request $S3_URL/ | grep $CHANNEL | sort | grep "/$" | tail -1 | cut -d" " -f29 | sed 's|/||')/src-url" ./
+        aws s3 cp --no-sign-request '$S3_URL/$(aws s3 ls --no-sign-request $S3_URL/ | grep $CHANNEL | sort | tail -1 | grep "/$" | cut -d" " -f29 | sed "s|/||")/src-url' ./
+        echo "::set-env name=new_artifact::no"
         if ! cmp -s ./src-url ./artifacts/src-url; then
           mkdir -p ./artifacts
           cp ./src-url ./artifacts/
           curl -H "Content-Type: application/json" "$(cat ./artifacts/src-url)/builds" -o ./artifacts/builds.json
+          echo "::set-env name=new_artifact::yes"
         fi
         exit 123
 
-    - name: Checking out the repository
-      uses: actions/checkout@v2
+    - name: Download latest builds for ${{ matrix.channel }} channel (if needed)
+      uses: actions/upload-artifact@v2
+      if: ${{ env.new_artifact == 'yes' }}
       with:
-        fetch-depth: 0
+        name: channel-${{ matrix.channel }}
+        path: ./artifacts
 
     - name: Installing Nix
       uses: cachix/install-nix-action@v8
