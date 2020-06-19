@@ -1,9 +1,6 @@
 name: "Hourly import channel to Elasticsearch"
 on:
   pull_request:
-  push:
-    branches:
-      - fix-cron
   # schedule:
   # - cron: '0 * * * *'
 jobs:
@@ -39,7 +36,7 @@ jobs:
         fi
         exit 123
       env:
-        VERSION: ${{ matrix.channel == "unstable" && "" || matrix.channel }}
+        VERSION: ${{ matrix.channel == 'unstable' && '' || matrix.channel }}
 
     - name: Checking out the repository
       uses: actions/checkout@v2
