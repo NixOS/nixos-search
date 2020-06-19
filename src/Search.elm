@@ -8,6 +8,7 @@ module Search exposing
     , decodeResult
     , init
     , makeRequest
+    , makeRequestBody
     , update
     , view
     )
@@ -559,8 +560,131 @@ type alias Options =
     }
 
 
+filter_by_type :
+    String
+    -> ( String, Json.Encode.Value )
+filter_by_type type_ =
+    ( "term"
+    , Json.Encode.object
+        [ ( "type"
+          , Json.Encode.object
+                [ ( "value", Json.Encode.string type_ )
+                , ( "_name", Json.Encode.string <| "filter_" ++ type_ ++ "s" )
+                ]
+          )
+        ]
+    )
+
+
+filter_by_query : String -> String -> List (List ( String, Json.Encode.Value ))
+filter_by_query field queryRaw =
+    let
+        query =
+            queryRaw
+                |> String.trim
+    in
+    query
+        |> String.replace "." " "
+        |> String.words
+        |> List.indexedMap
+            (\i query_word ->
+                let
+                    isLast =
+                        List.length (String.words query) == i + 1
+                in
+                [ if isLast then
+                    ( "bool"
+                    , Json.Encode.object
+                        [ ( "should"
+                          , Json.Encode.list Json.Encode.object
+                                [ [ ( "match"
+                                    , Json.Encode.object
+                                        [ ( field
+                                          , Json.Encode.object
+                                                [ ( "query", Json.Encode.string query_word )
+                                                , ( "fuzziness", Json.Encode.string "1" )
+                                                , ( "_name", Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_should_match" )
+                                                ]
+                                          )
+                                        ]
+                                    )
+                                  ]
+                                , [ ( "match_bool_prefix"
+                                    , Json.Encode.object
+                                        [ ( field
+                                          , Json.Encode.object
+                                                [ ( "query", Json.Encode.string query_word )
+                                                , ( "_name"
+                                                  , Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_should_prefix"
+                                                  )
+                                                ]
+                                          )
+                                        ]
+                                    )
+                                  ]
+                                ]
+                          )
+                        ]
+                    )
+
+                  else
+                    ( "match_bool_prefix"
+                    , Json.Encode.object
+                        [ ( field
+                          , Json.Encode.object
+                                [ ( "query", Json.Encode.string query_word )
+                                , ( "_name"
+                                  , Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_prefix"
+                                  )
+                                ]
+                          )
+                        ]
+                    )
+                ]
+            )
+
+
+makeRequestBody :
+    String
+    -> Int
+    -> Int
+    -> String
+    -> String
+    -> List (List ( String, Json.Encode.Value ))
+    -> Http.Body
+makeRequestBody query from size type_ query_field should_queries =
+    Http.jsonBody
+        (Json.Encode.object
+            [ ( "from"
+              , Json.Encode.int from
+              )
+            , ( "size"
+              , Json.Encode.int size
+              )
+            , ( "query"
+              , Json.Encode.object
+                    [ ( "bool"
+                      , Json.Encode.object
+                            [ ( "filter"
+                              , Json.Encode.list Json.Encode.object
+                                    (List.append
+                                        [ [ filter_by_type type_ ] ]
+                                        (filter_by_query query_field query)
+                                    )
+                              )
+                            , ( "should"
+                              , Json.Encode.list Json.Encode.object should_queries
+                              )
+                            ]
+                      )
+                    ]
+              )
+            ]
+        )
+
+
 makeRequest :
-    (String -> Int -> Int -> Http.Body)
+    Http.Body
     -> String
     -> Json.Decode.Decoder a
     -> Options
@@ -568,7 +692,7 @@ makeRequest :
     -> Int
     -> Int
     -> Cmd (Msg a)
-makeRequest makeRequestBody index decodeResultItemSource options query from sizeRaw =
+makeRequest body index decodeResultItemSource options query from sizeRaw =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -584,7 +708,7 @@ makeRequest makeRequestBody index decodeResultItemSource options query from size
             [ Http.header "Authorization" ("Basic " ++ Base64.encode (options.username ++ ":" ++ options.password))
             ]
         , url = options.url ++ "/" ++ index ++ "/_search"
-        , body = makeRequestBody query from size
+        , body = body
         , expect =
             Http.expectJson
                 (RemoteData.fromResult >> QueryResponse)

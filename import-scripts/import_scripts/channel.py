@@ -98,15 +98,8 @@ MAPPING = {
         "package_homepage": {"type": "keyword"},
         "package_system": {"type": "keyword"},
         # Options fields
-        "option_name": {
-            "type": "text",
-            "analyzer": "nixOptionName",
-            "fielddata": True,
-            "fields": {
-                "raw": {"type": "keyword"},
-                "granular": {"type": "text", "analyzer": "nixOptionNameGranular"},
-            },
-        },
+        "option_name": {"type": "keyword", "normalizer": "lowercase"},
+        "option_name_query": {"type": "keyword", "normalizer": "lowercase"},
         "option_description": {"type": "text"},
         "option_type": {"type": "keyword"},
         "option_default": {"type": "text"},
@@ -419,6 +412,7 @@ def get_options(evaluation):
             yield dict(
                 type="option",
                 option_name=name,
+                option_name_query=split_query(name),
                 option_description=description,
                 option_type=option.get("type"),
                 option_default=default,

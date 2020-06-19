@@ -26,6 +26,9 @@ var common = {
         filename: MODE == "production" ? "[name]-[hash].js" : "index.js"
     },
     plugins: [
+        new webpack.EnvironmentPlugin([
+          "ELASTICSEARCH_MAPPING_SCHEMA_VERSION"
+        ]),
         new HTMLWebpackPlugin({
             // Use this template to get basic responsive meta tags
             template: "src/index.html",
