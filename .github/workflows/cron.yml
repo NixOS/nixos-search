@@ -43,6 +43,7 @@ jobs:
     - name: Download latest builds for ${{ matrix.channel }} channel (if needed)
       if: steps.eval-cache.outputs.cache-hit != 'true'
       run: |
+        mkdir -p ./eval-cache
         cp ./src-url ./eval-cache/
         curl -H "Content-Type: application/json" "$(cat ./eval-cache/src-url)/builds" -o ./eval-cache/builds.json
 
