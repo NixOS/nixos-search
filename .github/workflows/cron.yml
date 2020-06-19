@@ -31,7 +31,6 @@ jobs:
         sudo apt-get install -y awscli
         set -x
         S3_URL="s3://nix-releases/nixpkgs"
-        ="nixpkgs-pre"
         if [ "${{ matrix.channel }}" = "unstable" ]; then
           RELEASE=$(aws s3 ls --no-sign-request "$S3_URL/" | grep "/$" | sort | tail -1  | sed "s|/||"| cut -d" " -f29)
         else
