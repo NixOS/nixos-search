@@ -11,8 +11,7 @@ jobs:
     - name: Fetch artifacts
       run: |
         sudo apt-get install -y awscli
-
-        aws s3 cp "s3://nix-releases/nixos/unstable/$(aws s3 ls s3://nix-releases/nixos/unstable/ | grep "/$" | tail -1 | cut -d" " -f29 | sed 's|/||')/src-url" ./artifacts/
+        aws s3 cp --no-sign-request "s3://nix-releases/nixos/unstable/$(aws s3 ls --no-sign-request s3://nix-releases/nixos/unstable/ | grep "/$" | tail -1 | cut -d" " -f29 | sed 's|/||')/src-url" ./artifacts/
         curl -H "Content-Type: application/json" "$(cat ./artifacts/src-url)/builds" -o ./artifacts/builds.json
 
     - name: Checking out the repository
