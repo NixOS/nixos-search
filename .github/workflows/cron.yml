@@ -22,7 +22,10 @@ jobs:
 
     - name: Download latest builds for ${{ matrix.channel }} channel (if needed)
       run: |
-        echo "-----------------"
+        VERSION="${{ matrix.channel }}"
+        if [ "$VERSION" = "unstable" ]; then
+          VERSION=""
+        fi
         echo $VERSION
         S3_URL="s3://nix-releases/nixpkgs/$VERSION"
         echo $S3_URL
@@ -35,8 +38,6 @@ jobs:
           curl -H "Content-Type: application/json" "$(cat ./artifacts/src-url)/builds" -o ./artifacts/builds.json
         fi
         exit 123
-      env:
-        VERSION: ${{ matrix.channel == 'unstable' && '' || matrix.channel }}
 
     - name: Checking out the repository
       uses: actions/checkout@v2
