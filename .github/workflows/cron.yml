@@ -1,6 +1,9 @@
 name: "Hourly import channel to Elasticsearch"
 on:
   pull_request:
+  push:
+    branches:
+      - master
   schedule:
   - cron: '0 * * * *'
 jobs:
