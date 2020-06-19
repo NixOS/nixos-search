@@ -101,10 +101,10 @@ MAPPING = {
         "option_name": {"type": "keyword", "normalizer": "lowercase"},
         "option_name_query": {"type": "keyword", "normalizer": "lowercase"},
         "option_name_completion": {
-            "analyzer": "nixOptionName",
-            "search_analyzer": "nixOptionName",
-            "preserve_position_increments": False,
             "type": "completion"
+            "analyzer": "lowercase",
+            "search_analyzer": "lowercase",
+            "preserve_position_increments": False,
         },
         "option_description": {"type": "text"},
         "option_type": {"type": "keyword"},
