@@ -100,7 +100,7 @@ MAPPING = {
         # Options fields
         "option_name": {"type": "keyword", "normalizer": "lowercase"},
         "option_name_query": {"type": "keyword", "normalizer": "lowercase"},
-        "option_name_completion": {
+        "option_name_suggestions": {
             "type": "completion"
             "analyzer": "lowercase",
             "search_analyzer": "lowercase",
