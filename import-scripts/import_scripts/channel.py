@@ -101,7 +101,7 @@ MAPPING = {
         "option_name": {"type": "keyword", "normalizer": "lowercase"},
         "option_name_query": {"type": "keyword", "normalizer": "lowercase"},
         "option_name_suggestions": {
-            "type": "completion"
+            "type": "completion",
             "analyzer": "lowercase",
             "search_analyzer": "lowercase",
             "preserve_position_increments": False,
@@ -186,7 +186,6 @@ def parse_query(text):
             tokens.append((prev_parts + part).rstrip("_.-"))
             prev_parts += part
     return tokens
->>>>>>> origin/master:import-scripts/import_scripts/channel.py
 
 
 def get_last_evaluation(prefix):

@@ -1,35 +1,19 @@
-# Logs
-logs
 *.log
-.idea
-.cache
-npm-debug.log*
-
-
-# Compiled binary addons (http://nodejs.org/api/addons.html)
-build/Release
-
-# Dependency directory
-node_modules
-
-# Optional npm cache directory
-.npm
-
-# Optional REPL history
-.node_repl_history
-
-# elm-package generated files
-elm-stuff/
-# elm-repl generated files
-repl-temp-*
-
 .DS_Store
-example/dist
-
-ignore
+.cache
+.idea
+.node_repl_history
+.npm
+build/Release
 dist
-package-lock.json
-result
-scripts/eval-*
+elm-stuff/
 eval-*
+ignore
+import-scripts/import_scripts/__pycache__/
+logs
+node_modules
+npm-debug.log*
+package-lock.json
+repl-temp-*
+result
 src-url
