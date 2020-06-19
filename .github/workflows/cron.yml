@@ -20,16 +20,15 @@ jobs:
       with:
         fetch-depth: 0
 
-    #- name: Download ${{ matrix.channel }} channel artifacts
-    #  uses: actions/download-artifact@v2
-    #  with:
-    #    name: channel-${{ matrix.channel }}
-    #    path: ./artifacts
+    - name: Download ${{ matrix.channel }} channel artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: channel-${{ matrix.channel }}
+        path: ./artifacts
 
     - name: Download latest builds for ${{ matrix.channel }} channel (if needed)
       run: |
         sudo apt-get install -y awscli
-        set -x
         S3_URL="s3://nix-releases/nixpkgs"
         if [ "${{ matrix.channel }}" = "unstable" ]; then
           RELEASE=$(aws s3 ls --no-sign-request "$S3_URL/" | grep "/$" | sort | tail -1  | sed "s|/||"| cut -d" " -f29)
@@ -37,6 +36,7 @@ jobs:
             RELEASE=$(aws s3 ls --no-sign-request "$S3_URL/" | grep "nixpkgs-${{ matrix.channel }}pre" | grep "/$" | sort | tail -1  | sed "s|/||"| cut -d" " -f29)
         fi
         aws s3 cp --no-sign-request "$S3_URL/$RELEASE/src-url" ./
+
         echo "::set-env name=new_artifact::no"
         if ! cmp -s ./src-url ./artifacts/src-url; then
           mkdir -p ./artifacts
@@ -69,5 +69,7 @@ jobs:
 
     - name: Import ${{ matrix.channel }} channel
       run: |
+        EVAL_ID=$(cat src-url | cut -c30-)
+        cp ./artifacts/builds.json ./eval-$EVAL_ID.json
         ./result/bin/import-channel --es-url ${{ secrets.ELASTICSEARCH_URL }} --channel ${{ matrix.channel }} -vvv
       if: github.repository == 'NixOS/nixos-search'
