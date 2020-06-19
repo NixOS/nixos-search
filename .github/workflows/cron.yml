@@ -14,11 +14,11 @@ jobs:
           - 19.09
       fail-fast: true
     steps:
-    - name: Download ${{ matrix.channel }} channel artifacts
-      uses: actions/download-artifact@v2
-      with:
-        name: channel-${{ matrix.channel }}
-        path: artifacts
+    #- name: Download ${{ matrix.channel }} channel artifacts
+    #  uses: actions/download-artifact@v2
+    #  with:
+    #    name: channel-${{ matrix.channel }}
+    #    path: artifacts
 
     - name: Download latest builds for ${{ matrix.channel }} channel (if needed)
       run: |
