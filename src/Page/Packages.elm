@@ -362,12 +362,14 @@ viewResultItemDetails channel item =
 -- API
 
 
-makeRequestBody :
-    String
+makeRequest :
+    Search.Options
+    -> String
+    -> String
     -> Int
     -> Int
-    -> Http.Body
-makeRequestBody queryRaw from size =
+    -> Cmd Msg
+makeRequest options channel queryRaw from size =
     let
         query =
             queryRaw
@@ -481,130 +483,15 @@ makeRequestBody queryRaw from size =
                 , ( "package_pname", 1 )
                 ]
 
-        filter_packages =
-            ( "term"
-            , Json.Encode.object
-                [ ( "type"
-                  , Json.Encode.object
-                        [ ( "value", Json.Encode.string "package" )
-                        , ( "_name", Json.Encode.string "filter_packages" )
-                        ]
-                  )
-                ]
-            )
-
-        filter_queries =
-            let
-                filterQuery =
-                    query
-                        |> String.replace "." " "
-            in
-            filterQuery
-                |> String.words
-                |> List.indexedMap
-                    (\i query_word ->
-                        let
-                            isLast =
-                                List.length (String.words filterQuery) == i + 1
-                        in
-                        [ if isLast then
-                            ( "bool"
-                            , Json.Encode.object
-                                [ ( "should"
-                                  , Json.Encode.list Json.Encode.object
-                                        [ [ ( "match"
-                                            , Json.Encode.object
-                                                [ ( "package_attr_name_query"
-                                                  , Json.Encode.object
-                                                        [ ( "query", Json.Encode.string query_word )
-                                                        , ( "fuzziness", Json.Encode.string "1" )
-                                                        , ( "_name", Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_should_match" )
-                                                        ]
-                                                  )
-                                                ]
-                                            )
-                                          ]
-                                        , [ ( "match_bool_prefix"
-                                            , Json.Encode.object
-                                                [ ( "package_attr_name_query"
-                                                  , Json.Encode.object
-                                                        [ ( "query", Json.Encode.string query_word )
-                                                        , ( "_name"
-                                                          , Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_should_prefix"
-                                                          )
-                                                        ]
-                                                  )
-                                                ]
-                                            )
-                                          ]
-                                        ]
-                                  )
-                                ]
-                            )
-
-                          else
-                            ( "match_bool_prefix"
-                            , Json.Encode.object
-                                [ ( "package_attr_name_query"
-                                  , Json.Encode.object
-                                        [ ( "query", Json.Encode.string query_word )
-                                        , ( "_name"
-                                          , Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_prefix"
-                                          )
-                                        ]
-                                  )
-                                ]
-                            )
-                        ]
-                    )
+        should_queries =
+            []
+                |> List.append (should_term 10000)
+                |> List.append (should_terms 1000)
+                |> List.append (should_match_bool_prefix 100)
+                |> List.append (should_match 10)
     in
-    Http.jsonBody
-        (Json.Encode.object
-            [ ( "from"
-              , Json.Encode.int from
-              )
-            , ( "size"
-              , Json.Encode.int size
-              )
-            , ( "query"
-              , Json.Encode.object
-                    [ ( "bool"
-                      , Json.Encode.object
-                            [ ( "filter"
-                              , Json.Encode.list Json.Encode.object
-                                    (List.append
-                                        [ [ filter_packages ] ]
-                                        filter_queries
-                                    )
-                              )
-                            , ( "should"
-                              , Json.Encode.list
-                                    Json.Encode.object
-                                    ([]
-                                        |> List.append (should_term 10000)
-                                        |> List.append (should_terms 1000)
-                                        |> List.append (should_match_bool_prefix 100)
-                                        |> List.append (should_match 10)
-                                    )
-                              )
-                            ]
-                      )
-                    ]
-              )
-            ]
-        )
-
-
-makeRequest :
-    Search.Options
-    -> String
-    -> String
-    -> Int
-    -> Int
-    -> Cmd Msg
-makeRequest options channel query from size =
     Search.makeRequest
-        makeRequestBody
+        (Search.makeRequestBody query from size "package" "package_attr_name_query" should_queries)
         ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
         decodeResultItemSource
         options

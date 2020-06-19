@@ -49,83 +49,6 @@ ANALYSIS = {
             "tokenizer": "keyword",
             "filter": ["lowercase"],
         },
-        "nixOptionName": {
-            "type": "custom",
-            "tokenizer": "nix_option_name",
-            "filter": ["lowercase"],
-        },
-        "nixOptionNameGranular": {
-            "type": "custom",
-            "tokenizer": "nix_option_name_granular",
-            "filter": ["lowercase"],
-        },
-    },
-    "tokenizer": {
-        "nix_package_query": {"type": "pattern", "pattern": "|".join(["[ ]"])},
-        "nix_package_attr_name": {
-            "type": "pattern",
-            # Split on attrname separators like _, .
-            "pattern": "|".join(
-                [
-                    "[_.-]",  # Common separators like underscores, dots and dashes
-                    "\\d+?Packages",  # python37Packages -> python
-                    "\\d+?Plugins",  # vimPlugins -> vim
-                    "\\d+?Extensions",  # php74Extensions -> php
-                    "\\d+?Interpreters",  # perlInterpreters -> perl
-                    # Camelcase tokenizer adapted from
-                    # https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-pattern-analyzer.html
-                    "".join(
-                        [
-                            "(?<=[\\p{L}&&[^\\p{Lu}]])"  # lower case
-                            "(?=\\p{Lu})",  # followed by upper case
-                            "|",
-                            "(?<=\\p{Lu})"  # or upper case
-                            "(?=\\p{Lu}[\\p{L}&&[^\\p{Lu}]])",  # followed by lower case
-                        ]
-                    ),
-                ]
-            ),
-        },
-        "nix_option_name": {"type": "pattern", "pattern": "[.]"},
-        # Lower priority (virtualHost -> [virtual, host])
-        "nix_option_name_granular": {
-            "type": "pattern",
-            # Split on attrname separators like _, .
-            "pattern": "|".join(
-                [
-                    "[_.-]",  # Common separators like underscores, dots and dashes
-                    # Camelcase tokenizer adapted from
-                    # https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-pattern-analyzer.html
-                    "".join(
-                        [
-                            "(?<=[\\p{L}&&[^\\p{Lu}]])"  # lower case
-                            "(?=\\p{Lu})",  # followed by upper case
-                            "|",
-                            "(?<=\\p{Lu})"  # or upper case
-                            "(?=\\p{Lu}[\\p{L}&&[^\\p{Lu}]])",  # followed by lower case
-                        ]
-                    ),
-                ]
-            ),
-        },
-    },
-    "filter": {
-        "nix_stopwords": {
-            "type": "stop",
-            "ignore_case": True,
-            "stopwords": [
-                "packages",
-                "package",
-                "options",
-                "option",
-                "plugins",
-                "plugin",
-                "extensions",
-                "extension",
-                "interpreters",
-                "interpreter",
-            ],
-        },
     },
 }
 MAPPING = {
@@ -175,15 +98,8 @@ MAPPING = {
         "package_homepage": {"type": "keyword"},
         "package_system": {"type": "keyword"},
         # Options fields
-        "option_name": {
-            "type": "text",
-            "analyzer": "nixOptionName",
-            "fielddata": True,
-            "fields": {
-                "raw": {"type": "keyword"},
-                "granular": {"type": "text", "analyzer": "nixOptionNameGranular"},
-            },
-        },
+        "option_name": {"type": "keyword", "normalizer": "lowercase"},
+        "option_name_query": {"type": "keyword", "normalizer": "lowercase"},
         "option_description": {"type": "text"},
         "option_type": {"type": "keyword"},
         "option_default": {"type": "text"},
@@ -340,7 +256,8 @@ def remove_attr_set(name):
         # Plugins
         "elasticsearch",
         "graylog",
-        "tmuxplugin" "vimplugin",
+        "tmuxplugin",
+        "vimplugin",
     ]
     # TODO: is this correct
     if any([name.startswith(i) for i in sets]):
@@ -495,6 +412,7 @@ def get_options(evaluation):
             yield dict(
                 type="option",
                 option_name=name,
+                option_name_query=split_query(name),
                 option_description=description,
                 option_type=option.get("type"),
                 option_default=default,
