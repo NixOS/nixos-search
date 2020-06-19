@@ -653,6 +653,36 @@ makeRequestBody :
     -> List (List ( String, Json.Encode.Value ))
     -> Http.Body
 makeRequestBody query from size type_ query_field should_queries =
+    -- TODO: rescore how close the query is to the root of the name
+    --    |> List.append
+    --        ("""int i = 1;
+    --            for (token in doc['option_name.raw'][0].splitOnToken('.')) {
+    --               if (token == '"""
+    --            ++ query
+    --            ++ """') {
+    --                  return 10000 - (i * 100);
+    --               }
+    --               i++;
+    --            }
+    --            return 10;
+    --            """
+    --            |> stringIn "source"
+    --            |> objectIn "script"
+    --            |> objectIn "script_score"
+    --            |> objectIn "function_score"
+    --            |> objectIn "rescore_query"
+    --            |> List.append ("total" |> stringIn "score_mode")
+    --            |> List.append ("total" |> stringIn "score_mode")
+    --            |> objectIn "query"
+    --            |> List.append [ ( "window_size", Json.Encode.int 1000 ) ]
+    --            |> objectIn "rescore"
+    --        )
+    --    |> List.append
+    --        [ ( "from", Json.Encode.int from )
+    --        , ( "size", Json.Encode.int size )
+    --        ]
+    --    |> Json.Encode.object
+    --    |> Http.jsonBody
     Http.jsonBody
         (Json.Encode.object
             [ ( "from"

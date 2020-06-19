@@ -491,7 +491,7 @@ makeRequest options channel queryRaw from size =
                 |> List.append (should_match 10)
     in
     Search.makeRequest
-        (Search.makeRequestBody query from size "packages" "package_attr_name_query" should_queries)
+        (Search.makeRequestBody query from size "package" "package_attr_name_query" should_queries)
         ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
         decodeResultItemSource
         options
