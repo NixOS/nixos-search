@@ -44,7 +44,6 @@ jobs:
           curl -H "Content-Type: application/json" "$(cat ./artifacts/src-url)/builds" -o ./artifacts/builds.json
           echo "::set-env name=new_artifact::yes"
         fi
-        exit 123
 
     - name: Upload artifacts for ${{ matrix.channel }} channel (if needed)
       uses: actions/upload-artifact@v2
