@@ -1,22 +1,58 @@
 name: "Hourly import channel to Elasticsearch"
+
 on:
+
   schedule:
   - cron: '0 * * * *'
+
 jobs:
+
   hourly-import-channel:
+
     runs-on: ubuntu-latest
+
     strategy:
+      fail-fast: true
       matrix:
         channel:
           - unstable
           - 20.03
           - 19.09
-      fail-fast: true
+
+    env:
+      S3_URL: s3://nix-releases/nixpkgs
+
     steps:
+
     - name: Checking out the repository
       uses: actions/checkout@v2
       with:
         fetch-depth: 0
+
+    - name: Check for latest evaluation in ${{ matrix.channel }} channel
+      run: |
+        sudo apt-get install -y awscli
+        if [ "${{ matrix.channel }}" = "unstable" ]; then
+          RELEASE=$(aws s3 ls --no-sign-request "$S3_URL/" | grep "/$" | cut -d" " -f29 | sort | tail -1 | sed 's|/||')
+        else
+          RELEASE=$(aws s3 ls --no-sign-request "$S3_URL/" | grep "nixpkgs-${{ matrix.channel }}pre" | grep "/$" | cut -d" " -f29 | sort | tail -1 | sed 's|/||')
+        fi
+        aws s3 cp --no-sign-request "$S3_URL/$RELEASE/src-url" ./
+        echo "::set-env name=EVAL_ID::$(cat src-url | cut -c30-)"
+
+    - name: Cache ${{ matrix.channel }} channel builds
+      id: eval-cache
+      uses: actions/cache@v2
+      with:
+        path: ./eval-cache
+        key: eval-cache-${{ env.EVAL_ID }}
+
+    - name: Download latest builds for ${{ matrix.channel }} channel (if needed)
+      if: steps.eval-cache.outputs.cache-hit != 'true'
+      run: |
+        mkdir -p ./eval-cache
+        cp ./src-url ./eval-cache/
+        curl -H "Content-Type: application/json" "$(cat ./eval-cache/src-url)/builds" -o ./eval-cache/builds.json
 
     - name: Installing Nix
       uses: cachix/install-nix-action@v8
@@ -35,5 +71,6 @@ jobs:
 
     - name: Import ${{ matrix.channel }} channel
       run: |
+        cp ./eval-cache/builds.json ./eval-${{ env.EVAL_ID }}.json
         ./result/bin/import-channel --es-url ${{ secrets.ELASTICSEARCH_URL }} --channel ${{ matrix.channel }} -vvv
       if: github.repository == 'NixOS/nixos-search'
