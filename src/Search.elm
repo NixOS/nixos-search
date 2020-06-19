@@ -28,10 +28,7 @@ import Html
         , i
         , input
         , li
-        , option
         , p
-        , select
-        , span
         , strong
         , text
         , ul
@@ -47,11 +44,9 @@ import Html.Attributes
         )
 import Html.Events
     exposing
-        ( custom
-        , onClick
+        ( onClick
         , onInput
         , onSubmit
-        , preventDefaultOn
         )
 import Http
 import Json.Decode
@@ -86,7 +81,7 @@ type alias ResultHits a =
 
 type alias ResultHitsTotal =
     { value : Int
-    , relation : String -- TODO: this should probably be Enum
+    , relation : String
     }
 
 
@@ -530,7 +525,7 @@ viewPager :
     -> SearchResult a
     -> String
     -> Html b
-viewPager outMsg model result path =
+viewPager _ model result path =
     ul [ class "pager" ]
         [ li
             [ classList
@@ -731,37 +726,46 @@ makeRequestBody :
     -> String
     -> List (List ( String, Json.Encode.Value ))
     -> Http.Body
-makeRequestBody query from size type_ query_field should_queries =
-    -- TODO: rescore how close the query is to the root of the name
-    --    |> List.append
-    --        ("""int i = 1;
-    --            for (token in doc['option_name.raw'][0].splitOnToken('.')) {
-    --               if (token == '"""
-    --            ++ query
-    --            ++ """') {
-    --                  return 10000 - (i * 100);
-    --               }
-    --               i++;
-    --            }
-    --            return 10;
-    --            """
-    --            |> stringIn "source"
-    --            |> objectIn "script"
-    --            |> objectIn "script_score"
-    --            |> objectIn "function_score"
-    --            |> objectIn "rescore_query"
-    --            |> List.append ("total" |> stringIn "score_mode")
-    --            |> List.append ("total" |> stringIn "score_mode")
-    --            |> objectIn "query"
-    --            |> List.append [ ( "window_size", Json.Encode.int 1000 ) ]
-    --            |> objectIn "rescore"
-    --        )
-    --    |> List.append
-    --        [ ( "from", Json.Encode.int from )
-    --        , ( "size", Json.Encode.int size )
-    --        ]
-    --    |> Json.Encode.object
-    --    |> Http.jsonBody
+makeRequestBody query from sizeRaw type_ query_field should_queries =
+    let
+        -- TODO: rescore how close the query is to the root of the name
+        --    |> List.append
+        --        ("""int i = 1;
+        --            for (token in doc['option_name.raw'][0].splitOnToken('.')) {
+        --               if (token == '"""
+        --            ++ query
+        --            ++ """') {
+        --                  return 10000 - (i * 100);
+        --               }
+        --               i++;
+        --            }
+        --            return 10;
+        --            """
+        --            |> stringIn "source"
+        --            |> objectIn "script"
+        --            |> objectIn "script_score"
+        --            |> objectIn "function_score"
+        --            |> objectIn "rescore_query"
+        --            |> List.append ("total" |> stringIn "score_mode")
+        --            |> List.append ("total" |> stringIn "score_mode")
+        --            |> objectIn "query"
+        --            |> List.append [ ( "window_size", Json.Encode.int 1000 ) ]
+        --            |> objectIn "rescore"
+        --        )
+        --    |> List.append
+        --        [ ( "from", Json.Encode.int from )
+        --        , ( "size", Json.Encode.int size )
+        --        ]
+        --    |> Json.Encode.object
+        --    |> Http.jsonBody
+        -- you can not request more then 10000 results otherwise it will return 404
+        size =
+            if from + sizeRaw > 10000 then
+                10000 - from
+
+            else
+                sizeRaw
+    in
     Http.jsonBody
         (Json.Encode.object
             [ ( "from"
@@ -801,16 +805,7 @@ makeRequest :
     -> Int
     -> Int
     -> Cmd (Msg a)
-makeRequest body index decodeResultItemSource options query from sizeRaw =
-    let
-        -- you can not request more then 10000 results otherwise it will return 404
-        size =
-            if from + sizeRaw > 10000 then
-                10000 - from
-
-            else
-                sizeRaw
-    in
+makeRequest body index decodeResultItemSource options _ _ _ =
     Http.riskyRequest
         { method = "POST"
         , headers =
