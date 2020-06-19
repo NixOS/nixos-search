@@ -28,15 +28,16 @@ jobs:
 
     - name: Download latest builds for ${{ matrix.channel }} channel (if needed)
       run: |
+        sudo apt-get install -y awscli
         set -x
         S3_URL="s3://nix-releases/nixpkgs"
-        CHANNEL="nixpkgs-${{ matrix.channel }}pre"
-        if [ "$CHANNEL" = "nixpkgs-unstablepre" ]; then
-          CHANNEL=""
+        ="nixpkgs-pre"
+        if [ "${{ matrix.channel }}" = "unstable" ]; then
+          RELEASE=$(aws s3 ls --no-sign-request "$S3_URL/" | grep "/$" | sort | tail -1  | sed "s|/||"| cut -d" " -f29)
+        else
+          RELEASE=$(aws s3 ls --no-sign-request "$S3_URL/" | grep "$CHANNEL" | grep "/$" | sort | tail -1  | sed "s|/||"| cut -d" " -f29)
         fi
-        sudo apt-get install -y awscli
-        RELEASE=$(aws s3 ls --no-sign-request $S3_URL/ | grep "$CHANNEL" | sort | tail -1 | grep "/$" | cut -d" " -f29 | sed "s|/||")
-        aws s3 cp --no-sign-request "$S3_URL/$()/src-url" ./
+        aws s3 cp --no-sign-request "$S3_URL/$RELEASE/src-url" ./
         echo "::set-env name=new_artifact::no"
         if ! cmp -s ./src-url ./artifacts/src-url; then
           mkdir -p ./artifacts
