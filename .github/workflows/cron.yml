@@ -3,7 +3,7 @@ on:
   pull_request:
   push:
     branches:
-      - master
+      - fix-cron
   # schedule:
   # - cron: '0 * * * *'
 jobs:
