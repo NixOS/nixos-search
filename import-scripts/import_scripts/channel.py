@@ -35,7 +35,7 @@ CHANNELS = {
         "options": "nixos/19.09/nixos-19.09.",
     },
     "20.03": {
-        "packages": "nixpkgs/nixpkgs-19.09pre",
+        "packages": "nixpkgs/nixpkgs-20.03pre",
         "options": "nixos/20.03/nixos-20.03.",
     },
 }
