@@ -1,5 +1,6 @@
 name: "Hourly import channel to Elasticsearch"
 on:
+  pull_request:
   schedule:
   - cron: '0 * * * *'
 jobs:
@@ -13,6 +14,30 @@ jobs:
           - 19.09
       fail-fast: true
     steps:
+    - name: Download ${{ matrix.channel }} channel artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: channel-${{ matrix.channel }}
+        path: artifacts
+
+    - name: Download latest builds for ${{ matrix.channel }} channel (if needed)
+      run: |
+        echo "-----------------"
+        echo $VERSION
+        S3_URL="s3://nix-releases/nixpkgs/$VERSION"
+        echo $S3_URL
+        echo "-----------------"
+        exit 123
+        sudo apt-get install -y awscli
+        aws s3 cp --no-sign-request "/$(aws s3 ls --no-sign-request s3://nix-releases/nixos/unstable/ | grep "/$" | tail -1 | cut -d" " -f29 | sed 's|/||')/src-url" ./
+        if ! cmp -s ./src-url ./artifacts/src-url; then
+          cp ./src-url ./artifacts
+          curl -H "Content-Type: application/json" "$(cat ./artifacts/src-url)/builds" -o ./artifacts/builds.json
+        fi
+        exit 123
+      env:
+        VERSION: ${{ matrix.channel == "unstable" && "" || matrix.channel }}
+
     - name: Checking out the repository
       uses: actions/checkout@v2
       with:
