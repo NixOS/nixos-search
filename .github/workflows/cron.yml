@@ -22,19 +22,16 @@ jobs:
 
     - name: Download latest builds for ${{ matrix.channel }} channel (if needed)
       run: |
-        VERSION="${{ matrix.channel }}"
-        if [ "$VERSION" = "unstable" ]; then
-          VERSION=""
+        S3_URL="s3://nix-releases/nixpkgs"
+        CHANNEL="nixpkgs-${{ matrix.channel }}pre"
+        if [ "$CHANNEL" = "nixpkgs-unstablepre" ]; then
+          CHANNEL=""
         fi
-        echo $VERSION
-        S3_URL="s3://nix-releases/nixpkgs/$VERSION"
-        echo $S3_URL
-        echo "-----------------"
-        exit 123
         sudo apt-get install -y awscli
-        aws s3 cp --no-sign-request "/$(aws s3 ls --no-sign-request s3://nix-releases/nixos/unstable/ | grep "/$" | tail -1 | cut -d" " -f29 | sed 's|/||')/src-url" ./
+        aws s3 cp --no-sign-request "$S3_URL/$(aws s3 ls --no-sign-request $S3_URL/ | grep $CHANNEL | sort | grep "/$" | tail -1 | cut -d" " -f29 | sed 's|/||')/src-url" ./
         if ! cmp -s ./src-url ./artifacts/src-url; then
-          cp ./src-url ./artifacts
+          mkdir -p ./artifacts
+          cp ./src-url ./artifacts/
           curl -H "Content-Type: application/json" "$(cat ./artifacts/src-url)/builds" -o ./artifacts/builds.json
         fi
         exit 123
