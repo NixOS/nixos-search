@@ -1,27 +1,20 @@
 name: "Hourly import channel to Elasticsearch"
-
 on:
-
-  schedule:
-  - cron: '0 * * * *'
-
+  pull_request:
+  # schedule:
+  # - cron: '0 * * * *'
 jobs:
-
   hourly-import-channel:
-
     runs-on: ubuntu-latest
-
     strategy:
-      fail-fast: true
       matrix:
         channel:
           - unstable
           - 20.03
           - 19.09
-
+      fail-fast: true
     env:
       S3_URL: s3://nix-releases/nixpkgs
-
     steps:
 
     - name: Checking out the repository
