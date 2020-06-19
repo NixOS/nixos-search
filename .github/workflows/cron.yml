@@ -34,7 +34,7 @@ jobs:
           CHANNEL=""
         fi
         sudo apt-get install -y awscli
-        aws s3 cp --no-sign-request '$S3_URL/$(aws s3 ls --no-sign-request $S3_URL/ | grep $CHANNEL | sort | tail -1 | grep "/$" | cut -d" " -f29 | sed "s|/||")/src-url' ./
+        aws s3 cp --no-sign-request "$S3_URL/$(aws s3 ls --no-sign-request $S3_URL/ | grep $CHANNEL | sort | tail -1 | grep '/$' | cut -d' ' -f29 | sed 's|/||')/src-url" ./
         echo "::set-env name=new_artifact::no"
         if ! cmp -s ./src-url ./artifacts/src-url; then
           mkdir -p ./artifacts
@@ -44,7 +44,7 @@ jobs:
         fi
         exit 123
 
-    - name: Download latest builds for ${{ matrix.channel }} channel (if needed)
+    - name: Upload artifacts for ${{ matrix.channel }} channel (if needed)
       uses: actions/upload-artifact@v2
       if: ${{ env.new_artifact == 'yes' }}
       with:
