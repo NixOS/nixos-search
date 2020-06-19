@@ -17,8 +17,11 @@ mkPoetryApplication {
     pkgs.poetry
   ];
   checkPhase = ''
-    black --diff --check ./import_scripts
-    flake8 --ignore W503,E501,E265,E203 ./import_scripts
+    export PYTHONPATH=$PWD:$PYTHONPATH
+    black --diff --check import_scripts/ tests/
+    flake8 --ignore W503,E501,E265,E203 import_scripts/ tests/
+    mypy import_scripts/ tests/
+    pytest tests/
   '';
   postInstall = ''
     wrapProgram $out/bin/import-channel --set INDEX_SCHEMA_VERSION "${version}"

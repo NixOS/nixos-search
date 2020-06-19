@@ -1,21 +1,22 @@
-import boto3
-import botocore
-import botocore.client
+import boto3  # type: ignore
+import botocore  # type: ignore
+import botocore.client  # type: ignore
+import typing
 import click
-import click_log
-import elasticsearch
-import elasticsearch.helpers
+import click_log  # type: ignore
+import elasticsearch  # type: ignore
+import elasticsearch.helpers  # type: ignore
 import json
 import logging
 import os
 import os.path
-import pypandoc
+import pypandoc  # type: ignore
 import re
 import requests
 import shlex
 import subprocess
 import sys
-import tqdm
+import tqdm  # type: ignore
 import xml.etree.ElementTree
 
 logger = logging.getLogger("import-channel")
@@ -132,10 +133,10 @@ def parse_suggestions(text: str):
      - extraConfig
     """
     results = []
-    for i in range(len(text.split('.'))):
+    for i in range(len(text.split("."))):
         tokens = text.split(".")[i:]
 
-        result = []
+        result: typing.List[str] = []
         for idx, token in enumerate(tokens, start=1):
             try:
                 prev = result[-1]
@@ -391,7 +392,7 @@ def get_packages(evaluation, evaluation_builds):
                 type="package",
                 package_hydra=hydra,
                 package_attr_name=attr_name,
-                package_attr_name_query=list(split_query(attr_name)),
+                package_attr_name_query=list(parse_query(attr_name)),
                 package_attr_set=attr_set,
                 package_pname=remove_attr_set(data["pname"]),
                 package_pversion=data["version"],
