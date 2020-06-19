@@ -8,6 +8,7 @@ module Search exposing
     , decodeResult
     , init
     , makeRequest
+    , makeRequestBody
     , update
     , view
     )
@@ -94,6 +95,7 @@ type alias ResultItem a =
     , id : String
     , score : Float
     , source : a
+    , matched_queries : Maybe (List String)
     }
 
 
@@ -481,8 +483,13 @@ view path title model viewSuccess outMsg =
                                                 model.from + model.size
                                             )
                                         ++ " of "
-                                        ++ String.fromInt result.hits.total.value
-                                        ++ "."
+                                        ++ (if result.hits.total.value == 10000 then
+                                                "more than 10000 results, please provide more precise search terms."
+
+                                            else
+                                                String.fromInt result.hits.total.value
+                                                    ++ "."
+                                           )
                                     )
                                 ]
                             ]
@@ -632,6 +639,159 @@ type alias Options =
     }
 
 
+filter_by_type :
+    String
+    -> ( String, Json.Encode.Value )
+filter_by_type type_ =
+    ( "term"
+    , Json.Encode.object
+        [ ( "type"
+          , Json.Encode.object
+                [ ( "value", Json.Encode.string type_ )
+                , ( "_name", Json.Encode.string <| "filter_" ++ type_ ++ "s" )
+                ]
+          )
+        ]
+    )
+
+
+filter_by_query : String -> String -> List (List ( String, Json.Encode.Value ))
+filter_by_query field queryRaw =
+    let
+        query =
+            queryRaw
+                |> String.trim
+    in
+    query
+        |> String.replace "." " "
+        |> String.words
+        |> List.indexedMap
+            (\i query_word ->
+                let
+                    isLast =
+                        List.length (String.words query) == i + 1
+                in
+                [ if isLast then
+                    ( "bool"
+                    , Json.Encode.object
+                        [ ( "should"
+                          , Json.Encode.list Json.Encode.object
+                                [ [ ( "match"
+                                    , Json.Encode.object
+                                        [ ( field
+                                          , Json.Encode.object
+                                                [ ( "query", Json.Encode.string query_word )
+                                                , ( "fuzziness", Json.Encode.string "1" )
+                                                , ( "_name", Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_should_match" )
+                                                ]
+                                          )
+                                        ]
+                                    )
+                                  ]
+                                , [ ( "match_bool_prefix"
+                                    , Json.Encode.object
+                                        [ ( field
+                                          , Json.Encode.object
+                                                [ ( "query", Json.Encode.string query_word )
+                                                , ( "_name"
+                                                  , Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_should_prefix"
+                                                  )
+                                                ]
+                                          )
+                                        ]
+                                    )
+                                  ]
+                                ]
+                          )
+                        ]
+                    )
+
+                  else
+                    ( "match_bool_prefix"
+                    , Json.Encode.object
+                        [ ( field
+                          , Json.Encode.object
+                                [ ( "query", Json.Encode.string query_word )
+                                , ( "_name"
+                                  , Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_prefix"
+                                  )
+                                ]
+                          )
+                        ]
+                    )
+                ]
+            )
+
+
+makeRequestBody :
+    String
+    -> Int
+    -> Int
+    -> String
+    -> String
+    -> List (List ( String, Json.Encode.Value ))
+    -> Http.Body
+makeRequestBody query from size type_ query_field should_queries =
+    -- TODO: rescore how close the query is to the root of the name
+    --    |> List.append
+    --        ("""int i = 1;
+    --            for (token in doc['option_name.raw'][0].splitOnToken('.')) {
+    --               if (token == '"""
+    --            ++ query
+    --            ++ """') {
+    --                  return 10000 - (i * 100);
+    --               }
+    --               i++;
+    --            }
+    --            return 10;
+    --            """
+    --            |> stringIn "source"
+    --            |> objectIn "script"
+    --            |> objectIn "script_score"
+    --            |> objectIn "function_score"
+    --            |> objectIn "rescore_query"
+    --            |> List.append ("total" |> stringIn "score_mode")
+    --            |> List.append ("total" |> stringIn "score_mode")
+    --            |> objectIn "query"
+    --            |> List.append [ ( "window_size", Json.Encode.int 1000 ) ]
+    --            |> objectIn "rescore"
+    --        )
+    --    |> List.append
+    --        [ ( "from", Json.Encode.int from )
+    --        , ( "size", Json.Encode.int size )
+    --        ]
+    --    |> Json.Encode.object
+    --    |> Http.jsonBody
+    Http.jsonBody
+        (Json.Encode.object
+            [ ( "from"
+              , Json.Encode.int from
+              )
+            , ( "size"
+              , Json.Encode.int size
+              )
+            , ( "query"
+              , Json.Encode.object
+                    [ ( "bool"
+                      , Json.Encode.object
+                            [ ( "filter"
+                              , Json.Encode.list Json.Encode.object
+                                    (List.append
+                                        [ [ filter_by_type type_ ] ]
+                                        (filter_by_query query_field query)
+                                    )
+                              )
+                            , ( "should"
+                              , Json.Encode.list Json.Encode.object should_queries
+                              )
+                            ]
+                      )
+                    ]
+              )
+            ]
+        )
+
+
 makeRequest :
     Http.Body
     -> String
@@ -641,7 +801,16 @@ makeRequest :
     -> Int
     -> Int
     -> Cmd (Msg a)
-makeRequest body index decodeResultItemSource options query from size =
+makeRequest body index decodeResultItemSource options query from sizeRaw =
+    let
+        -- you can not request more then 10000 results otherwise it will return 404
+        size =
+            if from + sizeRaw > 10000 then
+                10000 - from
+
+            else
+                sizeRaw
+    in
     Http.riskyRequest
         { method = "POST"
         , headers =
@@ -687,8 +856,9 @@ decodeResultHitsTotal =
 
 decodeResultItem : Json.Decode.Decoder a -> Json.Decode.Decoder (ResultItem a)
 decodeResultItem decodeResultItemSource =
-    Json.Decode.map4 ResultItem
+    Json.Decode.map5 ResultItem
         (Json.Decode.field "_index" Json.Decode.string)
         (Json.Decode.field "_id" Json.Decode.string)
         (Json.Decode.field "_score" Json.Decode.float)
         (Json.Decode.field "_source" decodeResultItemSource)
+        (Json.Decode.maybe (Json.Decode.field "matched_queries" (Json.Decode.list Json.Decode.string)))

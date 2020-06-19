@@ -17,6 +17,8 @@ import Html
         , div
         , dl
         , dt
+        , li
+        , p
         , pre
         , span
         , table
@@ -26,6 +28,7 @@ import Html
         , th
         , thead
         , tr
+        , ul
         )
 import Html.Attributes
     exposing
@@ -42,6 +45,7 @@ import Html.Parser.Util
 import Http
 import Json.Decode
 import Json.Encode
+import Regex
 import Search
 
 
@@ -145,10 +149,30 @@ viewResultItem show item =
             else
                 []
     in
-    tr [ onClick (SearchMsg (Search.ShowDetails item.source.name)) ]
-        [ td [] [ text item.source.name ]
-        ]
-        :: packageDetails
+    []
+        -- DEBUG: |> List.append
+        -- DEBUG:     [ tr []
+        -- DEBUG:         [ td [ colspan 1 ]
+        -- DEBUG:             [ p [] [ text <| "score: " ++ String.fromFloat item.score ]
+        -- DEBUG:             , p []
+        -- DEBUG:                 [ text <|
+        -- DEBUG:                     "matched queries: "
+        -- DEBUG:                 , ul []
+        -- DEBUG:                     (item.matched_queries
+        -- DEBUG:                         |> Maybe.withDefault []
+        -- DEBUG:                         |> List.sort
+        -- DEBUG:                         |> List.map (\q -> li [] [ text q ])
+        -- DEBUG:                     )
+        -- DEBUG:                 ]
+        -- DEBUG:             ]
+        -- DEBUG:         ]
+        -- DEBUG:     ]
+        |> List.append
+            (tr [ onClick (SearchMsg (Search.ShowDetails item.source.name)) ]
+                [ td [] [ text item.source.name ]
+                ]
+                :: packageDetails
+            )
 
 
 viewResultItemDetails :
@@ -229,160 +253,6 @@ viewResultItemDetails item =
 -- API
 
 
-makeRequestBody :
-    String
-    -> Int
-    -> Int
-    -> Http.Body
-makeRequestBody query from size =
-    -- Prefix Query
-    --   example query for "python"
-    -- {
-    --   "from": 0,
-    --   "size": 1000,
-    --   "query": {
-    --     "bool": {
-    --       "must": {
-    --           "bool": {
-    --               "should": [
-    --                   {
-    --                       "term": {
-    --                           "option_name.raw": {
-    --                               "value": "nginx",
-    --                               "boost": 2.0
-    --                           }
-    --                       }
-    --                   },
-    --                   {
-    --                       "term": {
-    --                           "option_name": {
-    --                               "value": "nginx",
-    --                               "boost": 1.0
-    --                           }
-    --                       }
-    --                   },
-    --                   {
-    --                       "term": {
-    --                           "option_name.granular": {
-    --                               "value": "nginx",
-    --                               "boost": 0.6
-    --                           }
-    --                       }
-    --                   },
-    --                   {
-    --                       "term": {
-    --                           "option_description": {
-    --                               "value": "nginx",
-    --                               "boost": 0.3
-    --                           }
-    --                       }
-    --                   }
-    --               ]
-    --           }
-    --       },
-    --       "filter": [
-    --         {
-    --           "match": {
-    --             "type": "option"
-    --           }
-    --         }
-    --       ]
-    --     }
-    --   },
-    --   "rescore" : {
-    --       "window_size": 500,
-    --       "query" : {
-    --          "score_mode": "total",
-    --          "rescore_query" : {
-    --           "function_score" : {
-    --              "script_score": {
-    --                 "script": {
-    --                   "source": "
-    --                     int i = 1;
-    --                     for (token in doc['option_name.raw'][0].splitOnToken('.')) {
-    --                        if (token == \"nginx\") {
-    --                           return 10000 - (i * 100);
-    --                        }
-    --                        i++;
-    --                     }
-    --                     return 10;
-    --                   "
-    --                 }
-    --              }
-    --           }
-    --        }
-    --      }
-    --   }
-    -- }
-    let
-        stringIn name value =
-            [ ( name, Json.Encode.string value ) ]
-
-        listIn name type_ value =
-            [ ( name, Json.Encode.list type_ value ) ]
-
-        objectIn name value =
-            [ ( name, Json.Encode.object value ) ]
-
-        encodeTerm ( name, boost ) =
-            [ ( "term"
-              , Json.Encode.object
-                    [ ( name
-                      , Json.Encode.object
-                            [ ( "value", Json.Encode.string query )
-                            , ( "boost", Json.Encode.float boost )
-                            ]
-                      )
-                    ]
-              )
-            ]
-    in
-    [ ( "option_name.raw", 2.0 )
-    , ( "option_name", 1.0 )
-    , ( "option_name.granular", 0.6 )
-    , ( "option_description", 0.3 )
-    ]
-        |> List.map encodeTerm
-        |> listIn "should" Json.Encode.object
-        |> objectIn "bool"
-        |> objectIn "must"
-        |> ([ ( "type", Json.Encode.string "option" ) ]
-                |> objectIn "match"
-                |> objectIn "filter"
-                |> List.append
-           )
-        |> objectIn "bool"
-        |> objectIn "query"
-        |> List.append
-            ("""int i = 1;
-                for (token in doc['option_name.raw'][0].splitOnToken('.')) {
-                   if (token == '"""
-                ++ query
-                ++ """') {
-                      return 10000 - (i * 100);
-                   }
-                   i++;
-                }
-                return 10;
-                """
-                |> stringIn "source"
-                |> objectIn "script"
-                |> objectIn "script_score"
-                |> objectIn "function_score"
-                |> objectIn "rescore_query"
-                |> List.append ("total" |> stringIn "score_mode")
-                |> objectIn "query"
-                |> List.append [ ( "window_size", Json.Encode.int 1000 ) ]
-                |> objectIn "rescore"
-            )
-        |> List.append
-            [ ( "from", Json.Encode.int from )
-            , ( "size", Json.Encode.int size )
-            ]
-        |> Json.Encode.object
-        |> Http.jsonBody
-
-
 makeRequest :
     Search.Options
     -> String
@@ -390,9 +260,123 @@ makeRequest :
     -> Int
     -> Int
     -> Cmd Msg
-makeRequest options channel query from size =
+makeRequest options channel queryRaw from size =
+    let
+        query =
+            queryRaw
+                |> String.trim
+
+        delimiters =
+            Maybe.withDefault Regex.never (Regex.fromString "[. ]")
+
+        should_match boost_base =
+            List.indexedMap
+                (\i ( field, boost ) ->
+                    [ ( "match"
+                      , Json.Encode.object
+                            [ ( field
+                              , Json.Encode.object
+                                    [ ( "query", Json.Encode.string query )
+                                    , ( "boost", Json.Encode.float boost )
+                                    , ( "analyzer", Json.Encode.string "whitespace" )
+                                    , ( "fuzziness", Json.Encode.string "1" )
+                                    , ( "_name"
+                                      , Json.Encode.string <|
+                                            "should_match_"
+                                                ++ String.fromInt (i + 1)
+                                      )
+                                    ]
+                              )
+                            ]
+                      )
+                    ]
+                )
+                [ ( "option_name", 1 )
+                , ( "option_name_query", 1 )
+                , ( "option_description", 1 )
+                ]
+
+        should_match_bool_prefix boost_base =
+            List.indexedMap
+                (\i ( field, boost ) ->
+                    [ ( "match_bool_prefix"
+                      , Json.Encode.object
+                            [ ( field
+                              , Json.Encode.object
+                                    [ ( "query", Json.Encode.string query )
+                                    , ( "boost", Json.Encode.float boost )
+                                    , ( "analyzer", Json.Encode.string "whitespace" )
+                                    , ( "fuzziness", Json.Encode.string "1" )
+                                    , ( "_name"
+                                      , Json.Encode.string <|
+                                            "should_match_bool_prefix_"
+                                                ++ String.fromInt (i + 1)
+                                      )
+                                    ]
+                              )
+                            ]
+                      )
+                    ]
+                )
+                [ ( "option_name", 1 )
+                , ( "option_name_query", 1 )
+                ]
+
+        should_terms boost_base =
+            List.indexedMap
+                (\i ( field, boost ) ->
+                    [ ( "terms"
+                      , Json.Encode.object
+                            [ ( field
+                              , Json.Encode.list Json.Encode.string (Regex.split delimiters query)
+                              )
+                            , ( "boost", Json.Encode.float <| boost_base * boost )
+                            , ( "_name"
+                              , Json.Encode.string <|
+                                    "should_terms_"
+                                        ++ String.fromInt (i + 1)
+                              )
+                            ]
+                      )
+                    ]
+                )
+                [ ( "option_name", 1 )
+                , ( "option_name_query", 1 )
+                ]
+
+        should_term boost_base =
+            List.indexedMap
+                (\i ( field, boost ) ->
+                    [ ( "term"
+                      , Json.Encode.object
+                            [ ( field
+                              , Json.Encode.object
+                                    [ ( "value", Json.Encode.string query )
+                                    , ( "boost", Json.Encode.float <| boost_base * boost )
+                                    , ( "_name"
+                                      , Json.Encode.string <|
+                                            "should_term_"
+                                                ++ String.fromInt (i + 1)
+                                      )
+                                    ]
+                              )
+                            ]
+                      )
+                    ]
+                )
+                [ ( "option_name", 1 )
+                , ( "option_name_query", 1 )
+                ]
+
+        should_queries =
+            []
+                |> List.append (should_term 10000)
+                |> List.append (should_terms 1000)
+                |> List.append (should_match_bool_prefix 100)
+                |> List.append (should_match 10)
+    in
     Search.makeRequest
-        (makeRequestBody query from size)
+        (Search.makeRequestBody query from size "option" "option_name_query" should_queries)
         ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
         decodeResultItemSource
         options

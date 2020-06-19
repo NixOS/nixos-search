@@ -1,31 +1,22 @@
-#! /usr/bin/env nix-shell
-#! nix-shell -i python3 -p python3 python3Packages.requests python3Packages.click python3Packages.click-log python3Packages.elasticsearch python3Packages.boto3 python3Packages.tqdm python3Packages.pypandoc
-
-# develop:
-# $ nix-shell -p python3Packages.black python3Packages.mypy python3Packages.flake8
-#
-# format:
-# $ nix-shell -p python3Packages.black --command "black import-channel"
-#
-# lint:
-# $ nix-shell -p python3Packages.flake8 --command "flake8 --ignore E501,E265 import-channel"
-
 import boto3
 import botocore
 import botocore.client
-import xml.etree.ElementTree
 import click
 import click_log
 import elasticsearch
 import elasticsearch.helpers
 import json
 import logging
+import os
 import os.path
 import pypandoc
+import re
 import requests
 import shlex
 import subprocess
+import sys
 import tqdm
+import xml.etree.ElementTree
 
 logger = logging.getLogger("import-channel")
 click_log.basic_config(logger)
@@ -33,7 +24,7 @@ click_log.basic_config(logger)
 
 S3_BUCKET = "nix-releases"
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-INDEX_SCHEMA_VERSION = 5
+INDEX_SCHEMA_VERSION = os.environ.get("INDEX_SCHEMA_VERSION", 0)
 CHANNELS = {
     "unstable": {
         "packages": "nixpkgs/nixpkgs-20.09pre",
@@ -44,81 +35,19 @@ CHANNELS = {
         "options": "nixos/19.09/nixos-19.09.",
     },
     "20.03": {
-        "packages": "nixpkgs/nixpkgs-19.09pre",
+        "packages": "nixpkgs/nixpkgs-20.03pre",
         "options": "nixos/20.03/nixos-20.03.",
     },
 }
 ANALYSIS = {
+    "normalizer": {
+        "lowercase": {"type": "custom", "char_filter": [], "filter": ["lowercase"]}
+    },
     "analyzer": {
-        "nixAttrName": {
+        "lowercase": {
             "type": "custom",
-            "tokenizer": "nix_attrname",
-            "filter": ["lowercase", "nix_stopwords"],
-        },
-        "nixOptionName": {
-            "type": "custom",
-            "tokenizer": "nix_option_name",
+            "tokenizer": "keyword",
             "filter": ["lowercase"],
-        },
-        "nixOptionNameGranular": {
-            "type": "custom",
-            "tokenizer": "nix_option_name_granular",
-            "filter": ["lowercase"],
-        },
-    },
-    "tokenizer": {
-        "nix_attrname": {
-            "type": "pattern",
-            # Split on attrname separators like _, .
-            "pattern": "|".join(
-                [
-                    "[_.-]",  # Common separators like underscores, dots and dashes
-                    "\\d+?Packages",  # python37Packages -> python
-                    # Camelcase tokenizer adapted from
-                    # https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-pattern-analyzer.html
-                    "".join(
-                        [
-                            "(?<=[\\p{L}&&[^\\p{Lu}]])"  # lower case
-                            "(?=\\p{Lu})",  # followed by upper case
-                            "|",
-                            "(?<=\\p{Lu})"  # or upper case
-                            "(?=\\p{Lu}[\\p{L}&&[^\\p{Lu}]])",  # followed by lower case
-                        ]
-                    ),
-                ]
-            ),
-        },
-        "nix_option_name": {
-            "type": "pattern",
-            "pattern": "[.]",
-        },
-        # Lower priority (virtualHost -> [virtual, host])
-        "nix_option_name_granular": {
-            "type": "pattern",
-            # Split on attrname separators like _, .
-            "pattern": "|".join(
-                [
-                    "[_.-]",  # Common separators like underscores, dots and dashes
-                    # Camelcase tokenizer adapted from
-                    # https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-pattern-analyzer.html
-                    "".join(
-                        [
-                            "(?<=[\\p{L}&&[^\\p{Lu}]])"  # lower case
-                            "(?=\\p{Lu})",  # followed by upper case
-                            "|",
-                            "(?<=\\p{Lu})"  # or upper case
-                            "(?=\\p{Lu}[\\p{L}&&[^\\p{Lu}]])",  # followed by lower case
-                        ]
-                    ),
-                ]
-            ),
-        },
-    },
-    "filter": {
-        "nix_stopwords": {
-            "type": "stop",
-            "ignore_case": True,
-            "stopwords": ["packages", "package", "options", "option"],
         },
     },
 }
@@ -139,19 +68,16 @@ MAPPING = {
                     "type": "nested",
                     "properties": {
                         "output": {"type": "keyword"},
-                        "path": {"type": "keyword"}
+                        "path": {"type": "keyword"},
                     },
                 },
                 "drv_path": {"type": "keyword"},
             },
         },
-        "package_attr_name": {
-            "type": "text",
-            "analyzer": "nixAttrName",
-            "fields": {"raw": {"type": "keyword"}},
-        },
-        "package_attr_set": {"type": "keyword"},
-        "package_pname": {"type": "keyword"},
+        "package_attr_name": {"type": "keyword", "normalizer": "lowercase"},
+        "package_attr_name_query": {"type": "keyword", "normalizer": "lowercase"},
+        "package_attr_set": {"type": "keyword", "normalizer": "lowercase"},
+        "package_pname": {"type": "keyword", "normalizer": "lowercase"},
         "package_pversion": {"type": "keyword"},
         "package_description": {"type": "text"},
         "package_longDescription": {"type": "text"},
@@ -172,20 +98,8 @@ MAPPING = {
         "package_homepage": {"type": "keyword"},
         "package_system": {"type": "keyword"},
         # Options fields
-        "option_name": {
-            "type": "text",
-            "analyzer": "nixOptionName",
-            "fielddata": True,
-            "fields": {
-                "raw": {
-                    "type": "keyword"
-                },
-                "granular": {
-                    "type": "text",
-                    "analyzer": "nixOptionNameGranular",
-                },
-            },
-        },
+        "option_name": {"type": "keyword", "normalizer": "lowercase"},
+        "option_name_query": {"type": "keyword", "normalizer": "lowercase"},
         "option_name_completion": {
             "analyzer": "nixOptionName",
             "search_analyzer": "nixOptionName",
@@ -201,10 +115,25 @@ MAPPING = {
 }
 
 
-def parse_option_name_completion(name: str):
+def parse_suggestions(text: str):
+    """Tokenize option_name
+
+    Example:
+
+    services.nginx.extraConfig
+     = index: 0
+     - services.nginx.extraConfig
+     - services.nginx.
+     - services.
+     = index: 1
+     - nginx.extraConfig
+     - nginx.
+     = index: 2
+     - extraConfig
+    """
     results = []
-    for i in range(len(name.split('.'))):
-        tokens = name.split(".")[i:]
+    for i in range(len(text.split('.'))):
+        tokens = text.split(".")[i:]
 
         result = []
         for idx, token in enumerate(tokens, start=1):
@@ -220,7 +149,44 @@ def parse_option_name_completion(name: str):
 
             result.append(prev + token + suffix)
         results.extend(result)
+
     return results
+
+
+def parse_query(text):
+    """Tokenize package attr_name
+
+    Example package:
+
+    python37Packages.test_name-test
+     = index: 0
+     - python37Packages.test1_name-test2
+     - python37Packages.test1_name
+     - python37Packages.test1
+     - python37
+     - python
+     = index: 1
+     - test1_name-test2
+     - test1_name
+     - test1
+     = index: 2
+     - name-test2
+     - name
+     = index: 3
+     - test2
+    """
+    tokens = []
+    regex = re.compile(
+        ".+?(?:(?<=[a-z])(?=[1-9A-Z])|(?<=[1-9A-Z])(?=[A-Z][a-z])|[._-]|$)"
+    )
+    parts = [m.group(0) for m in regex.finditer(text)]
+    for index in range(len(parts)):
+        prev_parts = ""
+        for part in parts[index:]:
+            tokens.append((prev_parts + part).rstrip("_.-"))
+            prev_parts += part
+    return tokens
+>>>>>>> origin/master:import-scripts/import_scripts/channel.py
 
 
 def get_last_evaluation(prefix):
@@ -235,14 +201,13 @@ def get_last_evaluation(prefix):
         if not item:
             continue
         logger.debug(f"get_last_evaluation: evaluation in raw {item}")
-        try:
-            revisions_since_start, git_revision = item['Prefix'][len(prefix):].rstrip('/').split('.')
-        except: 
-            __import__('pdb').set_trace()
+        revisions_since_start, git_revision = (
+            item["Prefix"][len(prefix) :].rstrip("/").split(".")
+        )
         evaluation = {
             "revisions_since_start": int(revisions_since_start),
             "git_revision": git_revision,
-            "prefix": item['Prefix'].rstrip('/'),
+            "prefix": item["Prefix"].rstrip("/"),
         }
         logger.debug(f"get_last_evaluation: evaluation {evaluation}")
         evaluations.append(evaluation)
@@ -255,7 +220,9 @@ def get_last_evaluation(prefix):
     evaluation = evaluations[-1]
 
     result = s3.get_object(Bucket=S3_BUCKET, Key=f"{evaluation['prefix']}/src-url")
-    evaluation['id'] = result.get("Body").read().decode()[len("https://hydra.nixos.org/eval/"):]
+    evaluation["id"] = (
+        result.get("Body").read().decode()[len("https://hydra.nixos.org/eval/") :]
+    )
 
     logger.debug(f"get_last_evaluation: last evaluation is: {evaluation}")
 
@@ -263,21 +230,21 @@ def get_last_evaluation(prefix):
 
 
 def get_evaluation_builds(evaluation_id):
-    logger.debug(f"get_evaluation_builds: Retriving list of builds for {evaluation_id} evaluation id")
+    logger.debug(
+        f"get_evaluation_builds: Retriving list of builds for {evaluation_id} evaluation id"
+    )
     filename = f"eval-{evaluation_id}.json"
     if not os.path.exists(filename):
         url = f"https://hydra.nixos.org/eval/{evaluation_id}/builds"
         logger.debug(f"get_evaluation_builds: Fetching builds from {url} url.")
-        headers = {
-            "Content-Type": "application/json"
-        }
+        headers = {"Content-Type": "application/json"}
         r = requests.get(url, headers=headers, stream=True)
         with tqdm.tqdm.wrapattr(
             open(filename, "wb"),
             "write",
             miniters=1,
-            total=int(r.headers.get('content-length', 0)),
-            desc=filename
+            total=int(r.headers.get("content-length", 0)),
+            desc=filename,
         ) as f:
             for chunk in r.iter_content(chunk_size=4096):
                 f.write(chunk)
@@ -287,10 +254,65 @@ def get_evaluation_builds(evaluation_id):
 
     result = {}
     for build in builds:
-        result.setdefault(build['nixname'], {})
-        result[build['nixname']][build['system']] = build
+        result.setdefault(build["nixname"], {})
+        result[build["nixname"]][build["system"]] = build
 
     return result
+
+
+def get_maintainer(maintainer):
+    maintainers = []
+
+    if type(maintainer) == str:
+        maintainers.append(dict(name=maintainer, email=None, github=None,))
+
+    elif type(maintainer) == dict:
+        maintainers.append(
+            dict(
+                name=maintainer.get("name"),
+                email=maintainer.get("email"),
+                github=maintainer.get("github"),
+            )
+        )
+
+    elif type(maintainer) == list:
+        for item in maintainer:
+            maintainers += get_maintainer(item)
+
+    else:
+        logger.error(f"maintainer  can not be recognized from: {maintainer}")
+        sys.exit(1)
+
+    return maintainers
+
+
+def remove_attr_set(name):
+    # some package sets the prefix is included in pname
+    sets = [
+        # Packages
+        "emscripten",
+        "lua",
+        "php",
+        "pure",
+        "python",
+        "lisp",
+        "perl",
+        "ruby",
+        # Plugins
+        "elasticsearch",
+        "graylog",
+        "tmuxplugin",
+        "vimplugin",
+    ]
+    # TODO: is this correct
+    if any([name.startswith(i) for i in sets]):
+        name = "-".join(name.split("-")[1:])
+
+    # node does things a bit different
+    elif name.startswith("node_"):
+        name = name[len("node_") :]
+
+    return name
 
 
 def get_packages(evaluation, evaluation_builds):
@@ -309,6 +331,7 @@ def get_packages(evaluation, evaluation_builds):
 
     def gen():
         for attr_name, data in packages:
+
             position = data["meta"].get("position")
             if position and position.startswith("/nix/store"):
                 position = position[44:]
@@ -328,16 +351,7 @@ def get_packages(evaluation, evaluation_builds):
             else:
                 licenses = []
 
-            maintainers = [
-                type(maintainer) == str
-                and dict(name=maintainer, email=None, github=None)
-                or dict(
-                    name=maintainer.get("name"),
-                    email=maintainer.get("email"),
-                    github=maintainer.get("github"),
-                )
-                for maintainer in data["meta"].get("maintainers", [])
-            ]
+            maintainers = get_maintainer(data["meta"].get("maintainers", []))
 
             platforms = [
                 type(platform) == str and platform or None
@@ -347,38 +361,40 @@ def get_packages(evaluation, evaluation_builds):
             attr_set = None
             if "." in attr_name:
                 attr_set = attr_name.split(".")[0]
-                if not attr_set.endswith("Packages") and not attr_set.endswith(
-                    "Plugins"
+                if (
+                    not attr_set.endswith("Packages")
+                    and not attr_set.endswith("Plugins")
+                    and not attr_set.endswith("Extensions")
                 ):
                     attr_set = None
 
             hydra = None
-            if data['name'] in evaluation_builds:
+            if data["name"] in evaluation_builds:
                 hydra = []
-                for platform, build in evaluation_builds[data['name']].items():
-                    hydra.append({
-                        "build_id": build['id'],
-                        "build_status":  build['buildstatus'],
-                        "platform": build['system'],
-                        "project": build['project'],
-                        "jobset": build['jobset'],
-                        "job": build['job'],
-                        "path": [
-                            {
-                                "output": output,
-                                "path": item['path'],
-                            }
-                            for output, item in build['buildoutputs'].items()
-                        ],
-                        "drv_path": build['drvpath'],
-                    })
+                for platform, build in evaluation_builds[data["name"]].items():
+                    hydra.append(
+                        {
+                            "build_id": build["id"],
+                            "build_status": build["buildstatus"],
+                            "platform": build["system"],
+                            "project": build["project"],
+                            "jobset": build["jobset"],
+                            "job": build["job"],
+                            "path": [
+                                {"output": output, "path": item["path"]}
+                                for output, item in build["buildoutputs"].items()
+                            ],
+                            "drv_path": build["drvpath"],
+                        }
+                    )
 
             yield dict(
                 type="package",
                 package_hydra=hydra,
                 package_attr_name=attr_name,
+                package_attr_name_query=list(split_query(attr_name)),
                 package_attr_set=attr_set,
-                package_pname=data["pname"],
+                package_pname=remove_attr_set(data["pname"]),
                 package_pversion=data["version"],
                 package_description=data["meta"].get("description"),
                 package_longDescription=data["meta"].get("longDescription", ""),
@@ -418,7 +434,7 @@ def get_options(evaluation):
 
             example = option.get("example")
             if example is not None:
-                if (type(example) == dict and example.get("_type") == "literalExample"):
+                if type(example) == dict and example.get("_type") == "literalExample":
                     example = json.dumps(example["text"])
                 else:
                     example = json.dumps(example)
@@ -426,24 +442,23 @@ def get_options(evaluation):
             description = option.get("description")
             if description is not None:
                 xml_description = (
-                        f"<xml xmlns:xlink=\"http://www.w3.org/1999/xlink\">"
-                        f"<para>{description}</para>"
-                        f"</xml>"
-                    )
+                    f'<xml xmlns:xlink="http://www.w3.org/1999/xlink">'
+                    f"<para>{description}</para>"
+                    f"</xml>"
+                )
                 # we first check if there are some xml elements before using pypandoc
                 # since pypandoc calls are quite slow
                 root = xml.etree.ElementTree.fromstring(xml_description)
-                if len(root.find('para').getchildren()) > 0:
+                if len(list(root.find("para"))) > 0:
                     description = pypandoc.convert_text(
-                        xml_description,
-                        "html",
-                        format="docbook",
+                        xml_description, "html", format="docbook",
                     )
 
             yield dict(
                 type="option",
                 option_name=name,
-                option_name_completion=parse_option_name_completion(name),
+                option_name_query=parse_query(name),
+                option_name_suggestions=parse_suggestions(name),
                 option_description=description,
                 option_type=option.get("type"),
                 option_default=default,
@@ -476,14 +491,16 @@ def ensure_index(es, index, mapping, force=False):
 
 
 def create_index_name(channel, evaluation_packages, evaluation_options):
-    evaluation_name = '-'.join([
-        evaluation_packages['id'],
-        str(evaluation_packages['revisions_since_start']),
-        evaluation_packages['git_revision'],
-        evaluation_options['id'],
-        str(evaluation_options['revisions_since_start']),
-        evaluation_options['git_revision'],
-    ])
+    evaluation_name = "-".join(
+        [
+            evaluation_packages["id"],
+            str(evaluation_packages["revisions_since_start"]),
+            evaluation_packages["git_revision"],
+            evaluation_options["id"],
+            str(evaluation_options["revisions_since_start"]),
+            evaluation_options["git_revision"],
+        ]
+    )
     return (
         f"latest-{INDEX_SCHEMA_VERSION}-{channel}",
         f"evaluation-{INDEX_SCHEMA_VERSION}-{channel}-{evaluation_name}",
@@ -531,7 +548,7 @@ def write(unit, es, index_name, number_of_items, item_generator):
 @click.option("-c", "--channel", type=click.Choice(CHANNELS.keys()), help="Channel.")
 @click.option("-f", "--force", is_flag=True, help="Force channel recreation.")
 @click.option("-v", "--verbose", count=True)
-def main(es_url, channel, force, verbose):
+def run(es_url, channel, force, verbose):
 
     logging_level = "CRITICAL"
     if verbose == 1:
@@ -543,23 +560,28 @@ def main(es_url, channel, force, verbose):
     logger.debug(f"Verbosity is {verbose}")
     logger.debug(f"Logging set to {logging_level}")
 
-    evaluation_packages = get_last_evaluation(CHANNELS[channel]['packages'])
-    evaluation_options = get_last_evaluation(CHANNELS[channel]['options'])
-    evaluation_packages_builds = get_evaluation_builds(evaluation_packages['id'])
+    evaluation_packages = get_last_evaluation(CHANNELS[channel]["packages"])
+    evaluation_options = get_last_evaluation(CHANNELS[channel]["options"])
+    evaluation_packages_builds = get_evaluation_builds(evaluation_packages["id"])
 
     es = elasticsearch.Elasticsearch([es_url])
 
-    alias_name, index_name = create_index_name(channel, evaluation_packages, evaluation_options)
+    alias_name, index_name = create_index_name(
+        channel, evaluation_packages, evaluation_options
+    )
     index_created = ensure_index(es, index_name, MAPPING, force)
 
     if index_created:
-        write("packages", es, index_name, *get_packages(evaluation_packages, evaluation_packages_builds))
+        write(
+            "packages",
+            es,
+            index_name,
+            *get_packages(evaluation_packages, evaluation_packages_builds),
+        )
         write("options", es, index_name, *get_options(evaluation_options))
 
     update_alias(es, alias_name, index_name)
 
 
 if __name__ == "__main__":
-    main()
-
-# vi:ft=python
+    run()
