@@ -8,6 +8,11 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
+    - name: Fetch artifacts
+      run: |
+        aws s3 cp "s3://nix-releases/nixos/unstable/$(aws s3 ls s3://nix-releases/nixos/unstable/ | rg "/$" | tail -1 | cut -d" " -f29 | sed 's|/||')/src-url" ./artifacts/
+        curl -H "Content-Type: application/json" "$(cat ./artifacts/src-url)/builds" -o ./artifacts/builds.json
+
     - name: Checking out the repository
       uses: actions/checkout@v2
       with:
