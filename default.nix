@@ -1,5 +1,5 @@
 { pkgs ? import <nixpkgs> { }
-, version ? "0"
+, version ? pkgs.lib.removeSuffix "\n" (builtins.readFile ./VERSION)
 }:
 let
   package = builtins.fromJSON (builtins.readFile ./package.json);

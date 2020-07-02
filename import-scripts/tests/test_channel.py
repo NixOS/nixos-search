@@ -5,22 +5,28 @@ import pytest  # type: ignore
     "text,expected",
     [
         (
+            "services.grafana.analytics.reporting.enable",
+            [
+                {"input": "services.grafana.analytics.reporting.enable", "weight": 960},
+                {"input": "services.grafana.analytics.reporting.", "weight": 971},
+                {"input": "services.grafana.analytics.", "weight": 981},
+                {"input": "services.grafana.", "weight": 991},
+                {"input": "services.", "weight": 1001},
+            ],
+        ),
+        (
             "services.nginx.extraConfig",
             [
-                "services.nginx.extraConfig",
-                "services.nginx.",
-                "services.",
-                "nginx.extraConfig",
-                "nginx.",
-                "extraConfig",
+                {"input": "services.nginx.extraConfig", "weight": 980},
+                {"input": "services.nginx.", "weight": 991},
+                {"input": "services.", "weight": 1001},
             ],
         ),
         (
             "python37Packages.test1_name-test2",
             [
-                "python37Packages.test1_name-test2",
-                "python37Packages.",
-                "test1_name-test2",
+                {"input": "python37Packages.test1_name-test2", "weight": 990},
+                {"input": "python37Packages.", "weight": 1001},
             ],
         ),
     ],
@@ -28,7 +34,7 @@ import pytest  # type: ignore
 def test_parse_suggestions(text, expected):
     import import_scripts.channel
 
-    assert sorted(import_scripts.channel.parse_suggestions(text)) == sorted(expected)
+    assert import_scripts.channel.parse_suggestions(text) == expected
 
 
 @pytest.mark.parametrize(

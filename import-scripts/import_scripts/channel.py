@@ -1,7 +1,6 @@
 import boto3  # type: ignore
 import botocore  # type: ignore
 import botocore.client  # type: ignore
-import typing
 import click
 import click_log  # type: ignore
 import elasticsearch  # type: ignore
@@ -17,6 +16,7 @@ import shlex
 import subprocess
 import sys
 import tqdm  # type: ignore
+import typing
 import xml.etree.ElementTree
 
 logger = logging.getLogger("import-channel")
@@ -56,6 +56,12 @@ MAPPING = {
     "properties": {
         "type": {"type": "keyword"},
         # Package fields
+        "package_suggestions": {
+            "type": "completion",
+            "analyzer": "lowercase",
+            "search_analyzer": "lowercase",
+            "preserve_position_increments": False,
+        },
         "package_hydra_build": {
             "type": "nested",
             "properties": {
@@ -99,14 +105,14 @@ MAPPING = {
         "package_homepage": {"type": "keyword"},
         "package_system": {"type": "keyword"},
         # Options fields
-        "option_name": {"type": "keyword", "normalizer": "lowercase"},
-        "option_name_query": {"type": "keyword", "normalizer": "lowercase"},
-        "option_name_suggestions": {
+        "option_suggestions": {
             "type": "completion",
             "analyzer": "lowercase",
             "search_analyzer": "lowercase",
             "preserve_position_increments": False,
         },
+        "option_name": {"type": "keyword", "normalizer": "lowercase"},
+        "option_name_query": {"type": "keyword", "normalizer": "lowercase"},
         "option_description": {"type": "text"},
         "option_type": {"type": "keyword"},
         "option_default": {"type": "text"},
@@ -116,41 +122,25 @@ MAPPING = {
 }
 
 
-def parse_suggestions(text: str):
+def parse_suggestions(text: str) -> typing.List[typing.Dict[str, object]]:
     """Tokenize option_name
 
     Example:
 
     services.nginx.extraConfig
-     = index: 0
      - services.nginx.extraConfig
      - services.nginx.
      - services.
-     = index: 1
-     - nginx.extraConfig
-     - nginx.
-     = index: 2
-     - extraConfig
     """
-    results = []
-    for i in range(len(text.split("."))):
-        tokens = text.split(".")[i:]
-
-        result: typing.List[str] = []
-        for idx, token in enumerate(tokens, start=1):
-            try:
-                prev = result[-1]
-            except IndexError:
-                prev = ""
-
-            if idx == len(tokens):
-                suffix = ""
-            else:
-                suffix = "."
-
-            result.append(prev + token + suffix)
-        results.extend(result)
-
+    results: typing.List[typing.Dict[str, object]] = [
+        {"input": text, "weight": 1000 - (((len(text.split(".")) - 1) * 10))},
+    ]
+    for i in range(len(text.split(".")) - 1):
+        result = {
+            "input": ".".join(text.split(".")[: -(i + 1)]) + ".",
+            "weight": 1000 - ((len(text.split(".")) - 2 - i) * 10) + 1,
+        }
+        results.append(result)
     return results
 
 
@@ -390,6 +380,7 @@ def get_packages(evaluation, evaluation_builds):
 
             yield dict(
                 type="package",
+                package_suggestions=parse_suggestions(attr_name),
                 package_hydra=hydra,
                 package_attr_name=attr_name,
                 package_attr_name_query=list(parse_query(attr_name)),
@@ -456,9 +447,9 @@ def get_options(evaluation):
 
             yield dict(
                 type="option",
+                option_suggestions=parse_suggestions(name),
                 option_name=name,
                 option_name_query=parse_query(name),
-                option_name_suggestions=parse_suggestions(name),
                 option_description=description,
                 option_type=option.get("type"),
                 option_default=default,

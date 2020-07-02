@@ -30,18 +30,68 @@ header .navbar.navbar-static-top {
 }
 
 .search-page {
-  .search-input {
-    text-align: center;
-    .input-append input {
-      font-size: 24px;
-      height: 40px;
-      width: auto;
-      max-width: 15em;
+  .search-input.with-suggestions-loading {
+    .input-append div.loader {
+      display: block;
     }
-    .input-append button {
-      font-size: 24px;
-      height: 50px;
-      min-width: 4em;
+  }
+  .search-input.with-suggestions {
+    ul.dropdown-menu {
+      display: block;
+    }
+    .input-append input {
+      border-radius: 4px 0 0 0;
+    }
+  }
+  .search-input {
+    position: relative;
+    ul.dropdown-menu {
+      font-size: 18px;
+      width: 25.6em;
+      height: auto;
+      max-height: 200px;
+      border-radius: 0;
+      margin-top: -10px;
+      border-top: 0;
+      overflow-y: scroll;
+      li > a {
+        font-size: 14px;
+      }
+      li > a#dropdown-menu-selected {
+        color: #fff;
+        text-decoration: none;
+        background-color: #0081c2;
+        background-image: -moz-linear-gradient(top,#08c,#0077b3);
+        background-image: -webkit-gradient(linear,0 0,0 100%,from(#08c),to(#0077b3));
+        background-image: -webkit-linear-gradient(top,#08c,#0077b3);
+        background-image: -o-linear-gradient(top,#08c,#0077b3);
+        background-image: linear-gradient(to bottom,#08c,#0077b3);
+        background-repeat: repeat-x;
+        filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff0088cc',endColorstr='#ff0077b3',GradientType=0);
+      }
+    }
+    .input-append {
+      position: relative;
+      input {
+        font-size: 18px;
+        height: 40px;
+        width: 25em;
+      }
+      div.loader {
+        display: none;
+        z-index: 100;
+        position: absolute;
+        margin: 0;
+        top: 37px;
+        right: 125px;
+        font-size: 6px;
+        color: #999999;
+      }
+      button {
+        font-size: 24px;
+        height: 50px;
+        min-width: 4em;
+      }
     }
     form > p > strong {
       vertical-align: middle;
@@ -84,7 +134,7 @@ header .navbar.navbar-static-top {
 .loader,
 .loader:before,
 .loader:after {
-  background: #ffffff;
+  background: transparent;
   -webkit-animation: load1 1s infinite ease-in-out;
   animation: load1 1s infinite ease-in-out;
   width: 1em;

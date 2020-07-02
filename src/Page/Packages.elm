@@ -122,13 +122,20 @@ type Msg
     = SearchMsg (Search.Msg ResultItemSource)
 
 
-update : Browser.Navigation.Key -> Msg -> Model -> ( Model, Cmd Msg )
-update navKey msg model =
+update : Browser.Navigation.Key -> Search.Options -> Msg -> Model -> ( Model, Cmd Msg )
+update navKey options msg model =
     case msg of
         SearchMsg subMsg ->
             let
                 ( newModel, newCmd ) =
-                    Search.update "packages" navKey subMsg model
+                    Search.update
+                        "packages"
+                        navKey
+                        "package"
+                        options
+                        decodeResultItemSource
+                        subMsg
+                        model
             in
             ( newModel, Cmd.map SearchMsg newCmd )
 
@@ -495,9 +502,8 @@ makeRequest options channel queryRaw from size =
         ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
         decodeResultItemSource
         options
-        query
-        from
-        size
+        Search.QueryResponse
+        (Just "query-packages")
         |> Cmd.map SearchMsg
 
 

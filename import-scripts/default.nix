@@ -1,5 +1,5 @@
 { pkgs ? import <nixpkgs> { }
-, version ? "0"
+, version ? pkgs.lib.removeSuffix "\n" (builtins.readFile ./../VERSION)
 }:
 let
   inherit (pkgs.poetry2nix) mkPoetryApplication overrides;
@@ -21,7 +21,7 @@ mkPoetryApplication {
     black --diff --check import_scripts/ tests/
     flake8 --ignore W503,E501,E265,E203 import_scripts/ tests/
     mypy import_scripts/ tests/
-    pytest tests/
+    pytest -vv tests/
   '';
   postInstall = ''
     wrapProgram $out/bin/import-channel --set INDEX_SCHEMA_VERSION "${version}"

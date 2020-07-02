@@ -4,7 +4,6 @@ require("./index.scss");
 
 const {Elm} = require('./Main');
 
-console.log("WORKS: " + process.env.ELASTICSEARCH_MAPPING_SCHEMA_VERSION);
 Elm.Main.init({
   flags: {
     elasticsearchMappingSchemaVersion: parseInt(process.env.ELASTICSEARCH_MAPPING_SCHEMA_VERSION) || 0,
