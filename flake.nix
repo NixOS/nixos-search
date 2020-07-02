@@ -18,14 +18,13 @@
               poetry2nix.overlay
             ];
           };
-          version = pkgs.lib.removeSuffix "\n" (builtins.readFile "${self}/VERSION");
         in
         {
           import_scripts = import ./import-scripts {
-            inherit pkgs version;
+            inherit pkgs;
           };
           frontend = import ./. {
-            inherit pkgs version;
+            inherit pkgs;
           };
         };
     in

@@ -1,21 +1,22 @@
-import boto3
-import botocore
-import botocore.client
+import boto3  # type: ignore
+import botocore  # type: ignore
+import botocore.client  # type: ignore
 import click
-import click_log
-import elasticsearch
-import elasticsearch.helpers
+import click_log  # type: ignore
+import elasticsearch  # type: ignore
+import elasticsearch.helpers  # type: ignore
 import json
 import logging
 import os
 import os.path
-import pypandoc
+import pypandoc  # type: ignore
 import re
 import requests
 import shlex
 import subprocess
 import sys
-import tqdm
+import tqdm  # type: ignore
+import typing
 import xml.etree.ElementTree
 
 logger = logging.getLogger("import-channel")
@@ -55,6 +56,12 @@ MAPPING = {
     "properties": {
         "type": {"type": "keyword"},
         # Package fields
+        "package_suggestions": {
+            "type": "completion",
+            "analyzer": "lowercase",
+            "search_analyzer": "lowercase",
+            "preserve_position_increments": False,
+        },
         "package_hydra_build": {
             "type": "nested",
             "properties": {
@@ -98,6 +105,12 @@ MAPPING = {
         "package_homepage": {"type": "keyword"},
         "package_system": {"type": "keyword"},
         # Options fields
+        "option_suggestions": {
+            "type": "completion",
+            "analyzer": "lowercase",
+            "search_analyzer": "lowercase",
+            "preserve_position_increments": False,
+        },
         "option_name": {"type": "keyword", "normalizer": "lowercase"},
         "option_name_query": {"type": "keyword", "normalizer": "lowercase"},
         "option_description": {"type": "text"},
@@ -109,10 +122,32 @@ MAPPING = {
 }
 
 
-def split_query(text):
-    """Tokenize package attr_name
+def parse_suggestions(text: str) -> typing.List[typing.Dict[str, object]]:
+    """Tokenize option_name
 
     Example:
+
+    services.nginx.extraConfig
+     - services.nginx.extraConfig
+     - services.nginx.
+     - services.
+    """
+    results: typing.List[typing.Dict[str, object]] = [
+        {"input": text, "weight": 1000 - (((len(text.split(".")) - 1) * 10))},
+    ]
+    for i in range(len(text.split(".")) - 1):
+        result = {
+            "input": ".".join(text.split(".")[: -(i + 1)]) + ".",
+            "weight": 1000 - ((len(text.split(".")) - 2 - i) * 10) + 1,
+        }
+        results.append(result)
+    return results
+
+
+def parse_query(text):
+    """Tokenize package attr_name
+
+    Example package:
 
     python37Packages.test_name-test
      = index: 0
@@ -345,9 +380,10 @@ def get_packages(evaluation, evaluation_builds):
 
             yield dict(
                 type="package",
+                package_suggestions=parse_suggestions(attr_name),
                 package_hydra=hydra,
                 package_attr_name=attr_name,
-                package_attr_name_query=list(split_query(attr_name)),
+                package_attr_name_query=list(parse_query(attr_name)),
                 package_attr_set=attr_set,
                 package_pname=remove_attr_set(data["pname"]),
                 package_pversion=data["version"],
@@ -411,8 +447,9 @@ def get_options(evaluation):
 
             yield dict(
                 type="option",
+                option_suggestions=parse_suggestions(name),
                 option_name=name,
-                option_name_query=split_query(name),
+                option_name_query=parse_query(name),
                 option_description=description,
                 option_type=option.get("type"),
                 option_default=default,
@@ -539,5 +576,3 @@ def run(es_url, channel, force, verbose):
 
 if __name__ == "__main__":
     run()
-
-# vi:ft=python
