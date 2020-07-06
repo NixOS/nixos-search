@@ -29,7 +29,6 @@ import Html
         , form
         , h1
         , h4
-        , i
         , input
         , li
         , p
@@ -40,6 +39,7 @@ import Html
 import Html.Attributes
     exposing
         ( attribute
+        , autofocus
         , class
         , classList
         , href
@@ -62,10 +62,6 @@ import Keyboard.Events
 import RemoteData
 import Task
 import Url.Builder
-
-
-type alias Char =
-    String
 
 
 type alias Model a =
@@ -123,14 +119,6 @@ type alias ResultItem a =
     }
 
 
-itemHtml : Char -> Html Never
-itemHtml char =
-    div []
-        [ i [ class "fa fa-rebel" ] []
-        , text (" " ++ char)
-        ]
-
-
 init :
     Maybe String
     -> Maybe String
@@ -138,7 +126,7 @@ init :
     -> Maybe Int
     -> Maybe Int
     -> Maybe (Model a)
-    -> ( Model a, Cmd msg )
+    -> ( Model a, Cmd (Msg a) )
 init channel query show from size model =
     let
         defaultChannel =
@@ -162,7 +150,19 @@ init channel query show from size model =
                 |> Debouncer.Messages.settleWhenQuietFor (Just <| Debouncer.Messages.fromSeconds 0.6)
                 |> Debouncer.Messages.toDebouncer
       , query = query
-      , querySuggest = RemoteData.NotAsked
+      , querySuggest =
+            query
+                |> Maybe.map
+                    (\selected ->
+                        if String.endsWith "." selected then
+                            model
+                                |> Maybe.map .querySuggest
+                                |> Maybe.withDefault RemoteData.NotAsked
+
+                        else
+                            RemoteData.NotAsked
+                    )
+                |> Maybe.withDefault RemoteData.NotAsked
       , querySelectedSuggestion = Nothing
       , result =
             model
@@ -172,7 +172,7 @@ init channel query show from size model =
       , from = Maybe.withDefault defaultFrom from
       , size = Maybe.withDefault defaultSize size
       }
-    , Cmd.none
+    , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
     )
 
 
@@ -189,7 +189,7 @@ type Msg a
     | QueryInput String
     | QueryInputSuggestionsSubmit
     | QueryInputSuggestionsResponse (RemoteData.WebData (SearchResult a))
-    | QuerySubmit
+    | QueryInputSubmit
     | QueryResponse (RemoteData.WebData (SearchResult a))
     | ShowDetails String
     | SuggestionsMoveDown
@@ -262,7 +262,22 @@ update path navKey result_type options decodeResultItemSource msg model =
                 (QueryInputDebounce (Debouncer.Messages.provideInput QueryInputSuggestionsSubmit))
                 { model
                     | query = Just query
-                    , querySuggest = RemoteData.NotAsked
+                    , querySuggest =
+                        case model.querySuggest of
+                            RemoteData.Success result ->
+                                let
+                                    suggestions =
+                                        getSuggestions (Just "XXXX") model.querySuggest
+                                            |> List.map .text
+                                in
+                                if List.member (Just query) suggestions then
+                                    RemoteData.NotAsked
+
+                                else
+                                    model.querySuggest
+
+                            _ ->
+                                RemoteData.NotAsked
                     , querySelectedSuggestion = Nothing
                 }
                 |> Tuple.mapSecond
@@ -304,7 +319,17 @@ update path navKey result_type options decodeResultItemSource msg model =
                         )
             in
             ( { model
-                | querySuggest = RemoteData.Loading
+                | querySuggest =
+                    model.query
+                        |> Maybe.map
+                            (\selected ->
+                                if String.endsWith "." selected then
+                                    model.querySuggest
+
+                                else
+                                    RemoteData.NotAsked
+                            )
+                        |> Maybe.withDefault RemoteData.NotAsked
                 , querySelectedSuggestion = Nothing
               }
             , makeRequest
@@ -324,7 +349,7 @@ update path navKey result_type options decodeResultItemSource msg model =
             , Cmd.none
             )
 
-        QuerySubmit ->
+        QueryInputSubmit ->
             ( { model | result = RemoteData.Loading }
             , createUrl
                 path
@@ -395,16 +420,24 @@ update path navKey result_type options decodeResultItemSource msg model =
 
                 Nothing ->
                     ( model
-                    , Cmd.none
+                    , Task.attempt (\_ -> QueryInputSubmit) (Task.succeed ())
                     )
 
         SuggestionsClickSelect selected ->
             ( { model
-                | querySuggest = RemoteData.NotAsked
+                | querySuggest =
+                    if String.endsWith "." selected then
+                        model.querySuggest
+
+                    else
+                        RemoteData.NotAsked
                 , querySelectedSuggestion = Nothing
                 , query = Just selected
               }
-            , Task.attempt (\_ -> QueryInputSuggestionsSubmit) (Task.succeed ())
+            , Cmd.batch
+                [ Task.attempt (\_ -> QueryInputSuggestionsSubmit) (Task.succeed ())
+                , Task.attempt (\_ -> QueryInputSubmit) (Task.succeed ())
+                ]
             )
 
         SuggestionsClose ->
@@ -658,7 +691,7 @@ view path title model viewSuccess outMsg =
                 , ( "with-suggestions-loading", RemoteData.isLoading model.querySuggest )
                 ]
             ]
-            [ form [ onSubmit (outMsg QuerySubmit) ]
+            [ form [ onSubmit (outMsg QueryInputSubmit) ]
                 [ p
                     []
                     [ strong []
@@ -691,6 +724,8 @@ view path title model viewSuccess outMsg =
                     ]
                     [ input
                         ([ type_ "text"
+                         , id "search-query-input"
+                         , autofocus True
                          , onInput (\x -> outMsg (QueryInput x))
                          , value <| Maybe.withDefault "" model.query
                          ]
