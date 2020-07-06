@@ -141,7 +141,7 @@ viewSuccess channel show result =
             , tbody
                 []
                 (List.concatMap
-                    (viewResultItem show)
+                    (viewResultItem channel show)
                     result.hits.hits
                 )
             ]
@@ -149,14 +149,15 @@ viewSuccess channel show result =
 
 
 viewResultItem :
-    Maybe String
+    String
+    -> Maybe String
     -> Search.ResultItem ResultItemSource
     -> List (Html Msg)
-viewResultItem show item =
+viewResultItem channel show item =
     let
         packageDetails =
             if Just item.source.name == show then
-                [ td [ colspan 1 ] [ viewResultItemDetails item ]
+                [ td [ colspan 1 ] [ viewResultItemDetails channel item ]
                 ]
 
             else
@@ -189,9 +190,10 @@ viewResultItem show item =
 
 
 viewResultItemDetails :
-    Search.ResultItem ResultItemSource
+    String
+    -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItemDetails item =
+viewResultItemDetails channel item =
     let
         default =
             "Not given"
@@ -211,14 +213,25 @@ viewResultItemDetails item =
         asLink value =
             a [ href value ] [ text value ]
 
-        -- TODO: this should take channel into account as well
-        githubUrlPrefix =
-            "https://github.com/NixOS/nixpkgs-channels/blob/nixos-unstable/"
+        githubUrlPrefix branch =
+            "https://github.com/NixOS/nixpkgs-channels/blob/" ++ branch ++ "/"
+
+        cleanPosition value =
+            if String.startsWith "source/" value then
+                String.dropLeft 7 value
+
+            else
+                value
 
         asGithubLink value =
-            a
-                [ href <| githubUrlPrefix ++ (value |> String.replace ":" "#L") ]
-                [ text <| value ]
+            case Search.channelDetailsFromId channel of
+                Just channelDetails ->
+                    a
+                        [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L") ]
+                        [ text <| value ]
+
+                Nothing ->
+                    text <| cleanPosition value
 
         wrapped wrapWith value =
             case value of
