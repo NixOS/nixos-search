@@ -29,7 +29,6 @@ import Html
         , form
         , h1
         , h4
-        , i
         , input
         , li
         , p
@@ -40,6 +39,7 @@ import Html
 import Html.Attributes
     exposing
         ( attribute
+        , autofocus
         , class
         , classList
         , href
@@ -62,10 +62,6 @@ import Keyboard.Events
 import RemoteData
 import Task
 import Url.Builder
-
-
-type alias Char =
-    String
 
 
 type alias Model a =
@@ -123,14 +119,6 @@ type alias ResultItem a =
     }
 
 
-itemHtml : Char -> Html Never
-itemHtml char =
-    div []
-        [ i [ class "fa fa-rebel" ] []
-        , text (" " ++ char)
-        ]
-
-
 init :
     Maybe String
     -> Maybe String
@@ -138,7 +126,7 @@ init :
     -> Maybe Int
     -> Maybe Int
     -> Maybe (Model a)
-    -> ( Model a, Cmd msg )
+    -> ( Model a, Cmd (Msg a) )
 init channel query show from size model =
     let
         defaultChannel =
@@ -172,7 +160,7 @@ init channel query show from size model =
       , from = Maybe.withDefault defaultFrom from
       , size = Maybe.withDefault defaultSize size
       }
-    , Cmd.none
+    , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
     )
 
 
@@ -691,6 +679,8 @@ view path title model viewSuccess outMsg =
                     ]
                     [ input
                         ([ type_ "text"
+                         , id "search-query-input"
+                         , autofocus True
                          , onInput (\x -> outMsg (QueryInput x))
                          , value <| Maybe.withDefault "" model.query
                          ]

@@ -75,8 +75,14 @@ init :
     -> Maybe Int
     -> Maybe Model
     -> ( Model, Cmd Msg )
-init =
-    Search.init
+init channel query show from size model =
+    let
+        ( newModel, newCmd ) =
+            Search.init channel query show from size model
+    in
+    ( newModel
+    , Cmd.map SearchMsg newCmd
+    )
 
 
 
