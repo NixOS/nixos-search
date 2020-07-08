@@ -726,7 +726,7 @@ view path title model viewSuccess outMsg =
                     [ input
                         ([ type_ "text"
                          , id "search-query-input"
-                         , autocomplete True
+                         , autocomplete False
                          , autofocus True
                          , onInput (\x -> outMsg (QueryInput x))
                          , value <| Maybe.withDefault "" model.query
