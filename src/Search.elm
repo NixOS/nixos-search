@@ -641,10 +641,30 @@ getSuggestions query querySuggest =
     in
     case querySuggest of
         RemoteData.Success result ->
-            result.suggest
-                |> maybeList (\x -> x.query |> maybeList (List.map .options))
-                |> List.concat
-                |> List.filter (\x -> x.text /= query)
+            let
+                suggestions =
+                    result.suggest
+                        |> maybeList (\x -> x.query |> maybeList (List.map .options))
+                        |> List.concat
+                        |> List.filter
+                            (\x ->
+                                if String.endsWith "." (Maybe.withDefault "" query) then
+                                    x.text /= query
+
+                                else
+                                    True
+                            )
+
+                firstItemText items =
+                    items
+                        |> List.head
+                        |> Maybe.andThen .text
+            in
+            if List.length suggestions == 1 && firstItemText suggestions == query then
+                []
+
+            else
+                suggestions
 
         _ ->
             []
