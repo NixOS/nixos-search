@@ -644,7 +644,14 @@ getSuggestions query querySuggest =
             result.suggest
                 |> maybeList (\x -> x.query |> maybeList (List.map .options))
                 |> List.concat
-                |> List.filter (\x -> x.text /= query)
+                |> List.filter
+                    (\x ->
+                        if String.endsWith "." (Maybe.withDefault "" query) then
+                            x.text /= query
+
+                        else
+                            True
+                    )
 
         _ ->
             []
