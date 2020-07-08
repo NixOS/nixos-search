@@ -39,6 +39,7 @@ import Html
 import Html.Attributes
     exposing
         ( attribute
+        , autocomplete
         , autofocus
         , class
         , classList
@@ -725,6 +726,7 @@ view path title model viewSuccess outMsg =
                     [ input
                         ([ type_ "text"
                          , id "search-query-input"
+                         , autocomplete True
                          , autofocus True
                          , onInput (\x -> outMsg (QueryInput x))
                          , value <| Maybe.withDefault "" model.query
