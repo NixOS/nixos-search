@@ -351,16 +351,20 @@ update path navKey result_type options decodeResultItemSource msg model =
             )
 
         QueryInputSubmit ->
-            ( { model | result = RemoteData.Loading }
-            , createUrl
-                path
-                model.channel
-                model.query
-                model.show
-                0
-                model.size
-                |> Browser.Navigation.pushUrl navKey
-            )
+            if model.query == Nothing || model.query == Just "" then
+                ( model, Cmd.none )
+
+            else
+                ( { model | result = RemoteData.Loading }
+                , createUrl
+                    path
+                    model.channel
+                    model.query
+                    model.show
+                    0
+                    model.size
+                    |> Browser.Navigation.pushUrl navKey
+                )
 
         QueryResponse result ->
             ( { model | result = result }
