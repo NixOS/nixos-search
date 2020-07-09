@@ -689,18 +689,25 @@ view path title model viewSuccess outMsg =
                     [ text <| Maybe.withDefault "" x.text ]
                 ]
     in
-    div [ class "search-page" ]
+    div
+        [ classList
+            [ ( "search-page", True )
+            , ( "with-suggestions", RemoteData.isSuccess model.querySuggest && List.length suggestions > 0 )
+            , ( "with-suggestions-loading"
+              , (model.query /= Nothing)
+                    && (model.query /= Just "")
+                    && not (RemoteData.isSuccess model.querySuggest || RemoteData.isNotAsked model.querySuggest)
+              )
+            ]
+        ]
         [ h1 [ class "page-header" ] [ text title ]
         , div
-            [ classList
-                [ ( "search-input", True )
-                , ( "with-suggestions", RemoteData.isSuccess model.querySuggest && List.length suggestions > 0 )
-                , ( "with-suggestions-loading"
-                  , (model.query /= Nothing)
-                        && (model.query /= Just "")
-                        && not (RemoteData.isSuccess model.querySuggest || RemoteData.isNotAsked model.querySuggest)
-                  )
-                ]
+            [ class "search-backdrop"
+            , onClick <| outMsg SuggestionsClose
+            ]
+            []
+        , div
+            [ class "search-input"
             ]
             [ form [ onSubmit (outMsg QueryInputSubmit) ]
                 [ p
