@@ -149,7 +149,7 @@ init channel query show from size model =
     ( { channel = Maybe.withDefault defaultChannel channel
       , queryDebounce =
             Debouncer.Messages.manual
-                |> Debouncer.Messages.settleWhenQuietFor (Just <| Debouncer.Messages.fromSeconds 0.6)
+                |> Debouncer.Messages.settleWhenQuietFor (Just <| Debouncer.Messages.fromSeconds 0.4)
                 |> Debouncer.Messages.toDebouncer
       , query = query
       , querySuggest =
@@ -264,22 +264,7 @@ update path navKey result_type options decodeResultItemSource msg model =
                 (QueryInputDebounce (Debouncer.Messages.provideInput QueryInputSuggestionsSubmit))
                 { model
                     | query = Just query
-                    , querySuggest =
-                        case model.querySuggest of
-                            RemoteData.Success result ->
-                                let
-                                    suggestions =
-                                        getSuggestions (Just "XXXX") model.querySuggest
-                                            |> List.map .text
-                                in
-                                if List.member (Just query) suggestions then
-                                    RemoteData.NotAsked
-
-                                else
-                                    model.querySuggest
-
-                            _ ->
-                                RemoteData.NotAsked
+                    , querySuggest = RemoteData.Loading
                     , querySelectedSuggestion = Nothing
                 }
                 |> Tuple.mapSecond
@@ -710,7 +695,11 @@ view path title model viewSuccess outMsg =
             [ classList
                 [ ( "search-input", True )
                 , ( "with-suggestions", RemoteData.isSuccess model.querySuggest && List.length suggestions > 0 )
-                , ( "with-suggestions-loading", RemoteData.isLoading model.querySuggest )
+                , ( "with-suggestions-loading"
+                  , (model.query /= Nothing)
+                        && (model.query /= Just "")
+                        && not (RemoteData.isSuccess model.querySuggest || RemoteData.isNotAsked model.querySuggest)
+                  )
                 ]
             ]
             [ form [ onSubmit (outMsg QueryInputSubmit) ]
