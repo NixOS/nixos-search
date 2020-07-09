@@ -399,7 +399,7 @@ makeRequest options channel queryRaw from size =
                             [ ( field
                               , Json.Encode.object
                                     [ ( "query", Json.Encode.string query )
-                                    , ( "boost", Json.Encode.float boost )
+                                    , ( "boost", Json.Encode.float <| boost_base * boost )
                                     , ( "analyzer", Json.Encode.string "whitespace" )
                                     , ( "fuzziness", Json.Encode.string "1" )
                                     , ( "_name"
@@ -428,7 +428,7 @@ makeRequest options channel queryRaw from size =
                             [ ( field
                               , Json.Encode.object
                                     [ ( "query", Json.Encode.string query )
-                                    , ( "boost", Json.Encode.float boost )
+                                    , ( "boost", Json.Encode.float <| boost_base * boost )
                                     , ( "analyzer", Json.Encode.string "whitespace" )
                                     , ( "fuzziness", Json.Encode.string "1" )
                                     , ( "_name"
@@ -442,9 +442,9 @@ makeRequest options channel queryRaw from size =
                       )
                     ]
                 )
-                [ ( "package_attr_name", 1 )
+                [ ( "package_attr_name", 2 )
                 , ( "package_attr_name_query", 1 )
-                , ( "package_pname", 1 )
+                , ( "package_pname", 3 )
                 ]
 
         should_terms boost_base =
