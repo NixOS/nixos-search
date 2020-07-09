@@ -45,6 +45,7 @@ import Html.Attributes
         , classList
         , href
         , id
+        , placeholder
         , type_
         , value
         )
@@ -748,6 +749,7 @@ view path title model viewSuccess outMsg =
                          , id "search-query-input"
                          , autocomplete False
                          , autofocus True
+                         , placeholder <| "Search for " ++ path
                          , onInput (\x -> outMsg (QueryInput x))
                          , value <| Maybe.withDefault "" model.query
                          ]
