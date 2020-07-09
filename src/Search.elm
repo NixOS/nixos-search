@@ -623,9 +623,9 @@ channelDetailsFromId channel_id =
 
 channels : List String
 channels =
-    [ "unstable"
+    [ "19.09"
     , "20.03"
-    , "19.09"
+    , "unstable"
     ]
 
 
