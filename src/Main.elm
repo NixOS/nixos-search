@@ -360,7 +360,12 @@ viewNavigationItem :
     -> Html Msg
 viewNavigationItem url ( path, title ) =
     li
-        [ classList [ ( "active", path == url.path ) ] ]
+        [ classList
+            [ ( "active"
+              , String.startsWith url.path path
+              )
+            ]
+        ]
         [ a [ href path ] [ text title ] ]
 
 
