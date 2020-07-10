@@ -108,12 +108,13 @@ init :
     -> Maybe String
     -> Maybe Int
     -> Maybe Int
+    -> Maybe String
     -> Maybe Model
     -> ( Model, Cmd Msg )
-init channel query show from size model =
+init channel query show from size sort model =
     let
         ( newModel, newCmd ) =
-            Search.init channel query show from size model
+            Search.init channel query show from size sort model
     in
     ( newModel
     , Cmd.map SearchMsg newCmd
@@ -381,8 +382,9 @@ makeRequest :
     -> String
     -> Int
     -> Int
+    -> Search.Sort
     -> Cmd Msg
-makeRequest options channel queryRaw from size =
+makeRequest options channel queryRaw from size sort =
     let
         query =
             queryRaw
@@ -504,7 +506,7 @@ makeRequest options channel queryRaw from size =
                 |> List.append (should_match 10)
     in
     Search.makeRequest
-        (Search.makeRequestBody query from size "package" "package_attr_name_query" should_queries)
+        (Search.makeRequestBody query from size sort "package" "package_attr_name" "package_attr_name_query" should_queries)
         ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
         decodeResultItemSource
         options
