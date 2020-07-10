@@ -4,8 +4,10 @@ module Search exposing
     , Options
     , ResultItem
     , SearchResult
+    , Sort(..)
     , channelDetailsFromId
     , decodeResult
+    , fromSortId
     , init
     , makeRequest
     , makeRequestBody
@@ -30,8 +32,11 @@ import Html
         , h1
         , h4
         , input
+        , label
         , li
+        , option
         , p
+        , select
         , strong
         , text
         , ul
@@ -46,6 +51,7 @@ import Html.Attributes
         , href
         , id
         , placeholder
+        , selected
         , type_
         , value
         )
@@ -76,6 +82,7 @@ type alias Model a =
     , show : Maybe String
     , from : Int
     , size : Int
+    , sort : Sort
     }
 
 
@@ -114,11 +121,17 @@ type alias ResultHitsTotal =
 type alias ResultItem a =
     { index : String
     , id : String
-    , score : Float
+    , score : Maybe Float
     , source : a
     , text : Maybe String
     , matched_queries : Maybe (List String)
     }
+
+
+type Sort
+    = Relevance
+    | AlphabeticallyAsc
+    | AlphabeticallyDesc
 
 
 init :
@@ -127,9 +140,10 @@ init :
     -> Maybe String
     -> Maybe Int
     -> Maybe Int
+    -> Maybe String
     -> Maybe (Model a)
     -> ( Model a, Cmd (Msg a) )
-init channel query show from size model =
+init channel query show from size sort model =
     let
         defaultChannel =
             model
@@ -173,6 +187,11 @@ init channel query show from size model =
       , show = show
       , from = Maybe.withDefault defaultFrom from
       , size = Maybe.withDefault defaultSize size
+      , sort =
+            sort
+                |> Maybe.withDefault ""
+                |> fromSortId 
+                |> Maybe.withDefault Relevance 
       }
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
     )
@@ -186,6 +205,7 @@ init channel query show from size model =
 
 type Msg a
     = NoOp
+    | SortChange String
     | ChannelChange String
     | QueryInputDebounce (Debouncer.Messages.Msg (Msg a))
     | QueryInput String
@@ -221,6 +241,21 @@ update path navKey result_type options decodeResultItemSource msg model =
             , Cmd.none
             )
 
+        SortChange sortId ->
+            let
+                sort = fromSortId sortId |> Maybe.withDefault Relevance
+            in
+            ( { model | sort = sort }
+            , createUrl
+                path
+                model.channel
+                model.query
+                model.show
+                0
+                model.size
+                sort
+                |> Browser.Navigation.pushUrl navKey
+            )
         ChannelChange channel ->
             ( { model
                 | channel = channel
@@ -242,6 +277,7 @@ update path navKey result_type options decodeResultItemSource msg model =
                     model.show
                     0
                     model.size
+                    model.sort
                     |> Browser.Navigation.pushUrl navKey
             )
 
@@ -349,6 +385,7 @@ update path navKey result_type options decodeResultItemSource msg model =
                     model.show
                     0
                     model.size
+                    model.sort
                     |> Browser.Navigation.pushUrl navKey
                 )
 
@@ -371,6 +408,7 @@ update path navKey result_type options decodeResultItemSource msg model =
                 )
                 model.from
                 model.size
+                model.sort
                 |> Browser.Navigation.pushUrl navKey
             )
 
@@ -531,10 +569,12 @@ createUrl :
     -> Maybe String
     -> Int
     -> Int
+    -> Sort
     -> String
-createUrl path channel query show from size =
+createUrl path channel query show from size sort =
     [ Url.Builder.int "from" from
     , Url.Builder.int "size" size
+    , Url.Builder.string "sort" <| toSortId sort
     , Url.Builder.string "channel" channel
     ]
         |> List.append
@@ -616,6 +656,64 @@ channels =
     , "20.03"
     , "unstable"
     ]
+
+
+sortBy : List Sort
+sortBy =
+    [ Relevance
+    , AlphabeticallyAsc
+    , AlphabeticallyDesc
+    ]
+
+
+toSortQuery :
+    Sort
+    -> String
+    -> ( String, Json.Encode.Value )
+toSortQuery sort field =
+    ( "sort"
+    , case sort of 
+          AlphabeticallyAsc ->
+              Json.Encode.list Json.Encode.object
+                  [ [ ( field, Json.Encode.string "asc")
+                    ]
+                  ]
+          AlphabeticallyDesc ->
+              Json.Encode.list Json.Encode.object
+                  [ [ ( field, Json.Encode.string "desc")
+                    ]
+                  ]
+          Relevance ->
+              Json.Encode.list Json.Encode.string
+                  [ "_score"
+                  ]
+      
+    )
+
+
+toSortTitle : Sort -> String
+toSortTitle sort =
+    case sort of 
+        AlphabeticallyAsc -> "Alphabetically Ascending"
+        AlphabeticallyDesc -> "Alphabetically Descending"
+        Relevance -> "Relevance"
+
+
+toSortId : Sort -> String
+toSortId sort =
+    case sort of 
+        AlphabeticallyAsc -> "alpha_asc"
+        AlphabeticallyDesc -> "alpha_desc"
+        Relevance -> "relevance"
+
+
+fromSortId : String -> Maybe Sort
+fromSortId id = 
+    case id of
+      "alpha_asc" -> Just AlphabeticallyAsc
+      "alpha_desc" -> Just AlphabeticallyDesc
+      "relevance" -> Just Relevance
+      _ -> Nothing
 
 
 getSuggestions :
@@ -840,6 +938,29 @@ view path title model viewSuccess outMsg =
                                     )
                                 ]
                             ]
+                        , form [ class "form-horizontal pull-right" ]
+                            [ div
+                                [ class "control-group"
+                                ]
+                                [ label [ class "control-label"] [ text "Sort by:" ]
+                                , div 
+                                    [ class "controls"]
+                                    [ select
+                                          [ onInput (\x -> outMsg (SortChange x))
+                                          ]
+                                          (List.map
+                                              (\sort ->
+                                                  option 
+                                                      [ selected (model.sort == sort)
+                                                      , value (toSortId sort)
+                                                      ]
+                                                      [ text <| toSortTitle sort]
+                                              )
+                                              sortBy
+                                          )
+                                    ]
+                                ]
+                            ]
                         , viewPager outMsg model result path
                         , viewSuccess model.channel model.show result
                         , viewPager outMsg model result path
@@ -897,6 +1018,7 @@ viewPager _ model result path =
                             model.show
                             0
                             model.size
+                            model.sort
                 ]
                 [ text "First" ]
             ]
@@ -918,6 +1040,7 @@ viewPager _ model result path =
                             model.show
                             (model.from - model.size)
                             model.size
+                            model.sort
                 ]
                 [ text "Previous" ]
             ]
@@ -939,6 +1062,7 @@ viewPager _ model result path =
                             model.show
                             (model.from + model.size)
                             model.size
+                            model.sort
                 ]
                 [ text "Next" ]
             ]
@@ -968,6 +1092,7 @@ viewPager _ model result path =
                             model.show
                             (((result.hits.total.value // model.size) - remainder) * model.size)
                             model.size
+                            model.sort
                 ]
                 [ text "Last" ]
             ]
@@ -1074,11 +1199,13 @@ makeRequestBody :
     String
     -> Int
     -> Int
+    -> Sort
+    -> String
     -> String
     -> String
     -> List (List ( String, Json.Encode.Value ))
     -> Http.Body
-makeRequestBody query from sizeRaw type_ query_field should_queries =
+makeRequestBody query from sizeRaw sort type_ sort_field query_field should_queries =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -1096,6 +1223,7 @@ makeRequestBody query from sizeRaw type_ query_field should_queries =
             , ( "size"
               , Json.Encode.int size
               )
+            , toSortQuery sort sort_field
             , ( "query"
               , Json.Encode.object
                     [ ( "bool"
@@ -1191,7 +1319,7 @@ decodeResultItem decodeResultItemSource =
     Json.Decode.map6 ResultItem
         (Json.Decode.field "_index" Json.Decode.string)
         (Json.Decode.field "_id" Json.Decode.string)
-        (Json.Decode.field "_score" Json.Decode.float)
+        (Json.Decode.field "_score" (Json.Decode.nullable Json.Decode.float))
         (Json.Decode.field "_source" decodeResultItemSource)
         (Json.Decode.maybe (Json.Decode.field "text" Json.Decode.string))
         (Json.Decode.maybe (Json.Decode.field "matched_queries" (Json.Decode.list Json.Decode.string)))

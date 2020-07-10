@@ -127,6 +127,7 @@ submitQuery old ( new, cmd ) =
                         (Maybe.withDefault "" newModel.query)
                         newModel.from
                         newModel.size
+                        newModel.sort
                         |> Cmd.map msg
                     ]
                 )
@@ -183,7 +184,7 @@ changeRouteTo model url =
             -- on the home page
             ( newModel, Browser.Navigation.pushUrl newModel.navKey "/packages" )
 
-        Just (Route.Packages channel query show from size) ->
+        Just (Route.Packages channel query show from size sort) ->
             let
                 modelPage =
                     case newModel.page of
@@ -193,11 +194,11 @@ changeRouteTo model url =
                         _ ->
                             Nothing
             in
-            Page.Packages.init channel query show from size modelPage
+            Page.Packages.init channel query show from size sort modelPage
                 |> updateWith Packages PackagesMsg newModel
                 |> submitQuery newModel
 
-        Just (Route.Options channel query show from size) ->
+        Just (Route.Options channel query show from size sort) ->
             let
                 modelPage =
                     case newModel.page of
@@ -207,7 +208,7 @@ changeRouteTo model url =
                         _ ->
                             Nothing
             in
-            Page.Options.init channel query show from size modelPage
+            Page.Options.init channel query show from size sort modelPage
                 |> updateWith Options OptionsMsg newModel
                 |> submitQuery newModel
 
