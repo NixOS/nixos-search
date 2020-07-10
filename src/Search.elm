@@ -190,8 +190,8 @@ init channel query show from size sort model =
       , sort =
             sort
                 |> Maybe.withDefault ""
-                |> fromSortId 
-                |> Maybe.withDefault Relevance 
+                |> fromSortId
+                |> Maybe.withDefault Relevance
       }
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
     )
@@ -243,7 +243,8 @@ update path navKey result_type options decodeResultItemSource msg model =
 
         SortChange sortId ->
             let
-                sort = fromSortId sortId |> Maybe.withDefault Relevance
+                sort =
+                    fromSortId sortId |> Maybe.withDefault Relevance
             in
             ( { model | sort = sort }
             , createUrl
@@ -256,6 +257,7 @@ update path navKey result_type options decodeResultItemSource msg model =
                 sort
                 |> Browser.Navigation.pushUrl navKey
             )
+
         ChannelChange channel ->
             ( { model
                 | channel = channel
@@ -672,48 +674,66 @@ toSortQuery :
     -> ( String, Json.Encode.Value )
 toSortQuery sort field =
     ( "sort"
-    , case sort of 
-          AlphabeticallyAsc ->
-              Json.Encode.list Json.Encode.object
-                  [ [ ( field, Json.Encode.string "asc")
-                    ]
+    , case sort of
+        AlphabeticallyAsc ->
+            Json.Encode.list Json.Encode.object
+                [ [ ( field, Json.Encode.string "asc" )
                   ]
-          AlphabeticallyDesc ->
-              Json.Encode.list Json.Encode.object
-                  [ [ ( field, Json.Encode.string "desc")
-                    ]
+                ]
+
+        AlphabeticallyDesc ->
+            Json.Encode.list Json.Encode.object
+                [ [ ( field, Json.Encode.string "desc" )
                   ]
-          Relevance ->
-              Json.Encode.list Json.Encode.string
-                  [ "_score"
-                  ]
-      
+                ]
+
+        Relevance ->
+            Json.Encode.list Json.Encode.string
+                [ "_score"
+                ]
     )
 
 
 toSortTitle : Sort -> String
 toSortTitle sort =
-    case sort of 
-        AlphabeticallyAsc -> "Alphabetically Ascending"
-        AlphabeticallyDesc -> "Alphabetically Descending"
-        Relevance -> "Relevance"
+    case sort of
+        AlphabeticallyAsc ->
+            "Alphabetically Ascending"
+
+        AlphabeticallyDesc ->
+            "Alphabetically Descending"
+
+        Relevance ->
+            "Relevance"
 
 
 toSortId : Sort -> String
 toSortId sort =
-    case sort of 
-        AlphabeticallyAsc -> "alpha_asc"
-        AlphabeticallyDesc -> "alpha_desc"
-        Relevance -> "relevance"
+    case sort of
+        AlphabeticallyAsc ->
+            "alpha_asc"
+
+        AlphabeticallyDesc ->
+            "alpha_desc"
+
+        Relevance ->
+            "relevance"
 
 
 fromSortId : String -> Maybe Sort
-fromSortId id = 
+fromSortId id =
     case id of
-      "alpha_asc" -> Just AlphabeticallyAsc
-      "alpha_desc" -> Just AlphabeticallyDesc
-      "relevance" -> Just Relevance
-      _ -> Nothing
+        "alpha_asc" ->
+            Just AlphabeticallyAsc
+
+        "alpha_desc" ->
+            Just AlphabeticallyDesc
+
+        "relevance" ->
+            Just Relevance
+
+        _ ->
+            Nothing
 
 
 getSuggestions :
@@ -942,22 +962,22 @@ view path title model viewSuccess outMsg =
                             [ div
                                 [ class "control-group"
                                 ]
-                                [ label [ class "control-label"] [ text "Sort by:" ]
-                                , div 
-                                    [ class "controls"]
+                                [ label [ class "control-label" ] [ text "Sort by:" ]
+                                , div
+                                    [ class "controls" ]
                                     [ select
-                                          [ onInput (\x -> outMsg (SortChange x))
-                                          ]
-                                          (List.map
-                                              (\sort ->
-                                                  option 
-                                                      [ selected (model.sort == sort)
-                                                      , value (toSortId sort)
-                                                      ]
-                                                      [ text <| toSortTitle sort]
-                                              )
-                                              sortBy
-                                          )
+                                        [ onInput (\x -> outMsg (SortChange x))
+                                        ]
+                                        (List.map
+                                            (\sort ->
+                                                option
+                                                    [ selected (model.sort == sort)
+                                                    , value (toSortId sort)
+                                                    ]
+                                                    [ text <| toSortTitle sort ]
+                                            )
+                                            sortBy
+                                        )
                                     ]
                                 ]
                             ]
