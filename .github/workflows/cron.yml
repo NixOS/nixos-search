@@ -2,6 +2,10 @@ name: "Hourly import channel to Elasticsearch"
 
 on:
 
+  pull_request:
+  push:
+    branches:
+      - master
   schedule:
   - cron: '0 * * * *'
 
@@ -29,9 +33,22 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Download latest builds for ${{ matrix.channel }} channel (if needed)
+      if: steps.eval-cache.outputs.cache-hit != 'true'
+      run: |
+        mkdir -p ./eval-cache
+        cp ./src-url ./eval-cache/
+        curl -H "Content-Type: application/json" "$(cat ./eval-cache/src-url)/builds" -o ./eval-cache/builds.json
+
+    - name: Installing Nix
+      uses: cachix/install-nix-action@v8
+
+    - name: Installing awscli
+      run: |
+        nix-env -iA nixpkgs.awscli
+
     - name: Check for latest evaluation in ${{ matrix.channel }} channel
       run: |
-        sudo apt-get install -y awscli
         if [ "${{ matrix.channel }}" = "unstable" ]; then
           RELEASE=$(aws s3 ls --no-sign-request "$S3_URL/" | grep "/$" | cut -d" " -f29 | sort | tail -1 | sed 's|/||')
         else
@@ -46,16 +63,6 @@ jobs:
       with:
         path: ./eval-cache
         key: eval-cache-${{ env.EVAL_ID }}
-
-    - name: Download latest builds for ${{ matrix.channel }} channel (if needed)
-      if: steps.eval-cache.outputs.cache-hit != 'true'
-      run: |
-        mkdir -p ./eval-cache
-        cp ./src-url ./eval-cache/
-        curl -H "Content-Type: application/json" "$(cat ./eval-cache/src-url)/builds" -o ./eval-cache/builds.json
-
-    - name: Installing Nix
-      uses: cachix/install-nix-action@v8
 
     - name: Installing NixFlakes
       run: |
