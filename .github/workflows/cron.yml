@@ -33,13 +33,6 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Download latest builds for ${{ matrix.channel }} channel (if needed)
-      if: steps.eval-cache.outputs.cache-hit != 'true'
-      run: |
-        mkdir -p ./eval-cache
-        cp ./src-url ./eval-cache/
-        curl -H "Content-Type: application/json" "$(cat ./eval-cache/src-url)/builds" -o ./eval-cache/builds.json
-
     - name: Installing Nix
       uses: cachix/install-nix-action@v8
 
@@ -56,6 +49,13 @@ jobs:
         fi
         aws s3 cp --no-sign-request "$S3_URL/$RELEASE/src-url" ./
         echo "::set-env name=EVAL_ID::$(cat src-url | cut -c30-)"
+
+    - name: Download latest builds for ${{ matrix.channel }} channel (if needed)
+      if: steps.eval-cache.outputs.cache-hit != 'true'
+      run: |
+        mkdir -p ./eval-cache
+        cp ./src-url ./eval-cache/
+        curl -H "Content-Type: application/json" "$(cat ./eval-cache/src-url)/builds" -o ./eval-cache/builds.json
 
     - name: Cache ${{ matrix.channel }} channel builds
       id: eval-cache
