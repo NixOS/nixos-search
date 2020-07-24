@@ -15,12 +15,9 @@ module Search exposing
     , view
     )
 
-import Array
 import Base64
 import Browser.Dom
 import Browser.Navigation
-import Debouncer.Messages
-import Dict
 import Html
     exposing
         ( Html
@@ -44,7 +41,6 @@ import Html
 import Html.Attributes
     exposing
         ( attribute
-        , autocomplete
         , autofocus
         , class
         , classList
@@ -57,16 +53,13 @@ import Html.Attributes
         )
 import Html.Events
     exposing
-        ( custom
-        , onClick
+        ( onClick
         , onInput
         , onSubmit
         )
 import Http
 import Json.Decode
 import Json.Encode
-import Keyboard
-import Keyboard.Events
 import RemoteData
 import Task
 import Url.Builder
@@ -75,9 +68,6 @@ import Url.Builder
 type alias Model a =
     { channel : String
     , query : Maybe String
-    , queryDebounce : Debouncer.Messages.Debouncer (Msg a)
-    , querySuggest : RemoteData.WebData (SearchResult a)
-    , querySelectedSuggestion : Maybe String
     , result : RemoteData.WebData (SearchResult a)
     , show : Maybe String
     , from : Int
@@ -88,20 +78,6 @@ type alias Model a =
 
 type alias SearchResult a =
     { hits : ResultHits a
-    , suggest : Maybe (SearchSuggest a)
-    }
-
-
-type alias SearchSuggest a =
-    { query : Maybe (List (SearchSuggestQuery a))
-    }
-
-
-type alias SearchSuggestQuery a =
-    { text : String
-    , offset : Int
-    , length : Int
-    , options : List (ResultItem a)
     }
 
 
@@ -161,25 +137,7 @@ init channel query show from size sort model =
                 |> Maybe.withDefault 15
     in
     ( { channel = Maybe.withDefault defaultChannel channel
-      , queryDebounce =
-            Debouncer.Messages.manual
-                |> Debouncer.Messages.settleWhenQuietFor (Just <| Debouncer.Messages.fromSeconds 0.4)
-                |> Debouncer.Messages.toDebouncer
       , query = query
-      , querySuggest =
-            query
-                |> Maybe.map
-                    (\selected ->
-                        if String.endsWith "." selected then
-                            model
-                                |> Maybe.map .querySuggest
-                                |> Maybe.withDefault RemoteData.NotAsked
-
-                        else
-                            RemoteData.NotAsked
-                    )
-                |> Maybe.withDefault RemoteData.NotAsked
-      , querySelectedSuggestion = Nothing
       , result =
             model
                 |> Maybe.map (\x -> x.result)
@@ -207,34 +165,19 @@ type Msg a
     = NoOp
     | SortChange String
     | ChannelChange String
-    | QueryInputDebounce (Debouncer.Messages.Msg (Msg a))
     | QueryInput String
-    | QueryInputSuggestionsSubmit
-    | QueryInputSuggestionsResponse (RemoteData.WebData (SearchResult a))
     | QueryInputSubmit
     | QueryResponse (RemoteData.WebData (SearchResult a))
     | ShowDetails String
-    | SuggestionsMoveDown
-    | SuggestionsMoveUp
-    | SuggestionsSelect
-    | SuggestionsClickSelect String
-    | SuggestionsClose
 
 
 update :
     String
     -> Browser.Navigation.Key
-    -> String
-    -> Options
-    -> Json.Decode.Decoder a
     -> Msg a
     -> Model a
     -> ( Model a, Cmd (Msg a) )
-update path navKey result_type options decodeResultItemSource msg model =
-    let
-        requestQuerySuggestionsTracker =
-            "query-" ++ result_type ++ "-suggestions"
-    in
+update path navKey msg model =
     case msg of
         NoOp ->
             ( model
@@ -283,94 +226,8 @@ update path navKey result_type options decodeResultItemSource msg model =
                     |> Browser.Navigation.pushUrl navKey
             )
 
-        QueryInputDebounce subMsg ->
-            Debouncer.Messages.update
-                (update path navKey result_type options decodeResultItemSource)
-                { mapMsg = QueryInputDebounce
-                , getDebouncer = .queryDebounce
-                , setDebouncer = \debouncer m -> { m | queryDebounce = debouncer }
-                }
-                subMsg
-                model
-
         QueryInput query ->
-            update path
-                navKey
-                result_type
-                options
-                decodeResultItemSource
-                (QueryInputDebounce (Debouncer.Messages.provideInput QueryInputSuggestionsSubmit))
-                { model
-                    | query = Just query
-                    , querySuggest = RemoteData.Loading
-                    , querySelectedSuggestion = Nothing
-                }
-                |> Tuple.mapSecond
-                    (\cmd ->
-                        if RemoteData.isLoading model.querySuggest then
-                            Cmd.batch
-                                [ cmd
-                                , Http.cancel requestQuerySuggestionsTracker
-                                ]
-
-                        else
-                            cmd
-                    )
-
-        QueryInputSuggestionsSubmit ->
-            let
-                body =
-                    Http.jsonBody
-                        (Json.Encode.object
-                            [ ( "from", Json.Encode.int 0 )
-                            , ( "size", Json.Encode.int 0 )
-                            , ( "suggest"
-                              , Json.Encode.object
-                                    [ ( "query"
-                                      , Json.Encode.object
-                                            [ ( "text", Json.Encode.string (Maybe.withDefault "" model.query) )
-                                            , ( "completion"
-                                              , Json.Encode.object
-                                                    [ ( "field", Json.Encode.string (result_type ++ "_suggestions") )
-                                                    , ( "skip_duplicates", Json.Encode.bool True )
-                                                    , ( "size", Json.Encode.int 1000 )
-                                                    ]
-                                              )
-                                            ]
-                                      )
-                                    ]
-                              )
-                            ]
-                        )
-            in
-            ( { model
-                | querySuggest =
-                    model.query
-                        |> Maybe.map
-                            (\selected ->
-                                if String.endsWith "." selected then
-                                    model.querySuggest
-
-                                else
-                                    RemoteData.NotAsked
-                            )
-                        |> Maybe.withDefault RemoteData.NotAsked
-                , querySelectedSuggestion = Nothing
-              }
-            , makeRequest
-                body
-                ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ model.channel)
-                decodeResultItemSource
-                options
-                QueryInputSuggestionsResponse
-                (Just requestQuerySuggestionsTracker)
-            )
-
-        QueryInputSuggestionsResponse querySuggest ->
-            ( { model
-                | querySuggest = querySuggest
-                , querySelectedSuggestion = Nothing
-              }
+            ( { model | query = Just query }
             , Cmd.none
             )
 
@@ -413,155 +270,6 @@ update path navKey result_type options decodeResultItemSource msg model =
                 model.sort
                 |> Browser.Navigation.pushUrl navKey
             )
-
-        SuggestionsMoveDown ->
-            ( { model
-                | querySelectedSuggestion =
-                    getMovedSuggestion
-                        model.query
-                        model.querySuggest
-                        model.querySelectedSuggestion
-                        (\x -> x + 1)
-              }
-            , scrollToSelected "dropdown-menu"
-            )
-
-        SuggestionsMoveUp ->
-            ( { model
-                | querySelectedSuggestion =
-                    getMovedSuggestion
-                        model.query
-                        model.querySuggest
-                        model.querySelectedSuggestion
-                        (\x -> x - 1)
-              }
-            , scrollToSelected "dropdown-menu"
-            )
-
-        SuggestionsSelect ->
-            case model.querySelectedSuggestion of
-                Just selected ->
-                    update path
-                        navKey
-                        result_type
-                        options
-                        decodeResultItemSource
-                        (SuggestionsClickSelect selected)
-                        model
-
-                Nothing ->
-                    ( model
-                    , Task.attempt (\_ -> QueryInputSubmit) (Task.succeed ())
-                    )
-
-        SuggestionsClickSelect selected ->
-            ( { model
-                | querySuggest =
-                    if String.endsWith "." selected then
-                        model.querySuggest
-
-                    else
-                        RemoteData.NotAsked
-                , querySelectedSuggestion = Nothing
-                , query = Just selected
-              }
-            , Cmd.batch
-                [ Task.attempt (\_ -> QueryInputSuggestionsSubmit) (Task.succeed ())
-                , Task.attempt (\_ -> QueryInputSubmit) (Task.succeed ())
-                ]
-            )
-
-        SuggestionsClose ->
-            ( { model
-                | querySuggest = RemoteData.NotAsked
-                , querySelectedSuggestion = Nothing
-              }
-            , Cmd.none
-            )
-
-
-scrollToSelected :
-    String
-    -> Cmd (Msg a)
-scrollToSelected id =
-    let
-        scroll y =
-            Browser.Dom.setViewportOf id 0 y
-                |> Task.onError (\_ -> Task.succeed ())
-    in
-    Task.sequence
-        [ Browser.Dom.getElement (id ++ "-selected")
-            |> Task.map (\x -> ( x.element.y, x.element.height ))
-        , Browser.Dom.getElement id
-            |> Task.map (\x -> ( x.element.y, x.element.height ))
-        , Browser.Dom.getViewportOf id
-            |> Task.map (\x -> ( x.viewport.y, x.viewport.height ))
-        ]
-        |> Task.andThen
-            (\x ->
-                case x of
-                    ( elementY, elementHeight ) :: ( viewportY, viewportHeight ) :: ( viewportScrollTop, _ ) :: [] ->
-                        let
-                            scrollTop =
-                                scroll (viewportScrollTop + (elementY - viewportY))
-
-                            scrollBottom =
-                                scroll (viewportScrollTop + (elementY - viewportY) + (elementHeight - viewportHeight))
-                        in
-                        if elementHeight > viewportHeight then
-                            scrollTop
-
-                        else if elementY < viewportY then
-                            scrollTop
-
-                        else if elementY + elementHeight > viewportY + viewportHeight then
-                            scrollBottom
-
-                        else
-                            Task.succeed ()
-
-                    _ ->
-                        Task.succeed ()
-            )
-        |> Task.attempt (\_ -> NoOp)
-
-
-getMovedSuggestion :
-    Maybe String
-    -> RemoteData.WebData (SearchResult a)
-    -> Maybe String
-    -> (Int -> Int)
-    -> Maybe String
-getMovedSuggestion query querySuggest querySelectedSuggestion moveIndex =
-    let
-        suggestions =
-            getSuggestions query querySuggest
-                |> List.filterMap .text
-
-        getIndex key =
-            suggestions
-                |> List.indexedMap (\i a -> ( a, i ))
-                |> Dict.fromList
-                |> Dict.get key
-                |> Maybe.map moveIndex
-                |> Maybe.map
-                    (\x ->
-                        if x < 0 then
-                            x + List.length suggestions
-
-                        else
-                            x
-                    )
-
-        getKey index =
-            suggestions
-                |> Array.fromList
-                |> Array.get index
-    in
-    querySelectedSuggestion
-        |> Maybe.andThen getIndex
-        |> Maybe.withDefault 0
-        |> getKey
 
 
 createUrl :
@@ -736,48 +444,6 @@ fromSortId id =
             Nothing
 
 
-getSuggestions :
-    Maybe String
-    -> RemoteData.WebData (SearchResult a)
-    -> List (ResultItem a)
-getSuggestions query querySuggest =
-    let
-        maybeList f x =
-            x
-                |> Maybe.map f
-                |> Maybe.withDefault []
-    in
-    case querySuggest of
-        RemoteData.Success result ->
-            let
-                suggestions =
-                    result.suggest
-                        |> maybeList (\x -> x.query |> maybeList (List.map .options))
-                        |> List.concat
-                        |> List.filter
-                            (\x ->
-                                if String.endsWith "." (Maybe.withDefault "" query) then
-                                    x.text /= query
-
-                                else
-                                    True
-                            )
-
-                firstItemText items =
-                    items
-                        |> List.head
-                        |> Maybe.andThen .text
-            in
-            if List.length suggestions == 1 && firstItemText suggestions == query then
-                []
-
-            else
-                suggestions
-
-        _ ->
-            []
-
-
 view :
     String
     -> String
@@ -786,48 +452,10 @@ view :
     -> (Msg a -> b)
     -> Html b
 view path title model viewSuccess outMsg =
-    let
-        suggestions =
-            getSuggestions model.query model.querySuggest
-
-        viewSuggestion x =
-            li
-                []
-                [ a
-                    ([ href "#" ]
-                        |> List.append
-                            (x.text
-                                |> Maybe.map (\text -> [ onClick <| outMsg (SuggestionsClickSelect text) ])
-                                |> Maybe.withDefault []
-                            )
-                        |> List.append
-                            (if x.text == model.querySelectedSuggestion then
-                                [ id "dropdown-menu-selected" ]
-
-                             else
-                                []
-                            )
-                    )
-                    [ text <| Maybe.withDefault "" x.text ]
-                ]
-    in
     div
-        [ classList
-            [ ( "search-page", True )
-            , ( "with-suggestions", RemoteData.isSuccess model.querySuggest && List.length suggestions > 0 )
-            , ( "with-suggestions-loading"
-              , (model.query /= Nothing)
-                    && (model.query /= Just "")
-                    && not (RemoteData.isSuccess model.querySuggest || RemoteData.isNotAsked model.querySuggest)
-              )
-            ]
+        [ class "search-page"
         ]
         [ h1 [ class "page-header" ] [ text title ]
-        , div
-            [ class "search-backdrop"
-            , onClick <| outMsg SuggestionsClose
-            ]
-            []
         , div
             [ class "search-input"
             ]
@@ -863,60 +491,19 @@ view path title model viewSuccess outMsg =
                     [ class "input-append"
                     ]
                     [ input
-                        ([ type_ "text"
-                         , id "search-query-input"
-                         , autocomplete False
-                         , autofocus True
-                         , placeholder <| "Search for " ++ path
-                         , onInput (\x -> outMsg (QueryInput x))
-                         , value <| Maybe.withDefault "" model.query
-                         ]
-                            |> List.append
-                                (if RemoteData.isSuccess model.querySuggest && List.length suggestions > 0 then
-                                    [ Keyboard.Events.custom Keyboard.Events.Keydown
-                                        { preventDefault = True
-                                        , stopPropagation = True
-                                        }
-                                        ([ ( Keyboard.ArrowDown, SuggestionsMoveDown )
-                                         , ( Keyboard.ArrowUp, SuggestionsMoveUp )
-                                         , ( Keyboard.Tab, SuggestionsMoveDown )
-                                         , ( Keyboard.Enter, SuggestionsSelect )
-                                         , ( Keyboard.Escape, SuggestionsClose )
-                                         ]
-                                            |> List.map (\( k, m ) -> ( k, outMsg m ))
-                                        )
-                                    ]
-
-                                 else if RemoteData.isNotAsked model.querySuggest then
-                                    [ Keyboard.Events.custom Keyboard.Events.Keydown
-                                        { preventDefault = True
-                                        , stopPropagation = True
-                                        }
-                                        ([ ( Keyboard.ArrowDown, QueryInputSuggestionsSubmit )
-                                         , ( Keyboard.ArrowUp, QueryInputSuggestionsSubmit )
-                                         ]
-                                            |> List.map (\( k, m ) -> ( k, outMsg m ))
-                                        )
-                                    ]
-
-                                 else
-                                    []
-                                )
-                        )
+                        [ type_ "text"
+                        , id "search-query-input"
+                        , autofocus True
+                        , placeholder <| "Search for " ++ path
+                        , onInput (\x -> outMsg (QueryInput x))
+                        , value <| Maybe.withDefault "" model.query
+                        ]
                         []
                     , div [ class "loader" ] []
                     , div [ class "btn-group" ]
                         [ button [ class "btn" ] [ text "Search" ]
                         ]
                     ]
-                , ul
-                    [ id "dropdown-menu", class "dropdown-menu" ]
-                    (if RemoteData.isSuccess model.querySuggest && List.length suggestions > 0 then
-                        List.map viewSuggestion suggestions
-
-                     else
-                        []
-                    )
                 ]
             ]
         , case model.result of
@@ -1299,24 +886,8 @@ decodeResult :
     Json.Decode.Decoder a
     -> Json.Decode.Decoder (SearchResult a)
 decodeResult decodeResultItemSource =
-    Json.Decode.map2 SearchResult
+    Json.Decode.map SearchResult
         (Json.Decode.field "hits" (decodeResultHits decodeResultItemSource))
-        (Json.Decode.maybe (Json.Decode.field "suggest" (decodeSuggest decodeResultItemSource)))
-
-
-decodeSuggest : Json.Decode.Decoder a -> Json.Decode.Decoder (SearchSuggest a)
-decodeSuggest decodeResultItemSource =
-    Json.Decode.map SearchSuggest
-        (Json.Decode.maybe (Json.Decode.field "query" (Json.Decode.list (decodeSuggestQuery decodeResultItemSource))))
-
-
-decodeSuggestQuery : Json.Decode.Decoder a -> Json.Decode.Decoder (SearchSuggestQuery a)
-decodeSuggestQuery decodeResultItemSource =
-    Json.Decode.map4 SearchSuggestQuery
-        (Json.Decode.field "text" Json.Decode.string)
-        (Json.Decode.field "offset" Json.Decode.int)
-        (Json.Decode.field "length" Json.Decode.int)
-        (Json.Decode.field "options" (Json.Decode.list (decodeResultItem decodeResultItemSource)))
 
 
 decodeResultHits : Json.Decode.Decoder a -> Json.Decode.Decoder (ResultHits a)

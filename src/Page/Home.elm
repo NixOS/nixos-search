@@ -26,7 +26,9 @@ type Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    ( model, Cmd.none )
+    case msg of
+        NoOp ->
+            ( model, Cmd.none )
 
 
 
@@ -34,5 +36,5 @@ update msg model =
 
 
 view : Model -> Html Msg
-view model =
+view _ =
     div [] [ text "Home" ]

@@ -19,7 +19,6 @@ import Html
         , dl
         , dt
         , li
-        , p
         , table
         , tbody
         , td
@@ -39,7 +38,6 @@ import Html.Events
     exposing
         ( onClick
         )
-import Http
 import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
@@ -129,8 +127,12 @@ type Msg
     = SearchMsg (Search.Msg ResultItemSource)
 
 
-update : Browser.Navigation.Key -> Search.Options -> Msg -> Model -> ( Model, Cmd Msg )
-update navKey options msg model =
+update :
+    Browser.Navigation.Key
+    -> Msg
+    -> Model
+    -> ( Model, Cmd Msg )
+update navKey msg model =
     case msg of
         SearchMsg subMsg ->
             let
@@ -138,9 +140,6 @@ update navKey options msg model =
                     Search.update
                         "packages"
                         navKey
-                        "package"
-                        options
-                        decodeResultItemSource
                         subMsg
                         model
             in
