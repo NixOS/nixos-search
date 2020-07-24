@@ -27,18 +27,9 @@ S3_BUCKET = "nix-releases"
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 INDEX_SCHEMA_VERSION = os.environ.get("INDEX_SCHEMA_VERSION", 0)
 CHANNELS = {
-    "unstable": {
-        "packages": "nixpkgs/nixpkgs-20.09pre",
-        "options": "nixos/unstable/nixos-20.09pre",
-    },
-    "19.09": {
-        "packages": "nixpkgs/nixpkgs-19.09pre",
-        "options": "nixos/19.09/nixos-19.09.",
-    },
-    "20.03": {
-        "packages": "nixpkgs/nixpkgs-20.03pre",
-        "options": "nixos/20.03/nixos-20.03.",
-    },
+    "unstable": "nixos/unstable/nixos-20.09pre",
+    "19.09": "nixos/19.09/nixos-19.09.",
+    "20.03": "nixos/20.03/nixos-20.03.",
 }
 ANALYSIS = {
     "normalizer": {
@@ -551,8 +542,8 @@ def run(es_url, channel, force, verbose):
     logger.debug(f"Verbosity is {verbose}")
     logger.debug(f"Logging set to {logging_level}")
 
-    evaluation_packages = get_last_evaluation(CHANNELS[channel]["packages"])
-    evaluation_options = get_last_evaluation(CHANNELS[channel]["options"])
+    evaluation_packages = get_last_evaluation(CHANNELS[channel])
+    evaluation_options = get_last_evaluation(CHANNELS[channel])
     evaluation_packages_builds = get_evaluation_builds(evaluation_packages["id"])
 
     es = elasticsearch.Elasticsearch([es_url])
