@@ -10,11 +10,6 @@
         version = "1.1.3";
       };
 
-      "ohanhi/keyboard" = {
-        sha256 = "10sbq8v2kydnc3lkydl367g36q2b0xizxl031xyakrgl4zlh07ic";
-        version = "2.0.1";
-      };
-
       "truqu/elm-base64" = {
         sha256 = "12w68b4idbs2vn0gm0lj354pm745jb7n0fj69408mpvh5r1z4m1b";
         version = "2.0.4";
@@ -33,16 +28,6 @@
       "elm/browser" = {
         sha256 = "0nagb9ajacxbbg985r4k9h0jadqpp0gp84nm94kcgbr5sf8i9x13";
         version = "1.0.2";
-      };
-
-      "Gizra/elm-debouncer" = {
-        sha256 = "009yw0rb418ar2a458ilr25m8gxrxsv5nvs3ld3l6sy12v12n0yn";
-        version = "2.0.0";
-      };
-
-      "Skinney/keyboard-events" = {
-        sha256 = "10qjlpa4byk78sra071w4ghc7b9p2brnppx7aqyy9cmbrmp5nf86";
-        version = "2.0.1";
       };
 
       "elm/core" = {
@@ -88,11 +73,6 @@
       "elm/parser" = {
         sha256 = "0a3cxrvbm7mwg9ykynhp7vjid58zsw03r63qxipxp3z09qks7512";
         version = "1.1.0";
-      };
-
-      "elm-community/list-extra" = {
-        sha256 = "1rvr1c8cfb3dwf3li17l9ziax6d1fshkliasspnw6rviva38lw34";
-        version = "8.2.4";
       };
 
       "elm/time" = {

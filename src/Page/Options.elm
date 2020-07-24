@@ -17,8 +17,6 @@ import Html
         , div
         , dl
         , dt
-        , li
-        , p
         , pre
         , span
         , table
@@ -28,7 +26,6 @@ import Html
         , th
         , thead
         , tr
-        , ul
         )
 import Html.Attributes
     exposing
@@ -42,7 +39,6 @@ import Html.Events
         )
 import Html.Parser
 import Html.Parser.Util
-import Http
 import Json.Decode
 import Json.Encode
 import Regex
@@ -94,8 +90,12 @@ type Msg
     = SearchMsg (Search.Msg ResultItemSource)
 
 
-update : Browser.Navigation.Key -> Search.Options -> Msg -> Model -> ( Model, Cmd Msg )
-update navKey options msg model =
+update :
+    Browser.Navigation.Key
+    -> Msg
+    -> Model
+    -> ( Model, Cmd Msg )
+update navKey msg model =
     case msg of
         SearchMsg subMsg ->
             let
@@ -103,9 +103,6 @@ update navKey options msg model =
                     Search.update
                         "options"
                         navKey
-                        "option"
-                        options
-                        decodeResultItemSource
                         subMsg
                         model
             in
@@ -211,9 +208,6 @@ viewResultItemDetails channel item =
         asCode value =
             pre [] [ text value ]
 
-        asLink value =
-            a [ href value ] [ text value ]
-
         githubUrlPrefix branch =
             "https://github.com/NixOS/nixpkgs-channels/blob/" ++ branch ++ "/"
 
@@ -305,7 +299,7 @@ makeRequest options channel queryRaw from size sort =
                             [ ( field
                               , Json.Encode.object
                                     [ ( "query", Json.Encode.string query )
-                                    , ( "boost", Json.Encode.float boost )
+                                    , ( "boost", Json.Encode.float <| boost_base * boost )
                                     , ( "analyzer", Json.Encode.string "whitespace" )
                                     , ( "fuzziness", Json.Encode.string "1" )
                                     , ( "_name"
@@ -332,7 +326,7 @@ makeRequest options channel queryRaw from size sort =
                             [ ( field
                               , Json.Encode.object
                                     [ ( "query", Json.Encode.string query )
-                                    , ( "boost", Json.Encode.float boost )
+                                    , ( "boost", Json.Encode.float <| boost_base * boost )
                                     , ( "analyzer", Json.Encode.string "whitespace" )
                                     , ( "fuzziness", Json.Encode.string "1" )
                                     , ( "_name"

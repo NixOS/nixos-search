@@ -240,11 +240,11 @@ update msg model =
                 |> updateWith Home HomeMsg model
 
         ( PackagesMsg subMsg, Packages subModel ) ->
-            Page.Packages.update model.navKey model.elasticsearch subMsg subModel
+            Page.Packages.update model.navKey subMsg subModel
                 |> updateWith Packages PackagesMsg model
 
         ( OptionsMsg subMsg, Options subModel ) ->
-            Page.Options.update model.navKey model.elasticsearch subMsg subModel
+            Page.Options.update model.navKey subMsg subModel
                 |> updateWith Options OptionsMsg model
 
         ( _, _ ) ->

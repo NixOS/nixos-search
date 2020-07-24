@@ -29,56 +29,8 @@ header .navbar.navbar-static-top {
   }
 }
 
-.search-page.with-suggestions-loading {
-  .input-append div.loader {
-    display: block;
-  }
-}
-.search-page.with-suggestions {
-  ul.dropdown-menu {
-    display: block;
-  }
-  .input-append input {
-    border-radius: 4px 0 0 0;
-  }
-  .search-backdrop {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-    z-index: 999;
-  }
-}
 .search-input {
-  position: relative;
-  ul.dropdown-menu {
-    font-size: 18px;
-    width: 25.6em;
-    height: auto;
-    max-height: 200px;
-    border-radius: 0;
-    margin-top: -10px;
-    border-top: 0;
-    overflow-y: scroll;
-    li > a {
-      font-size: 14px;
-    }
-    li > a#dropdown-menu-selected {
-      color: #fff;
-      text-decoration: none;
-      background-color: #0081c2;
-      background-image: -moz-linear-gradient(top,#08c,#0077b3);
-      background-image: -webkit-gradient(linear,0 0,0 100%,from(#08c),to(#0077b3));
-      background-image: -webkit-linear-gradient(top,#08c,#0077b3);
-      background-image: -o-linear-gradient(top,#08c,#0077b3);
-      background-image: linear-gradient(to bottom,#08c,#0077b3);
-      background-repeat: repeat-x;
-      filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff0088cc',endColorstr='#ff0077b3',GradientType=0);
-    }
-  }
   .input-append {
-    position: relative;
     input {
       font-size: 18px;
       height: 40px;
