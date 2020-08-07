@@ -29,62 +29,71 @@ header .navbar.navbar-static-top {
   }
 }
 
-.search-page {
-  .search-input {
-    text-align: center;
-    .input-append input {
-      font-size: 24px;
+.search-input {
+  .input-append {
+    input {
+      font-size: 18px;
       height: 40px;
-      width: auto;
-      max-width: 15em;
+      width: 25em;
     }
-    .input-append button {
+    div.loader {
+      display: none;
+      z-index: 100;
+      position: absolute;
+      margin: 0;
+      top: 37px;
+      right: 125px;
+      font-size: 6px;
+      color: #999999;
+    }
+    button {
       font-size: 24px;
       height: 50px;
       min-width: 4em;
     }
-    form > p > strong {
-      vertical-align: middle;
-      font-size: 1.2em;
-      margin-left: 0.2em;
-    }
   }
-  .search-result {
-    tbody > tr {
-      cursor: pointer;
-    }
-    tbody > td > dl > dd > ul.inline {
-      margin: 0;
-      li {
-        margin: 0;
-        padding: 0;
-      }
-      li::after {
-        content: ", ";
-        padding-right: 0.5em;
-      }
-      li:last-child::after {
-        content: "";
-      }
-    }
-    tbody > td > dl > dd > pre {
-      background: transparent;
-      border: 0;
-      padding: 0;
-      line-height: 20px;
-      margin: 0;
-    }
-    tbody > td > dl > dt,
-    tbody > td > dl > dd {
-      margin-bottom: 1em;
-    }
+  form > p > strong {
+    vertical-align: middle;
+    font-size: 1.2em;
+    margin-left: 0.2em;
   }
 }
+.search-result {
+  tbody > tr {
+    cursor: pointer;
+  }
+  tbody > td > dl > dd > ul.inline {
+    margin: 0;
+    li {
+      margin: 0;
+      padding: 0;
+    }
+    li::after {
+      content: ", ";
+      padding-right: 0.5em;
+    }
+    li:last-child::after {
+      content: "";
+    }
+  }
+  tbody > td > dl > dd > pre {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    line-height: 20px;
+    margin: 0;
+  }
+  tbody > td > dl > dt,
+  tbody > td > dl > dd {
+    margin-bottom: 1em;
+  }
+}
+
 
 .loader,
 .loader:before,
 .loader:after {
-  background: #ffffff;
+  background: transparent;
   -webkit-animation: load1 1s infinite ease-in-out;
   animation: load1 1s infinite ease-in-out;
   width: 1em;

@@ -17,8 +17,6 @@ import Html
         , div
         , dl
         , dt
-        , li
-        , p
         , pre
         , span
         , table
@@ -28,7 +26,6 @@ import Html
         , th
         , thead
         , tr
-        , ul
         )
 import Html.Attributes
     exposing
@@ -42,7 +39,6 @@ import Html.Events
         )
 import Html.Parser
 import Html.Parser.Util
-import Http
 import Json.Decode
 import Json.Encode
 import Regex
@@ -73,10 +69,17 @@ init :
     -> Maybe String
     -> Maybe Int
     -> Maybe Int
+    -> Maybe String
     -> Maybe Model
     -> ( Model, Cmd Msg )
-init =
-    Search.init
+init channel query show from size sort model =
+    let
+        ( newModel, newCmd ) =
+            Search.init channel query show from size sort model
+    in
+    ( newModel
+    , Cmd.map SearchMsg newCmd
+    )
 
 
 
@@ -87,13 +90,21 @@ type Msg
     = SearchMsg (Search.Msg ResultItemSource)
 
 
-update : Browser.Navigation.Key -> Msg -> Model -> ( Model, Cmd Msg )
+update :
+    Browser.Navigation.Key
+    -> Msg
+    -> Model
+    -> ( Model, Cmd Msg )
 update navKey msg model =
     case msg of
         SearchMsg subMsg ->
             let
                 ( newModel, newCmd ) =
-                    Search.update "options" navKey subMsg model
+                    Search.update
+                        "options"
+                        navKey
+                        subMsg
+                        model
             in
             ( newModel, Cmd.map SearchMsg newCmd )
 
@@ -115,7 +126,7 @@ view model =
 viewSuccess :
     String
     -> Maybe String
-    -> Search.Result ResultItemSource
+    -> Search.SearchResult ResultItemSource
     -> Html Msg
 viewSuccess channel show result =
     div [ class "search-result" ]
@@ -128,7 +139,7 @@ viewSuccess channel show result =
             , tbody
                 []
                 (List.concatMap
-                    (viewResultItem show)
+                    (viewResultItem channel show)
                     result.hits.hits
                 )
             ]
@@ -136,14 +147,15 @@ viewSuccess channel show result =
 
 
 viewResultItem :
-    Maybe String
+    String
+    -> Maybe String
     -> Search.ResultItem ResultItemSource
     -> List (Html Msg)
-viewResultItem show item =
+viewResultItem channel show item =
     let
         packageDetails =
             if Just item.source.name == show then
-                [ td [ colspan 1 ] [ viewResultItemDetails item ]
+                [ td [ colspan 1 ] [ viewResultItemDetails channel item ]
                 ]
 
             else
@@ -176,9 +188,10 @@ viewResultItem show item =
 
 
 viewResultItemDetails :
-    Search.ResultItem ResultItemSource
+    String
+    -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItemDetails item =
+viewResultItemDetails channel item =
     let
         default =
             "Not given"
@@ -195,17 +208,25 @@ viewResultItemDetails item =
         asCode value =
             pre [] [ text value ]
 
-        asLink value =
-            a [ href value ] [ text value ]
+        githubUrlPrefix branch =
+            "https://github.com/NixOS/nixpkgs-channels/blob/" ++ branch ++ "/"
 
-        -- TODO: this should take channel into account as well
-        githubUrlPrefix =
-            "https://github.com/NixOS/nixpkgs-channels/blob/nixos-unstable/"
+        cleanPosition value =
+            if String.startsWith "source/" value then
+                String.dropLeft 7 value
+
+            else
+                value
 
         asGithubLink value =
-            a
-                [ href <| githubUrlPrefix ++ (value |> String.replace ":" "#L") ]
-                [ text <| value ]
+            case Search.channelDetailsFromId channel of
+                Just channelDetails ->
+                    a
+                        [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L") ]
+                        [ text <| value ]
+
+                Nothing ->
+                    text <| cleanPosition value
 
         wrapped wrapWith value =
             case value of
@@ -259,8 +280,9 @@ makeRequest :
     -> String
     -> Int
     -> Int
+    -> Search.Sort
     -> Cmd Msg
-makeRequest options channel queryRaw from size =
+makeRequest options channel queryRaw from size sort =
     let
         query =
             queryRaw
@@ -277,7 +299,7 @@ makeRequest options channel queryRaw from size =
                             [ ( field
                               , Json.Encode.object
                                     [ ( "query", Json.Encode.string query )
-                                    , ( "boost", Json.Encode.float boost )
+                                    , ( "boost", Json.Encode.float <| boost_base * boost )
                                     , ( "analyzer", Json.Encode.string "whitespace" )
                                     , ( "fuzziness", Json.Encode.string "1" )
                                     , ( "_name"
@@ -304,7 +326,7 @@ makeRequest options channel queryRaw from size =
                             [ ( field
                               , Json.Encode.object
                                     [ ( "query", Json.Encode.string query )
-                                    , ( "boost", Json.Encode.float boost )
+                                    , ( "boost", Json.Encode.float <| boost_base * boost )
                                     , ( "analyzer", Json.Encode.string "whitespace" )
                                     , ( "fuzziness", Json.Encode.string "1" )
                                     , ( "_name"
@@ -376,13 +398,22 @@ makeRequest options channel queryRaw from size =
                 |> List.append (should_match 10)
     in
     Search.makeRequest
-        (Search.makeRequestBody query from size "option" "option_name_query" should_queries)
+        (Search.makeRequestBody query
+            from
+            size
+            sort
+            "option"
+            "option_name"
+            [ "option_name_query"
+            , "option_description"
+            ]
+            should_queries
+        )
         ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
         decodeResultItemSource
         options
-        query
-        from
-        size
+        Search.QueryResponse
+        (Just "query-options")
         |> Cmd.map SearchMsg
 
 

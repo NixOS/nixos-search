@@ -2,10 +2,12 @@ module Search exposing
     ( Model
     , Msg(..)
     , Options
-    , Result
     , ResultItem
+    , SearchResult
+    , Sort(..)
     , channelDetailsFromId
     , decodeResult
+    , fromSortId
     , init
     , makeRequest
     , makeRequestBody
@@ -14,6 +16,7 @@ module Search exposing
     )
 
 import Base64
+import Browser.Dom
 import Browser.Navigation
 import Html
     exposing
@@ -26,11 +29,11 @@ import Html
         , h1
         , h4
         , input
+        , label
         , li
         , option
         , p
         , select
-        , span
         , strong
         , text
         , ul
@@ -38,38 +41,42 @@ import Html
 import Html.Attributes
     exposing
         ( attribute
+        , autofocus
         , class
         , classList
         , href
+        , id
+        , placeholder
+        , selected
         , type_
         , value
         )
 import Html.Events
     exposing
-        ( custom
-        , onClick
+        ( onClick
         , onInput
         , onSubmit
-        , preventDefaultOn
         )
 import Http
 import Json.Decode
 import Json.Encode
 import RemoteData
+import Task
 import Url.Builder
 
 
 type alias Model a =
     { channel : String
     , query : Maybe String
-    , result : RemoteData.WebData (Result a)
+    , result : RemoteData.WebData (SearchResult a)
     , show : Maybe String
     , from : Int
     , size : Int
+    , sort : Sort
     }
 
 
-type alias Result a =
+type alias SearchResult a =
     { hits : ResultHits a
     }
 
@@ -83,17 +90,24 @@ type alias ResultHits a =
 
 type alias ResultHitsTotal =
     { value : Int
-    , relation : String -- TODO: this should probably be Enum
+    , relation : String
     }
 
 
 type alias ResultItem a =
     { index : String
     , id : String
-    , score : Float
+    , score : Maybe Float
     , source : a
+    , text : Maybe String
     , matched_queries : Maybe (List String)
     }
+
+
+type Sort
+    = Relevance
+    | AlphabeticallyAsc
+    | AlphabeticallyDesc
 
 
 init :
@@ -102,9 +116,10 @@ init :
     -> Maybe String
     -> Maybe Int
     -> Maybe Int
+    -> Maybe String
     -> Maybe (Model a)
-    -> ( Model a, Cmd msg )
-init channel query show from size model =
+    -> ( Model a, Cmd (Msg a) )
+init channel query show from size sort model =
     let
         defaultChannel =
             model
@@ -130,8 +145,13 @@ init channel query show from size model =
       , show = show
       , from = Maybe.withDefault defaultFrom from
       , size = Maybe.withDefault defaultSize size
+      , sort =
+            sort
+                |> Maybe.withDefault ""
+                |> fromSortId
+                |> Maybe.withDefault Relevance
       }
-    , Cmd.none
+    , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
     )
 
 
@@ -143,10 +163,11 @@ init channel query show from size model =
 
 type Msg a
     = NoOp
+    | SortChange String
     | ChannelChange String
     | QueryInput String
-    | QuerySubmit
-    | QueryResponse (RemoteData.WebData (Result a))
+    | QueryInputSubmit
+    | QueryResponse (RemoteData.WebData (SearchResult a))
     | ShowDetails String
 
 
@@ -161,6 +182,23 @@ update path navKey msg model =
         NoOp ->
             ( model
             , Cmd.none
+            )
+
+        SortChange sortId ->
+            let
+                sort =
+                    fromSortId sortId |> Maybe.withDefault Relevance
+            in
+            ( { model | sort = sort }
+            , createUrl
+                path
+                model.channel
+                model.query
+                model.show
+                0
+                model.size
+                sort
+                |> Browser.Navigation.pushUrl navKey
             )
 
         ChannelChange channel ->
@@ -184,6 +222,7 @@ update path navKey msg model =
                     model.show
                     0
                     model.size
+                    model.sort
                     |> Browser.Navigation.pushUrl navKey
             )
 
@@ -192,17 +231,22 @@ update path navKey msg model =
             , Cmd.none
             )
 
-        QuerySubmit ->
-            ( { model | result = RemoteData.Loading }
-            , createUrl
-                path
-                model.channel
-                model.query
-                model.show
-                0
-                model.size
-                |> Browser.Navigation.pushUrl navKey
-            )
+        QueryInputSubmit ->
+            if model.query == Nothing || model.query == Just "" then
+                ( model, Cmd.none )
+
+            else
+                ( { model | result = RemoteData.Loading }
+                , createUrl
+                    path
+                    model.channel
+                    model.query
+                    model.show
+                    0
+                    model.size
+                    model.sort
+                    |> Browser.Navigation.pushUrl navKey
+                )
 
         QueryResponse result ->
             ( { model | result = result }
@@ -223,6 +267,7 @@ update path navKey msg model =
                 )
                 model.from
                 model.size
+                model.sort
                 |> Browser.Navigation.pushUrl navKey
             )
 
@@ -234,10 +279,12 @@ createUrl :
     -> Maybe String
     -> Int
     -> Int
+    -> Sort
     -> String
-createUrl path channel query show from size =
+createUrl path channel query show from size sort =
     [ Url.Builder.int "from" from
     , Url.Builder.int "size" size
+    , Url.Builder.string "sort" <| toSortId sort
     , Url.Builder.string "channel" channel
     ]
         |> List.append
@@ -315,24 +362,104 @@ channelDetailsFromId channel_id =
 
 channels : List String
 channels =
-    [ "unstable"
+    [ "19.09"
     , "20.03"
-    , "19.09"
+    , "unstable"
     ]
+
+
+sortBy : List Sort
+sortBy =
+    [ Relevance
+    , AlphabeticallyAsc
+    , AlphabeticallyDesc
+    ]
+
+
+toSortQuery :
+    Sort
+    -> String
+    -> ( String, Json.Encode.Value )
+toSortQuery sort field =
+    ( "sort"
+    , case sort of
+        AlphabeticallyAsc ->
+            Json.Encode.list Json.Encode.object
+                [ [ ( field, Json.Encode.string "asc" )
+                  ]
+                ]
+
+        AlphabeticallyDesc ->
+            Json.Encode.list Json.Encode.object
+                [ [ ( field, Json.Encode.string "desc" )
+                  ]
+                ]
+
+        Relevance ->
+            Json.Encode.list Json.Encode.string
+                [ "_score"
+                ]
+    )
+
+
+toSortTitle : Sort -> String
+toSortTitle sort =
+    case sort of
+        AlphabeticallyAsc ->
+            "Alphabetically Ascending"
+
+        AlphabeticallyDesc ->
+            "Alphabetically Descending"
+
+        Relevance ->
+            "Relevance"
+
+
+toSortId : Sort -> String
+toSortId sort =
+    case sort of
+        AlphabeticallyAsc ->
+            "alpha_asc"
+
+        AlphabeticallyDesc ->
+            "alpha_desc"
+
+        Relevance ->
+            "relevance"
+
+
+fromSortId : String -> Maybe Sort
+fromSortId id =
+    case id of
+        "alpha_asc" ->
+            Just AlphabeticallyAsc
+
+        "alpha_desc" ->
+            Just AlphabeticallyDesc
+
+        "relevance" ->
+            Just Relevance
+
+        _ ->
+            Nothing
 
 
 view :
     String
     -> String
     -> Model a
-    -> (String -> Maybe String -> Result a -> Html b)
+    -> (String -> Maybe String -> SearchResult a -> Html b)
     -> (Msg a -> b)
     -> Html b
 view path title model viewSuccess outMsg =
-    div [ class "search-page" ]
+    div
+        [ class "search-page"
+        ]
         [ h1 [ class "page-header" ] [ text title ]
-        , div [ class "search-input" ]
-            [ form [ onSubmit (outMsg QuerySubmit) ]
+        , div
+            [ class "search-input"
+            ]
+            [ form [ onSubmit (outMsg QueryInputSubmit) ]
                 [ p
                     []
                     [ strong []
@@ -365,10 +492,14 @@ view path title model viewSuccess outMsg =
                     ]
                     [ input
                         [ type_ "text"
+                        , id "search-query-input"
+                        , autofocus True
+                        , placeholder <| "Search for " ++ path
                         , onInput (\x -> outMsg (QueryInput x))
                         , value <| Maybe.withDefault "" model.query
                         ]
                         []
+                    , div [ class "loader" ] []
                     , div [ class "btn-group" ]
                         [ button [ class "btn" ] [ text "Search" ]
                         ]
@@ -414,6 +545,29 @@ view path title model viewSuccess outMsg =
                                     )
                                 ]
                             ]
+                        , form [ class "form-horizontal pull-right" ]
+                            [ div
+                                [ class "control-group"
+                                ]
+                                [ label [ class "control-label" ] [ text "Sort by:" ]
+                                , div
+                                    [ class "controls" ]
+                                    [ select
+                                        [ onInput (\x -> outMsg (SortChange x))
+                                        ]
+                                        (List.map
+                                            (\sort ->
+                                                option
+                                                    [ selected (model.sort == sort)
+                                                    , value (toSortId sort)
+                                                    ]
+                                                    [ text <| toSortTitle sort ]
+                                            )
+                                            sortBy
+                                        )
+                                    ]
+                                ]
+                            ]
                         , viewPager outMsg model result path
                         , viewSuccess model.channel model.show result
                         , viewPager outMsg model result path
@@ -448,10 +602,10 @@ view path title model viewSuccess outMsg =
 viewPager :
     (Msg a -> b)
     -> Model a
-    -> Result a
+    -> SearchResult a
     -> String
     -> Html b
-viewPager outMsg model result path =
+viewPager _ model result path =
     ul [ class "pager" ]
         [ li
             [ classList
@@ -471,6 +625,7 @@ viewPager outMsg model result path =
                             model.show
                             0
                             model.size
+                            model.sort
                 ]
                 [ text "First" ]
             ]
@@ -492,6 +647,7 @@ viewPager outMsg model result path =
                             model.show
                             (model.from - model.size)
                             model.size
+                            model.sort
                 ]
                 [ text "Previous" ]
             ]
@@ -513,6 +669,7 @@ viewPager outMsg model result path =
                             model.show
                             (model.from + model.size)
                             model.size
+                            model.sort
                 ]
                 [ text "Next" ]
             ]
@@ -542,6 +699,7 @@ viewPager outMsg model result path =
                             model.show
                             (((result.hits.total.value // model.size) - remainder) * model.size)
                             model.size
+                            model.sort
                 ]
                 [ text "Last" ]
             ]
@@ -576,8 +734,11 @@ filter_by_type type_ =
     )
 
 
-filter_by_query : String -> String -> List (List ( String, Json.Encode.Value ))
-filter_by_query field queryRaw =
+filter_by_query :
+    List String
+    -> String
+    -> List (List ( String, Json.Encode.Value ))
+filter_by_query fields queryRaw =
     let
         query =
             queryRaw
@@ -592,55 +753,64 @@ filter_by_query field queryRaw =
                     isLast =
                         List.length (String.words query) == i + 1
                 in
-                [ if isLast then
-                    ( "bool"
-                    , Json.Encode.object
-                        [ ( "should"
-                          , Json.Encode.list Json.Encode.object
-                                [ [ ( "match"
-                                    , Json.Encode.object
-                                        [ ( field
-                                          , Json.Encode.object
-                                                [ ( "query", Json.Encode.string query_word )
-                                                , ( "fuzziness", Json.Encode.string "1" )
-                                                , ( "_name", Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_should_match" )
-                                                ]
-                                          )
-                                        ]
+                if isLast then
+                    [ ( "bool"
+                      , Json.Encode.object
+                            [ ( "should"
+                              , Json.Encode.list Json.Encode.object
+                                    (List.concatMap
+                                        (\field ->
+                                            [ [ ( "match"
+                                                , Json.Encode.object
+                                                    [ ( field
+                                                      , Json.Encode.object
+                                                            [ ( "query", Json.Encode.string query_word )
+                                                            , ( "fuzziness", Json.Encode.string "1" )
+                                                            , ( "_name", Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_should_match" )
+                                                            ]
+                                                      )
+                                                    ]
+                                                )
+                                              ]
+                                            , [ ( "match_bool_prefix"
+                                                , Json.Encode.object
+                                                    [ ( field
+                                                      , Json.Encode.object
+                                                            [ ( "query", Json.Encode.string query_word )
+                                                            , ( "_name"
+                                                              , Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_should_prefix"
+                                                              )
+                                                            ]
+                                                      )
+                                                    ]
+                                                )
+                                              ]
+                                            ]
+                                        )
+                                        fields
                                     )
-                                  ]
-                                , [ ( "match_bool_prefix"
-                                    , Json.Encode.object
-                                        [ ( field
-                                          , Json.Encode.object
-                                                [ ( "query", Json.Encode.string query_word )
-                                                , ( "_name"
-                                                  , Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_should_prefix"
-                                                  )
-                                                ]
-                                          )
-                                        ]
-                                    )
-                                  ]
-                                ]
-                          )
-                        ]
-                    )
+                              )
+                            ]
+                      )
+                    ]
 
-                  else
-                    ( "match_bool_prefix"
-                    , Json.Encode.object
-                        [ ( field
-                          , Json.Encode.object
-                                [ ( "query", Json.Encode.string query_word )
-                                , ( "_name"
-                                  , Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_prefix"
+                else
+                    List.map
+                        (\field ->
+                            ( "match_bool_prefix"
+                            , Json.Encode.object
+                                [ ( field
+                                  , Json.Encode.object
+                                        [ ( "query", Json.Encode.string query_word )
+                                        , ( "_name"
+                                          , Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_prefix"
+                                          )
+                                        ]
                                   )
                                 ]
-                          )
-                        ]
-                    )
-                ]
+                            )
+                        )
+                        fields
             )
 
 
@@ -648,41 +818,22 @@ makeRequestBody :
     String
     -> Int
     -> Int
+    -> Sort
     -> String
     -> String
+    -> List String
     -> List (List ( String, Json.Encode.Value ))
     -> Http.Body
-makeRequestBody query from size type_ query_field should_queries =
-    -- TODO: rescore how close the query is to the root of the name
-    --    |> List.append
-    --        ("""int i = 1;
-    --            for (token in doc['option_name.raw'][0].splitOnToken('.')) {
-    --               if (token == '"""
-    --            ++ query
-    --            ++ """') {
-    --                  return 10000 - (i * 100);
-    --               }
-    --               i++;
-    --            }
-    --            return 10;
-    --            """
-    --            |> stringIn "source"
-    --            |> objectIn "script"
-    --            |> objectIn "script_score"
-    --            |> objectIn "function_score"
-    --            |> objectIn "rescore_query"
-    --            |> List.append ("total" |> stringIn "score_mode")
-    --            |> List.append ("total" |> stringIn "score_mode")
-    --            |> objectIn "query"
-    --            |> List.append [ ( "window_size", Json.Encode.int 1000 ) ]
-    --            |> objectIn "rescore"
-    --        )
-    --    |> List.append
-    --        [ ( "from", Json.Encode.int from )
-    --        , ( "size", Json.Encode.int size )
-    --        ]
-    --    |> Json.Encode.object
-    --    |> Http.jsonBody
+makeRequestBody query from sizeRaw sort type_ sort_field query_fields should_queries =
+    let
+        -- you can not request more then 10000 results otherwise it will return 404
+        size =
+            if from + sizeRaw > 10000 then
+                10000 - from
+
+            else
+                sizeRaw
+    in
     Http.jsonBody
         (Json.Encode.object
             [ ( "from"
@@ -691,6 +842,7 @@ makeRequestBody query from size type_ query_field should_queries =
             , ( "size"
               , Json.Encode.int size
               )
+            , toSortQuery sort sort_field
             , ( "query"
               , Json.Encode.object
                     [ ( "bool"
@@ -699,7 +851,7 @@ makeRequestBody query from size type_ query_field should_queries =
                               , Json.Encode.list Json.Encode.object
                                     (List.append
                                         [ [ filter_by_type type_ ] ]
-                                        (filter_by_query query_field query)
+                                        (filter_by_query query_fields query)
                                     )
                               )
                             , ( "should"
@@ -718,20 +870,10 @@ makeRequest :
     -> String
     -> Json.Decode.Decoder a
     -> Options
-    -> String
-    -> Int
-    -> Int
+    -> (RemoteData.WebData (SearchResult a) -> Msg a)
+    -> Maybe String
     -> Cmd (Msg a)
-makeRequest body index decodeResultItemSource options query from sizeRaw =
-    let
-        -- you can not request more then 10000 results otherwise it will return 404
-        size =
-            if from + sizeRaw > 10000 then
-                10000 - from
-
-            else
-                sizeRaw
-    in
+makeRequest body index decodeResultItemSource options responseMsg tracker =
     Http.riskyRequest
         { method = "POST"
         , headers =
@@ -741,10 +883,10 @@ makeRequest body index decodeResultItemSource options query from sizeRaw =
         , body = body
         , expect =
             Http.expectJson
-                (RemoteData.fromResult >> QueryResponse)
+                (RemoteData.fromResult >> responseMsg)
                 (decodeResult decodeResultItemSource)
         , timeout = Nothing
-        , tracker = Nothing
+        , tracker = tracker
         }
 
 
@@ -754,9 +896,9 @@ makeRequest body index decodeResultItemSource options query from sizeRaw =
 
 decodeResult :
     Json.Decode.Decoder a
-    -> Json.Decode.Decoder (Result a)
+    -> Json.Decode.Decoder (SearchResult a)
 decodeResult decodeResultItemSource =
-    Json.Decode.map Result
+    Json.Decode.map SearchResult
         (Json.Decode.field "hits" (decodeResultHits decodeResultItemSource))
 
 
@@ -777,9 +919,10 @@ decodeResultHitsTotal =
 
 decodeResultItem : Json.Decode.Decoder a -> Json.Decode.Decoder (ResultItem a)
 decodeResultItem decodeResultItemSource =
-    Json.Decode.map5 ResultItem
+    Json.Decode.map6 ResultItem
         (Json.Decode.field "_index" Json.Decode.string)
         (Json.Decode.field "_id" Json.Decode.string)
-        (Json.Decode.field "_score" Json.Decode.float)
+        (Json.Decode.field "_score" (Json.Decode.nullable Json.Decode.float))
         (Json.Decode.field "_source" decodeResultItemSource)
+        (Json.Decode.maybe (Json.Decode.field "text" Json.Decode.string))
         (Json.Decode.maybe (Json.Decode.field "matched_queries" (Json.Decode.list Json.Decode.string)))

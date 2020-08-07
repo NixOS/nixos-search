@@ -1,21 +1,21 @@
-import boto3
-import botocore
-import botocore.client
+import boto3  # type: ignore
+import botocore  # type: ignore
+import botocore.client  # type: ignore
 import click
-import click_log
-import elasticsearch
-import elasticsearch.helpers
+import click_log  # type: ignore
+import elasticsearch  # type: ignore
+import elasticsearch.helpers  # type: ignore
 import json
 import logging
 import os
 import os.path
-import pypandoc
+import pypandoc  # type: ignore
 import re
 import requests
 import shlex
 import subprocess
 import sys
-import tqdm
+import tqdm  # type: ignore
 import xml.etree.ElementTree
 
 logger = logging.getLogger("import-channel")
@@ -26,18 +26,9 @@ S3_BUCKET = "nix-releases"
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 INDEX_SCHEMA_VERSION = os.environ.get("INDEX_SCHEMA_VERSION", 0)
 CHANNELS = {
-    "unstable": {
-        "packages": "nixpkgs/nixpkgs-20.09pre",
-        "options": "nixos/unstable/nixos-20.09pre",
-    },
-    "19.09": {
-        "packages": "nixpkgs/nixpkgs-19.09pre",
-        "options": "nixos/19.09/nixos-19.09.",
-    },
-    "20.03": {
-        "packages": "nixpkgs/nixpkgs-20.03pre",
-        "options": "nixos/20.03/nixos-20.03.",
-    },
+    "unstable": "nixos/unstable/nixos-20.09pre",
+    "19.09": "nixos/19.09/nixos-19.09.",
+    "20.03": "nixos/20.03/nixos-20.03.",
 }
 ANALYSIS = {
     "normalizer": {
@@ -109,10 +100,10 @@ MAPPING = {
 }
 
 
-def split_query(text):
+def parse_query(text):
     """Tokenize package attr_name
 
-    Example:
+    Example package:
 
     python37Packages.test_name-test
      = index: 0
@@ -347,7 +338,7 @@ def get_packages(evaluation, evaluation_builds):
                 type="package",
                 package_hydra=hydra,
                 package_attr_name=attr_name,
-                package_attr_name_query=list(split_query(attr_name)),
+                package_attr_name_query=list(parse_query(attr_name)),
                 package_attr_set=attr_set,
                 package_pname=remove_attr_set(data["pname"]),
                 package_pversion=data["version"],
@@ -412,7 +403,7 @@ def get_options(evaluation):
             yield dict(
                 type="option",
                 option_name=name,
-                option_name_query=split_query(name),
+                option_name_query=parse_query(name),
                 option_description=description,
                 option_type=option.get("type"),
                 option_default=default,
@@ -514,8 +505,8 @@ def run(es_url, channel, force, verbose):
     logger.debug(f"Verbosity is {verbose}")
     logger.debug(f"Logging set to {logging_level}")
 
-    evaluation_packages = get_last_evaluation(CHANNELS[channel]["packages"])
-    evaluation_options = get_last_evaluation(CHANNELS[channel]["options"])
+    evaluation_packages = get_last_evaluation(CHANNELS[channel])
+    evaluation_options = get_last_evaluation(CHANNELS[channel])
     evaluation_packages_builds = get_evaluation_builds(evaluation_packages["id"])
 
     es = elasticsearch.Elasticsearch([es_url])
@@ -539,5 +530,3 @@ def run(es_url, channel, force, verbose):
 
 if __name__ == "__main__":
     run()
-
-# vi:ft=python

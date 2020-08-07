@@ -15,8 +15,8 @@ import Url.Parser.Query
 type Route
     = NotFound
     | Home
-    | Packages (Maybe String) (Maybe String) (Maybe String) (Maybe Int) (Maybe Int)
-    | Options (Maybe String) (Maybe String) (Maybe String) (Maybe Int) (Maybe Int)
+    | Packages (Maybe String) (Maybe String) (Maybe String) (Maybe Int) (Maybe Int) (Maybe String)
+    | Options (Maybe String) (Maybe String) (Maybe String) (Maybe Int) (Maybe Int) (Maybe String)
 
 
 parser : Url.Parser.Parser (Route -> msg) msg
@@ -36,6 +36,7 @@ parser =
                 <?> Url.Parser.Query.string "show"
                 <?> Url.Parser.Query.int "from"
                 <?> Url.Parser.Query.int "size"
+                <?> Url.Parser.Query.string "sort"
             )
         , Url.Parser.map
             Options
@@ -45,6 +46,7 @@ parser =
                 <?> Url.Parser.Query.string "show"
                 <?> Url.Parser.Query.int "from"
                 <?> Url.Parser.Query.int "size"
+                <?> Url.Parser.Query.string "sort"
             )
         ]
 
@@ -94,22 +96,24 @@ routeToPieces page =
         NotFound ->
             ( [ "not-found" ], [] )
 
-        Packages channel query show from size ->
+        Packages channel query show from size sort ->
             ( [ "packages" ]
             , [ channel
               , query
               , show
               , Maybe.map String.fromInt from
               , Maybe.map String.fromInt size
+              , sort
               ]
             )
 
-        Options channel query show from size ->
+        Options channel query show from size sort ->
             ( [ "options" ]
             , [ channel
               , query
               , show
               , Maybe.map String.fromInt from
               , Maybe.map String.fromInt size
+              , sort
               ]
             )

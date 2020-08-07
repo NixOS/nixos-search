@@ -19,7 +19,6 @@ import Html
         , dl
         , dt
         , li
-        , p
         , table
         , tbody
         , td
@@ -39,7 +38,6 @@ import Html.Events
     exposing
         ( onClick
         )
-import Http
 import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
@@ -108,10 +106,17 @@ init :
     -> Maybe String
     -> Maybe Int
     -> Maybe Int
+    -> Maybe String
     -> Maybe Model
     -> ( Model, Cmd Msg )
-init =
-    Search.init
+init channel query show from size sort model =
+    let
+        ( newModel, newCmd ) =
+            Search.init channel query show from size sort model
+    in
+    ( newModel
+    , Cmd.map SearchMsg newCmd
+    )
 
 
 
@@ -122,13 +127,21 @@ type Msg
     = SearchMsg (Search.Msg ResultItemSource)
 
 
-update : Browser.Navigation.Key -> Msg -> Model -> ( Model, Cmd Msg )
+update :
+    Browser.Navigation.Key
+    -> Msg
+    -> Model
+    -> ( Model, Cmd Msg )
 update navKey msg model =
     case msg of
         SearchMsg subMsg ->
             let
                 ( newModel, newCmd ) =
-                    Search.update "packages" navKey subMsg model
+                    Search.update
+                        "packages"
+                        navKey
+                        subMsg
+                        model
             in
             ( newModel, Cmd.map SearchMsg newCmd )
 
@@ -150,7 +163,7 @@ view model =
 viewSuccess :
     String
     -> Maybe String
-    -> Search.Result ResultItemSource
+    -> Search.SearchResult ResultItemSource
     -> Html Msg
 viewSuccess channel show result =
     div [ class "search-result" ]
@@ -368,8 +381,9 @@ makeRequest :
     -> String
     -> Int
     -> Int
+    -> Search.Sort
     -> Cmd Msg
-makeRequest options channel queryRaw from size =
+makeRequest options channel queryRaw from size sort =
     let
         query =
             queryRaw
@@ -386,7 +400,7 @@ makeRequest options channel queryRaw from size =
                             [ ( field
                               , Json.Encode.object
                                     [ ( "query", Json.Encode.string query )
-                                    , ( "boost", Json.Encode.float boost )
+                                    , ( "boost", Json.Encode.float <| boost_base * boost )
                                     , ( "analyzer", Json.Encode.string "whitespace" )
                                     , ( "fuzziness", Json.Encode.string "1" )
                                     , ( "_name"
@@ -415,7 +429,7 @@ makeRequest options channel queryRaw from size =
                             [ ( field
                               , Json.Encode.object
                                     [ ( "query", Json.Encode.string query )
-                                    , ( "boost", Json.Encode.float boost )
+                                    , ( "boost", Json.Encode.float <| boost_base * boost )
                                     , ( "analyzer", Json.Encode.string "whitespace" )
                                     , ( "fuzziness", Json.Encode.string "1" )
                                     , ( "_name"
@@ -429,9 +443,9 @@ makeRequest options channel queryRaw from size =
                       )
                     ]
                 )
-                [ ( "package_attr_name", 1 )
+                [ ( "package_attr_name", 2 )
                 , ( "package_attr_name_query", 1 )
-                , ( "package_pname", 1 )
+                , ( "package_pname", 3 )
                 ]
 
         should_terms boost_base =
@@ -491,13 +505,23 @@ makeRequest options channel queryRaw from size =
                 |> List.append (should_match 10)
     in
     Search.makeRequest
-        (Search.makeRequestBody query from size "package" "package_attr_name_query" should_queries)
+        (Search.makeRequestBody query
+            from
+            size
+            sort
+            "package"
+            "package_attr_name"
+            [ "package_attr_name_query"
+            , "package_pname"
+            , "package_description"
+            ]
+            should_queries
+        )
         ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
         decodeResultItemSource
         options
-        query
-        from
-        size
+        Search.QueryResponse
+        (Just "query-packages")
         |> Cmd.map SearchMsg
 
 

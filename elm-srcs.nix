@@ -15,6 +15,11 @@
         version = "2.0.4";
       };
 
+      "elm/regex" = {
+        sha256 = "0lijsp50w7n1n57mjg6clpn9phly8vvs07h0qh2rqcs0f1jqvsa2";
+        version = "1.0.0";
+      };
+
       "elm/html" = {
         sha256 = "1n3gpzmpqqdsldys4ipgyl1zacn0kbpc3g4v3hdpiyfjlgh8bf3k";
         version = "1.0.0";
@@ -60,11 +65,6 @@
         version = "1.0.5";
       };
 
-      "elm/regex" = {
-        sha256 = "0lijsp50w7n1n57mjg6clpn9phly8vvs07h0qh2rqcs0f1jqvsa2";
-        version = "1.0.0";
-      };
-
       "rtfeldman/elm-hex" = {
         sha256 = "1y0aa16asvwdqmgbskh5iba6psp43lkcjjw9mgzj3gsrg33lp00d";
         version = "1.0.0";
@@ -88,6 +88,11 @@
       "elm-explorations/test" = {
         sha256 = "1fsd7bajm7qa93r5pn3mdafqh3blpzya601jbs9l238p0hmvh576";
         version = "1.2.2";
+      };
+
+      "elm/svg" = {
+        sha256 = "1cwcj73p61q45wqwgqvrvz3aypjyy3fw732xyxdyj6s256hwkn0k";
+        version = "1.0.1";
       };
 
       "elm/random" = {

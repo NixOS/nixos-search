@@ -8,6 +8,7 @@ import Html
     exposing
         ( Html
         , a
+        , button
         , div
         , footer
         , header
@@ -19,11 +20,13 @@ import Html
         )
 import Html.Attributes
     exposing
-        ( class
+        ( attribute
+        , class
         , classList
         , href
         , id
         , src
+        , type_
         )
 import Page.Home
 import Page.Options
@@ -124,6 +127,7 @@ submitQuery old ( new, cmd ) =
                         (Maybe.withDefault "" newModel.query)
                         newModel.from
                         newModel.size
+                        newModel.sort
                         |> Cmd.map msg
                     ]
                 )
@@ -180,7 +184,7 @@ changeRouteTo model url =
             -- on the home page
             ( newModel, Browser.Navigation.pushUrl newModel.navKey "/packages" )
 
-        Just (Route.Packages channel query show from size) ->
+        Just (Route.Packages channel query show from size sort) ->
             let
                 modelPage =
                     case newModel.page of
@@ -190,11 +194,11 @@ changeRouteTo model url =
                         _ ->
                             Nothing
             in
-            Page.Packages.init channel query show from size modelPage
+            Page.Packages.init channel query show from size sort modelPage
                 |> updateWith Packages PackagesMsg newModel
                 |> submitQuery newModel
 
-        Just (Route.Options channel query show from size) ->
+        Just (Route.Options channel query show from size sort) ->
             let
                 modelPage =
                     case newModel.page of
@@ -204,7 +208,7 @@ changeRouteTo model url =
                         _ ->
                             Nothing
             in
-            Page.Options.init channel query show from size modelPage
+            Page.Options.init channel query show from size sort modelPage
                 |> updateWith Options OptionsMsg newModel
                 |> submitQuery newModel
 
@@ -278,7 +282,17 @@ view model =
                 [ div [ class "navbar navbar-static-top" ]
                     [ div [ class "navbar-inner" ]
                         [ div [ class "container" ]
-                            [ a [ class "brand", href "https://nixos.org" ]
+                            [ button
+                                [ type_ "button"
+                                , class "btn btn-navbar"
+                                , attribute "data-toggle" "collapse"
+                                , attribute "data-target" ".nav-collapse"
+                                ]
+                                [ span [ class "icon-bar" ] []
+                                , span [ class "icon-bar" ] []
+                                , span [ class "icon-bar" ] []
+                                ]
+                            , a [ class "brand", href "https://nixos.org" ]
                                 [ img [ src "https://nixos.org/logo/nix-wiki.png", class "logo" ] []
                                 ]
                             , div [ class "nav-collapse collapse" ]
@@ -294,12 +308,18 @@ view model =
                 , footer
                     [ class "container text-center" ]
                     [ div []
-                        [ span [] [ text "Elasticsearch instance graciously provided by " ]
-                        , a [ href "https://bonsai.io" ] [ text "Bonsai" ]
+                        [ span [] [ text "Please help us improve the search by " ]
+                        , a
+                            [ href "https://github.com/NixOS/nixos-search/issues"
+                            ]
+                            [ text "reporting issues" ]
                         , span [] [ text "." ]
                         ]
                     , div []
-                        [ span [] [ text "❤️  Thank you ❤️ " ]
+                        [ span [] [ text "❤️  " ]
+                        , span [] [ text "Elasticsearch instance graciously provided by " ]
+                        , a [ href "https://bonsai.io" ] [ text "Bonsai" ]
+                        , span [] [ text ". Thank you! ❤️ " ]
                         ]
                     ]
                 ]
@@ -347,7 +367,12 @@ viewNavigationItem :
     -> Html Msg
 viewNavigationItem url ( path, title ) =
     li
-        [ classList [ ( "active", path == url.path ) ] ]
+        [ classList
+            [ ( "active"
+              , String.startsWith url.path path
+              )
+            ]
+        ]
         [ a [ href path ] [ text title ] ]
 
 
