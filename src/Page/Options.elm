@@ -398,7 +398,17 @@ makeRequest options channel queryRaw from size sort =
                 |> List.append (should_match 10)
     in
     Search.makeRequest
-        (Search.makeRequestBody query from size sort "option" "option_name" "option_name_query" should_queries)
+        (Search.makeRequestBody query
+            from
+            size
+            sort
+            "option"
+            "option_name"
+            [ "option_name_query"
+            , "option_description"
+            ]
+            should_queries
+        )
         ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
         decodeResultItemSource
         options
