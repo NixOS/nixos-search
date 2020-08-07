@@ -308,12 +308,18 @@ view model =
                 , footer
                     [ class "container text-center" ]
                     [ div []
-                        [ span [] [ text "Elasticsearch instance graciously provided by " ]
-                        , a [ href "https://bonsai.io" ] [ text "Bonsai" ]
+                        [ span [] [ text "Please help us improve the search by " ]
+                        , a
+                            [ href "https://github.com/NixOS/nixos-search/issues"
+                            ]
+                            [ text "reporting issues" ]
                         , span [] [ text "." ]
                         ]
                     , div []
-                        [ span [] [ text "❤️  Thank you ❤️ " ]
+                        [ span [] [ text "❤️  " ]
+                        , span [] [ text "Elasticsearch instance graciously provided by " ]
+                        , a [ href "https://bonsai.io" ] [ text "Bonsai" ]
+                        , span [] [ text ". Thank you! ❤️ " ]
                         ]
                     ]
                 ]
