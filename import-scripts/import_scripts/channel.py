@@ -70,8 +70,8 @@ MAPPING = {
         "package_attr_set": {"type": "keyword", "normalizer": "lowercase"},
         "package_pname": {"type": "keyword", "normalizer": "lowercase"},
         "package_pversion": {"type": "keyword"},
-        "package_description": {"type": "text"},
-        "package_longDescription": {"type": "text"},
+        "package_description": {"type": "text", "analyzer": "english"},
+        "package_longDescription": {"type": "text", "analyzer": "english"},
         "package_license": {
             "type": "nested",
             "properties": {"fullName": {"type": "text"}, "url": {"type": "text"}},
@@ -91,7 +91,7 @@ MAPPING = {
         # Options fields
         "option_name": {"type": "keyword", "normalizer": "lowercase"},
         "option_name_query": {"type": "keyword", "normalizer": "lowercase"},
-        "option_description": {"type": "text"},
+        "option_description": {"type": "text", "analyzer": "english"},
         "option_type": {"type": "keyword"},
         "option_default": {"type": "text"},
         "option_example": {"type": "text"},
