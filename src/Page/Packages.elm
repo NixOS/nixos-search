@@ -414,10 +414,10 @@ makeRequest options channel queryRaw from size sort =
                       )
                     ]
                 )
-                [ ( "package_attr_name", 1 )
-                , ( "package_attr_name_query", 1 )
-                , ( "package_pname", 1 )
-                , ( "package_description", 1 )
+                [ ( "package_attr_name", 5 )
+                , ( "package_attr_name_query", 3 )
+                , ( "package_pname", 4 )
+                , ( "package_description", 2 )
                 , ( "package_longDescription", 1 )
                 ]
 
@@ -466,9 +466,9 @@ makeRequest options channel queryRaw from size sort =
                       )
                     ]
                 )
-                [ ( "package_attr_name", 1 )
-                , ( "package_attr_name_query", 1 )
-                , ( "package_pname", 1 )
+                [ ( "package_attr_name", 3 )
+                , ( "package_attr_name_query", 2 )
+                , ( "package_pname", 4 )
                 , ( "package_attr_set", 1 )
                 ]
 
@@ -492,9 +492,9 @@ makeRequest options channel queryRaw from size sort =
                       )
                     ]
                 )
-                [ ( "package_attr_name", 1 )
+                [ ( "package_attr_name", 2 )
                 , ( "package_attr_name_query", 1 )
-                , ( "package_pname", 1 )
+                , ( "package_pname", 3 )
                 ]
 
         should_queries =
@@ -514,6 +514,7 @@ makeRequest options channel queryRaw from size sort =
             [ "package_attr_name_query"
             , "package_pname"
             , "package_description"
+            , "package_longDescription"
             ]
             should_queries
         )
