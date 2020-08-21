@@ -268,6 +268,7 @@ update path navKey msg model =
                 model.from
                 model.size
                 model.sort
+                |> (\x -> x ++ "#disabled")
                 |> Browser.Navigation.pushUrl navKey
             )
 
