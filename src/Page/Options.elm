@@ -237,7 +237,12 @@ viewResultItemDetails channel item =
                     wrapWith value
     in
     dl [ class "dl-horizontal" ]
-        [ dt [] [ text "Description" ]
+        [ dt [] [ text "Name" ]
+        , dd []
+            [ item.source.name
+                |> asText
+            ]
+        , dt [] [ text "Description" ]
         , dd []
             [ item.source.description
                 |> Maybe.withDefault default

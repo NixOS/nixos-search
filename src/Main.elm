@@ -158,8 +158,15 @@ changeRouteTo :
     -> ( Model, Cmd Msg )
 changeRouteTo model url =
     let
+        cleanUrl =
+            if url.fragment == Just "disabled" then
+                { url | fragment = Nothing }
+
+            else
+                url
+
         newModel =
-            { model | url = url }
+            { model | url = cleanUrl }
 
         maybeRoute =
             Route.fromUrl url
@@ -196,7 +203,13 @@ changeRouteTo model url =
             in
             Page.Packages.init channel query show from size sort modelPage
                 |> updateWith Packages PackagesMsg newModel
-                |> submitQuery newModel
+                |> (\x ->
+                        if url.fragment == Just "disabled" then
+                            ( Tuple.first x, Cmd.none )
+
+                        else
+                            submitQuery newModel x
+                   )
 
         Just (Route.Options channel query show from size sort) ->
             let
@@ -210,7 +223,13 @@ changeRouteTo model url =
             in
             Page.Options.init channel query show from size sort modelPage
                 |> updateWith Options OptionsMsg newModel
-                |> submitQuery newModel
+                |> (\x ->
+                        if url.fragment == Just "disabled" then
+                            ( Tuple.first x, Cmd.none )
+
+                        else
+                            submitQuery newModel x
+                   )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
