@@ -737,81 +737,65 @@ filter_by_type type_ =
 filter_by_query :
     List String
     -> String
-    -> List (List ( String, Json.Encode.Value ))
+    -> ( String, Json.Encode.Value )
 filter_by_query fields queryRaw =
     let
         query =
             queryRaw
                 |> String.trim
     in
-    query
-        |> String.replace "." " "
-        |> String.words
-        |> List.indexedMap
-            (\i query_word ->
-                let
-                    isLast =
-                        List.length (String.words query) == i + 1
-                in
-                if isLast then
-                    [ ( "bool"
-                      , Json.Encode.object
-                            [ ( "should"
-                              , Json.Encode.list Json.Encode.object
-                                    (List.concatMap
-                                        (\field ->
-                                            [ [ ( "match"
-                                                , Json.Encode.object
-                                                    [ ( field
-                                                      , Json.Encode.object
-                                                            [ ( "query", Json.Encode.string query_word )
-                                                            , ( "fuzziness", Json.Encode.string "1" )
-                                                            , ( "_name", Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_should_match" )
-                                                            ]
-                                                      )
-                                                    ]
-                                                )
-                                              ]
-                                            , [ ( "match_bool_prefix"
-                                                , Json.Encode.object
-                                                    [ ( field
-                                                      , Json.Encode.object
-                                                            [ ( "query", Json.Encode.string query_word )
-                                                            , ( "_name"
-                                                              , Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_should_prefix"
+    ( "bool"
+    , Json.Encode.object
+        [ ( "should"
+          , Json.Encode.list Json.Encode.object
+                (query
+                    |> String.words
+                    |> List.indexedMap
+                        (\i query_word ->
+                            [ ( "bool"
+                              , Json.Encode.object
+                                    [ ( "should"
+                                      , Json.Encode.list Json.Encode.object
+                                            (List.concatMap
+                                                (\field ->
+                                                    [ [ ( "match"
+                                                        , Json.Encode.object
+                                                            [ ( field
+                                                              , Json.Encode.object
+                                                                    [ ( "query", Json.Encode.string query_word )
+                                                                    , ( "fuzziness", Json.Encode.string "1" )
+                                                                    , ( "_name", Json.Encode.string <| "filter_queries_" ++ String.fromInt i ++ "_should_match" )
+                                                                    ]
                                                               )
                                                             ]
-                                                      )
+                                                        )
+                                                      ]
+                                                    , [ ( "match_bool_prefix"
+                                                        , Json.Encode.object
+                                                            [ ( field
+                                                              , Json.Encode.object
+                                                                    [ ( "query", Json.Encode.string query_word )
+                                                                    , ( "_name"
+                                                                      , Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_should_prefix"
+                                                                      )
+                                                                    ]
+                                                              )
+                                                            ]
+                                                        )
+                                                      ]
                                                     ]
                                                 )
-                                              ]
-                                            ]
-                                        )
-                                        fields
-                                    )
+                                                fields
+                                            )
+                                      )
+                                    ]
                               )
                             ]
-                      )
-                    ]
-
-                else
-                    List.map
-                        (\field ->
-                            ( "match_bool_prefix"
-                            , Json.Encode.object
-                                [ ( field
-                                  , Json.Encode.object
-                                        [ ( "query", Json.Encode.string query_word )
-                                        , ( "_name"
-                                          , Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_prefix"
-                                          )
-                                        ]
-                                  )
-                                ]
-                            )
                         )
-                        fields
-            )
+                )
+          )
+        ]
+    )
 
 
 makeRequestBody :
@@ -849,10 +833,9 @@ makeRequestBody query from sizeRaw sort type_ sort_field query_fields should_que
                       , Json.Encode.object
                             [ ( "filter"
                               , Json.Encode.list Json.Encode.object
-                                    (List.append
-                                        [ [ filter_by_type type_ ] ]
-                                        (filter_by_query query_fields query)
-                                    )
+                                    [ [ filter_by_type type_ ]
+                                    , [ filter_by_query query_fields query ]
+                                    ]
                               )
                             , ( "should"
                               , Json.Encode.list Json.Encode.object should_queries

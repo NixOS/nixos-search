@@ -165,8 +165,8 @@ viewResultItem channel show item =
         -- DEBUG: |> List.append
         -- DEBUG:     [ tr []
         -- DEBUG:         [ td [ colspan 1 ]
-        -- DEBUG:             [ p [] [ text <| "score: " ++ String.fromFloat item.score ]
-        -- DEBUG:             , p []
+        -- DEBUG:             [ div [] [ text <| "score: " ++ String.fromFloat (Maybe.withDefault 0 item.score) ]
+        -- DEBUG:             , div []
         -- DEBUG:                 [ text <|
         -- DEBUG:                     "matched queries: "
         -- DEBUG:                 , ul []
