@@ -13,6 +13,7 @@ import Html
     exposing
         ( Html
         , a
+        , code
         , dd
         , div
         , dl
@@ -205,8 +206,11 @@ viewResultItemDetails channel item =
                     Err _ ->
                         []
 
-        asCode value =
+        asPre value =
             pre [] [ text value ]
+
+        asCode value =
+            code [] [ text value ]
 
         githubUrlPrefix branch =
             "https://github.com/NixOS/nixpkgs-channels/blob/" ++ branch ++ "/"
@@ -235,43 +239,31 @@ viewResultItemDetails channel item =
 
                 _ ->
                     wrapWith value
+
+        withEmpty wrapWith maybe =
+            case maybe of
+                Nothing ->
+                    asPre default
+
+                Just "" ->
+                    asPre default
+
+                Just value ->
+                    wrapWith value
     in
     dl [ class "dl-horizontal" ]
         [ dt [] [ text "Name" ]
-        , dd []
-            [ item.source.name
-                |> asText
-            ]
+        , dd [] [ withEmpty asText (Just item.source.name) ]
         , dt [] [ text "Description" ]
-        , dd []
-            [ item.source.description
-                |> Maybe.withDefault default
-                |> asText
-            ]
+        , dd [] [ withEmpty asText item.source.description ]
         , dt [] [ text "Default value" ]
-        , dd []
-            [ item.source.default
-                |> Maybe.withDefault default
-                |> wrapped asCode
-            ]
+        , dd [] [ withEmpty asCode item.source.default ]
         , dt [] [ text "Type" ]
-        , dd []
-            [ item.source.type_
-                |> Maybe.withDefault default
-                |> asCode
-            ]
+        , dd [] [ withEmpty asPre item.source.type_ ]
         , dt [] [ text "Example value" ]
-        , dd []
-            [ item.source.example
-                |> Maybe.withDefault default
-                |> wrapped asCode
-            ]
+        , dd [] [ withEmpty (wrapped asCode) item.source.example ]
         , dt [] [ text "Declared in" ]
-        , dd []
-            [ item.source.source
-                |> Maybe.withDefault default
-                |> asGithubLink
-            ]
+        , dd [] [ withEmpty asGithubLink item.source.source ]
         ]
 
 

@@ -19,6 +19,7 @@ import Html
         , dl
         , dt
         , li
+        , pre
         , table
         , tbody
         , td
@@ -265,17 +266,6 @@ viewResultItemDetails channel item =
                 Nothing ->
                     text <| cleanPosition value
 
-        withDefault wrapWith maybe =
-            case maybe of
-                Nothing ->
-                    text default
-
-                Just "" ->
-                    text default
-
-                Just value ->
-                    wrapWith value
-
         mainPlatforms platform =
             List.member platform
                 [ "x86_64-linux"
@@ -299,81 +289,100 @@ viewResultItemDetails channel item =
                 |> List.map (showPlatform hydra)
 
         showPlatform hydra platform =
-            li []
-                [ case
-                    ( getHydraDetailsForPlatform hydra platform
-                    , Search.channelDetailsFromId channel
-                    )
-                  of
-                    ( Just hydraDetails, _ ) ->
-                        a
-                            [ href <| "https://hydra.nixos.org/build/" ++ String.fromInt hydraDetails.build_id
-                            ]
-                            [ text platform
-                            ]
+            case
+                ( getHydraDetailsForPlatform hydra platform
+                , Search.channelDetailsFromId channel
+                )
+            of
+                ( Just hydraDetails, _ ) ->
+                    a
+                        [ href <| "https://hydra.nixos.org/build/" ++ String.fromInt hydraDetails.build_id
+                        ]
+                        [ text platform
+                        ]
 
-                    ( Nothing, Just channelDetails ) ->
-                        a
-                            [ href <| "https://hydra.nixos.org/job/" ++ channelDetails.jobset ++ "/nixpkgs." ++ item.source.attr_name ++ "." ++ platform
-                            ]
-                            [ text platform
-                            ]
+                ( Nothing, Just channelDetails ) ->
+                    a
+                        [ href <| "https://hydra.nixos.org/job/" ++ channelDetails.jobset ++ "/nixpkgs." ++ item.source.attr_name ++ "." ++ platform
+                        ]
+                        [ text platform
+                        ]
 
-                    ( _, _ ) ->
-                        text platform
-                ]
+                ( _, _ ) ->
+                    text platform
 
         showLicence license =
-            li []
-                [ case ( license.fullName, license.url ) of
-                    ( Nothing, Nothing ) ->
-                        text default
+            case ( license.fullName, license.url ) of
+                ( Nothing, Nothing ) ->
+                    text default
 
-                    ( Just fullName, Nothing ) ->
-                        text fullName
+                ( Just fullName, Nothing ) ->
+                    text fullName
 
-                    ( Nothing, Just url ) ->
-                        a [ href url ] [ text default ]
+                ( Nothing, Just url ) ->
+                    a [ href url ] [ text default ]
 
-                    ( Just fullName, Just url ) ->
-                        a [ href url ] [ text fullName ]
-                ]
+                ( Just fullName, Just url ) ->
+                    a [ href url ] [ text fullName ]
 
         showMaintainer maintainer =
-            li []
-                [ a
-                    [ href <|
-                        case maintainer.github of
-                            Just github ->
-                                "https://github.com/" ++ github
+            a
+                [ href <|
+                    case maintainer.github of
+                        Just github ->
+                            "https://github.com/" ++ github
 
-                            Nothing ->
-                                "#"
-                    ]
-                    [ text <| maintainer.name ++ " <" ++ maintainer.email ++ ">" ]
+                        Nothing ->
+                            "#"
                 ]
+                [ text <| maintainer.name ++ " <" ++ maintainer.email ++ ">" ]
+
+        asPre value =
+            pre [] [ text value ]
+
+        asCode value =
+            code [] [ text value ]
+
+        asList list =
+            case list of
+                [] ->
+                    asPre default
+
+                _ ->
+                    ul [ class "inline" ] <| List.map (\i -> li [] [ i ]) list
+
+        withEmpty wrapWith maybe =
+            case maybe of
+                Nothing ->
+                    asPre default
+
+                Just "" ->
+                    asPre default
+
+                Just value ->
+                    wrapWith value
     in
     dl [ class "dl-horizontal" ]
         [ dt [] [ text "Attribute Name" ]
-        , dd [] [ asText item.source.attr_name ]
+        , dd [] [ withEmpty asText (Just item.source.attr_name) ]
         , dt [] [ text "Name" ]
-        , dd [] [ asText item.source.pname ]
+        , dd [] [ withEmpty asText (Just item.source.pname) ]
         , dt [] [ text "Install command" ]
-        , dd [] [ code [] [ text <| "nix-env -iA nixos." ++ item.source.attr_name ] ]
-        , dt [] [ text <| "Nix expression" ]
-        , dd [] [ withDefault asGithubLink item.source.position ]
+        , dd [] [ withEmpty asCode (Just ("nix-env -iA nixos." ++ item.source.attr_name)) ]
+        , dt [] [ text "Nix expression" ]
+        , dd [] [ withEmpty asGithubLink item.source.position ]
         , dt [] [ text "Platforms" ]
-        , dd [] [ ul [ class "inline" ] <| showPlatforms item.source.hydra item.source.platforms ]
+        , dd [] [ asList (showPlatforms item.source.hydra item.source.platforms) ]
         , dt [] [ text "Homepage" ]
-        , dd [] [ withDefault asLink item.source.homepage ]
+        , dd [] [ withEmpty asLink item.source.homepage ]
         , dt [] [ text "Licenses" ]
-        , dd [] [ ul [ class "inline" ] <| List.map showLicence item.source.licenses ]
+        , dd [] [ asList (List.map showLicence item.source.licenses) ]
         , dt [] [ text "Maintainers" ]
-        , dd [] [ ul [ class "inline" ] <| List.map showMaintainer item.source.maintainers ]
+        , dd [] [ asList (List.map showMaintainer item.source.maintainers) ]
         , dt [] [ text "Description" ]
-        , dd [] [ withDefault asText item.source.description ]
+        , dd [] [ withEmpty asText item.source.description ]
         , dt [] [ text "Long description" ]
-        , dd [] [ withDefault asText item.source.longDescription ]
+        , dd [] [ withEmpty asText item.source.longDescription ]
         ]
 
 
