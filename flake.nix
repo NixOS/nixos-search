@@ -4,31 +4,18 @@
   inputs = {
     nixpkgs = { url = "nixpkgs/nixos-unstable"; };
     poetry2nix = { url = "github:nix-community/poetry2nix"; };
+    flake-utils = { url = "github:numtide/flake-utils"; };
   };
 
-  outputs = { self, nixpkgs, poetry2nix }:
-    let
-      systems = [ "x86_64-linux" "i686-linux" "x86_64-darwin" "aarch64-linux" ];
-      forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f system);
-      allPackages = system:
-        let
-          pkgs = import nixpkgs {
-            inherit system;
-            overlays = [
-              poetry2nix.overlay
-            ];
-          };
-        in
-        {
-          import_scripts = import ./import-scripts {
-            inherit pkgs;
-          };
-          frontend = import ./. {
-            inherit pkgs;
-          };
-        };
-    in
-    {
-      packages = forAllSystems allPackages;
+  outputs = { self, nixpkgs, poetry2nix, flake-utils }:
+    flake-utils.lib.simpleFlake {
+      name = "nixos-search";
+      inherit self nixpkgs;
+      systems = flake-utils.lib.defaultSystems;
+      preOverlays = [
+        poetry2nix.overlay
+      ];
+      overlay = ./overlay.nix;
+      shell = ./.;
     };
 }

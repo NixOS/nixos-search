@@ -1,5 +1,20 @@
 {
   "nodes": {
+    "flake-utils": {
+      "locked": {
+        "lastModified": 1598189285,
+        "narHash": "sha256-5jcLCoX9ZakSSyqC+x8YPm9W58zyfrpOLGxO2jASoNI=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "e34fcedfc799e31449ec0a0b87b031e14c454a39",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1595175601,
@@ -49,6 +64,7 @@
     },
     "root": {
       "inputs": {
+        "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs",
         "poetry2nix": "poetry2nix"
       }
