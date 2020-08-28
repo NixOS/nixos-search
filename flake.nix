@@ -10,25 +10,22 @@
     let
       systems = [ "x86_64-linux" "i686-linux" "x86_64-darwin" "aarch64-linux" ];
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f system);
-      allPackages = system:
+      mkPackage = path: system:
         let
           pkgs = import nixpkgs {
             inherit system;
-            overlays = [
-              poetry2nix.overlay
-            ];
+            overlays = [ poetry2nix.overlay ];
           };
         in
+          import path { inherit pkgs; };
+      packages = system:
         {
-          import_scripts = import ./import-scripts {
-            inherit pkgs;
-          };
-          frontend = import ./. {
-            inherit pkgs;
-          };
+          import_scripts = mkPackage ./import-scripts system;
+          frontend = mkPackage ./. system;
         };
     in
     {
-      packages = forAllSystems allPackages;
+      defaultPackage = forAllSystems (mkPackage ./.);
+      packages = forAllSystems packages;
     };
 }
