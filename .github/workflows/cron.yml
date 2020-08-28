@@ -32,6 +32,11 @@ jobs:
     - name: Installing Nix
       uses: cachix/install-nix-action@v8
 
+    - uses: cachix/cachix-action@v6
+      with:
+        name: nixos-search
+        signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
+
     - name: Installing awscli
       run: |
         nix-env -iA nixpkgs.awscli
