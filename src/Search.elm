@@ -752,7 +752,7 @@ filter_by_query fields queryRaw =
                 (query
                     |> String.words
                     |> List.indexedMap
-                        (\i query_word ->
+                        (\i queryWord ->
                             [ ( "bool"
                               , Json.Encode.object
                                     [ ( "should"
@@ -763,9 +763,8 @@ filter_by_query fields queryRaw =
                                                         , Json.Encode.object
                                                             [ ( field
                                                               , Json.Encode.object
-                                                                    [ ( "query", Json.Encode.string query_word )
-                                                                    , ( "fuzziness", Json.Encode.string "1" )
-                                                                    , ( "_name", Json.Encode.string <| "filter_queries_" ++ String.fromInt i ++ "_should_match" )
+                                                                    [ ( "query", Json.Encode.string queryWord )
+                                                                    , ( "_name", Json.Encode.string <| "filter_queries_should_match_" ++ field ++ "_" ++ queryWord )
                                                                     ]
                                                               )
                                                             ]
@@ -775,9 +774,9 @@ filter_by_query fields queryRaw =
                                                         , Json.Encode.object
                                                             [ ( field
                                                               , Json.Encode.object
-                                                                    [ ( "query", Json.Encode.string query_word )
+                                                                    [ ( "query", Json.Encode.string queryWord )
                                                                     , ( "_name"
-                                                                      , Json.Encode.string <| "filter_queries_" ++ String.fromInt (i + 1) ++ "_should_prefix"
+                                                                      , Json.Encode.string <| "filter_queries_should_match_bool_prefix_" ++ field ++ "_" ++ queryWord
                                                                       )
                                                                     ]
                                                               )
@@ -809,7 +808,7 @@ makeRequestBody :
     -> List String
     -> List (List ( String, Json.Encode.Value ))
     -> Http.Body
-makeRequestBody query from sizeRaw sort type_ sort_field query_fields should_queries =
+makeRequestBody query from sizeRaw sort type_ sort_field query_fields ranking_queries =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -839,7 +838,7 @@ makeRequestBody query from sizeRaw sort type_ sort_field query_fields should_que
                                     ]
                               )
                             , ( "should"
-                              , Json.Encode.list Json.Encode.object should_queries
+                              , Json.Encode.list Json.Encode.object ranking_queries
                               )
                             ]
                       )
