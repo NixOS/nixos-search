@@ -2,6 +2,7 @@
 .DS_Store
 .cache
 .idea
+.vscode
 .node_repl_history
 .npm
 build/Release

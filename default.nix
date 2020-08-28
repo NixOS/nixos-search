@@ -20,22 +20,6 @@ let
       echo 9 > $HOME/.node-gyp/${pkgs.nodejs.version}/installVersion
       ln -sfv ${pkgs.nodejs}/include $HOME/.node-gyp/${pkgs.nodejs.version}
     '';
-    pkgConfig = {
-      node-sass = {
-        buildInputs = with pkgs; [
-          which
-          python2
-          libsass
-          pkgconfig
-        ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
-          xcodebuild
-        ];
-        postInstall = ''
-          LIBSASS_EXT=auto yarn --offline run build
-          rm build/config.gypi
-        '';
-      };
-    };
     publishBinsFor =
       [
         "webpack"
