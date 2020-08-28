@@ -50,10 +50,10 @@ var common = {
                 }
             },
             {
-                test: /\.scss$/,
+                test: /\.less$/,
                 exclude: [/elm-stuff/, /node_modules/],
                 // see https://github.com/webpack-contrib/css-loader#url
-                loaders: ["style-loader", "css-loader?url=false", "sass-loader"]
+                loaders: ["style-loader", "css-loader?url=false", "less-loader"]
             },
             {
                 test: /\.css$/,
@@ -174,12 +174,12 @@ if (MODE === "production") {
                     ]
                 },
                 {
-                    test: /\.scss$/,
+                    test: /\.less$/,
                     exclude: [/elm-stuff/, /node_modules/],
                     loaders: [
                         MiniCssExtractPlugin.loader,
                         "css-loader?url=false",
-                        "sass-loader"
+                        "less-loader"
                     ]
                 }
             ]
