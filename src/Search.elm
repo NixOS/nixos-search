@@ -721,68 +721,48 @@ type alias Options =
 
 filter_by_type :
     String
-    -> ( String, Json.Encode.Value )
+    -> List ( String, Json.Encode.Value )
 filter_by_type type_ =
-    ( "term"
-    , Json.Encode.object
-        [ ( "type"
-          , Json.Encode.object
-                [ ( "value", Json.Encode.string type_ )
-                , ( "_name", Json.Encode.string <| "filter_" ++ type_ ++ "s" )
+    [ ( "term"
+      , Json.Encode.object
+            [ ( "type"
+              , Json.Encode.object
+                    [ ( "value", Json.Encode.string type_ )
+                    , ( "_name", Json.Encode.string <| "filter_" ++ type_ ++ "s" )
+                    ]
+              )
+            ]
+      )
+    ]
+
+
+search_fields :
+    String
+    -> List String
+    -> List (List ( String, Json.Encode.Value ))
+search_fields query fields =
+    query
+        |> String.words
+        |> List.reverse
+        |> List.indexedMap
+            (\queryIndex queryWord ->
+                [ ( "multi_match"
+                  , Json.Encode.object
+                        [ ( "type", Json.Encode.string "most_fields" )
+                        , ( "query", Json.Encode.string queryWord )
+                        , ( "fuzziness", Json.Encode.int 1 )
+                        , ( "operator", Json.Encode.string "or" )
+                        , ( "_name"
+                          , Json.Encode.string <| "multi_match_" ++ queryWord ++ "_" ++ (queryIndex + 1 |> String.fromInt)
+                          )
+                        , ( "fields"
+                          , Json.Encode.list Json.Encode.string
+                                (List.map (\field -> field ++ "." ++ (queryIndex + 1 |> String.fromInt)) fields)
+                          )
+                        ]
+                  )
                 ]
-          )
-        ]
-    )
-
-
-filter_by_query :
-    List String
-    -> String
-    -> ( String, Json.Encode.Value )
-filter_by_query fields queryRaw =
-    let
-        query =
-            queryRaw
-                |> String.trim
-    in
-    ( "bool"
-    , Json.Encode.object
-        [ ( "should"
-          , Json.Encode.list Json.Encode.object
-                (query
-                    |> String.words
-                    |> List.indexedMap
-                        (\i queryWord ->
-                            [ ( "bool"
-                              , Json.Encode.object
-                                    [ ( "should"
-                                      , Json.Encode.list Json.Encode.object
-                                            (List.concatMap
-                                                (\field ->
-                                                    [ [ ( "match"
-                                                        , Json.Encode.object
-                                                            [ ( field
-                                                              , Json.Encode.object
-                                                                    [ ( "query", Json.Encode.string queryWord )
-                                                                    , ( "_name", Json.Encode.string <| "filter_queries_should_match_" ++ field ++ "_" ++ queryWord )
-                                                                    ]
-                                                              )
-                                                            ]
-                                                        )
-                                                      ]
-                                                    ]
-                                                )
-                                                fields
-                                            )
-                                      )
-                                    ]
-                              )
-                            ]
-                        )
-                )
-          )
-        ]
-    )
+            )
 
 
 makeRequestBody :
@@ -793,9 +773,8 @@ makeRequestBody :
     -> String
     -> String
     -> List String
-    -> List (List ( String, Json.Encode.Value ))
     -> Http.Body
-makeRequestBody query from sizeRaw sort type_ sort_field query_fields ranking_queries =
+makeRequestBody query from sizeRaw sort type_ sortField fields =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -813,19 +792,18 @@ makeRequestBody query from sizeRaw sort type_ sort_field query_fields ranking_qu
             , ( "size"
               , Json.Encode.int size
               )
-            , toSortQuery sort sort_field
+            , toSortQuery sort sortField
             , ( "query"
               , Json.Encode.object
                     [ ( "bool"
                       , Json.Encode.object
                             [ ( "filter"
                               , Json.Encode.list Json.Encode.object
-                                    [ [ filter_by_type type_ ]
-                                    , [ filter_by_query query_fields query ]
-                                    ]
+                                    [ filter_by_type type_ ]
                               )
-                            , ( "should"
-                              , Json.Encode.list Json.Encode.object ranking_queries
+                            , ( "must"
+                              , Json.Encode.list Json.Encode.object
+                                    (search_fields query fields)
                               )
                             ]
                       )

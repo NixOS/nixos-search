@@ -405,104 +405,21 @@ makeRequest :
     -> Int
     -> Search.Sort
     -> Cmd Msg
-makeRequest options channel queryRaw from size sort =
-    let
-        query =
-            queryRaw
-                |> String.trim
-
-        makeMatchQueries queryType boostBase queryIndex queryWord =
-            List.indexedMap
-                (\fieldIndex field ->
-                    let
-                        boost =
-                            boostBase * ((fieldIndex + 1 |> toFloat) * 10) * (queryIndex + 1 |> toFloat)
-                    in
-                    [ ( queryType
-                      , Json.Encode.object
-                            [ ( field
-                              , Json.Encode.object
-                                    [ ( "query", Json.Encode.string queryWord )
-                                    , ( "boost", Json.Encode.float <| boost )
-                                    , ( "_name", Json.Encode.string <| "ranking_queries_" ++ queryType ++ "_" ++ queryWord ++ "_" ++ field ++ "_" ++ String.fromFloat boost )
-                                    ]
-                              )
-                            ]
-                      )
-                    ]
-                )
-                ([ "package_attr_name"
-                 , "package_pname"
-                 , "package_attr_name_query"
-                 , "package_description"
-                 , "package_longDescription"
-                 ]
-                    |> List.reverse
-                )
-
-        makeTermQueries boostBase queryIndex queryWord =
-            List.indexedMap
-                (\fieldIndex field ->
-                    let
-                        boost =
-                            boostBase * ((fieldIndex + 1 |> toFloat) * 10) * (queryIndex + 1 |> toFloat)
-                    in
-                    [ ( "term"
-                      , Json.Encode.object
-                            [ ( field
-                              , Json.Encode.object
-                                    [ ( "value", Json.Encode.string queryWord )
-                                    , ( "boost", Json.Encode.float boost )
-                                    , ( "_name", Json.Encode.string <| "ranking_queries_term_" ++ queryWord ++ "_" ++ field ++ "_" ++ String.fromFloat boost )
-                                    ]
-                              )
-                            ]
-                      )
-                    ]
-                )
-                ([ "package_pname"
-                 , "package_attr_name"
-                 , "package_attr_name_query"
-                 ]
-                    |> List.reverse
-                )
-
-        match_queries =
-            String.words query
-                |> List.reverse
-                |> List.indexedMap (makeMatchQueries "match" 1)
-                |> List.concat
-
-        match_bool_prefix_queries =
-            String.words query
-                |> List.reverse
-                |> List.indexedMap (makeMatchQueries "match_bool_prefix" 2)
-                |> List.concat
-
-        term_queries =
-            [ query ]
-                |> List.indexedMap (makeTermQueries 2)
-                |> List.concat
-
-        ranking_queries =
-            []
-                |> List.append match_queries
-                |> List.append match_bool_prefix_queries
-                |> List.append term_queries
-    in
+makeRequest options channel query from size sort =
     Search.makeRequest
-        (Search.makeRequestBody query
+        (Search.makeRequestBody
+            (String.trim query)
             from
             size
             sort
             "package"
             "package_attr_name"
-            [ "package_attr_name_query"
-            , "package_pname"
-            , "package_description"
-            , "package_longDescription"
+            [ "package_attr_name^2"
+            , "package_attr_name_query^2"
+            , "package_pname^2"
+            , "package_description^1"
+            , "package_longDescription^1"
             ]
-            ranking_queries
         )
         ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
         decodeResultItemSource
