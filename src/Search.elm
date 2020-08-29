@@ -750,7 +750,7 @@ search_fields query fields =
                   , Json.Encode.object
                         [ ( "type", Json.Encode.string "most_fields" )
                         , ( "query", Json.Encode.string queryWord )
-                        , ( "fuzziness", Json.Encode.int <| String.length queryWord // 4 )
+                        , ( "fuzziness", Json.Encode.int <| String.length queryWord // 5 )
                         , ( "operator", Json.Encode.string "or" )
                         , ( "_name"
                           , Json.Encode.string <| "multi_match_" ++ queryWord ++ "_" ++ (queryIndex + 1 |> String.fromInt)
