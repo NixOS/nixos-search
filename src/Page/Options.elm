@@ -279,132 +279,19 @@ makeRequest :
     -> Int
     -> Search.Sort
     -> Cmd Msg
-makeRequest options channel queryRaw from size sort =
-    let
-        query =
-            queryRaw
-                |> String.trim
-
-        delimiters =
-            Maybe.withDefault Regex.never (Regex.fromString "[. ]")
-
-        should_match boost_base =
-            List.indexedMap
-                (\i ( field, boost ) ->
-                    [ ( "match"
-                      , Json.Encode.object
-                            [ ( field
-                              , Json.Encode.object
-                                    [ ( "query", Json.Encode.string query )
-                                    , ( "boost", Json.Encode.float <| boost_base * boost )
-                                    , ( "analyzer", Json.Encode.string "whitespace" )
-                                    , ( "fuzziness", Json.Encode.string "1" )
-                                    , ( "_name"
-                                      , Json.Encode.string <|
-                                            "should_match_"
-                                                ++ String.fromInt (i + 1)
-                                      )
-                                    ]
-                              )
-                            ]
-                      )
-                    ]
-                )
-                [ ( "option_name", 1 )
-                , ( "option_name_query", 1 )
-                , ( "option_description", 1 )
-                ]
-
-        should_match_bool_prefix boost_base =
-            List.indexedMap
-                (\i ( field, boost ) ->
-                    [ ( "match_bool_prefix"
-                      , Json.Encode.object
-                            [ ( field
-                              , Json.Encode.object
-                                    [ ( "query", Json.Encode.string query )
-                                    , ( "boost", Json.Encode.float <| boost_base * boost )
-                                    , ( "analyzer", Json.Encode.string "whitespace" )
-                                    , ( "fuzziness", Json.Encode.string "1" )
-                                    , ( "_name"
-                                      , Json.Encode.string <|
-                                            "should_match_bool_prefix_"
-                                                ++ String.fromInt (i + 1)
-                                      )
-                                    ]
-                              )
-                            ]
-                      )
-                    ]
-                )
-                [ ( "option_name", 1 )
-                , ( "option_name_query", 1 )
-                ]
-
-        should_terms boost_base =
-            List.indexedMap
-                (\i ( field, boost ) ->
-                    [ ( "terms"
-                      , Json.Encode.object
-                            [ ( field
-                              , Json.Encode.list Json.Encode.string (Regex.split delimiters query)
-                              )
-                            , ( "boost", Json.Encode.float <| boost_base * boost )
-                            , ( "_name"
-                              , Json.Encode.string <|
-                                    "should_terms_"
-                                        ++ String.fromInt (i + 1)
-                              )
-                            ]
-                      )
-                    ]
-                )
-                [ ( "option_name", 1 )
-                , ( "option_name_query", 1 )
-                ]
-
-        should_term boost_base =
-            List.indexedMap
-                (\i ( field, boost ) ->
-                    [ ( "term"
-                      , Json.Encode.object
-                            [ ( field
-                              , Json.Encode.object
-                                    [ ( "value", Json.Encode.string query )
-                                    , ( "boost", Json.Encode.float <| boost_base * boost )
-                                    , ( "_name"
-                                      , Json.Encode.string <|
-                                            "should_term_"
-                                                ++ String.fromInt (i + 1)
-                                      )
-                                    ]
-                              )
-                            ]
-                      )
-                    ]
-                )
-                [ ( "option_name", 1 )
-                , ( "option_name_query", 1 )
-                ]
-
-        should_queries =
-            []
-                |> List.append (should_term 10000)
-                |> List.append (should_terms 1000)
-                |> List.append (should_match_bool_prefix 100)
-                |> List.append (should_match 10)
-    in
+makeRequest options channel query from size sort =
     Search.makeRequest
-        (Search.makeRequestBody query
+        (Search.makeRequestBody
+            (String.trim query)
             from
             size
             sort
             "option"
             "option_name"
-            [ "option_name_query"
-            , "option_description"
+            [ "option_name^2"
+            , "option_name_query^2"
+            , "option_description^1"
             ]
-            should_queries
         )
         ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
         decodeResultItemSource

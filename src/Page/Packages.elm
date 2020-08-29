@@ -206,8 +206,15 @@ viewResultItem channel show item =
         -- DEBUG: |> List.append
         -- DEBUG:     [ tr []
         -- DEBUG:         [ td [ colspan 4 ]
-        -- DEBUG:             [ p [] [ text <| "score: " ++ String.fromFloat item.score ]
-        -- DEBUG:             , p []
+        -- DEBUG:             [ div []
+        -- DEBUG:                 [ text <|
+        -- DEBUG:                     "score: "
+        -- DEBUG:                         ++ (item.score
+        -- DEBUG:                                 |> Maybe.map String.fromFloat
+        -- DEBUG:                                 |> Maybe.withDefault "No score"
+        -- DEBUG:                            )
+        -- DEBUG:                 ]
+        -- DEBUG:             , div []
         -- DEBUG:                 [ text <|
         -- DEBUG:                     "matched queries: "
         -- DEBUG:                 , ul []
@@ -398,140 +405,21 @@ makeRequest :
     -> Int
     -> Search.Sort
     -> Cmd Msg
-makeRequest options channel queryRaw from size sort =
-    let
-        query =
-            queryRaw
-                |> String.trim
-
-        delimiters =
-            Maybe.withDefault Regex.never (Regex.fromString "[. ]")
-
-        should_match boost_base =
-            List.indexedMap
-                (\i ( field, boost ) ->
-                    [ ( "match"
-                      , Json.Encode.object
-                            [ ( field
-                              , Json.Encode.object
-                                    [ ( "query", Json.Encode.string query )
-                                    , ( "boost", Json.Encode.float <| boost_base * boost )
-                                    , ( "analyzer", Json.Encode.string "whitespace" )
-                                    , ( "fuzziness", Json.Encode.string "1" )
-                                    , ( "_name"
-                                      , Json.Encode.string <|
-                                            "should_match_"
-                                                ++ String.fromInt (i + 1)
-                                      )
-                                    ]
-                              )
-                            ]
-                      )
-                    ]
-                )
-                [ ( "package_attr_name", 5 )
-                , ( "package_attr_name_query", 3 )
-                , ( "package_pname", 4 )
-                , ( "package_description", 2 )
-                , ( "package_longDescription", 1 )
-                ]
-
-        should_match_bool_prefix boost_base =
-            List.indexedMap
-                (\i ( field, boost ) ->
-                    [ ( "match_bool_prefix"
-                      , Json.Encode.object
-                            [ ( field
-                              , Json.Encode.object
-                                    [ ( "query", Json.Encode.string query )
-                                    , ( "boost", Json.Encode.float <| boost_base * boost )
-                                    , ( "analyzer", Json.Encode.string "whitespace" )
-                                    , ( "fuzziness", Json.Encode.string "1" )
-                                    , ( "_name"
-                                      , Json.Encode.string <|
-                                            "should_match_bool_prefix_"
-                                                ++ String.fromInt (i + 1)
-                                      )
-                                    ]
-                              )
-                            ]
-                      )
-                    ]
-                )
-                [ ( "package_attr_name", 2 )
-                , ( "package_attr_name_query", 1 )
-                , ( "package_pname", 3 )
-                ]
-
-        should_terms boost_base =
-            List.indexedMap
-                (\i ( field, boost ) ->
-                    [ ( "terms"
-                      , Json.Encode.object
-                            [ ( field
-                              , Json.Encode.list Json.Encode.string (Regex.split delimiters query)
-                              )
-                            , ( "boost", Json.Encode.float <| boost_base * boost )
-                            , ( "_name"
-                              , Json.Encode.string <|
-                                    "should_terms_"
-                                        ++ String.fromInt (i + 1)
-                              )
-                            ]
-                      )
-                    ]
-                )
-                [ ( "package_attr_name", 3 )
-                , ( "package_attr_name_query", 2 )
-                , ( "package_pname", 4 )
-                , ( "package_attr_set", 1 )
-                ]
-
-        should_term boost_base =
-            List.indexedMap
-                (\i ( field, boost ) ->
-                    [ ( "term"
-                      , Json.Encode.object
-                            [ ( field
-                              , Json.Encode.object
-                                    [ ( "value", Json.Encode.string query )
-                                    , ( "boost", Json.Encode.float <| boost_base * boost )
-                                    , ( "_name"
-                                      , Json.Encode.string <|
-                                            "should_term_"
-                                                ++ String.fromInt (i + 1)
-                                      )
-                                    ]
-                              )
-                            ]
-                      )
-                    ]
-                )
-                [ ( "package_attr_name", 2 )
-                , ( "package_attr_name_query", 1 )
-                , ( "package_pname", 3 )
-                ]
-
-        should_queries =
-            []
-                |> List.append (should_term 10000)
-                |> List.append (should_terms 1000)
-                |> List.append (should_match_bool_prefix 100)
-                |> List.append (should_match 10)
-    in
+makeRequest options channel query from size sort =
     Search.makeRequest
-        (Search.makeRequestBody query
+        (Search.makeRequestBody
+            (String.trim query)
             from
             size
             sort
             "package"
             "package_attr_name"
-            [ "package_attr_name_query"
-            , "package_pname"
-            , "package_description"
-            , "package_longDescription"
+            [ "package_attr_name^2"
+            , "package_attr_name_query^2"
+            , "package_pname^2"
+            , "package_description^1"
+            , "package_longDescription^1"
             ]
-            should_queries
         )
         ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
         decodeResultItemSource
