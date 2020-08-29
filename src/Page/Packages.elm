@@ -411,63 +411,77 @@ makeRequest options channel queryRaw from size sort =
             queryRaw
                 |> String.trim
 
-        makeMatchQueries queryType queryIndex queryWord =
+        makeMatchQueries queryType boostBase queryIndex queryWord =
             List.indexedMap
                 (\fieldIndex field ->
+                    let
+                        boost =
+                            boostBase * ((fieldIndex + 1 |> toFloat) * 10) * (queryIndex + 1 |> toFloat)
+                    in
                     [ ( queryType
                       , Json.Encode.object
                             [ ( field
                               , Json.Encode.object
                                     [ ( "query", Json.Encode.string queryWord )
-                                    , ( "boost", Json.Encode.float <| ((fieldIndex + 1 |> toFloat) * 10) * (queryIndex + 1 |> toFloat) )
-                                    , ( "_name", Json.Encode.string <| "ranking_queries_" ++ queryType ++ "_" ++ queryWord ++ "_" ++ field )
+                                    , ( "boost", Json.Encode.float <| boost )
+                                    , ( "_name", Json.Encode.string <| "ranking_queries_" ++ queryType ++ "_" ++ queryWord ++ "_" ++ field ++ "_" ++ String.fromFloat boost )
                                     ]
                               )
                             ]
                       )
                     ]
                 )
-                [ "package_attr_name"
-                , "package_pname"
-                , "package_attr_name_query"
-                , "package_description"
-                , "package_longDescription"
-                ]
+                ([ "package_attr_name"
+                 , "package_pname"
+                 , "package_attr_name_query"
+                 , "package_description"
+                 , "package_longDescription"
+                 ]
+                    |> List.reverse
+                )
 
-        makeTermQueries queryIndex queryWord =
+        makeTermQueries boostBase queryIndex queryWord =
             List.indexedMap
                 (\fieldIndex field ->
+                    let
+                        boost =
+                            boostBase * ((fieldIndex + 1 |> toFloat) * 10) * (queryIndex + 1 |> toFloat)
+                    in
                     [ ( "term"
                       , Json.Encode.object
                             [ ( field
                               , Json.Encode.object
                                     [ ( "value", Json.Encode.string queryWord )
-                                    , ( "boost", Json.Encode.float <| 10 * ((fieldIndex + 1 |> toFloat) * 10) * (queryIndex + 1 |> toFloat) )
-                                    , ( "_name", Json.Encode.string <| "ranking_queries_term_" ++ queryWord ++ "_" ++ field )
+                                    , ( "boost", Json.Encode.float boost )
+                                    , ( "_name", Json.Encode.string <| "ranking_queries_term_" ++ queryWord ++ "_" ++ field ++ "_" ++ String.fromFloat boost )
                                     ]
                               )
                             ]
                       )
                     ]
                 )
-                [ "package_pname"
-                , "package_attr_name"
-                , "package_attr_name_query"
-                ]
+                ([ "package_pname"
+                 , "package_attr_name"
+                 , "package_attr_name_query"
+                 ]
+                    |> List.reverse
+                )
 
         match_queries =
             String.words query
-                |> List.indexedMap (makeMatchQueries "match")
+                |> List.reverse
+                |> List.indexedMap (makeMatchQueries "match" 1)
                 |> List.concat
 
         match_bool_prefix_queries =
             String.words query
-                |> List.indexedMap (makeMatchQueries "match_bool_prefix")
+                |> List.reverse
+                |> List.indexedMap (makeMatchQueries "match_bool_prefix" 2)
                 |> List.concat
 
         term_queries =
-            String.words query
-                |> List.indexedMap makeTermQueries
+            [ query ]
+                |> List.indexedMap (makeTermQueries 2)
                 |> List.concat
 
         ranking_queries =

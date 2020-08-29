@@ -770,19 +770,6 @@ filter_by_query fields queryRaw =
                                                             ]
                                                         )
                                                       ]
-                                                    , [ ( "match_bool_prefix"
-                                                        , Json.Encode.object
-                                                            [ ( field
-                                                              , Json.Encode.object
-                                                                    [ ( "query", Json.Encode.string queryWord )
-                                                                    , ( "_name"
-                                                                      , Json.Encode.string <| "filter_queries_should_match_bool_prefix_" ++ field ++ "_" ++ queryWord
-                                                                      )
-                                                                    ]
-                                                              )
-                                                            ]
-                                                        )
-                                                      ]
                                                     ]
                                                 )
                                                 fields
