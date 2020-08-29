@@ -134,7 +134,7 @@ init channel query show from size sort model =
         defaultSize =
             model
                 |> Maybe.map (\x -> x.size)
-                |> Maybe.withDefault 15
+                |> Maybe.withDefault 30
     in
     ( { channel = Maybe.withDefault defaultChannel channel
       , query = query
