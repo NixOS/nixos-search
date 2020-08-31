@@ -748,17 +748,17 @@ search_fields query fields =
             (\queryIndex queryWord ->
                 [ ( "multi_match"
                   , Json.Encode.object
-                        [ ( "type", Json.Encode.string "most_fields" )
+                        [ ( "type", Json.Encode.string "bool_prefix" )
                         , ( "query", Json.Encode.string queryWord )
                         , ( "fuzziness", Json.Encode.int <| String.length queryWord // 5 )
-                        , ( "analyzer", Json.Encode.string "whitespace" )
+                        , ( "prefix_length", Json.Encode.int 3 )
                         , ( "operator", Json.Encode.string "or" )
                         , ( "_name"
                           , Json.Encode.string <| "multi_match_" ++ queryWord ++ "_" ++ (queryIndex + 1 |> String.fromInt)
                           )
                         , ( "fields"
                           , Json.Encode.list Json.Encode.string
-                                (List.map (\field -> field ++ "." ++ (queryIndex + 1 |> String.fromInt)) fields)
+                                (List.map (\field -> field ++ (queryIndex + 1 |> String.fromInt)) fields)
                           )
                         ]
                   )
