@@ -66,3 +66,18 @@ def test_parse_query(text, expected):
     import import_scripts.channel
 
     assert sorted(import_scripts.channel.parse_query(text)) == sorted(expected)
+
+
+@pytest.mark.parametrize(
+    "field,expected",
+    [
+        ("example", "elpmaxe"),
+        ("example two", "elpmaxe owt"),
+        (["example", "three"], ["elpmaxe", "eerht"]),
+        (("example", "three"), ("elpmaxe", "eerht")),
+    ],
+)
+def test_field_reverse(field, expected):
+    import import_scripts.channel
+
+    assert import_scripts.channel.field_reverse(field) == expected

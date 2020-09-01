@@ -737,12 +737,12 @@ filter_by_type type_ =
 
 
 search_fields :
-    String
+    Float
     -> List String
+    -> List ( String, Float )
     -> List (List ( String, Json.Encode.Value ))
-search_fields query fields =
-    query
-        |> String.words
+search_fields baseScore queryWords fields =
+    queryWords
         |> List.reverse
         |> List.indexedMap
             (\queryIndex queryWord ->
@@ -758,7 +758,10 @@ search_fields query fields =
                           )
                         , ( "fields"
                           , Json.Encode.list Json.Encode.string
-                                (List.map (\field -> field ++ (queryIndex + 1 |> String.fromInt)) fields)
+                                (List.map
+                                    (\( field, score ) -> field ++ "^" ++ (baseScore * (score + (0.1 * (queryIndex + 1 |> toFloat))) |> String.fromFloat))
+                                    fields
+                                )
                           )
                         ]
                   )
@@ -773,7 +776,7 @@ makeRequestBody :
     -> Sort
     -> String
     -> String
-    -> List String
+    -> List ( String, Float )
     -> Http.Body
 makeRequestBody query from sizeRaw sort type_ sortField fields =
     let
@@ -804,7 +807,41 @@ makeRequestBody query from sizeRaw sort type_ sortField fields =
                               )
                             , ( "must"
                               , Json.Encode.list Json.Encode.object
-                                    (search_fields query fields)
+                                    [ [ ( "dis_max"
+                                        , Json.Encode.object
+                                            [ ( "tie_breaker", Json.Encode.float 0.7 )
+                                            , ( "queries"
+                                              , Json.Encode.list Json.Encode.object
+                                                    [ [ ( "bool"
+                                                        , Json.Encode.object
+                                                            [ ( "must"
+                                                              , Json.Encode.list Json.Encode.object <|
+                                                                    search_fields
+                                                                        1.0
+                                                                        (String.words query)
+                                                                        fields
+                                                              )
+                                                            ]
+                                                        )
+                                                      ]
+                                                    , [ ( "bool"
+                                                        , Json.Encode.object
+                                                            [ ( "must"
+                                                              , Json.Encode.list Json.Encode.object <|
+                                                                    search_fields
+                                                                        0.8
+                                                                        (String.words query |> List.map String.reverse)
+                                                                        (List.map (\( field, score ) -> ( field ++ "_reverse", score )) fields)
+                                                              )
+                                                            ]
+                                                        )
+                                                      ]
+                                                    ]
+                                              )
+                                            ]
+                                        )
+                                      ]
+                                    ]
                               )
                             ]
                       )
