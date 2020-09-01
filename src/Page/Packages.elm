@@ -414,11 +414,11 @@ makeRequest options channel query from size sort =
             sort
             "package"
             "package_attr_name"
-            [ "package_attr_name^2.3"
-            , "package_pname^2.2"
-            , "package_attr_name_query^2.1"
-            , "package_description^1."
-            , "package_longDescription^1."
+            [ ( "package_attr_name", 2.4 )
+            , ( "package_pname", 2.2 )
+            , ( "package_attr_name_query", 2.0 )
+            , ( "package_description", 1.2 )
+            , ( "package_longDescription", 1.0 )
             ]
         )
         ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)

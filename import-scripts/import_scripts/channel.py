@@ -66,12 +66,21 @@ MAPPING = {
             },
         },
         "package_attr_name": {"type": "keyword", "normalizer": "lowercase"},
+        "package_attr_name_reverse": {"type": "keyword", "normalizer": "lowercase"},
         "package_attr_name_query": {"type": "keyword", "normalizer": "lowercase"},
+        "package_attr_name_query_reverse": {
+            "type": "keyword",
+            "normalizer": "lowercase",
+        },
         "package_attr_set": {"type": "keyword", "normalizer": "lowercase"},
+        "package_attr_set_reverse": {"type": "keyword", "normalizer": "lowercase"},
         "package_pname": {"type": "keyword", "normalizer": "lowercase"},
+        "package_pname_reverse": {"type": "keyword", "normalizer": "lowercase"},
         "package_pversion": {"type": "keyword"},
         "package_description": {"type": "text", "analyzer": "english"},
+        "package_description_reverse": {"type": "text", "analyzer": "english"},
         "package_longDescription": {"type": "text", "analyzer": "english"},
+        "package_longDescription_reverse": {"type": "text", "analyzer": "english"},
         "package_license": {
             "type": "nested",
             "properties": {"fullName": {"type": "text"}, "url": {"type": "text"}},
@@ -90,14 +99,48 @@ MAPPING = {
         "package_system": {"type": "keyword"},
         # Options fields
         "option_name": {"type": "keyword", "normalizer": "lowercase"},
+        "option_name_reverse": {"type": "keyword", "normalizer": "lowercase"},
         "option_name_query": {"type": "keyword", "normalizer": "lowercase"},
+        "option_name_query_reverse": {"type": "keyword", "normalizer": "lowercase"},
         "option_description": {"type": "text", "analyzer": "english"},
+        "option_description_reverse": {"type": "text", "analyzer": "english"},
         "option_type": {"type": "keyword"},
         "option_default": {"type": "text"},
         "option_example": {"type": "text"},
         "option_source": {"type": "keyword"},
     },
 }
+
+
+# def field_reverse_str(field):
+
+
+def string_reverse(text):
+    return text[::-1]
+
+
+def field_reverse(field):
+
+    if isinstance(field, str):
+
+        if " " in field:
+            field = " ".join(map(field_reverse, field.split(" ")))
+        else:
+            field = string_reverse(field)
+
+    elif isinstance(field, list):
+        field = list(map(field_reverse, field))
+
+    elif isinstance(field, tuple):
+        field = tuple(map(field_reverse, field))
+
+    elif field is None:
+        pass
+
+    else:
+        raise NotImplementedError(f"Don't know how to reverse {field}")
+
+    return field
 
 
 def parse_query(text):
@@ -334,16 +377,27 @@ def get_packages(evaluation, evaluation_builds):
                         }
                     )
 
+            package_attr_name_query = list(parse_query(attr_name))
+            package_pname = remove_attr_set(data["pname"])
+            package_description = data["meta"].get("description")
+            package_longDescription = data["meta"].get("longDescription", "")
+
             yield dict(
                 type="package",
                 package_hydra=hydra,
                 package_attr_name=attr_name,
-                package_attr_name_query=list(parse_query(attr_name)),
+                package_attr_name_reverse=field_reverse(attr_name),
+                package_attr_name_query=package_attr_name_query,
+                package_attr_name_query_reverse=field_reverse(package_attr_name_query),
                 package_attr_set=attr_set,
-                package_pname=remove_attr_set(data["pname"]),
+                package_attr_set_reverse=field_reverse(attr_set),
+                package_pname=package_pname,
+                package_pname_reverse=field_reverse(package_pname),
                 package_pversion=data["version"],
-                package_description=data["meta"].get("description"),
-                package_longDescription=data["meta"].get("longDescription", ""),
+                package_description=package_description,
+                package_description_reverse=field_reverse(package_description),
+                package_longDescription=package_longDescription,
+                package_longDescription_reverse=field_reverse(package_longDescription),
                 package_license=licenses,
                 package_maintainers=maintainers,
                 package_platforms=[i for i in platforms if i],
@@ -400,11 +454,16 @@ def get_options(evaluation):
                         xml_description, "html", format="docbook",
                     )
 
+            option_name_query = parse_query(name)
+
             yield dict(
                 type="option",
                 option_name=name,
-                option_name_query=parse_query(name),
+                option_name_reverse=field_reverse(name),
+                option_name_query=option_name_query,
+                option_name_query_reverse=field_reverse(option_name_query),
                 option_description=description,
+                option_description_reverse=field_reverse(description),
                 option_type=option.get("type"),
                 option_default=default,
                 option_example=example,
@@ -507,7 +566,9 @@ def run(es_url, channel, force, verbose):
 
     evaluation_packages = get_last_evaluation(CHANNELS[channel])
     evaluation_options = get_last_evaluation(CHANNELS[channel])
-    evaluation_packages_builds = get_evaluation_builds(evaluation_packages["id"])
+    evaluation_packages_builds = (
+        dict()
+    )  # get_evaluation_builds(evaluation_packages["id"])
 
     es = elasticsearch.Elasticsearch([es_url])
 
