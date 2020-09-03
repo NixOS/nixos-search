@@ -117,7 +117,11 @@ submitQuery :
 submitQuery old ( new, cmd ) =
     let
         triggerSearch _ newModel msg makeRequest =
-            if newModel.query /= Nothing && newModel.query /= Just "" then
+            if
+                (newModel.query /= Nothing)
+                    && (newModel.query /= Just "")
+                    && List.member newModel.channel Search.channels
+            then
                 ( new
                 , Cmd.batch
                     [ cmd
