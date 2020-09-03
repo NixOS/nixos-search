@@ -6,6 +6,7 @@ module Search exposing
     , SearchResult
     , Sort(..)
     , channelDetailsFromId
+    , channels
     , decodeResult
     , fromSortId
     , init
@@ -463,31 +464,47 @@ view path title model viewSuccess outMsg =
             [ form [ onSubmit (outMsg QueryInputSubmit) ]
                 [ p
                     []
-                    [ strong []
-                        [ text "Channel: " ]
-                    , div
-                        [ class "btn-group"
-                        , attribute "data-toggle" "buttons-radio"
-                        ]
-                        (List.filterMap
-                            (\channel_id ->
-                                channelDetailsFromId channel_id
-                                    |> Maybe.map
-                                        (\channel ->
-                                            button
-                                                [ type_ "button"
-                                                , classList
-                                                    [ ( "btn", True )
-                                                    , ( "active", channel.id == model.channel )
-                                                    ]
-                                                , onClick <| outMsg (ChannelChange channel.id)
-                                                ]
-                                                [ text channel.title ]
-                                        )
+                    ([]
+                        |> List.append
+                            (if List.member model.channel channels then
+                                []
+
+                             else
+                                [ p [ class "alert alert-error" ]
+                                    [ h4 [] [ text "Wrong channel selected!" ]
+                                    , text <| "Please select one of the channels above!"
+                                    ]
+                                ]
                             )
-                            channels
-                        )
-                    ]
+                        |> List.append
+                            [ p []
+                                [ strong []
+                                    [ text "Channel: " ]
+                                , div
+                                    [ class "btn-group"
+                                    , attribute "data-toggle" "buttons-radio"
+                                    ]
+                                    (List.filterMap
+                                        (\channel_id ->
+                                            channelDetailsFromId channel_id
+                                                |> Maybe.map
+                                                    (\channel ->
+                                                        button
+                                                            [ type_ "button"
+                                                            , classList
+                                                                [ ( "btn", True )
+                                                                , ( "active", channel.id == model.channel )
+                                                                ]
+                                                            , onClick <| outMsg (ChannelChange channel.id)
+                                                            ]
+                                                            [ text channel.title ]
+                                                    )
+                                        )
+                                        channels
+                                    )
+                                ]
+                            ]
+                    )
                 , p
                     [ class "input-append"
                     ]
