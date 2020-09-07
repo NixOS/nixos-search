@@ -77,7 +77,7 @@ type alias ResultPackageLicense =
 
 
 type alias ResultPackageMaintainer =
-    { name : String
+    { name : Maybe String
     , email : String
     , github : Maybe String
     }
@@ -342,7 +342,7 @@ viewResultItemDetails channel item =
                         Nothing ->
                             "#"
                 ]
-                [ text <| maintainer.name ++ " <" ++ maintainer.email ++ ">" ]
+                [ text <| Maybe.withDefault "" maintainer.name ++ " <" ++ maintainer.email ++ ">" ]
 
         asPre value =
             pre [] [ text value ]
@@ -460,7 +460,7 @@ decodeResultPackageLicense =
 decodeResultPackageMaintainer : Json.Decode.Decoder ResultPackageMaintainer
 decodeResultPackageMaintainer =
     Json.Decode.map3 ResultPackageMaintainer
-        (Json.Decode.field "name" Json.Decode.string)
+        (Json.Decode.field "name" (Json.Decode.nullable Json.Decode.string))
         (Json.Decode.field "email" Json.Decode.string)
         (Json.Decode.field "github" (Json.Decode.nullable Json.Decode.string))
 
