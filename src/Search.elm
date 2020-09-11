@@ -317,7 +317,7 @@ type Channel
     = Unstable
     | Release_19_09
     | Release_20_03
-
+    | Release_20_09
 
 type alias ChannelDetails =
     { id : String
@@ -339,6 +339,9 @@ channelDetails channel =
         Release_20_03 ->
             ChannelDetails "20.03" "20.03" "nixos/release-20.03" "nixos-20.03"
 
+        Release_20_09 ->
+            ChannelDetails "20.09" "20.09" "nixos/release-20.09" "nixos-20.09"
+
 
 channelFromId : String -> Maybe Channel
 channelFromId channel_id =
@@ -351,6 +354,9 @@ channelFromId channel_id =
 
         "20.03" ->
             Just Release_20_03
+
+        "20.09" ->
+            Just Release_20_09
 
         _ ->
             Nothing
@@ -366,6 +372,7 @@ channels : List String
 channels =
     [ "19.09"
     , "20.03"
+    , "20.09"
     , "unstable"
     ]
 
