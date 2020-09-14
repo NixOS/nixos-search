@@ -38,7 +38,7 @@ var common = {
     ],
     resolve: {
         modules: [path.join(__dirname, "src"), "node_modules"],
-        extensions: [".js", ".elm", ".scss", ".png"]
+        extensions: [".js", ".elm", ".scss", ".png", ".xml"]
     },
     module: {
         rules: [
@@ -70,7 +70,7 @@ var common = {
                 }
             },
             {
-                test: /\.(ttf|eot|svg)(\?v=[0-9]\.[0-9]\.[0-9])?$/,
+                test: /\.(ttf|eot|svg|xml)(\?v=[0-9]\.[0-9]\.[0-9])?$/,
                 exclude: [/elm-stuff/, /node_modules/],
                 loader: "file-loader"
             },
