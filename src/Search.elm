@@ -767,7 +767,8 @@ search_fields baseScore queryWords fields =
                   , Json.Encode.object
                         [ ( "type", Json.Encode.string "bool_prefix" )
                         , ( "query", Json.Encode.string queryWord )
-                        , ( "fuzziness", Json.Encode.int <| String.length queryWord // 5 )
+                        , ( "analyzer", Json.Encode.string "lowercase" )
+                        , ( "auto_generate_synonyms_phrase_query", Json.Encode.bool False )
                         , ( "prefix_length", Json.Encode.int 3 )
                         , ( "operator", Json.Encode.string "or" )
                         , ( "_name"
