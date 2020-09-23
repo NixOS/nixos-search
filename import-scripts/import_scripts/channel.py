@@ -34,7 +34,22 @@ ANALYSIS = {
     "normalizer": {
         "lowercase": {"type": "custom", "char_filter": [], "filter": ["lowercase"]}
     },
+    "tokenizer": {
+        "edge": {
+            "type": "edge_ngram",
+            "min_gram": 2,
+            "max_gram": 50,
+            "token_chars": [
+                "letter",
+                "digit",
+                # Either we use them or we would need to strip them before that.
+                "punctuation",
+                "symbol",
+            ],
+        },
+    },
     "analyzer": {
+        "edge": {"tokenizer": "edge"},
         "lowercase": {
             "type": "custom",
             "tokenizer": "keyword",
@@ -65,22 +80,67 @@ MAPPING = {
                 "drv_path": {"type": "keyword"},
             },
         },
-        "package_attr_name": {"type": "keyword", "normalizer": "lowercase"},
-        "package_attr_name_reverse": {"type": "keyword", "normalizer": "lowercase"},
-        "package_attr_name_query": {"type": "keyword", "normalizer": "lowercase"},
+        "package_attr_name": {
+            "type": "keyword",
+            "normalizer": "lowercase",
+            "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+        },
+        "package_attr_name_reverse": {
+            "type": "keyword",
+            "normalizer": "lowercase",
+            "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+        },
+        "package_attr_name_query": {
+            "type": "keyword",
+            "normalizer": "lowercase",
+            "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+        },
         "package_attr_name_query_reverse": {
             "type": "keyword",
             "normalizer": "lowercase",
+            "fields": {"edge": {"type": "text", "analyzer": "edge"}},
         },
-        "package_attr_set": {"type": "keyword", "normalizer": "lowercase"},
-        "package_attr_set_reverse": {"type": "keyword", "normalizer": "lowercase"},
-        "package_pname": {"type": "keyword", "normalizer": "lowercase"},
-        "package_pname_reverse": {"type": "keyword", "normalizer": "lowercase"},
+        "package_attr_set": {
+            "type": "keyword",
+            "normalizer": "lowercase",
+            "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+        },
+        "package_attr_set_reverse": {
+            "type": "keyword",
+            "normalizer": "lowercase",
+            "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+        },
+        "package_pname": {
+            "type": "keyword",
+            "normalizer": "lowercase",
+            "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+        },
+        "package_pname_reverse": {
+            "type": "keyword",
+            "normalizer": "lowercase",
+            "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+        },
         "package_pversion": {"type": "keyword"},
-        "package_description": {"type": "text", "analyzer": "english"},
-        "package_description_reverse": {"type": "text", "analyzer": "english"},
-        "package_longDescription": {"type": "text", "analyzer": "english"},
-        "package_longDescription_reverse": {"type": "text", "analyzer": "english"},
+        "package_description": {
+            "type": "text",
+            "analyzer": "english",
+            "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+        },
+        "package_description_reverse": {
+            "type": "text",
+            "analyzer": "english",
+            "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+        },
+        "package_longDescription": {
+            "type": "text",
+            "analyzer": "english",
+            "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+        },
+        "package_longDescription_reverse": {
+            "type": "text",
+            "analyzer": "english",
+            "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+        },
         "package_license": {
             "type": "nested",
             "properties": {"fullName": {"type": "text"}, "url": {"type": "text"}},
@@ -98,12 +158,36 @@ MAPPING = {
         "package_homepage": {"type": "keyword"},
         "package_system": {"type": "keyword"},
         # Options fields
-        "option_name": {"type": "keyword", "normalizer": "lowercase"},
-        "option_name_reverse": {"type": "keyword", "normalizer": "lowercase"},
-        "option_name_query": {"type": "keyword", "normalizer": "lowercase"},
-        "option_name_query_reverse": {"type": "keyword", "normalizer": "lowercase"},
-        "option_description": {"type": "text", "analyzer": "english"},
-        "option_description_reverse": {"type": "text", "analyzer": "english"},
+        "option_name": {
+            "type": "keyword",
+            "normalizer": "lowercase",
+            "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+        },
+        "option_name_reverse": {
+            "type": "keyword",
+            "normalizer": "lowercase",
+            "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+        },
+        "option_name_query": {
+            "type": "keyword",
+            "normalizer": "lowercase",
+            "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+        },
+        "option_name_query_reverse": {
+            "type": "keyword",
+            "normalizer": "lowercase",
+            "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+        },
+        "option_description": {
+            "type": "text",
+            "analyzer": "english",
+            "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+        },
+        "option_description_reverse": {
+            "type": "text",
+            "analyzer": "english",
+            "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+        },
         "option_type": {"type": "keyword"},
         "option_default": {"type": "text"},
         "option_example": {"type": "text"},

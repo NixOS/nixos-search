@@ -62,6 +62,7 @@ import Http
 import Json.Decode
 import Json.Encode
 import RemoteData
+import Set
 import Task
 import Url.Builder
 
@@ -753,38 +754,56 @@ filter_by_type type_ =
     ]
 
 
-search_fields :
-    Float
-    -> List String
+searchFields :
+    String
     -> List ( String, Float )
     -> List (List ( String, Json.Encode.Value ))
-search_fields baseScore queryWords fields =
-    queryWords
-        |> List.reverse
-        |> List.indexedMap
-            (\queryIndex queryWord ->
-                [ ( "multi_match"
-                  , Json.Encode.object
-                        [ ( "type", Json.Encode.string "bool_prefix" )
-                        , ( "query", Json.Encode.string queryWord )
-                        , ( "analyzer", Json.Encode.string "lowercase" )
-                        , ( "auto_generate_synonyms_phrase_query", Json.Encode.bool False )
-                        , ( "prefix_length", Json.Encode.int 3 )
-                        , ( "operator", Json.Encode.string "or" )
-                        , ( "_name"
-                          , Json.Encode.string <| "multi_match_" ++ queryWord ++ "_" ++ (queryIndex + 1 |> String.fromInt)
-                          )
-                        , ( "fields"
-                          , Json.Encode.list Json.Encode.string
-                                (List.map
-                                    (\( field, score ) -> field ++ "^" ++ (baseScore * (score + (0.1 * (queryIndex + 1 |> toFloat))) |> String.fromFloat))
-                                    fields
-                                )
-                          )
-                        ]
-                  )
-                ]
-            )
+searchFields query fields =
+    let
+        queryVariations q =
+            case ( List.head q, List.tail q ) of
+                ( Just h, Just t ) ->
+                    let
+                        tail : List (List String)
+                        tail =
+                            queryVariations t
+                    in
+                    List.append
+                        (List.map (\x -> List.append [ h ] x) tail)
+                        (List.map (\x -> List.append [ String.reverse h ] x) tail)
+                        |> Set.fromList
+                        |> Set.toList
+
+                ( Just h, Nothing ) ->
+                    [ [ h ], [ String.reverse h ] ]
+
+                ( _, _ ) ->
+                    [ [], [] ]
+
+        reverseFields =
+            List.map (\( field, score ) -> ( field ++ "_reverse", score * 0.8 )) fields
+
+        allFields =
+            List.append fields reverseFields
+                |> List.map (\( field, score ) -> [ field ++ "^" ++ String.fromFloat score, field ++ ".edge^" ++ String.fromFloat score ])
+                |> List.concat
+    in
+    List.map
+        (\queryWords ->
+            [ ( "multi_match"
+              , Json.Encode.object
+                    [ ( "type", Json.Encode.string "cross_fields" )
+                    , ( "query", Json.Encode.string <| String.join " " queryWords )
+                    , ( "analyzer", Json.Encode.string "whitespace" )
+                    , ( "auto_generate_synonyms_phrase_query", Json.Encode.bool False )
+                    , ( "operator", Json.Encode.string "and" )
+                    , ( "_name", Json.Encode.string <| "multi_match_" ++ String.join "_" queryWords )
+                    , ( "fields", Json.Encode.list Json.Encode.string allFields )
+                    ]
+              )
+            ]
+        )
+        (queryVariations (String.words query))
 
 
 makeRequestBody :
@@ -830,31 +849,29 @@ makeRequestBody query from sizeRaw sort type_ sortField fields =
                                             [ ( "tie_breaker", Json.Encode.float 0.7 )
                                             , ( "queries"
                                               , Json.Encode.list Json.Encode.object
-                                                    [ [ ( "bool"
-                                                        , Json.Encode.object
-                                                            [ ( "must"
-                                                              , Json.Encode.list Json.Encode.object <|
-                                                                    search_fields
-                                                                        1.0
-                                                                        (String.words query)
-                                                                        fields
-                                                              )
-                                                            ]
-                                                        )
-                                                      ]
-                                                    , [ ( "bool"
-                                                        , Json.Encode.object
-                                                            [ ( "must"
-                                                              , Json.Encode.list Json.Encode.object <|
-                                                                    search_fields
-                                                                        0.8
-                                                                        (String.words query |> List.map String.reverse)
-                                                                        (List.map (\( field, score ) -> ( field ++ "_reverse", score )) fields)
-                                                              )
-                                                            ]
-                                                        )
-                                                      ]
-                                                    ]
+                                                    (searchFields query fields)
+                                                -- [ [ ( "bool"
+                                                --     , Json.Encode.object
+                                                --         [ ( "must"
+                                                --           , Json.Encode.list Json.Encode.object <|
+                                                --                 searchFields query fields
+                                                --           )
+                                                --         ]
+                                                --     )
+                                                --   ]
+                                                -- ]
+                                                -- , [ ( "bool"
+                                                --     , Json.Encode.object
+                                                --         [ ( "must"
+                                                --           , Json.Encode.list Json.Encode.object <|
+                                                --                 searchFields
+                                                --                     0.8
+                                                --                     (String.words query |> List.map String.reverse)
+                                                --           )
+                                                --         ]
+                                                --     )
+                                                --   ]
+                                                --]
                                               )
                                             ]
                                         )
