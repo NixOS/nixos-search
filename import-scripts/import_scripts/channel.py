@@ -26,10 +26,10 @@ S3_BUCKET = "nix-releases"
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 INDEX_SCHEMA_VERSION = os.environ.get("INDEX_SCHEMA_VERSION", 0)
 CHANNELS = {
-    "unstable": "nixos/unstable/nixos-20.09pre",
+    "unstable": "nixos/unstable/nixos-21.03pre",
     "19.09": "nixos/19.09/nixos-19.09.",
     "20.03": "nixos/20.03/nixos-20.03.",
-    "20.09": "nixos/20.09/nixos-20.09alpha",
+    "20.09": "nixos/20.09/nixos-20.09beta",
 }
 ANALYSIS = {
     "normalizer": {
