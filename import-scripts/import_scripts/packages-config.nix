@@ -38,5 +38,6 @@
     "steamPackages"
     "ut2004Packages"
     "zeroadPackages"
-  ];
+  ] //
+    { texlive-pkgs-nixos-search = super.lib.mapAttrs (name: attrs: if name != "combined" && builtins.isAttrs attrs && builtins.hasAttr "pkgs" attrs then builtins.elemAt attrs.pkgs 0 else attrs) super.texlive; };
 }

@@ -432,6 +432,9 @@ def get_packages(evaluation, evaluation_builds):
                 for platform in data["meta"].get("platforms", [])
             ]
 
+            if attr_name.startswith("texlive-pkgs-nixos-search."):
+                attr_name = attr_name.replace("texlive-pkgs-nixos-search.", "texlive.")
+
             attr_set = None
             if "." in attr_name:
                 attr_set = attr_name.split(".")[0]
