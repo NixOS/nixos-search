@@ -28,7 +28,7 @@ click_log.basic_config(logger)
 S3_BUCKET = "nix-releases"
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 INDEX_SCHEMA_VERSION = os.environ.get("INDEX_SCHEMA_VERSION", 0)
-DIFF_OUTPUT = ["markdown", "json", "html", "stats"]
+DIFF_OUTPUT = ["json", "stats"]
 CHANNELS = {
     "unstable": "nixos/unstable/nixos-21.03pre",
     "19.09": "nixos/19.09/nixos-19.09.",
@@ -687,47 +687,22 @@ def prepare_items(key, total, func):
 
 
 def get_packages_diff(evaluation):
-    main_platforms = [
-        "x86_64-linux",
-        "aarch64-linux",
-        "x86_64-darwin",
-        "i686-linux",
-    ]
     for attr_name, data in get_packages_raw(evaluation):
-        data_raw = copy.deepcopy(data)
-        data["attr_name"] = attr_name
-
-        # position is not relavant when comparing two packages
-        if "position" in data["meta"]:
-            del data["meta"]["position"]
-
-        # reduce platforms to main_platforms
-        platforms = data["meta"].get("platforms")
-        if platforms:
-            if type(platforms) == list:
-                platforms = list(itertools.chain(*platforms))
-            data["meta"]["platforms"] = list(set(platforms).intersection(set(main_platforms)))
-
-        licenses = data["meta"].get("platforms")
-        if licenses:
-            if type(licenses) == list:
-                new_licences = []
-                for license in licenses:
-                    if "url" in license:
-                        del license["url"]
-                    if "fullName" in license:
-                        del license["fullName"]
-                    new_licences.append(license)
-                licenses = new_licences
-
-        yield attr_name, data, data_raw
+        data_cmp=dict(
+            attr_name=attr_name,
+            version=data.get("version"),
+        )
+        yield attr_name, data_cmp, data
 
 
 def get_options_diff(evaluation):
     for name, data in get_options_raw(evaluation):
-        data_raw = copy.deepcopy(data)
-        data["name"] = name
-        yield name, data, data_raw
+        data_cmp=dict(
+            name=name,
+            type=data.get("type"),
+            default=data.get("default"),
+        )
+        yield name, data_cmp, data
 
 
 def create_diff(type_, items_from, items_to):
@@ -807,12 +782,6 @@ def run_diff(channel_from, channel_to, output, verbose):
             packages=packages_diff,
             options=options_diff,
         )))
-    elif output == "markdown":
-        # TODO
-        pass
-    elif output == "html":
-        # TODO
-        pass
     else:
         click.echo(f"ERROR: unknown output {output}")
 
