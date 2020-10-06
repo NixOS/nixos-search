@@ -1,13 +1,11 @@
 import boto3  # type: ignore
 import botocore  # type: ignore
 import botocore.client  # type: ignore
-import copy
 import click
 import click_log  # type: ignore
-import dictdiffer
+import dictdiffer  # type: ignore
 import elasticsearch  # type: ignore
 import elasticsearch.helpers  # type: ignore
-import itertools
 import json
 import logging
 import os
@@ -409,8 +407,10 @@ def get_packages_raw(evaluation):
 
 
 def get_packages(evaluation, evaluation_builds):
+    packages = list(get_packages_raw(evaluation))
+
     def gen():
-        for attr_name, data in get_packages_raw(evaluation):
+        for attr_name, data in packages:
             licenses = data["meta"].get("license")
             if licenses:
                 if type(licenses) == str:
@@ -463,6 +463,10 @@ def get_packages(evaluation, evaluation_builds):
                         }
                     )
 
+            position = data["meta"].get("position")
+            if position and position.startswith("/nix/store"):
+                position = position[44:]
+
             package_attr_name_query = list(parse_query(attr_name))
             package_pname = remove_attr_set(data["pname"])
             package_description = data["meta"].get("description")
@@ -495,6 +499,7 @@ def get_packages(evaluation, evaluation_builds):
     logger.debug(f"get_packages: Found {len(packages)} packages")
     return len(packages), gen
 
+
 def get_options_raw(evaluation):
     logger.debug(
         f"get_packages: Retriving list of options for '{evaluation['git_revision']}' revision"
@@ -514,9 +519,12 @@ def get_options_raw(evaluation):
             options = json.load(f).items()
     return list(options)
 
+
 def get_options(evaluation):
+    options = get_options_raw(evaluation)
+
     def gen():
-        for name, option in get_options_raw(evaluation):
+        for name, option in options:
             default = option.get("default")
             if default is not None:
                 default = json.dumps(default)
@@ -688,35 +696,22 @@ def prepare_items(key, total, func):
 
 def get_packages_diff(evaluation):
     for attr_name, data in get_packages_raw(evaluation):
-        data_cmp=dict(
-            attr_name=attr_name,
-            version=data.get("version"),
-        )
+        data_cmp = dict(attr_name=attr_name, version=data.get("version"),)
         yield attr_name, data_cmp, data
 
 
 def get_options_diff(evaluation):
     for name, data in get_options_raw(evaluation):
-        data_cmp=dict(
-            name=name,
-            type=data.get("type"),
-            default=data.get("default"),
-        )
+        data_cmp = dict(name=name, type=data.get("type"), default=data.get("default"),)
         yield name, data_cmp, data
 
 
 def create_diff(type_, items_from, items_to):
     logger.debug(f"Starting to diff {type_}...")
     return dict(
-        added=[
-            item
-            for key, item in items_to.items()
-            if key not in items_from.keys()
-        ],
+        added=[item for key, item in items_to.items() if key not in items_from.keys()],
         removed=[
-            item
-            for key, item in items_from.items()
-            if key not in items_to.keys()
+            item for key, item in items_from.items() if key not in items_to.keys()
         ],
         updated=[
             (
@@ -757,8 +752,7 @@ def run_diff(channel_from, channel_to, output, verbose):
         for key, item, item_raw in get_options_diff(evaluation_from)
     }
     options_to = {
-        key: (item, item_raw)
-        for key, item, item_raw in get_options_diff(evaluation_to)
+        key: (item, item_raw) for key, item, item_raw in get_options_diff(evaluation_to)
     }
 
     packages_diff = create_diff("packages", packages_from, packages_to)
@@ -778,10 +772,7 @@ def run_diff(channel_from, channel_to, output, verbose):
         click.echo(f"  Removed: {len(options_diff['removed'])}")
         click.echo(f"  Updated: {len(options_diff['updated'])}")
     elif output == "json":
-        click.echo(json.dumps(dict(
-            packages=packages_diff,
-            options=options_diff,
-        )))
+        click.echo(json.dumps(dict(packages=packages_diff, options=options_diff,)))
     else:
         click.echo(f"ERROR: unknown output {output}")
 
