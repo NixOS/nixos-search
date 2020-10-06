@@ -1,10 +1,13 @@
 import boto3  # type: ignore
 import botocore  # type: ignore
 import botocore.client  # type: ignore
+import copy
 import click
 import click_log  # type: ignore
+import dictdiffer
 import elasticsearch  # type: ignore
 import elasticsearch.helpers  # type: ignore
+import itertools
 import json
 import logging
 import os
@@ -25,6 +28,7 @@ click_log.basic_config(logger)
 S3_BUCKET = "nix-releases"
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 INDEX_SCHEMA_VERSION = os.environ.get("INDEX_SCHEMA_VERSION", 0)
+DIFF_OUTPUT = ["markdown", "json", "html", "stats"]
 CHANNELS = {
     "unstable": "nixos/unstable/nixos-21.03pre",
     "19.09": "nixos/19.09/nixos-19.09.",
@@ -389,7 +393,7 @@ def remove_attr_set(name):
     return name
 
 
-def get_packages(evaluation, evaluation_builds):
+def get_packages_raw(evaluation):
     logger.debug(
         f"get_packages: Retriving list of packages for '{evaluation['git_revision']}' revision"
     )
@@ -401,15 +405,12 @@ def get_packages(evaluation, evaluation_builds):
         check=True,
     )
     packages = json.loads(result.stdout).items()
-    packages = list(packages)
+    return list(packages)
 
+
+def get_packages(evaluation, evaluation_builds):
     def gen():
-        for attr_name, data in packages:
-
-            position = data["meta"].get("position")
-            if position and position.startswith("/nix/store"):
-                position = position[44:]
-
+        for attr_name, data in get_packages_raw(evaluation):
             licenses = data["meta"].get("license")
             if licenses:
                 if type(licenses) == str:
@@ -494,8 +495,10 @@ def get_packages(evaluation, evaluation_builds):
     logger.debug(f"get_packages: Found {len(packages)} packages")
     return len(packages), gen
 
-
-def get_options(evaluation):
+def get_options_raw(evaluation):
+    logger.debug(
+        f"get_packages: Retriving list of options for '{evaluation['git_revision']}' revision"
+    )
     result = subprocess.run(
         shlex.split(
             f"nix-build <nixpkgs/nixos/release.nix> --no-out-link -A options -I nixpkgs=https://github.com/NixOS/nixpkgs-channels/archive/{evaluation['git_revision']}.tar.gz"
@@ -509,10 +512,11 @@ def get_options(evaluation):
     if os.path.exists(options_file):
         with open(options_file) as f:
             options = json.load(f).items()
-    options = list(options)
+    return list(options)
 
+def get_options(evaluation):
     def gen():
-        for name, option in options:
+        for name, option in get_options_raw(evaluation):
             default = option.get("default")
             if default is not None:
                 default = json.dumps(default)
@@ -632,13 +636,7 @@ def write(unit, es, index_name, number_of_items, item_generator):
         click.echo(f"Indexed {successes}/{number_of_items} {unit}")
 
 
-@click.command()
-@click.option("-u", "--es-url", help="Elasticsearch connection url.")
-@click.option("-c", "--channel", type=click.Choice(CHANNELS.keys()), help="Channel.")
-@click.option("-f", "--force", is_flag=True, help="Force channel recreation.")
-@click.option("-v", "--verbose", count=True)
-def run(es_url, channel, force, verbose):
-
+def setup_logging(verbose):
     logging_level = "CRITICAL"
     if verbose == 1:
         logging_level = "WARNING"
@@ -648,6 +646,15 @@ def run(es_url, channel, force, verbose):
     logger.setLevel(getattr(logging, logging_level))
     logger.debug(f"Verbosity is {verbose}")
     logger.debug(f"Logging set to {logging_level}")
+
+
+@click.command()
+@click.option("-u", "--es-url", help="Elasticsearch connection url.")
+@click.option("-c", "--channel", type=click.Choice(CHANNELS.keys()), help="Channel.")
+@click.option("-f", "--force", is_flag=True, help="Force channel recreation.")
+@click.option("-v", "--verbose", count=True)
+def run_import(es_url, channel, force, verbose):
+    setup_logging(verbose)
 
     evaluation_packages = get_last_evaluation(CHANNELS[channel])
     evaluation_options = get_last_evaluation(CHANNELS[channel])
@@ -674,5 +681,141 @@ def run(es_url, channel, force, verbose):
     update_alias(es, alias_name, index_name)
 
 
+def prepare_items(key, total, func):
+    logger.info(f"Preparing items ({key})...")
+    return {item[key]: item for item in func()}
+
+
+def get_packages_diff(evaluation):
+    main_platforms = [
+        "x86_64-linux",
+        "aarch64-linux",
+        "x86_64-darwin",
+        "i686-linux",
+    ]
+    for attr_name, data in get_packages_raw(evaluation):
+        data_raw = copy.deepcopy(data)
+        data["attr_name"] = attr_name
+
+        # position is not relavant when comparing two packages
+        if "position" in data["meta"]:
+            del data["meta"]["position"]
+
+        # reduce platforms to main_platforms
+        platforms = data["meta"].get("platforms")
+        if platforms:
+            if type(platforms) == list:
+                platforms = list(itertools.chain(*platforms))
+            data["meta"]["platforms"] = list(set(platforms).intersection(set(main_platforms)))
+
+        licenses = data["meta"].get("platforms")
+        if licenses:
+            if type(licenses) == list:
+                new_licences = []
+                for license in licenses:
+                    if "url" in license:
+                        del license["url"]
+                    if "fullName" in license:
+                        del license["fullName"]
+                    new_licences.append(license)
+                licenses = new_licences
+
+        yield attr_name, data, data_raw
+
+
+def get_options_diff(evaluation):
+    for name, data in get_options_raw(evaluation):
+        data_raw = copy.deepcopy(data)
+        data["name"] = name
+        yield name, data, data_raw
+
+
+def create_diff(type_, items_from, items_to):
+    logger.debug(f"Starting to diff {type_}...")
+    return dict(
+        added=[
+            item
+            for key, item in items_to.items()
+            if key not in items_from.keys()
+        ],
+        removed=[
+            item
+            for key, item in items_from.items()
+            if key not in items_to.keys()
+        ],
+        updated=[
+            (
+                list(dictdiffer.diff(items_from[key][0], items_to[key][0])),
+                items_from[key],
+                items_to[key],
+            )
+            for key in set(items_from.keys()).intersection(set(items_to.keys()))
+            if items_from[key][0] != items_to[key][0]
+        ],
+    )
+
+
+@click.command()
+@click.option("-v", "--verbose", count=True)
+@click.option("-o", "--output", default="stats", type=click.Choice(DIFF_OUTPUT))
+@click.argument("channel_from", type=click.Choice(CHANNELS.keys()))
+@click.argument("channel_to", type=click.Choice(CHANNELS.keys()))
+def run_diff(channel_from, channel_to, output, verbose):
+    setup_logging(verbose)
+
+    # TODO: channel_from and channel_to should not be the same
+
+    evaluation_from = get_last_evaluation(CHANNELS[channel_from])
+    evaluation_to = get_last_evaluation(CHANNELS[channel_to])
+
+    packages_from = {
+        key: (item, item_raw)
+        for key, item, item_raw in get_packages_diff(evaluation_from)
+    }
+    packages_to = {
+        key: (item, item_raw)
+        for key, item, item_raw in get_packages_diff(evaluation_to)
+    }
+
+    options_from = {
+        key: (item, item_raw)
+        for key, item, item_raw in get_options_diff(evaluation_from)
+    }
+    options_to = {
+        key: (item, item_raw)
+        for key, item, item_raw in get_options_diff(evaluation_to)
+    }
+
+    packages_diff = create_diff("packages", packages_from, packages_to)
+    options_diff = create_diff("options", options_from, options_to)
+
+    if output == "stats":
+        click.echo("Packages:")
+        click.echo(f"  All in {channel_from}: {len(packages_from)}")
+        click.echo(f"  All in {channel_to}: {len(packages_to)}")
+        click.echo(f"  Added: {len(packages_diff['added'])}")
+        click.echo(f"  Removed: {len(packages_diff['removed'])}")
+        click.echo(f"  Updated: {len(packages_diff['updated'])}")
+        click.echo("Options:")
+        click.echo(f"  All in {channel_from}: {len(options_from)}")
+        click.echo(f"  All in {channel_to}: {len(options_to)}")
+        click.echo(f"  Added: {len(options_diff['added'])}")
+        click.echo(f"  Removed: {len(options_diff['removed'])}")
+        click.echo(f"  Updated: {len(options_diff['updated'])}")
+    elif output == "json":
+        click.echo(json.dumps(dict(
+            packages=packages_diff,
+            options=options_diff,
+        )))
+    elif output == "markdown":
+        # TODO
+        pass
+    elif output == "html":
+        # TODO
+        pass
+    else:
+        click.echo(f"ERROR: unknown output {output}")
+
+
 if __name__ == "__main__":
-    run()
+    run_diff()

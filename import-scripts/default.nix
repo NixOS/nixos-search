@@ -25,6 +25,7 @@ mkPoetryApplication {
   '';
   postInstall = ''
     wrapProgram $out/bin/import-channel --set INDEX_SCHEMA_VERSION "${version}"
+    wrapProgram $out/bin/channel-diff --set INDEX_SCHEMA_VERSION "${version}"
   '';
   shellHook = ''
     cd import-scripts/
