@@ -395,7 +395,7 @@ def get_packages(evaluation, evaluation_builds):
     )
     result = subprocess.run(
         shlex.split(
-            f"nix-env -f '<nixpkgs>' -I nixpkgs=https://github.com/NixOS/nixpkgs-channels/archive/{evaluation['git_revision']}.tar.gz --arg config 'import {CURRENT_DIR}/packages-config.nix' -qa --json"
+            f"nix-env -f '<nixpkgs>' -I nixpkgs=https://github.com/NixOS/nixpkgs/archive/{evaluation['git_revision']}.tar.gz --arg config 'import {CURRENT_DIR}/packages-config.nix' -qa --json"
         ),
         stdout=subprocess.PIPE,
         check=True,
@@ -498,7 +498,7 @@ def get_packages(evaluation, evaluation_builds):
 def get_options(evaluation):
     result = subprocess.run(
         shlex.split(
-            f"nix-build <nixpkgs/nixos/release.nix> --no-out-link -A options -I nixpkgs=https://github.com/NixOS/nixpkgs-channels/archive/{evaluation['git_revision']}.tar.gz"
+            f"nix-build <nixpkgs/nixos/release.nix> --no-out-link -A options -I nixpkgs=https://github.com/NixOS/nixpkgs/archive/{evaluation['git_revision']}.tar.gz"
         ),
         stdout=subprocess.PIPE,
         check=True,

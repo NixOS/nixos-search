@@ -213,7 +213,7 @@ viewResultItemDetails channel item =
             code [] [ text value ]
 
         githubUrlPrefix branch =
-            "https://github.com/NixOS/nixpkgs-channels/blob/" ++ branch ++ "/"
+            "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/"
 
         cleanPosition value =
             if String.startsWith "source/" value then
