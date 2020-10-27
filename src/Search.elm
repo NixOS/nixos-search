@@ -39,7 +39,7 @@ import Html
         , text
         , ul
         )
-import Html.Attributes
+import Html.Attributes as Attrs
     exposing
         ( attribute
         , autofocus
@@ -62,8 +62,10 @@ import Http
 import Json.Decode
 import Json.Encode
 import RemoteData
+import Route
 import Set
 import Task
+import Url
 import Url.Builder
 
 
@@ -320,6 +322,7 @@ type Channel
     | Release_20_03
     | Release_20_09
 
+
 type alias ChannelDetails =
     { id : String
     , title : String
@@ -521,13 +524,17 @@ view path title model viewSuccess outMsg =
                         , id "search-query-input"
                         , autofocus True
                         , placeholder <| "Search for " ++ path
-                        , onInput (\x -> outMsg (QueryInput x))
+                        , onInput (outMsg << QueryInput)
                         , value <| Maybe.withDefault "" model.query
                         ]
                         []
                     , div [ class "loader" ] []
                     , div [ class "btn-group" ]
-                        [ button [ class "btn" ] [ text "Search" ]
+                        [ button
+                            [ class "btn"
+                            , Attrs.type_ "submit"
+                            ]
+                            [ text "Search" ]
                         ]
                     ]
                 ]
