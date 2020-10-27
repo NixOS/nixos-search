@@ -9,6 +9,17 @@ import Url.Parser exposing ((<?>))
 import Url.Parser.Query
 
 
+{-| This is type safe wrapper for working with search queries in url
+-}
+type SearchQuery
+    = SearchQuery String
+
+
+unSearchQuery : SearchQuery -> String
+unSearchQuery (SearchQuery str) =
+    str
+
+
 
 -- ROUTING
 
@@ -20,11 +31,12 @@ type Route
     | Options (Maybe String) (Maybe String) (Maybe String) (Maybe Int) (Maybe Int) (Maybe String)
 
 
-{-| Fixes issue with elm/url not properly escaping string
+{-| Decode from url with browser search support
 -}
-queryString : String -> Url.Parser.Query.Parser (Maybe String)
-queryString =
-    Url.Parser.Query.map (Maybe.andThen Url.percentDecode) << Url.Parser.Query.string
+querySearchString : String -> Url.Parser.Query.Parser (Maybe SearchQuery)
+querySearchString =
+    Url.Parser.Query.map (Maybe.map (SearchQuery << String.replace "+" " "))
+        << Url.Parser.Query.string
 
 
 parser : Url.Parser.Parser (Route -> msg) msg
@@ -34,21 +46,21 @@ parser =
         , Url.Parser.map NotFound (Url.Parser.s "not-found")
         , Url.Parser.map Packages
             (Url.Parser.s "packages"
-                <?> queryString "channel"
-                <?> queryString "query"
-                <?> queryString "show"
+                <?> Url.Parser.Query.string "channel"
+                <?> Url.Parser.Query.map (Maybe.map unSearchQuery) (querySearchString "query")
+                <?> Url.Parser.Query.string "show"
                 <?> Url.Parser.Query.int "from"
                 <?> Url.Parser.Query.int "size"
-                <?> queryString "sort"
+                <?> Url.Parser.Query.string "sort"
             )
         , Url.Parser.map Options
             (Url.Parser.s "options"
-                <?> queryString "channel"
-                <?> queryString "query"
-                <?> queryString "show"
+                <?> Url.Parser.Query.string "channel"
+                <?> Url.Parser.Query.map (Maybe.map unSearchQuery) (querySearchString "query")
+                <?> Url.Parser.Query.string "show"
                 <?> Url.Parser.Query.int "from"
                 <?> Url.Parser.Query.int "size"
-                <?> queryString "sort"
+                <?> Url.Parser.Query.string "sort"
             )
         ]
 
@@ -82,27 +94,46 @@ fromUrl url =
 
 routeToString : Route -> String
 routeToString =
-    (\( path, query ) -> Url.Builder.absolute path query) << routeToPieces
+    let
+        buildString ( path, query, searchQuery ) =
+            Url.Builder.absolute path query
+                |> (\str ->
+                        case searchQuery of
+                            Just ( name, SearchQuery val ) ->
+                                case query of
+                                    [] ->
+                                        str ++ "?" ++ name ++ "=" ++ val
+
+                                    _ ->
+                                        str ++ "&" ++ name ++ "=" ++ val
+
+                            Nothing ->
+                                str
+                   )
+
+        -- \( path, query, searchQuery ) -> Url.Builder.absolute path query
+    in
+    buildString << routeToPieces
 
 
-{-| Fixes issue with elm/url not properly escaping string
+{-| Encode the url with browser search support
 -}
-builderString : String -> String -> QueryParameter
-builderString name =
-    Url.Builder.string name << Url.percentEncode
+builderSearchString : String -> String -> ( String, SearchQuery )
+builderSearchString name query =
+    ( name, SearchQuery <| String.replace "%20" "+" <| Url.percentEncode query )
 
 
-routeToPieces : Route -> ( List String, List QueryParameter )
+routeToPieces : Route -> ( List String, List QueryParameter, Maybe ( String, SearchQuery ) )
 routeToPieces page =
     let
         channelQ =
-            Maybe.map (builderString "channel")
+            Maybe.map (Url.Builder.string "channel")
 
         queryQ =
-            Maybe.map (builderString "query")
+            Maybe.map (builderSearchString "query")
 
         showQ =
-            Maybe.map (builderString "show")
+            Maybe.map (Url.Builder.string "show")
 
         fromQ =
             Maybe.map (Url.Builder.int "from")
@@ -111,34 +142,34 @@ routeToPieces page =
             Maybe.map (Url.Builder.int "size")
 
         sortQ =
-            Maybe.map (builderString "sort")
+            Maybe.map (Url.Builder.string "sort")
     in
-    Tuple.mapSecond (List.filterMap identity) <|
+    (\( path, urlQ, searchQuery ) -> ( path, List.filterMap identity urlQ, searchQuery )) <|
         case page of
             Home ->
-                ( [], [] )
+                ( [], [], Nothing )
 
             NotFound ->
-                ( [ "not-found" ], [] )
+                ( [ "not-found" ], [], Nothing )
 
             Packages channel query show from size sort ->
                 ( [ "packages" ]
                 , [ channelQ channel
-                  , queryQ query
                   , showQ show
                   , fromQ from
                   , sizeQ size
                   , sortQ sort
                   ]
+                , queryQ query
                 )
 
             Options channel query show from size sort ->
                 ( [ "options" ]
                 , [ channelQ channel
-                  , queryQ query
                   , showQ show
                   , fromQ from
                   , sizeQ size
                   , sortQ sort
                   ]
+                , queryQ query
                 )
