@@ -1,6 +1,5 @@
 module Route exposing (Route(..), fromUrl, href, replaceUrl, routeToString)
 
-import Basics.Extra exposing (uncurry)
 import Browser.Navigation
 import Html
 import Html.Attributes
@@ -83,7 +82,7 @@ fromUrl url =
 
 routeToString : Route -> String
 routeToString =
-    uncurry Builder.absolute << routeToPieces
+    (\( path, query ) -> Builder.absolute path query) << routeToPieces
 
 
 {-| Fixes issue with elm/url not properly escaping string
