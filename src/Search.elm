@@ -639,11 +639,11 @@ viewPager _ model result path =
                 ]
             ]
             [ a
-                [ if model.from == 0 then
-                    href ""
+                [ href <|
+                    if model.from == 0 then
+                        ""
 
-                  else
-                    href <|
+                    else
                         createUrl
                             path
                             model.channel
