@@ -39,7 +39,7 @@ import Html
         , text
         , ul
         )
-import Html.Attributes as Attrs
+import Html.Attributes
     exposing
         ( attribute
         , autofocus
@@ -523,10 +523,7 @@ view { toRoute, categoryName } title model viewSuccess outMsg =
                         []
                     , div [ class "loader" ] []
                     , div [ class "btn-group" ]
-                        [ button
-                            [ class "btn"
-                            , Attrs.type_ "submit"
-                            ]
+                        [ button [ class "btn", type_ "submit" ]
                             [ text "Search" ]
                         ]
                     ]

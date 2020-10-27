@@ -4,9 +4,9 @@ import Browser.Navigation
 import Html
 import Html.Attributes
 import Url
-import Url.Builder as Builder exposing (QueryParameter)
+import Url.Builder exposing (QueryParameter)
 import Url.Parser exposing ((<?>))
-import Url.Parser.Query as Query
+import Url.Parser.Query
 
 
 
@@ -22,9 +22,9 @@ type Route
 
 {-| Fixes issue with elm/url not properly escaping string
 -}
-queryString : String -> Query.Parser (Maybe String)
+queryString : String -> Url.Parser.Query.Parser (Maybe String)
 queryString =
-    Query.map (Maybe.andThen Url.percentDecode) << Query.string
+    Url.Parser.Query.map (Maybe.andThen Url.percentDecode) << Url.Parser.Query.string
 
 
 parser : Url.Parser.Parser (Route -> msg) msg
@@ -37,8 +37,8 @@ parser =
                 <?> queryString "channel"
                 <?> queryString "query"
                 <?> queryString "show"
-                <?> Query.int "from"
-                <?> Query.int "size"
+                <?> Url.Parser.Query.int "from"
+                <?> Url.Parser.Query.int "size"
                 <?> queryString "sort"
             )
         , Url.Parser.map Options
@@ -46,8 +46,8 @@ parser =
                 <?> queryString "channel"
                 <?> queryString "query"
                 <?> queryString "show"
-                <?> Query.int "from"
-                <?> Query.int "size"
+                <?> Url.Parser.Query.int "from"
+                <?> Url.Parser.Query.int "size"
                 <?> queryString "sort"
             )
         ]
@@ -82,14 +82,14 @@ fromUrl url =
 
 routeToString : Route -> String
 routeToString =
-    (\( path, query ) -> Builder.absolute path query) << routeToPieces
+    (\( path, query ) -> Url.Builder.absolute path query) << routeToPieces
 
 
 {-| Fixes issue with elm/url not properly escaping string
 -}
 builderString : String -> String -> QueryParameter
 builderString name =
-    Builder.string name << Url.percentEncode
+    Url.Builder.string name << Url.percentEncode
 
 
 routeToPieces : Route -> ( List String, List QueryParameter )
@@ -105,10 +105,10 @@ routeToPieces page =
             Maybe.map (builderString "show")
 
         fromQ =
-            Maybe.map (Builder.int "from")
+            Maybe.map (Url.Builder.int "from")
 
         sizeQ =
-            Maybe.map (Builder.int "size")
+            Maybe.map (Url.Builder.int "size")
 
         sortQ =
             Maybe.map (builderString "sort")
