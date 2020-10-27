@@ -634,11 +634,11 @@ viewPager _ model result toRoute =
                 ]
             ]
             [ a
-                [ if model.from == 0 then
-                    href ""
+                [ href <|
+                    if model.from == 0 then
+                        ""
 
-                  else
-                    href <|
+                    else
                         createUrl
                             toRoute
                             model.channel
