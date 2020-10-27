@@ -43,6 +43,7 @@ import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
 import Regex
+import Route
 import Search
 
 
@@ -139,7 +140,7 @@ update navKey msg model =
             let
                 ( newModel, newCmd ) =
                     Search.update
-                        "packages"
+                        Route.Packages
                         navKey
                         subMsg
                         model
@@ -153,8 +154,7 @@ update navKey msg model =
 
 view : Model -> Html Msg
 view model =
-    Search.view
-        "packages"
+    Search.view { toRoute = Route.Packages, categoryName = "packages" }
         "Search NixOS packages"
         model
         viewSuccess
