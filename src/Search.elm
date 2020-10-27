@@ -282,7 +282,6 @@ update toRoute navKey msg model =
                 model.from
                 model.size
                 model.sort
-                |> (\x -> x ++ "#disabled")
                 |> Browser.Navigation.pushUrl navKey
             )
 
@@ -636,7 +635,7 @@ viewPager _ model result toRoute =
             ]
             [ a
                 [ if model.from == 0 then
-                    href "#disabled"
+                    href ""
 
                   else
                     href <|
@@ -659,7 +658,7 @@ viewPager _ model result toRoute =
             [ a
                 [ href <|
                     if model.from - model.size < 0 then
-                        "#disabled"
+                        ""
 
                     else
                         createUrl
@@ -681,7 +680,7 @@ viewPager _ model result toRoute =
             [ a
                 [ href <|
                     if model.from + model.size >= result.hits.total.value then
-                        "#disabled"
+                        ""
 
                     else
                         createUrl
@@ -703,7 +702,7 @@ viewPager _ model result toRoute =
             [ a
                 [ href <|
                     if model.from + model.size >= result.hits.total.value then
-                        "#disabled"
+                        ""
 
                     else
                         let

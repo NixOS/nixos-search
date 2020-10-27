@@ -160,29 +160,19 @@ changeRouteTo :
     -> ( Model, Cmd Msg )
 changeRouteTo model url =
     let
-        cleanUrl =
-            if url.fragment == Just "disabled" then
-                { url | fragment = Nothing }
-
-            else
-                url
-
-        newModel =
-            { model | url = cleanUrl }
-
         maybeRoute =
             Route.fromUrl url
     in
     case maybeRoute of
         Nothing ->
-            ( { newModel
+            ( { model
                 | page = NotFound
               }
             , Cmd.none
             )
 
         Just Route.NotFound ->
-            ( { newModel
+            ( { model
                 | page = NotFound
               }
             , Cmd.none
@@ -191,12 +181,12 @@ changeRouteTo model url =
         Just Route.Home ->
             -- Always redirect to /packages until we have something to show
             -- on the home page
-            ( newModel, Browser.Navigation.pushUrl newModel.navKey "/packages" )
+            ( model, Browser.Navigation.pushUrl model.navKey "/packages" )
 
         Just (Route.Packages channel query show from size sort) ->
             let
                 modelPage =
-                    case newModel.page of
+                    case model.page of
                         Packages x ->
                             Just x
 
@@ -204,19 +194,19 @@ changeRouteTo model url =
                             Nothing
             in
             Page.Packages.init channel query show from size sort modelPage
-                |> updateWith Packages PackagesMsg newModel
+                |> updateWith Packages PackagesMsg model
                 |> (\x ->
                         if url.fragment == Just "disabled" then
                             ( Tuple.first x, Cmd.none )
 
                         else
-                            submitQuery newModel x
+                            submitQuery model x
                    )
 
         Just (Route.Options channel query show from size sort) ->
             let
                 modelPage =
-                    case newModel.page of
+                    case model.page of
                         Options x ->
                             Just x
 
@@ -224,13 +214,13 @@ changeRouteTo model url =
                             Nothing
             in
             Page.Options.init channel query show from size sort modelPage
-                |> updateWith Options OptionsMsg newModel
+                |> updateWith Options OptionsMsg model
                 |> (\x ->
                         if url.fragment == Just "disabled" then
                             ( Tuple.first x, Cmd.none )
 
                         else
-                            submitQuery newModel x
+                            submitQuery model x
                    )
 
 
