@@ -3,21 +3,11 @@ module Route exposing (Route(..), fromUrl, href, replaceUrl, routeToString)
 import Browser.Navigation
 import Html
 import Html.Attributes
+import Route.SearchQuery
 import Url
 import Url.Builder exposing (QueryParameter)
 import Url.Parser exposing ((<?>))
 import Url.Parser.Query
-
-
-{-| This is type safe wrapper for working with search queries in url
--}
-type SearchQuery
-    = SearchQuery String
-
-
-unSearchQuery : SearchQuery -> String
-unSearchQuery (SearchQuery str) =
-    str
 
 
 
@@ -31,32 +21,32 @@ type Route
     | Options (Maybe String) (Maybe String) (Maybe String) (Maybe Int) (Maybe Int) (Maybe String)
 
 
-{-| Decode from url with browser search support
--}
-querySearchString : String -> Url.Parser.Query.Parser (Maybe SearchQuery)
-querySearchString =
-    Url.Parser.Query.map (Maybe.map (SearchQuery << String.replace "+" " "))
-        << Url.Parser.Query.string
+parser : Url.Url -> Url.Parser.Parser (Route -> msg) msg
+parser url =
+    let
+        rawQuery =
+            Route.SearchQuery.toRawQuery url
 
-
-parser : Url.Parser.Parser (Route -> msg) msg
-parser =
+        withSearchQuery : (a -> Maybe String -> b) -> a -> b
+        withSearchQuery f channel =
+            f channel <|
+                Maybe.andThen Route.SearchQuery.searchQueryToString <|
+                    Maybe.andThen (Route.SearchQuery.searchString "query") rawQuery
+    in
     Url.Parser.oneOf
         [ Url.Parser.map Home Url.Parser.top
         , Url.Parser.map NotFound (Url.Parser.s "not-found")
-        , Url.Parser.map Packages
+        , Url.Parser.map (withSearchQuery Packages)
             (Url.Parser.s "packages"
                 <?> Url.Parser.Query.string "channel"
-                <?> Url.Parser.Query.map (Maybe.map unSearchQuery) (querySearchString "query")
                 <?> Url.Parser.Query.string "show"
                 <?> Url.Parser.Query.int "from"
                 <?> Url.Parser.Query.int "size"
                 <?> Url.Parser.Query.string "sort"
             )
-        , Url.Parser.map Options
+        , Url.Parser.map (withSearchQuery Options)
             (Url.Parser.s "options"
                 <?> Url.Parser.Query.string "channel"
-                <?> Url.Parser.Query.map (Maybe.map unSearchQuery) (querySearchString "query")
                 <?> Url.Parser.Query.string "show"
                 <?> Url.Parser.Query.int "from"
                 <?> Url.Parser.Query.int "size"
@@ -85,7 +75,7 @@ fromUrl url =
     -- This makes it *literally* the path, so we can proceed
     -- with parsing as if it had been a normal path all along.
     --{ url | path = Maybe.withDefault "" url.fragment, fragment = Nothing }
-    Url.Parser.parse parser url
+    Url.Parser.parse (parser url) url
 
 
 
@@ -96,41 +86,21 @@ routeToString : Route -> String
 routeToString =
     let
         buildString ( path, query, searchQuery ) =
-            Url.Builder.absolute path query
-                |> (\str ->
-                        case searchQuery of
-                            Just ( name, SearchQuery val ) ->
-                                case query of
-                                    [] ->
-                                        str ++ "?" ++ name ++ "=" ++ val
-
-                                    _ ->
-                                        str ++ "&" ++ name ++ "=" ++ val
-
-                            Nothing ->
-                                str
-                   )
-
-        -- \( path, query, searchQuery ) -> Url.Builder.absolute path query
+            Route.SearchQuery.absolute path query <|
+                Maybe.withDefault [] <|
+                    Maybe.map List.singleton searchQuery
     in
     buildString << routeToPieces
 
 
-{-| Encode the url with browser search support
--}
-builderSearchString : String -> String -> ( String, SearchQuery )
-builderSearchString name query =
-    ( name, SearchQuery <| String.replace "%20" "+" <| Url.percentEncode query )
-
-
-routeToPieces : Route -> ( List String, List QueryParameter, Maybe ( String, SearchQuery ) )
+routeToPieces : Route -> ( List String, List QueryParameter, Maybe ( String, Route.SearchQuery.SearchQuery ) )
 routeToPieces page =
     let
         channelQ =
             Maybe.map (Url.Builder.string "channel")
 
         queryQ =
-            Maybe.map (builderSearchString "query")
+            Maybe.map (Route.SearchQuery.toSearchQuery "query")
 
         showQ =
             Maybe.map (Url.Builder.string "show")
