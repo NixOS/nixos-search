@@ -162,15 +162,15 @@ changeRouteTo currentModel url =
     let
         attempteQuery (( newModel, cmd ) as pair) =
             case ( currentModel.route, newModel.route ) of
-                ( Route.Packages c1 q1 _ f1 s1 srt1, Route.Packages c2 q2 _ f2 s2 srt2 ) ->
-                    if c1 /= c2 || q1 /= q2 || f1 /= f2 || srt1 /= srt2 then
+                ( Route.Packages channel1 query1 _ from1 size1 sort1, Route.Packages channel2 query2 _ from2 size2 sort2 ) ->
+                    if channel1 /= channel2 || query1 /= query2 || from1 /= from2 || size1 /= size2 || sort1 /= sort2 then
                         submitQuery newModel ( newModel, cmd )
 
                     else
                         pair
 
-                ( Route.Options c1 q1 _ f1 s1 srt1, Route.Options c2 q2 _ f2 s2 srt2 ) ->
-                    if c1 /= c2 || q1 /= q2 || f1 /= f2 || srt1 /= srt2 then
+                ( Route.Options channel1 query1 _ from1 size1 sort1, Route.Options channel2 query2 _ from2 size2 sort2 ) ->
+                    if channel1 /= channel2 || query1 /= query2 || from1 /= from2 || size1 /= size2 || sort1 /= sort2 then
                         submitQuery newModel ( newModel, cmd )
 
                     else
