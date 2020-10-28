@@ -1,7 +1,5 @@
 module Main exposing (main)
 
---exposing (UrlRequest(..))
-
 import Browser
 import Browser.Navigation
 import Html

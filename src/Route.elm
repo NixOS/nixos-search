@@ -1,9 +1,11 @@
-module Route exposing (Route(..), fromUrl, href, replaceUrl)
+module Route exposing (Route(..), fromUrl, href, replaceUrl, routeToString)
 
 import Browser.Navigation
 import Html
 import Html.Attributes
+import Route.SearchQuery
 import Url
+import Url.Builder exposing (QueryParameter)
 import Url.Parser exposing ((<?>))
 import Url.Parser.Query
 
@@ -19,30 +21,32 @@ type Route
     | Options (Maybe String) (Maybe String) (Maybe String) (Maybe Int) (Maybe Int) (Maybe String)
 
 
-parser : Url.Parser.Parser (Route -> msg) msg
-parser =
+parser : Url.Url -> Url.Parser.Parser (Route -> msg) msg
+parser url =
+    let
+        rawQuery =
+            Route.SearchQuery.toRawQuery url
+
+        withSearchQuery : (a -> Maybe String -> b) -> a -> b
+        withSearchQuery f channel =
+            f channel <|
+                Maybe.andThen Route.SearchQuery.searchQueryToString <|
+                    Maybe.andThen (Route.SearchQuery.searchString "query") rawQuery
+    in
     Url.Parser.oneOf
-        [ Url.Parser.map
-            Home
-            Url.Parser.top
-        , Url.Parser.map
-            NotFound
-            (Url.Parser.s "not-found")
-        , Url.Parser.map
-            Packages
+        [ Url.Parser.map Home Url.Parser.top
+        , Url.Parser.map NotFound (Url.Parser.s "not-found")
+        , Url.Parser.map (withSearchQuery Packages)
             (Url.Parser.s "packages"
                 <?> Url.Parser.Query.string "channel"
-                <?> Url.Parser.Query.string "query"
                 <?> Url.Parser.Query.string "show"
                 <?> Url.Parser.Query.int "from"
                 <?> Url.Parser.Query.int "size"
                 <?> Url.Parser.Query.string "sort"
             )
-        , Url.Parser.map
-            Options
+        , Url.Parser.map (withSearchQuery Options)
             (Url.Parser.s "options"
                 <?> Url.Parser.Query.string "channel"
-                <?> Url.Parser.Query.string "query"
                 <?> Url.Parser.Query.string "show"
                 <?> Url.Parser.Query.int "from"
                 <?> Url.Parser.Query.int "size"
@@ -71,7 +75,7 @@ fromUrl url =
     -- This makes it *literally* the path, so we can proceed
     -- with parsing as if it had been a normal path all along.
     --{ url | path = Maybe.withDefault "" url.fragment, fragment = Nothing }
-    Url.Parser.parse parser url
+    Url.Parser.parse (parser url) url
 
 
 
@@ -79,41 +83,63 @@ fromUrl url =
 
 
 routeToString : Route -> String
-routeToString page =
+routeToString =
     let
-        ( path, query ) =
-            routeToPieces page
+        buildString ( path, query, searchQuery ) =
+            Route.SearchQuery.absolute path query <|
+                Maybe.withDefault [] <|
+                    Maybe.map List.singleton searchQuery
     in
-    "/" ++ String.join "/" path ++ "?" ++ String.join "&" (List.filterMap Basics.identity query)
+    buildString << routeToPieces
 
 
-routeToPieces : Route -> ( List String, List (Maybe String) )
+routeToPieces : Route -> ( List String, List QueryParameter, Maybe ( String, Route.SearchQuery.SearchQuery ) )
 routeToPieces page =
-    case page of
-        Home ->
-            ( [], [] )
+    let
+        channelQ =
+            Maybe.map (Url.Builder.string "channel")
 
-        NotFound ->
-            ( [ "not-found" ], [] )
+        queryQ =
+            Maybe.map (Route.SearchQuery.toSearchQuery "query")
 
-        Packages channel query show from size sort ->
-            ( [ "packages" ]
-            , [ channel
-              , query
-              , show
-              , Maybe.map String.fromInt from
-              , Maybe.map String.fromInt size
-              , sort
-              ]
-            )
+        showQ =
+            Maybe.map (Url.Builder.string "show")
 
-        Options channel query show from size sort ->
-            ( [ "options" ]
-            , [ channel
-              , query
-              , show
-              , Maybe.map String.fromInt from
-              , Maybe.map String.fromInt size
-              , sort
-              ]
-            )
+        fromQ =
+            Maybe.map (Url.Builder.int "from")
+
+        sizeQ =
+            Maybe.map (Url.Builder.int "size")
+
+        sortQ =
+            Maybe.map (Url.Builder.string "sort")
+    in
+    (\( path, urlQ, searchQuery ) -> ( path, List.filterMap identity urlQ, searchQuery )) <|
+        case page of
+            Home ->
+                ( [], [], Nothing )
+
+            NotFound ->
+                ( [ "not-found" ], [], Nothing )
+
+            Packages channel query show from size sort ->
+                ( [ "packages" ]
+                , [ channelQ channel
+                  , showQ show
+                  , fromQ from
+                  , sizeQ size
+                  , sortQ sort
+                  ]
+                , queryQ query
+                )
+
+            Options channel query show from size sort ->
+                ( [ "options" ]
+                , [ channelQ channel
+                  , showQ show
+                  , fromQ from
+                  , sizeQ size
+                  , sortQ sort
+                  ]
+                , queryQ query
+                )

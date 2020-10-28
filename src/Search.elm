@@ -62,9 +62,21 @@ import Http
 import Json.Decode
 import Json.Encode
 import RemoteData
+import Route exposing (Route)
 import Set
 import Task
+import Url
 import Url.Builder
+
+
+type alias SearchRoute =
+    Maybe String
+    -> Maybe String
+    -> Maybe String
+    -> Maybe Int
+    -> Maybe Int
+    -> Maybe String
+    -> Route
 
 
 type alias Model a =
@@ -174,12 +186,12 @@ type Msg a
 
 
 update :
-    String
+    SearchRoute
     -> Browser.Navigation.Key
     -> Msg a
     -> Model a
     -> ( Model a, Cmd (Msg a) )
-update path navKey msg model =
+update toRoute navKey msg model =
     case msg of
         NoOp ->
             ( model
@@ -193,7 +205,7 @@ update path navKey msg model =
             in
             ( { model | sort = sort }
             , createUrl
-                path
+                toRoute
                 model.channel
                 model.query
                 model.show
@@ -218,7 +230,7 @@ update path navKey msg model =
 
               else
                 createUrl
-                    path
+                    toRoute
                     channel
                     model.query
                     model.show
@@ -240,7 +252,7 @@ update path navKey msg model =
             else
                 ( { model | result = RemoteData.Loading }
                 , createUrl
-                    path
+                    toRoute
                     model.channel
                     model.query
                     model.show
@@ -258,7 +270,7 @@ update path navKey msg model =
         ShowDetails selected ->
             ( model
             , createUrl
-                path
+                toRoute
                 model.channel
                 model.query
                 (if model.show == Just selected then
@@ -275,8 +287,10 @@ update path navKey msg model =
             )
 
 
+{-| TODO: Sort should be part of Route type
+-}
 createUrl :
-    String
+    SearchRoute
     -> String
     -> Maybe String
     -> Maybe String
@@ -284,30 +298,9 @@ createUrl :
     -> Int
     -> Sort
     -> String
-createUrl path channel query show from size sort =
-    [ Url.Builder.int "from" from
-    , Url.Builder.int "size" size
-    , Url.Builder.string "sort" <| toSortId sort
-    , Url.Builder.string "channel" channel
-    ]
-        |> List.append
-            (query
-                |> Maybe.map
-                    (\x ->
-                        [ Url.Builder.string "query" x ]
-                    )
-                |> Maybe.withDefault []
-            )
-        |> List.append
-            (show
-                |> Maybe.map
-                    (\x ->
-                        [ Url.Builder.string "show" x
-                        ]
-                    )
-                |> Maybe.withDefault []
-            )
-        |> Url.Builder.absolute [ path ]
+createUrl toRoute channel query show from size sort =
+    toRoute (Just channel) query show (Just from) (Just size) (Just <| toSortId sort)
+        |> Route.routeToString
 
 
 
@@ -319,6 +312,7 @@ type Channel
     | Release_19_09
     | Release_20_03
     | Release_20_09
+
 
 type alias ChannelDetails =
     { id : String
@@ -455,13 +449,15 @@ fromSortId id =
 
 
 view :
-    String
+    { toRoute : SearchRoute
+    , categoryName : String
+    }
     -> String
     -> Model a
     -> (String -> Maybe String -> SearchResult a -> Html b)
     -> (Msg a -> b)
     -> Html b
-view path title model viewSuccess outMsg =
+view { toRoute, categoryName } title model viewSuccess outMsg =
     div
         [ class "search-page"
         ]
@@ -520,14 +516,15 @@ view path title model viewSuccess outMsg =
                         [ type_ "text"
                         , id "search-query-input"
                         , autofocus True
-                        , placeholder <| "Search for " ++ path
-                        , onInput (\x -> outMsg (QueryInput x))
+                        , placeholder <| "Search for " ++ categoryName
+                        , onInput (outMsg << QueryInput)
                         , value <| Maybe.withDefault "" model.query
                         ]
                         []
                     , div [ class "loader" ] []
                     , div [ class "btn-group" ]
-                        [ button [ class "btn" ] [ text "Search" ]
+                        [ button [ class "btn", type_ "submit" ]
+                            [ text "Search" ]
                         ]
                     ]
                 ]
@@ -542,8 +539,7 @@ view path title model viewSuccess outMsg =
             RemoteData.Success result ->
                 if result.hits.total.value == 0 then
                     div []
-                        [ h4 [] [ text <| "No " ++ path ++ " found!" ]
-                        ]
+                        [ h4 [] [ text <| "No " ++ categoryName ++ " found!" ] ]
 
                 else
                     div []
@@ -594,9 +590,9 @@ view path title model viewSuccess outMsg =
                                     ]
                                 ]
                             ]
-                        , viewPager outMsg model result path
+                        , viewPager outMsg model result toRoute
                         , viewSuccess model.channel model.show result
-                        , viewPager outMsg model result path
+                        , viewPager outMsg model result toRoute
                         ]
 
             RemoteData.Failure error ->
@@ -629,9 +625,9 @@ viewPager :
     (Msg a -> b)
     -> Model a
     -> SearchResult a
-    -> String
+    -> SearchRoute
     -> Html b
-viewPager _ model result path =
+viewPager _ model result toRoute =
     ul [ class "pager" ]
         [ li
             [ classList
@@ -645,7 +641,7 @@ viewPager _ model result path =
                   else
                     href <|
                         createUrl
-                            path
+                            toRoute
                             model.channel
                             model.query
                             model.show
@@ -667,7 +663,7 @@ viewPager _ model result path =
 
                     else
                         createUrl
-                            path
+                            toRoute
                             model.channel
                             model.query
                             model.show
@@ -689,7 +685,7 @@ viewPager _ model result path =
 
                     else
                         createUrl
-                            path
+                            toRoute
                             model.channel
                             model.query
                             model.show
@@ -719,7 +715,7 @@ viewPager _ model result path =
                                     0
                         in
                         createUrl
-                            path
+                            toRoute
                             model.channel
                             model.query
                             model.show
