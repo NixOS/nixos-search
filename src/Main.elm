@@ -188,7 +188,7 @@ changeRouteTo currentModel url =
         Just route ->
             let
                 model =
-                    { currentModel | route = Debug.log "route" route }
+                    { currentModel | route = route }
             in
             case route of
                 Route.NotFound ->
