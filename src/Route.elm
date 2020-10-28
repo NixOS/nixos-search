@@ -17,6 +17,7 @@ import Url.Parser.Query
 type Route
     = NotFound
     | Home
+      -- route | channel | (search) query | show | from | size | sort
     | Packages (Maybe String) (Maybe String) (Maybe String) (Maybe Int) (Maybe Int) (Maybe String)
     | Options (Maybe String) (Maybe String) (Maybe String) (Maybe Int) (Maybe Int) (Maybe String)
 

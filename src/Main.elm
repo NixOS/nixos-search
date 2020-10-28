@@ -49,7 +49,7 @@ type alias Flags =
 
 type alias Model =
     { navKey : Browser.Navigation.Key
-    , url : Url.Url
+    , route : Route.Route
     , elasticsearch : Search.Options
     , page : Page
     }
@@ -71,7 +71,6 @@ init flags url navKey =
     let
         model =
             { navKey = navKey
-            , url = url
             , elasticsearch =
                 Search.Options
                     flags.elasticsearchMappingSchemaVersion
@@ -79,6 +78,7 @@ init flags url navKey =
                     flags.elasticsearchUsername
                     flags.elasticsearchPassword
             , page = NotFound
+            , route = Route.Home
             }
     in
     changeRouteTo model url
@@ -158,80 +158,78 @@ changeRouteTo :
     Model
     -> Url.Url
     -> ( Model, Cmd Msg )
-changeRouteTo model url =
+changeRouteTo currentModel url =
     let
-        cleanUrl =
-            if url.fragment == Just "disabled" then
-                { url | fragment = Nothing }
+        attempteQuery (( newModel, cmd ) as pair) =
+            case ( currentModel.route, newModel.route ) of
+                ( Route.Packages channel1 query1 _ from1 size1 sort1, Route.Packages channel2 query2 _ from2 size2 sort2 ) ->
+                    if channel1 /= channel2 || query1 /= query2 || from1 /= from2 || size1 /= size2 || sort1 /= sort2 then
+                        submitQuery newModel ( newModel, cmd )
 
-            else
-                url
+                    else
+                        pair
 
-        newModel =
-            { model | url = cleanUrl }
+                ( Route.Options channel1 query1 _ from1 size1 sort1, Route.Options channel2 query2 _ from2 size2 sort2 ) ->
+                    if channel1 /= channel2 || query1 /= query2 || from1 /= from2 || size1 /= size2 || sort1 /= sort2 then
+                        submitQuery newModel ( newModel, cmd )
 
-        maybeRoute =
-            Route.fromUrl url
+                    else
+                        pair
+
+                ( a, b ) ->
+                    if a /= b then
+                        submitQuery newModel ( newModel, cmd )
+
+                    else
+                        pair
     in
-    case maybeRoute of
+    case Route.fromUrl url of
         Nothing ->
-            ( { newModel
-                | page = NotFound
-              }
+            ( { currentModel | page = NotFound }
             , Cmd.none
             )
 
-        Just Route.NotFound ->
-            ( { newModel
-                | page = NotFound
-              }
-            , Cmd.none
-            )
-
-        Just Route.Home ->
-            -- Always redirect to /packages until we have something to show
-            -- on the home page
-            ( newModel, Browser.Navigation.pushUrl newModel.navKey "/packages" )
-
-        Just (Route.Packages channel query show from size sort) ->
+        Just route ->
             let
-                modelPage =
-                    case newModel.page of
-                        Packages x ->
-                            Just x
-
-                        _ ->
-                            Nothing
+                model =
+                    { currentModel | route = route }
             in
-            Page.Packages.init channel query show from size sort modelPage
-                |> updateWith Packages PackagesMsg newModel
-                |> (\x ->
-                        if url.fragment == Just "disabled" then
-                            ( Tuple.first x, Cmd.none )
+            case route of
+                Route.NotFound ->
+                    ( { model | page = NotFound }, Cmd.none )
 
-                        else
-                            submitQuery newModel x
-                   )
+                Route.Home ->
+                    -- Always redirect to /packages until we have something to show
+                    -- on the home page
+                    ( model, Browser.Navigation.pushUrl model.navKey "/packages" )
 
-        Just (Route.Options channel query show from size sort) ->
-            let
-                modelPage =
-                    case newModel.page of
-                        Options x ->
-                            Just x
+                Route.Packages channel query show from size sort ->
+                    let
+                        modelPage =
+                            case model.page of
+                                Packages x ->
+                                    Just x
 
-                        _ ->
-                            Nothing
-            in
-            Page.Options.init channel query show from size sort modelPage
-                |> updateWith Options OptionsMsg newModel
-                |> (\x ->
-                        if url.fragment == Just "disabled" then
-                            ( Tuple.first x, Cmd.none )
+                                _ ->
+                                    Nothing
+                    in
+                    Page.Packages.init channel query show from size sort modelPage
+                        |> updateWith Packages PackagesMsg model
+                        |> attempteQuery
 
-                        else
-                            submitQuery newModel x
-                   )
+                Route.Options channel query show from size sort ->
+                    let
+                        modelPage =
+                            case model.page of
+                                Options x ->
+                                    Just x
+
+                                _ ->
+                                    Nothing
+                    in
+                    Page.Options.init channel query show from size sort modelPage
+                        |> updateWith Options OptionsMsg model
+                        |> attempteQuery
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -241,11 +239,7 @@ update msg model =
             case urlRequest of
                 Browser.Internal url ->
                     ( model
-                    , if url.fragment == Just "disabled" then
-                        Cmd.none
-
-                      else
-                        Browser.Navigation.pushUrl model.navKey <| Url.toString url
+                    , Browser.Navigation.pushUrl model.navKey <| Url.toString url
                     )
 
                 Browser.External href ->
@@ -318,7 +312,7 @@ view model =
                                 ]
                             , div [ class "nav-collapse collapse" ]
                                 [ ul [ class "nav pull-left" ]
-                                    (viewNavigation model.page model.url)
+                                    (viewNavigation model.route)
                                 ]
                             ]
                         ]
@@ -349,52 +343,37 @@ view model =
     }
 
 
-viewNavigation : Page -> Url.Url -> List (Html Msg)
-viewNavigation page url =
+viewNavigation : Route.Route -> List (Html Msg)
+viewNavigation route =
     let
-        preserveSearchOptions =
-            case page of
-                Packages model ->
-                    model.query
-                        |> Maybe.map (\q -> [ Url.Builder.string "query" q ])
-                        |> Maybe.withDefault []
-                        |> List.append [ Url.Builder.string "channel" model.channel ]
+        toRoute f =
+            case route of
+                -- Preserve arguments
+                Route.Packages channel query show from size sort ->
+                    f channel query show from size sort
 
-                Options model ->
-                    model.query
-                        |> Maybe.map (\q -> [ Url.Builder.string "query" q ])
-                        |> Maybe.withDefault []
-                        |> List.append [ Url.Builder.string "channel" model.channel ]
+                Route.Options channel query show from size sort ->
+                    f channel query show from size sort
 
                 _ ->
-                    []
-
-        createUrl path =
-            []
-                |> List.append preserveSearchOptions
-                |> Url.Builder.absolute [ path ]
+                    f Nothing Nothing Nothing Nothing Nothing Nothing
     in
-    List.map
-        (viewNavigationItem url)
-        [ ( "https://nixos.org", "Back to nixos.org" )
-        , ( createUrl "packages", "Packages" )
-        , ( createUrl "options", "Options" )
-        ]
+    li [] [ a [ href "https://nixos.org" ] [ text "Back to nixos.org" ] ]
+        :: List.map
+            (viewNavigationItem route)
+            [ ( toRoute Route.Packages, "Packages" )
+            , ( toRoute Route.Options, "Options" )
+            ]
 
 
 viewNavigationItem :
-    Url.Url
-    -> ( String, String )
+    Route.Route
+    -> ( Route.Route, String )
     -> Html Msg
-viewNavigationItem url ( path, title ) =
+viewNavigationItem currentRoute ( route, title ) =
     li
-        [ classList
-            [ ( "active"
-              , String.startsWith url.path path
-              )
-            ]
-        ]
-        [ a [ href path ] [ text title ] ]
+        [ classList [ ( "active", currentRoute == route ) ] ]
+        [ a [ Route.href route ] [ text title ] ]
 
 
 viewPage : Model -> Html Msg
