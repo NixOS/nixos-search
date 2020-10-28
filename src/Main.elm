@@ -159,6 +159,26 @@ changeRouteTo :
     -> Url.Url
     -> ( Model, Cmd Msg )
 changeRouteTo currentModel url =
+    let
+        attempteQuery (( newModel, cmd ) as pair) =
+            case ( currentModel.route, newModel.route ) of
+                ( Route.Packages c1 q1 _ f1 s1 srt1, Route.Packages c2 q2 _ f2 s2 srt2 ) ->
+                    if c1 /= c2 || q1 /= q2 || f1 /= f2 || srt1 /= srt2 then
+                        submitQuery newModel ( newModel, cmd )
+
+                    else
+                        pair
+
+                ( Route.Options c1 q1 _ f1 s1 srt1, Route.Options c2 q2 _ f2 s2 srt2 ) ->
+                    if c1 /= c2 || q1 /= q2 || f1 /= f2 || srt1 /= srt2 then
+                        submitQuery newModel ( newModel, cmd )
+
+                    else
+                        pair
+
+                _ ->
+                    pair
+    in
     case Route.fromUrl url of
         Nothing ->
             ( { currentModel | page = NotFound }
@@ -166,49 +186,46 @@ changeRouteTo currentModel url =
             )
 
         Just route ->
-            if currentModel.route == route then
-                -- Route did not changed - there is nothing to be initialized
-                ( currentModel, Cmd.none )
+            let
+                model =
+                    { currentModel | route = Debug.log "route" route }
+            in
+            case route of
+                Route.NotFound ->
+                    ( { model | page = NotFound }, Cmd.none )
 
-            else
-                let
-                    model =
-                        { currentModel | route = route }
-                in
-                case route of
-                    Route.NotFound ->
-                        ( { model | page = NotFound }, Cmd.none )
+                Route.Home ->
+                    -- Always redirect to /packages until we have something to show
+                    -- on the home page
+                    ( model, Browser.Navigation.pushUrl model.navKey "/packages" )
 
-                    Route.Home ->
-                        -- Always redirect to /packages until we have something to show
-                        -- on the home page
-                        ( model, Browser.Navigation.pushUrl model.navKey "/packages" )
+                Route.Packages channel query show from size sort ->
+                    let
+                        modelPage =
+                            case model.page of
+                                Packages x ->
+                                    Just x
 
-                    Route.Packages channel query show from size sort ->
-                        let
-                            modelPage =
-                                case model.page of
-                                    Packages x ->
-                                        Just x
+                                _ ->
+                                    Nothing
+                    in
+                    Page.Packages.init channel query show from size sort modelPage
+                        |> updateWith Packages PackagesMsg model
+                        |> attempteQuery
 
-                                    _ ->
-                                        Nothing
-                        in
-                        Page.Packages.init channel query show from size sort modelPage
-                            |> updateWith Packages PackagesMsg model
+                Route.Options channel query show from size sort ->
+                    let
+                        modelPage =
+                            case model.page of
+                                Options x ->
+                                    Just x
 
-                    Route.Options channel query show from size sort ->
-                        let
-                            modelPage =
-                                case model.page of
-                                    Options x ->
-                                        Just x
-
-                                    _ ->
-                                        Nothing
-                        in
-                        Page.Options.init channel query show from size sort modelPage
-                            |> updateWith Options OptionsMsg model
+                                _ ->
+                                    Nothing
+                    in
+                    Page.Options.init channel query show from size sort modelPage
+                        |> updateWith Options OptionsMsg model
+                        |> attempteQuery
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
