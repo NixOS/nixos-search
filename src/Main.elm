@@ -176,8 +176,12 @@ changeRouteTo currentModel url =
                     else
                         pair
 
-                _ ->
-                    pair
+                ( a, b ) ->
+                    if a /= b then
+                        submitQuery newModel ( newModel, cmd )
+
+                    else
+                        pair
     in
     case Route.fromUrl url of
         Nothing ->
