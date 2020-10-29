@@ -44,6 +44,7 @@ import Json.Decode
 import Json.Encode
 import Regex
 import Route
+import Route.SearchQuery
 import Search
 
 
@@ -67,7 +68,7 @@ type alias ResultItemSource =
 
 init :
     Maybe String
-    -> Maybe String
+    -> Maybe Route.SearchQuery.SearchQuery
     -> Maybe String
     -> Maybe Int
     -> Maybe Int

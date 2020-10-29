@@ -1,9 +1,16 @@
-module Route exposing (Route(..), fromUrl, href, replaceUrl, routeToString)
+module Route exposing
+    ( Route(..)
+    , SearchRoute
+    , fromUrl
+    , href
+    , replaceUrl
+    , routeToString
+    )
 
 import Browser.Navigation
 import Html
 import Html.Attributes
-import Route.SearchQuery
+import Route.SearchQuery exposing (SearchQuery)
 import Url
 import Url.Builder exposing (QueryParameter)
 import Url.Parser exposing ((<?>))
@@ -14,12 +21,22 @@ import Url.Parser.Query
 -- ROUTING
 
 
+type alias SearchRoute =
+    Maybe String
+    -> Maybe SearchQuery
+    -> Maybe String
+    -> Maybe Int
+    -> Maybe Int
+    -> Maybe String
+    -> Route
+
+
 type Route
     = NotFound
     | Home
       -- route | channel | (search) query | show | from | size | sort
-    | Packages (Maybe String) (Maybe String) (Maybe String) (Maybe Int) (Maybe Int) (Maybe String)
-    | Options (Maybe String) (Maybe String) (Maybe String) (Maybe Int) (Maybe Int) (Maybe String)
+    | Packages (Maybe String) (Maybe SearchQuery) (Maybe String) (Maybe Int) (Maybe Int) (Maybe String)
+    | Options (Maybe String) (Maybe SearchQuery) (Maybe String) (Maybe Int) (Maybe Int) (Maybe String)
 
 
 parser : Url.Url -> Url.Parser.Parser (Route -> msg) msg
@@ -28,11 +45,10 @@ parser url =
         rawQuery =
             Route.SearchQuery.toRawQuery url
 
-        withSearchQuery : (a -> Maybe String -> b) -> a -> b
+        withSearchQuery : (a -> Maybe SearchQuery -> b) -> a -> b
         withSearchQuery f channel =
             f channel <|
-                Maybe.andThen Route.SearchQuery.searchQueryToString <|
-                    Maybe.andThen (Route.SearchQuery.searchString "query") rawQuery
+                Maybe.andThen (Route.SearchQuery.searchString "query") rawQuery
     in
     Url.Parser.oneOf
         [ Url.Parser.map Home Url.Parser.top
@@ -101,7 +117,7 @@ routeToPieces page =
             Maybe.map (Url.Builder.string "channel")
 
         queryQ =
-            Maybe.map (Route.SearchQuery.toSearchQuery "query")
+            Maybe.map (Tuple.pair "query")
 
         showQ =
             Maybe.map (Url.Builder.string "show")

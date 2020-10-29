@@ -63,20 +63,11 @@ import Json.Decode
 import Json.Encode
 import RemoteData
 import Route exposing (Route)
+import Route.SearchQuery
 import Set
 import Task
 import Url
 import Url.Builder
-
-
-type alias SearchRoute =
-    Maybe String
-    -> Maybe String
-    -> Maybe String
-    -> Maybe Int
-    -> Maybe Int
-    -> Maybe String
-    -> Route
 
 
 type alias Model a =
@@ -126,7 +117,7 @@ type Sort
 
 init :
     Maybe String
-    -> Maybe String
+    -> Maybe Route.SearchQuery.SearchQuery
     -> Maybe String
     -> Maybe Int
     -> Maybe Int
@@ -151,7 +142,7 @@ init channel query show from size sort model =
                 |> Maybe.withDefault 30
     in
     ( { channel = Maybe.withDefault defaultChannel channel
-      , query = query
+      , query = Maybe.andThen Route.SearchQuery.searchQueryToString query
       , result =
             model
                 |> Maybe.map (\x -> x.result)
@@ -186,7 +177,7 @@ type Msg a
 
 
 update :
-    SearchRoute
+    Route.SearchRoute
     -> Browser.Navigation.Key
     -> Msg a
     -> Model a
@@ -289,7 +280,7 @@ update toRoute navKey msg model =
 {-| TODO: Sort should be part of Route type
 -}
 createUrl :
-    SearchRoute
+    Route.SearchRoute
     -> String
     -> Maybe String
     -> Maybe String
@@ -298,7 +289,7 @@ createUrl :
     -> Sort
     -> String
 createUrl toRoute channel query show from size sort =
-    toRoute (Just channel) query show (Just from) (Just size) (Just <| toSortId sort)
+    toRoute (Just channel) (Maybe.map Route.SearchQuery.toSearchQuery query) show (Just from) (Just size) (Just <| toSortId sort)
         |> Route.routeToString
 
 
@@ -448,7 +439,7 @@ fromSortId id =
 
 
 view :
-    { toRoute : SearchRoute
+    { toRoute : Route.SearchRoute
     , categoryName : String
     }
     -> String
@@ -624,7 +615,7 @@ viewPager :
     (Msg a -> b)
     -> Model a
     -> SearchResult a
-    -> SearchRoute
+    -> Route.SearchRoute
     -> Html b
 viewPager _ model result toRoute =
     ul [ class "pager" ]

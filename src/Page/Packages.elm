@@ -44,6 +44,7 @@ import Json.Decode.Pipeline
 import Json.Encode
 import Regex
 import Route
+import Route.SearchQuery
 import Search
 
 
@@ -104,7 +105,7 @@ type alias ResultPackageHydraPath =
 
 init :
     Maybe String
-    -> Maybe String
+    -> Maybe Route.SearchQuery.SearchQuery
     -> Maybe String
     -> Maybe Int
     -> Maybe Int

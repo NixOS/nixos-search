@@ -60,9 +60,9 @@ searchQueryToString (SearchQuery str) =
     Url.percentDecode <| String.replace "+" "%20" str
 
 
-toSearchQuery : String -> String -> ( String, SearchQuery )
-toSearchQuery name query =
-    ( name, SearchQuery <| String.replace "%20" "+" <| Url.percentEncode query )
+toSearchQuery : String -> SearchQuery
+toSearchQuery query =
+    SearchQuery <| String.replace "%20" "+" <| Url.percentEncode query
 
 
 {-| Build absolute URL with support for search query strings
