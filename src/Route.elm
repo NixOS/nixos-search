@@ -1,5 +1,6 @@
 module Route exposing
     ( Route(..)
+    , SearchArgs
     , SearchRoute
     , fromUrl
     , href
@@ -13,7 +14,7 @@ import Html.Attributes
 import Route.SearchQuery exposing (SearchQuery)
 import Url
 import Url.Builder exposing (QueryParameter)
-import Url.Parser exposing ((<?>))
+import Url.Parser exposing ((</>), (<?>))
 import Url.Parser.Query
 
 
@@ -21,26 +22,24 @@ import Url.Parser.Query
 -- ROUTING
 
 
+type alias SearchArgs =
+    { channel : Maybe String
+    , query : Maybe SearchQuery
+    , show : Maybe String
+    , from : Maybe Int
+    , size : Maybe Int
+
+    -- TODO: embed sort type
+    , sort : Maybe String
+    }
+
+
 type alias SearchRoute =
-    Maybe String
-    -> Maybe SearchQuery
-    -> Maybe String
-    -> Maybe Int
-    -> Maybe Int
-    -> Maybe String
-    -> Route
+    SearchArgs -> Route
 
 
-type Route
-    = NotFound
-    | Home
-      -- route | channel | (search) query | show | from | size | sort
-    | Packages (Maybe String) (Maybe SearchQuery) (Maybe String) (Maybe Int) (Maybe Int) (Maybe String)
-    | Options (Maybe String) (Maybe SearchQuery) (Maybe String) (Maybe Int) (Maybe Int) (Maybe String)
-
-
-parser : Url.Url -> Url.Parser.Parser (Route -> msg) msg
-parser url =
+searchQueryParser : Url.Url -> Url.Parser.Parser (SearchArgs -> msg) msg
+searchQueryParser url =
     let
         rawQuery =
             Route.SearchQuery.toRawQuery url
@@ -50,25 +49,42 @@ parser url =
             f channel <|
                 Maybe.andThen (Route.SearchQuery.searchString "query") rawQuery
     in
+    Url.Parser.map (withSearchQuery SearchArgs) <|
+        Url.Parser.top
+            <?> Url.Parser.Query.string "channel"
+            <?> Url.Parser.Query.string "show"
+            <?> Url.Parser.Query.int "from"
+            <?> Url.Parser.Query.int "size"
+            <?> Url.Parser.Query.string "sort"
+
+
+searchArgsToUrl : SearchArgs -> ( List QueryParameter, Maybe ( String, Route.SearchQuery.SearchQuery ) )
+searchArgsToUrl args =
+    ( List.filterMap identity
+        [ Maybe.map (Url.Builder.string "channel") args.channel
+        , Maybe.map (Url.Builder.string "show") args.show
+        , Maybe.map (Url.Builder.int "from") args.from
+        , Maybe.map (Url.Builder.int "size") args.size
+        , Maybe.map (Url.Builder.string "sort") args.sort
+        ]
+    , Maybe.map (Tuple.pair "query") args.query
+    )
+
+
+type Route
+    = NotFound
+    | Home
+    | Packages SearchArgs
+    | Options SearchArgs
+
+
+parser : Url.Url -> Url.Parser.Parser (Route -> msg) msg
+parser url =
     Url.Parser.oneOf
         [ Url.Parser.map Home Url.Parser.top
-        , Url.Parser.map NotFound (Url.Parser.s "not-found")
-        , Url.Parser.map (withSearchQuery Packages)
-            (Url.Parser.s "packages"
-                <?> Url.Parser.Query.string "channel"
-                <?> Url.Parser.Query.string "show"
-                <?> Url.Parser.Query.int "from"
-                <?> Url.Parser.Query.int "size"
-                <?> Url.Parser.Query.string "sort"
-            )
-        , Url.Parser.map (withSearchQuery Options)
-            (Url.Parser.s "options"
-                <?> Url.Parser.Query.string "channel"
-                <?> Url.Parser.Query.string "show"
-                <?> Url.Parser.Query.int "from"
-                <?> Url.Parser.Query.int "size"
-                <?> Url.Parser.Query.string "sort"
-            )
+        , Url.Parser.map NotFound <| Url.Parser.s "not-found"
+        , Url.Parser.map Packages <| Url.Parser.s "packages" </> searchQueryParser url
+        , Url.Parser.map Options <| Url.Parser.s "options" </> searchQueryParser url
         ]
 
 
@@ -112,51 +128,17 @@ routeToString =
 
 routeToPieces : Route -> ( List String, List QueryParameter, Maybe ( String, Route.SearchQuery.SearchQuery ) )
 routeToPieces page =
-    let
-        channelQ =
-            Maybe.map (Url.Builder.string "channel")
+    case page of
+        Home ->
+            ( [], [], Nothing )
 
-        queryQ =
-            Maybe.map (Tuple.pair "query")
+        NotFound ->
+            ( [ "not-found" ], [], Nothing )
 
-        showQ =
-            Maybe.map (Url.Builder.string "show")
+        Packages searchArgs ->
+            searchArgsToUrl searchArgs
+                |> (\( query, raw ) -> ( [ "packages" ], query, raw ))
 
-        fromQ =
-            Maybe.map (Url.Builder.int "from")
-
-        sizeQ =
-            Maybe.map (Url.Builder.int "size")
-
-        sortQ =
-            Maybe.map (Url.Builder.string "sort")
-    in
-    (\( path, urlQ, searchQuery ) -> ( path, List.filterMap identity urlQ, searchQuery )) <|
-        case page of
-            Home ->
-                ( [], [], Nothing )
-
-            NotFound ->
-                ( [ "not-found" ], [], Nothing )
-
-            Packages channel query show from size sort ->
-                ( [ "packages" ]
-                , [ channelQ channel
-                  , showQ show
-                  , fromQ from
-                  , sizeQ size
-                  , sortQ sort
-                  ]
-                , queryQ query
-                )
-
-            Options channel query show from size sort ->
-                ( [ "options" ]
-                , [ channelQ channel
-                  , showQ show
-                  , fromQ from
-                  , sizeQ size
-                  , sortQ sort
-                  ]
-                , queryQ query
-                )
+        Options searchArgs ->
+            searchArgsToUrl searchArgs
+                |> (\( query, raw ) -> ( [ "options" ], query, raw ))

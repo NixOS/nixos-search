@@ -162,15 +162,27 @@ changeRouteTo currentModel url =
     let
         attempteQuery (( newModel, cmd ) as pair) =
             case ( currentModel.route, newModel.route ) of
-                ( Route.Packages channel1 query1 _ from1 size1 sort1, Route.Packages channel2 query2 _ from2 size2 sort2 ) ->
-                    if channel1 /= channel2 || query1 /= query2 || from1 /= from2 || size1 /= size2 || sort1 /= sort2 then
+                ( Route.Packages arg1, Route.Packages arg2 ) ->
+                    if
+                        (arg1.channel /= arg2.channel)
+                            || (arg1.query /= arg2.query)
+                            || (arg1.from /= arg2.from)
+                            || (arg1.size /= arg2.size)
+                            || (arg1.sort /= arg2.sort)
+                    then
                         submitQuery newModel ( newModel, cmd )
 
                     else
                         pair
 
-                ( Route.Options channel1 query1 _ from1 size1 sort1, Route.Options channel2 query2 _ from2 size2 sort2 ) ->
-                    if channel1 /= channel2 || query1 /= query2 || from1 /= from2 || size1 /= size2 || sort1 /= sort2 then
+                ( Route.Options arg1, Route.Options arg2 ) ->
+                    if
+                        (arg1.channel /= arg2.channel)
+                            || (arg1.query /= arg2.query)
+                            || (arg1.from /= arg2.from)
+                            || (arg1.size /= arg2.size)
+                            || (arg1.sort /= arg2.sort)
+                    then
                         submitQuery newModel ( newModel, cmd )
 
                     else
@@ -203,7 +215,7 @@ changeRouteTo currentModel url =
                     -- on the home page
                     ( model, Browser.Navigation.pushUrl model.navKey "/packages" )
 
-                Route.Packages channel query show from size sort ->
+                Route.Packages searchArgs ->
                     let
                         modelPage =
                             case model.page of
@@ -213,11 +225,11 @@ changeRouteTo currentModel url =
                                 _ ->
                                     Nothing
                     in
-                    Page.Packages.init channel query show from size sort modelPage
+                    Page.Packages.init searchArgs modelPage
                         |> updateWith Packages PackagesMsg model
                         |> attempteQuery
 
-                Route.Options channel query show from size sort ->
+                Route.Options searchArgs ->
                     let
                         modelPage =
                             case model.page of
@@ -227,7 +239,7 @@ changeRouteTo currentModel url =
                                 _ ->
                                     Nothing
                     in
-                    Page.Options.init channel query show from size sort modelPage
+                    Page.Options.init searchArgs modelPage
                         |> updateWith Options OptionsMsg model
                         |> attempteQuery
 
@@ -349,11 +361,11 @@ viewNavigation route =
         toRoute f =
             case route of
                 -- Preserve arguments
-                Route.Packages channel query show from size sort ->
-                    f channel query show from size sort
+                Route.Packages searchArgs ->
+                    f searchArgs
 
-                Route.Options channel query show from size sort ->
-                    f channel query show from size sort
+                Route.Options searchArgs ->
+                    f searchArgs
 
                 _ ->
                     f Nothing Nothing Nothing Nothing Nothing Nothing

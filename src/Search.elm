@@ -115,16 +115,8 @@ type Sort
     | AlphabeticallyDesc
 
 
-init :
-    Maybe String
-    -> Maybe Route.SearchQuery.SearchQuery
-    -> Maybe String
-    -> Maybe Int
-    -> Maybe Int
-    -> Maybe String
-    -> Maybe (Model a)
-    -> ( Model a, Cmd (Msg a) )
-init channel query show from size sort model =
+init : Route.SearchArgs -> Maybe (Model a) -> ( Model a, Cmd (Msg a) )
+init args model =
     let
         defaultChannel =
             model
@@ -141,17 +133,17 @@ init channel query show from size sort model =
                 |> Maybe.map (\x -> x.size)
                 |> Maybe.withDefault 30
     in
-    ( { channel = Maybe.withDefault defaultChannel channel
-      , query = Maybe.andThen Route.SearchQuery.searchQueryToString query
+    ( { channel = Maybe.withDefault defaultChannel args.channel
+      , query = Maybe.andThen Route.SearchQuery.searchQueryToString args.query
       , result =
             model
                 |> Maybe.map (\x -> x.result)
                 |> Maybe.withDefault RemoteData.NotAsked
-      , show = show
-      , from = Maybe.withDefault defaultFrom from
-      , size = Maybe.withDefault defaultSize size
+      , show = args.show
+      , from = Maybe.withDefault defaultFrom args.from
+      , size = Maybe.withDefault defaultSize args.size
       , sort =
-            sort
+            args.sort
                 |> Maybe.withDefault ""
                 |> fromSortId
                 |> Maybe.withDefault Relevance
@@ -190,24 +182,14 @@ update toRoute navKey msg model =
             )
 
         SortChange sortId ->
-            let
-                sort =
-                    fromSortId sortId |> Maybe.withDefault Relevance
-            in
-            ( { model | sort = sort }
-            , createUrl
-                toRoute
-                model.channel
-                model.query
-                model.show
-                0
-                model.size
-                sort
-                |> Browser.Navigation.pushUrl navKey
-            )
+            { model
+                | sort = fromSortId sortId |> Maybe.withDefault Relevance
+                , from = 0
+            }
+                |> pushUrl toRoute navKey
 
         ChannelChange channel ->
-            ( { model
+            { model
                 | channel = channel
                 , result =
                     if model.query == Nothing || model.query == Just "" then
@@ -215,21 +197,9 @@ update toRoute navKey msg model =
 
                     else
                         RemoteData.Loading
-              }
-            , if model.query == Nothing || model.query == Just "" then
-                Cmd.none
-
-              else
-                createUrl
-                    toRoute
-                    channel
-                    model.query
-                    model.show
-                    0
-                    model.size
-                    model.sort
-                    |> Browser.Navigation.pushUrl navKey
-            )
+                , from = 0
+            }
+                |> pushUrl toRoute navKey
 
         QueryInput query ->
             ( { model | query = Just query }
@@ -237,21 +207,11 @@ update toRoute navKey msg model =
             )
 
         QueryInputSubmit ->
-            if model.query == Nothing || model.query == Just "" then
-                ( model, Cmd.none )
-
-            else
-                ( { model | result = RemoteData.Loading }
-                , createUrl
-                    toRoute
-                    model.channel
-                    model.query
-                    model.show
-                    0
-                    model.size
-                    model.sort
-                    |> Browser.Navigation.pushUrl navKey
-                )
+            { model
+                | result = RemoteData.Loading
+                , from = 0
+            }
+                |> pushUrl toRoute navKey
 
         QueryResponse result ->
             ( { model | result = result }
@@ -259,38 +219,38 @@ update toRoute navKey msg model =
             )
 
         ShowDetails selected ->
-            ( model
-            , createUrl
-                toRoute
-                model.channel
-                model.query
-                (if model.show == Just selected then
-                    Nothing
+            { model
+                | show =
+                    if model.show == Just selected then
+                        Nothing
 
-                 else
-                    Just selected
-                )
-                model.from
-                model.size
-                model.sort
-                |> Browser.Navigation.pushUrl navKey
-            )
+                    else
+                        Just selected
+            }
+                |> pushUrl toRoute navKey
 
 
-{-| TODO: Sort should be part of Route type
--}
-createUrl :
-    Route.SearchRoute
-    -> String
-    -> Maybe String
-    -> Maybe String
-    -> Int
-    -> Int
-    -> Sort
-    -> String
-createUrl toRoute channel query show from size sort =
-    toRoute (Just channel) (Maybe.map Route.SearchQuery.toSearchQuery query) show (Just from) (Just size) (Just <| toSortId sort)
-        |> Route.routeToString
+pushUrl : Route.SearchRoute -> Browser.Navigation.Key -> Model a -> ( Model a, Cmd msg )
+pushUrl toRoute navKey model =
+    Tuple.pair model <|
+        if model.query == Nothing || model.query == Just "" then
+            Cmd.none
+
+        else
+            Browser.Navigation.pushUrl navKey <| createUrl toRoute model
+
+
+createUrl : Route.SearchRoute -> Model a -> String
+createUrl toRoute model =
+    Route.routeToString <|
+        toRoute
+            { channel = Just model.channel
+            , query = Maybe.map Route.SearchQuery.toSearchQuery model.query
+            , show = model.show
+            , from = Just model.from
+            , size = Just model.size
+            , sort = Just <| toSortId model.sort
+            }
 
 
 
@@ -630,14 +590,7 @@ viewPager _ model result toRoute =
                         ""
 
                     else
-                        createUrl
-                            toRoute
-                            model.channel
-                            model.query
-                            model.show
-                            0
-                            model.size
-                            model.sort
+                        createUrl toRoute { model | from = 0 }
                 ]
                 [ text "First" ]
             ]
@@ -652,14 +605,7 @@ viewPager _ model result toRoute =
                         ""
 
                     else
-                        createUrl
-                            toRoute
-                            model.channel
-                            model.query
-                            model.show
-                            (model.from - model.size)
-                            model.size
-                            model.sort
+                        createUrl toRoute { model | from = model.from - model.size }
                 ]
                 [ text "Previous" ]
             ]
@@ -674,14 +620,7 @@ viewPager _ model result toRoute =
                         ""
 
                     else
-                        createUrl
-                            toRoute
-                            model.channel
-                            model.query
-                            model.show
-                            (model.from + model.size)
-                            model.size
-                            model.sort
+                        createUrl toRoute { model | from = model.from + model.size }
                 ]
                 [ text "Next" ]
             ]
@@ -704,14 +643,8 @@ viewPager _ model result toRoute =
                                 else
                                     0
                         in
-                        createUrl
-                            toRoute
-                            model.channel
-                            model.query
-                            model.show
-                            (((result.hits.total.value // model.size) - remainder) * model.size)
-                            model.size
-                            model.sort
+                        createUrl toRoute
+                            { model | from = ((result.hits.total.value // model.size) - remainder) * model.size }
                 ]
                 [ text "Last" ]
             ]

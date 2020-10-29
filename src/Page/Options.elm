@@ -44,7 +44,6 @@ import Json.Decode
 import Json.Encode
 import Regex
 import Route
-import Route.SearchQuery
 import Search
 
 
@@ -66,19 +65,11 @@ type alias ResultItemSource =
     }
 
 
-init :
-    Maybe String
-    -> Maybe Route.SearchQuery.SearchQuery
-    -> Maybe String
-    -> Maybe Int
-    -> Maybe Int
-    -> Maybe String
-    -> Maybe Model
-    -> ( Model, Cmd Msg )
-init channel query show from size sort model =
+init : Route.SearchArgs -> Maybe Model -> ( Model, Cmd Msg )
+init searchArgs model =
     let
         ( newModel, newCmd ) =
-            Search.init channel query show from size sort model
+            Search.init searchArgs model
     in
     ( newModel
     , Cmd.map SearchMsg newCmd
