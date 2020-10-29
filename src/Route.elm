@@ -23,8 +23,8 @@ import Url.Parser.Query
 
 
 type alias SearchArgs =
-    { channel : Maybe String
-    , query : Maybe SearchQuery
+    { query : Maybe SearchQuery
+    , channel : Maybe String
     , show : Maybe String
     , from : Maybe Int
     , size : Maybe Int
@@ -44,12 +44,9 @@ searchQueryParser url =
         rawQuery =
             Route.SearchQuery.toRawQuery url
 
-        withSearchQuery : (a -> Maybe SearchQuery -> b) -> a -> b
-        withSearchQuery f channel =
-            f channel <|
-                Maybe.andThen (Route.SearchQuery.searchString "query") rawQuery
+        maybeQuery = Maybe.andThen (Route.SearchQuery.searchString "query") rawQuery
     in
-    Url.Parser.map (withSearchQuery SearchArgs) <|
+    Url.Parser.map (SearchArgs maybeQuery) <|
         Url.Parser.top
             <?> Url.Parser.Query.string "channel"
             <?> Url.Parser.Query.string "show"
