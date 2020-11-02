@@ -121,7 +121,7 @@ init args model =
         defaultChannel =
             model
                 |> Maybe.map (\x -> x.channel)
-                |> Maybe.withDefault "unstable"
+                |> Maybe.withDefault latest_stable
 
         defaultFrom =
             model
@@ -287,6 +287,11 @@ channelDetails channel =
         Release_20_09 ->
             ChannelDetails "20.09" "20.09" "nixos/release-20.09" "nixos-20.09"
 
+-- Concentrates logic near releases definition.
+-- Otherwise you would have remember to modify @:124 defaultChannel each time.
+-- Bump when new channel is released.
+latest_stable : String
+latest_stable = "20.09"
 
 channelFromId : String -> Maybe Channel
 channelFromId channel_id =
