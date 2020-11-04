@@ -118,30 +118,30 @@ type Sort
 init : Route.SearchArgs -> Maybe (Model a) -> ( Model a, Cmd (Msg a) )
 init args model =
     let
-        defaultChannel =
+        channel =
             model
                 |> Maybe.map (\x -> x.channel)
-                |> Maybe.withDefault "unstable"
+                |> Maybe.withDefault defaultChannel
 
-        defaultFrom =
+        from =
             model
                 |> Maybe.map (\x -> x.from)
                 |> Maybe.withDefault 0
 
-        defaultSize =
+        size =
             model
                 |> Maybe.map (\x -> x.size)
                 |> Maybe.withDefault 30
     in
-    ( { channel = Maybe.withDefault defaultChannel args.channel
+    ( { channel = Maybe.withDefault channel args.channel
       , query = Maybe.andThen Route.SearchQuery.searchQueryToString args.query
       , result =
             model
                 |> Maybe.map (\x -> x.result)
                 |> Maybe.withDefault RemoteData.NotAsked
       , show = args.show
-      , from = Maybe.withDefault defaultFrom args.from
-      , size = Maybe.withDefault defaultSize args.size
+      , from = Maybe.withDefault from args.from
+      , size = Maybe.withDefault size args.size
       , sort =
             args.sort
                 |> Maybe.withDefault ""
@@ -270,6 +270,11 @@ type alias ChannelDetails =
     , jobset : String
     , branch : String
     }
+
+
+defaultChannel : String
+defaultChannel =
+    "20.09"
 
 
 channelDetails : Channel -> ChannelDetails
