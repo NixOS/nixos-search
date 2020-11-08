@@ -19,6 +19,7 @@
     "nodePackages"
     "platformioPackages"
     "haskellPackages"
+    "haskell.compiler"
     "idrisPackages"
     "sconsPackages"
     "gns3Packages"
