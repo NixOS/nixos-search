@@ -28,8 +28,6 @@ jobs:
     - name: Installing NixFlakes
       run: |
         env
-        nix-env -iA nixpkgs.nixFlakes
-        echo "::add-path::$HOME/.nix-profile/bin"
         nix --version
         cat /etc/nix/nix.conf
 
