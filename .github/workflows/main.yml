@@ -24,7 +24,7 @@ jobs:
         signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
 
     - name: DEBUG
-      uses: lhotari/action-upterm@v1
+      uses: mxschmitt/action-tmate@v3
 
     - name: Installing NixFlakes
       run: |
