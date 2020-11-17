@@ -23,6 +23,9 @@ jobs:
         name: nixos-search
         signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
 
+    - name: DEBUG
+      uses: lhotari/action-upterm@v1
+
     - name: Installing NixFlakes
       run: |
         nix-env -iA nixpkgs.nixFlakes
