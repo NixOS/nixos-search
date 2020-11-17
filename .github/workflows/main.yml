@@ -14,33 +14,37 @@ jobs:
         fetch-depth: 0
 
     - name: Installing Nix
-      uses: cachix/install-nix-action@v9
+      uses: cachix/install-nix-action@v12
 
-    - uses: cachix/cachix-action@v6
+    - uses: cachix/cachix-action@v8
       with:
         name: nixos-search
         signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
 
+    - name: Install unstable channel
+      run: |
+        nix-channel --add https://nixos.org/channels/nixpkgs-unstable
+        nix-channel --update
+
     - name: Installing NixFlakes
       run: |
         nix-env -iA nixpkgs.nixFlakes
-        echo "::add-path::$HOME/.nix-profile/bin"
         echo 'experimental-features = nix-command flakes' | sudo tee -a /etc/nix/nix.conf
         nix --version
         cat /etc/nix/nix.conf
 
     - name: Building import_scripts
       run: |
-        nix build ./#packages.x86_64-linux.import_scripts
+        $HOME/.nix-profile/bin/nix build ./#packages.x86_64-linux.import_scripts
 
     - name: Building search.nixos.org
       run: |
-        nix build ./#packages.x86_64-linux.frontend
+        $HOME/.nix-profile/bin/nix build ./#packages.x86_64-linux.frontend
         mkdir ./dist
         cp -RL ./result/* ./dist/
 
     - name: Deploy to Netlify
-      uses: nwtgck/actions-netlify@v1.0.5
+      uses: nwtgck/actions-netlify@v1.1.11
       env:
         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
