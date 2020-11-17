@@ -16,6 +16,7 @@ jobs:
     - name: Installing Nix
       uses: cachix/install-nix-action@v12
       with:
+        install_url: https://hydra.nixos.org/job/nix/master/installerScript/latest/download/1/install
         nix_path: nixpkgs=channel:nixos-unstable
         extra_nix_config: |
           experimental-features = nix-command flakes
