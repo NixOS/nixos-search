@@ -16,10 +16,7 @@ jobs:
     - name: Installing Nix
       uses: cachix/install-nix-action@v12
       with:
-        install_url: https://hydra.nixos.org/job/nix/master/installerScript/latest/download/1/install
         nix_path: nixpkgs=channel:nixos-unstable
-        extra_nix_config: |
-          experimental-features = nix-command flakes
 
     - uses: cachix/cachix-action@v8
       with:
@@ -28,7 +25,9 @@ jobs:
 
     - name: Installing NixFlakes
       run: |
-        env
+        nix-env -iA nixpkgs.nixFlakes
+        echo "::add-path::$HOME/.nix-profile/bin"
+        echo 'experimental-features = nix-command flakes' | sudo tee -a /etc/nix/nix.conf
         nix --version
         cat /etc/nix/nix.conf
 
