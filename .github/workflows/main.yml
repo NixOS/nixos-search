@@ -26,18 +26,17 @@ jobs:
         nix-channel --add https://nixos.org/channels/nixpkgs-unstable
         nix-channel --update
         nix-env -iA nixpkgs.nixFlakes
-        echo "PATH=$HOME/.nix-profile/bin:$PATH" >> $GITHUB_ENV
         echo 'experimental-features = nix-command flakes' | sudo tee -a /etc/nix/nix.conf
         nix --version
         cat /etc/nix/nix.conf
 
     - name: Building import_scripts
       run: |
-        nix build ./#packages.x86_64-linux.import_scripts
+        $HOME/.nix-profile/bin/nix build ./#packages.x86_64-linux.import_scripts
 
     - name: Building search.nixos.org
       run: |
-        nix build ./#packages.x86_64-linux.frontend
+        $HOME/.nix-profile/bin/nix build ./#packages.x86_64-linux.frontend
         mkdir ./dist
         cp -RL ./result/* ./dist/
 
