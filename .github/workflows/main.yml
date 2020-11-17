@@ -26,7 +26,7 @@ jobs:
         nix-channel --add https://nixos.org/channels/nixpkgs-unstable
         nix-channel --update
         nix-env -iA nixpkgs.nixFlakes
-        echo "::add-path::$HOME/.nix-profile/bin"
+        echo "PATH=$HOME/.nix-profile/bin:$PATH" >> $GITHUB_ENV
         echo 'experimental-features = nix-command flakes' | sudo tee -a /etc/nix/nix.conf
         nix --version
         cat /etc/nix/nix.conf
