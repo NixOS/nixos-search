@@ -160,7 +160,14 @@ changeRouteTo :
     -> ( Model, Cmd Msg )
 changeRouteTo currentModel url =
     let
-        attempteQuery (( newModel, cmd ) as pair) =
+        attempteQuery ( newModel, cmd ) =
+            let
+                -- We intentially throw away Cmd
+                -- because we don't want to perform any effects
+                -- in this cases where route itself doesn't change
+                noEffects =
+                    ( newModel, Cmd.none )
+            in
             case ( currentModel.route, newModel.route ) of
                 ( Route.Packages arg1, Route.Packages arg2 ) ->
                     if
@@ -173,7 +180,7 @@ changeRouteTo currentModel url =
                         submitQuery newModel ( newModel, cmd )
 
                     else
-                        pair
+                        noEffects
 
                 ( Route.Options arg1, Route.Options arg2 ) ->
                     if
@@ -186,14 +193,14 @@ changeRouteTo currentModel url =
                         submitQuery newModel ( newModel, cmd )
 
                     else
-                        pair
+                        noEffects
 
                 ( a, b ) ->
                     if a /= b then
                         submitQuery newModel ( newModel, cmd )
 
                     else
-                        pair
+                        noEffects
     in
     case Route.fromUrl url of
         Nothing ->
