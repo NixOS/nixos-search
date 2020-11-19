@@ -12,6 +12,7 @@ module Search exposing
     , init
     , makeRequest
     , makeRequestBody
+    , shouldLoad
     , update
     , view
     )
@@ -152,6 +153,20 @@ init args model =
     )
 
 
+shouldLoad : Model a -> Bool
+shouldLoad model =
+    model.result == RemoteData.Loading
+
+
+ensureLoading : Model a -> Model a
+ensureLoading model =
+    if model.query /= Nothing && model.query /= Just "" && List.member model.channel channels then
+        { model | result = RemoteData.Loading }
+
+    else
+        model
+
+
 
 -- ---------------------------
 -- UPDATE
@@ -191,14 +206,9 @@ update toRoute navKey msg model =
         ChannelChange channel ->
             { model
                 | channel = channel
-                , result =
-                    if model.query == Nothing || model.query == Just "" then
-                        RemoteData.NotAsked
-
-                    else
-                        RemoteData.Loading
                 , from = 0
             }
+                |> ensureLoading
                 |> pushUrl toRoute navKey
 
         QueryInput query ->
@@ -207,10 +217,8 @@ update toRoute navKey msg model =
             )
 
         QueryInputSubmit ->
-            { model
-                | result = RemoteData.Loading
-                , from = 0
-            }
+            { model | from = 0 }
+                |> ensureLoading
                 |> pushUrl toRoute navKey
 
         QueryResponse result ->
