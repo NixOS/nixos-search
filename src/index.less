@@ -1,6 +1,7 @@
 body {
   position: relative;
   min-height: 100vh;
+  overflow-y: scroll;
 }
 
 #content {
@@ -89,6 +90,21 @@ header .navbar.navbar-static-top {
   }
 }
 
+.sort-form,
+.sort-form > .sort-group {
+  margin-bottom: 0;
+}
+.pager {
+  & > li > a {
+    cursor: pointer;
+    margin: 0 2px;
+  }
+}
+
+.loader-wrapper {
+  height: 200px;
+  overflow: hidden;
+}
 .loader,
 .loader:before,
 .loader:after {
@@ -100,6 +116,7 @@ header .navbar.navbar-static-top {
 }
 .loader {
   color: #000000;
+  height: 50px;
   text-indent: -9999em;
   margin: 88px auto;
   position: relative;

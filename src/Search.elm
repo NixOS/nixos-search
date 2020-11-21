@@ -502,20 +502,26 @@ view { toRoute, categoryName } title model viewSuccess outMsg =
                     ]
                 ]
             ]
-        , case model.result of
-            RemoteData.NotAsked ->
-                div [] [ text "" ]
+        , div [] <|
+            case model.result of
+                RemoteData.NotAsked ->
+                    [ text "" ]
 
-            RemoteData.Loading ->
-                div [ class "loader" ] [ text "Loading..." ]
+                RemoteData.Loading ->
+                    [ p [] [ em [] [ text "Searching..." ] ]
+                    , div []
+                        [ viewSortSelection outMsg model
+                        , viewPager outMsg model 0 toRoute
+                        ]
+                    , div [ class "loader-wrapper" ] [ div [ class "loader" ] [ text "Loading..." ] ]
+                    , viewPager outMsg model 0 toRoute
+                    ]
 
-            RemoteData.Success result ->
-                if result.hits.total.value == 0 then
-                    div []
+                RemoteData.Success result ->
+                    if result.hits.total.value == 0 then
                         [ h4 [] [ text <| "No " ++ categoryName ++ " found!" ] ]
 
-                else
-                    div []
+                    else
                         [ p []
                             [ em []
                                 [ text
@@ -540,57 +546,63 @@ view { toRoute, categoryName } title model viewSuccess outMsg =
                                     )
                                 ]
                             ]
-                        , form [ class "form-horizontal pull-right" ]
-                            [ div
-                                [ class "control-group"
-                                ]
-                                [ label [ class "control-label" ] [ text "Sort by:" ]
-                                , div
-                                    [ class "controls" ]
-                                    [ select
-                                        [ onInput (\x -> outMsg (SortChange x))
-                                        ]
-                                        (List.map
-                                            (\sort ->
-                                                option
-                                                    [ selected (model.sort == sort)
-                                                    , value (toSortId sort)
-                                                    ]
-                                                    [ text <| toSortTitle sort ]
-                                            )
-                                            sortBy
-                                        )
-                                    ]
-                                ]
+                        , div []
+                            [ viewSortSelection outMsg model
+                            , viewPager outMsg model result.hits.total.value toRoute
                             ]
-                        , viewPager outMsg model result.hits.total.value toRoute
                         , viewSuccess model.channel model.show result
                         , viewPager outMsg model result.hits.total.value toRoute
                         ]
 
-            RemoteData.Failure error ->
-                let
-                    ( errorTitle, errorMessage ) =
-                        case error of
-                            Http.BadUrl text ->
-                                ( "Bad Url!", text )
+                RemoteData.Failure error ->
+                    let
+                        ( errorTitle, errorMessage ) =
+                            case error of
+                                Http.BadUrl text ->
+                                    ( "Bad Url!", text )
 
-                            Http.Timeout ->
-                                ( "Timeout!", "Request to the server timeout." )
+                                Http.Timeout ->
+                                    ( "Timeout!", "Request to the server timeout." )
 
-                            Http.NetworkError ->
-                                ( "Network Error!", "A network request bonsaisearch.net domain failed. This is either due to a content blocker or a networking issue." )
+                                Http.NetworkError ->
+                                    ( "Network Error!", "A network request bonsaisearch.net domain failed. This is either due to a content blocker or a networking issue." )
 
-                            Http.BadStatus code ->
-                                ( "Bad Status", "Server returned " ++ String.fromInt code )
+                                Http.BadStatus code ->
+                                    ( "Bad Status", "Server returned " ++ String.fromInt code )
 
-                            Http.BadBody text ->
-                                ( "Bad Body", text )
-                in
-                div [ class "alert alert-error" ]
-                    [ h4 [] [ text errorTitle ]
-                    , text errorMessage
+                                Http.BadBody text ->
+                                    ( "Bad Body", text )
+                    in
+                    [ div [ class "alert alert-error" ]
+                        [ h4 [] [ text errorTitle ]
+                        , text errorMessage
+                        ]
                     ]
+        ]
+
+
+viewSortSelection : (Msg a -> b) -> Model a -> Html b
+viewSortSelection outMsg model =
+    form [ class "form-horizontal pull-right sort-form" ]
+        [ div [ class "control-group sort-group" ]
+            [ label [ class "control-label" ] [ text "Sort by:" ]
+            , div
+                [ class "controls" ]
+                [ select
+                    [ onInput (\x -> outMsg (SortChange x))
+                    ]
+                    (List.map
+                        (\sort ->
+                            option
+                                [ selected (model.sort == sort)
+                                , value (toSortId sort)
+                                ]
+                                [ text <| toSortTitle sort ]
+                        )
+                        sortBy
+                    )
+                ]
+            ]
         ]
 
 
@@ -600,8 +612,8 @@ viewPager :
     -> Int
     -> Route.SearchRoute
     -> Html b
-viewPager msg model total toRoute =
-    Html.map msg <|
+viewPager outMsg model total toRoute =
+    Html.map outMsg <|
         ul [ class "pager" ]
             [ li [ classList [ ( "disabled", model.from == 0 ) ] ]
                 [ a
