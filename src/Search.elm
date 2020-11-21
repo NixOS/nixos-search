@@ -563,9 +563,9 @@ view { toRoute, categoryName } title model viewSuccess outMsg =
                                     ]
                                 ]
                             ]
-                        , viewPager outMsg model result toRoute
+                        , viewPager outMsg model result.hits.total.value toRoute
                         , viewSuccess model.channel model.show result
-                        , viewPager outMsg model result toRoute
+                        , viewPager outMsg model result.hits.total.value toRoute
                         ]
 
             RemoteData.Failure error ->
@@ -597,10 +597,10 @@ view { toRoute, categoryName } title model viewSuccess outMsg =
 viewPager :
     (Msg a -> b)
     -> Model a
-    -> SearchResult a
+    -> Int
     -> Route.SearchRoute
     -> Html b
-viewPager msg model result toRoute =
+viewPager msg model total toRoute =
     Html.map msg <|
         ul [ class "pager" ]
             [ li [ classList [ ( "disabled", model.from == 0 ) ] ]
@@ -625,10 +625,10 @@ viewPager msg model result toRoute =
                     ]
                     [ text "Previous" ]
                 ]
-            , li [ classList [ ( "disabled", model.from + model.size >= result.hits.total.value ) ] ]
+            , li [ classList [ ( "disabled", model.from + model.size >= total ) ] ]
                 [ a
                     [ Html.Events.onClick <|
-                        if model.from + model.size >= result.hits.total.value then
+                        if model.from + model.size >= total then
                             NoOp
 
                         else
@@ -636,22 +636,22 @@ viewPager msg model result toRoute =
                     ]
                     [ text "Next" ]
                 ]
-            , li [ classList [ ( "disabled", model.from + model.size >= result.hits.total.value ) ] ]
+            , li [ classList [ ( "disabled", model.from + model.size >= total ) ] ]
                 [ a
                     [ Html.Events.onClick <|
-                        if model.from + model.size >= result.hits.total.value then
+                        if model.from + model.size >= total then
                             NoOp
 
                         else
                             let
                                 remainder =
-                                    if remainderBy model.size result.hits.total.value == 0 then
+                                    if remainderBy model.size total == 0 then
                                         1
 
                                     else
                                         0
                             in
-                            ChangePage <| ((result.hits.total.value // model.size) - remainder) * model.size
+                            ChangePage <| ((total // model.size) - remainder) * model.size
                     ]
                     [ text "Last" ]
                 ]
