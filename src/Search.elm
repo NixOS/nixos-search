@@ -149,6 +149,7 @@ init args model =
                 |> fromSortId
                 |> Maybe.withDefault Relevance
       }
+        |> ensureLoading
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
     )
 
@@ -181,6 +182,7 @@ type Msg a
     | QueryInputSubmit
     | QueryResponse (RemoteData.WebData (SearchResult a))
     | ShowDetails String
+    | ChangePage Int
 
 
 update :
@@ -235,6 +237,11 @@ update toRoute navKey msg model =
                     else
                         Just selected
             }
+                |> pushUrl toRoute navKey
+
+        ChangePage from ->
+            { model | from = from }
+                |> ensureLoading
                 |> pushUrl toRoute navKey
 
 
@@ -593,78 +600,62 @@ viewPager :
     -> SearchResult a
     -> Route.SearchRoute
     -> Html b
-viewPager _ model result toRoute =
-    ul [ class "pager" ]
-        [ li
-            [ classList
-                [ ( "disabled", model.from == 0 )
-                ]
-            ]
-            [ a
-                [ href <|
-                    if model.from == 0 then
-                        ""
+viewPager msg model result toRoute =
+    Html.map msg <|
+        ul [ class "pager" ]
+            [ li [ classList [ ( "disabled", model.from == 0 ) ] ]
+                [ a
+                    [ Html.Events.onClick <|
+                        if model.from == 0 then
+                            NoOp
 
-                    else
-                        createUrl toRoute { model | from = 0 }
+                        else
+                            ChangePage 0
+                    ]
+                    [ text "First" ]
                 ]
-                [ text "First" ]
-            ]
-        , li
-            [ classList
-                [ ( "disabled", model.from == 0 )
-                ]
-            ]
-            [ a
-                [ href <|
-                    if model.from - model.size < 0 then
-                        ""
+            , li [ classList [ ( "disabled", model.from == 0 ) ] ]
+                [ a
+                    [ Html.Events.onClick <|
+                        if model.from - model.size < 0 then
+                            NoOp
 
-                    else
-                        createUrl toRoute { model | from = model.from - model.size }
+                        else
+                            ChangePage <| model.from - model.size
+                    ]
+                    [ text "Previous" ]
                 ]
-                [ text "Previous" ]
-            ]
-        , li
-            [ classList
-                [ ( "disabled", model.from + model.size >= result.hits.total.value )
-                ]
-            ]
-            [ a
-                [ href <|
-                    if model.from + model.size >= result.hits.total.value then
-                        ""
+            , li [ classList [ ( "disabled", model.from + model.size >= result.hits.total.value ) ] ]
+                [ a
+                    [ Html.Events.onClick <|
+                        if model.from + model.size >= result.hits.total.value then
+                            NoOp
 
-                    else
-                        createUrl toRoute { model | from = model.from + model.size }
+                        else
+                            ChangePage <| model.from + model.size
+                    ]
+                    [ text "Next" ]
                 ]
-                [ text "Next" ]
-            ]
-        , li
-            [ classList
-                [ ( "disabled", model.from + model.size >= result.hits.total.value )
-                ]
-            ]
-            [ a
-                [ href <|
-                    if model.from + model.size >= result.hits.total.value then
-                        ""
+            , li [ classList [ ( "disabled", model.from + model.size >= result.hits.total.value ) ] ]
+                [ a
+                    [ Html.Events.onClick <|
+                        if model.from + model.size >= result.hits.total.value then
+                            NoOp
 
-                    else
-                        let
-                            remainder =
-                                if remainderBy model.size result.hits.total.value == 0 then
-                                    1
+                        else
+                            let
+                                remainder =
+                                    if remainderBy model.size result.hits.total.value == 0 then
+                                        1
 
-                                else
-                                    0
-                        in
-                        createUrl toRoute
-                            { model | from = ((result.hits.total.value // model.size) - remainder) * model.size }
+                                    else
+                                        0
+                            in
+                            ChangePage <| ((result.hits.total.value // model.size) - remainder) * model.size
+                    ]
+                    [ text "Last" ]
                 ]
-                [ text "Last" ]
             ]
-        ]
 
 
 

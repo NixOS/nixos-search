@@ -122,15 +122,17 @@ attemptQuery (( model, _ ) as pair) =
                 (\cmd ->
                     Cmd.batch
                         [ cmd
-                        , Cmd.map msg <| makeRequest
-                            model.elasticsearch
-                            searchModel.channel
-                            (Maybe.withDefault "" searchModel.query)
-                            searchModel.from
-                            searchModel.size
-                            searchModel.sort
+                        , Cmd.map msg <|
+                            makeRequest
+                                model.elasticsearch
+                                searchModel.channel
+                                (Maybe.withDefault "" searchModel.query)
+                                searchModel.from
+                                searchModel.size
+                                searchModel.sort
                         ]
-                ) pair
+                )
+                pair
     in
     case model.page of
         Packages searchModel ->
@@ -217,7 +219,13 @@ update msg model =
 
                 Browser.External href ->
                     ( model
-                    , Browser.Navigation.load href
+                    , case href of
+                        -- ignore links with no `href` attribute
+                        "" ->
+                            Cmd.none
+
+                        _ ->
+                            Browser.Navigation.load href
                     )
 
         ( ChangedUrl url, _ ) ->
