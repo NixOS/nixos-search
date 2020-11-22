@@ -34,6 +34,7 @@ import Html.Attributes
         ( class
         , colspan
         , href
+        , target
         )
 import Html.Events
     exposing
@@ -248,18 +249,18 @@ viewResultItemDetails channel item =
         githubUrlPrefix branch =
             "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/"
 
-        cleanPosition value =
-            if String.startsWith "source/" value then
-                String.dropLeft 7 value
-
-            else
-                value
+        cleanPosition =
+            Regex.fromString "^[0-9a-f]+\\.tar\\.gz\\/"
+                |> Maybe.withDefault Regex.never
+                >> (\reg -> Regex.replace reg (\_ -> ""))
 
         asGithubLink value =
             case Search.channelDetailsFromId channel of
                 Just channelDetails ->
                     a
-                        [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L" |> cleanPosition) ]
+                        [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L" |> cleanPosition)
+                        , target "blank_"
+                        ]
                         [ text <| cleanPosition value ]
 
                 Nothing ->

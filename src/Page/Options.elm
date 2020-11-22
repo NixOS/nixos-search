@@ -33,6 +33,7 @@ import Html.Attributes
         ( class
         , colspan
         , href
+        , target
         )
 import Html.Events
     exposing
@@ -218,7 +219,9 @@ viewResultItemDetails channel item =
             case Search.channelDetailsFromId channel of
                 Just channelDetails ->
                     a
-                        [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L") ]
+                        [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L")
+                        , target "_blank"
+                        ]
                         [ text <| value ]
 
                 Nothing ->

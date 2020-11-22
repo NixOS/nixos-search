@@ -264,6 +264,9 @@ type Channel
     | Release_20_09
 
 
+{-| TODO: we should consider using more dynamic approach here
+and load channels from apis similar to what status page does
+-}
 type alias ChannelDetails =
     { id : String
     , title : String
