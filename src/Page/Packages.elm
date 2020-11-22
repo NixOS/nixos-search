@@ -259,7 +259,7 @@ viewResultItemDetails channel item =
                 Just channelDetails ->
                     a
                         [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L" |> cleanPosition)
-                        , target "blank_"
+                        , target "_blank"
                         ]
                         [ text <| cleanPosition value ]
 
