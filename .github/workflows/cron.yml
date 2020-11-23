@@ -2,6 +2,7 @@ name: "Hourly import channel to Elasticsearch"
 
 on:
 
+  pull_request:
   schedule:
   - cron: '0 * * * *'
 
@@ -45,7 +46,7 @@ jobs:
 
     - name: Installing awscli
       run: |
-        nix-env -iA nixpkgs.awscli
+        nix-env -iA nixpkgs.awscli2
 
     - name: Check for latest evaluation in ${{ matrix.channel }} channel
       run: |
