@@ -45,7 +45,7 @@ jobs:
 
     - name: Installing awscli
       run: |
-        nix-env -iA nixpkgs.awscli
+        nix-env -iA nixpkgs.awscli2
 
     - name: Check for latest evaluation in ${{ matrix.channel }} channel
       run: |
