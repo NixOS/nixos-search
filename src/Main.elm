@@ -153,6 +153,25 @@ attemptQuery (( model, _ ) as pair) =
             pair
 
 
+pageMatch : Page -> Page -> Bool
+pageMatch m1 m2 =
+    case ( m1, m2 ) of
+        ( NotFound, NotFound ) ->
+            True
+
+        ( Home _, Home _ ) ->
+            True
+
+        ( Packages _, Packages _ ) ->
+            True
+
+        ( Options _, Options _ ) ->
+            True
+
+        _ ->
+            False
+
+
 changeRouteTo :
     Model
     -> Url.Url
@@ -168,6 +187,13 @@ changeRouteTo currentModel url =
             let
                 model =
                     { currentModel | route = route }
+
+                avoidReinit ( newModel, cmd ) =
+                    if pageMatch currentModel.page newModel.page then
+                        ( model, Cmd.none )
+
+                    else
+                        ( newModel, cmd )
             in
             case route of
                 Route.NotFound ->
@@ -190,6 +216,7 @@ changeRouteTo currentModel url =
                     in
                     Page.Packages.init searchArgs modelPage
                         |> updateWith Packages PackagesMsg model
+                        |> avoidReinit
                         |> attemptQuery
 
                 Route.Options searchArgs ->
@@ -204,6 +231,7 @@ changeRouteTo currentModel url =
                     in
                     Page.Options.init searchArgs modelPage
                         |> updateWith Options OptionsMsg model
+                        |> avoidReinit
                         |> attemptQuery
 
 

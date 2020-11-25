@@ -203,6 +203,7 @@ update toRoute navKey msg model =
                 | sort = fromSortId sortId |> Maybe.withDefault Relevance
                 , from = 0
             }
+                |> ensureLoading
                 |> pushUrl toRoute navKey
 
         ChannelChange channel ->
