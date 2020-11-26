@@ -266,7 +266,7 @@ def parse_query(text):
 
 
 def get_last_evaluation(prefix):
-    logger.debug(f"Retriving last evaluation for {prefix} prefix.")
+    logger.debug(f"Retrieving last evaluation for {prefix} prefix.")
 
     s3 = boto3.client(
         "s3", config=botocore.client.Config(signature_version=botocore.UNSIGNED)
@@ -307,7 +307,7 @@ def get_last_evaluation(prefix):
 
 def get_evaluation_builds(evaluation_id):
     logger.debug(
-        f"get_evaluation_builds: Retriving list of builds for {evaluation_id} evaluation id"
+        f"get_evaluation_builds: Retrieving list of builds for {evaluation_id} evaluation id"
     )
     filename = f"eval-{evaluation_id}.json"
     if not os.path.exists(filename):
@@ -393,7 +393,7 @@ def remove_attr_set(name):
 
 def get_packages_raw(evaluation):
     logger.debug(
-        f"get_packages: Retriving list of packages for '{evaluation['git_revision']}' revision"
+        f"get_packages: Retrieving list of packages for '{evaluation['git_revision']}' revision"
     )
     result = subprocess.run(
         shlex.split(
@@ -502,7 +502,7 @@ def get_packages(evaluation, evaluation_builds):
 
 def get_options_raw(evaluation):
     logger.debug(
-        f"get_packages: Retriving list of options for '{evaluation['git_revision']}' revision"
+        f"get_packages: Retrieving list of options for '{evaluation['git_revision']}' revision"
     )
     result = subprocess.run(
         shlex.split(
@@ -523,18 +523,29 @@ def get_options_raw(evaluation):
 def get_options(evaluation):
     options = get_options_raw(evaluation)
 
+    def toNix(value):
+        result = subprocess.run(
+            shlex.split(
+                "nix-instantiate --eval --strict -E 'builtins.fromJSON (builtins.readFile /dev/stdin)'"
+            ),
+            input=json.dumps(value).encode(),
+            stdout=subprocess.PIPE,
+            check=True,
+        )
+        return result.stdout.strip().decode()
+
     def gen():
         for name, option in options:
             default = option.get("default")
             if default is not None:
-                default = json.dumps(default)
+                default = toNix(default)
 
             example = option.get("example")
             if example is not None:
                 if type(example) == dict and example.get("_type") == "literalExample":
-                    example = json.dumps(example["text"])
+                    example = example["text"]
                 else:
-                    example = json.dumps(example)
+                    example = toNix(example)
 
             description = option.get("description")
             if description is not None:
