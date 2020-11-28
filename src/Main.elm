@@ -108,50 +108,68 @@ updateWith toPage toMsg model ( subModel, subCmd ) =
     )
 
 
-submitQuery :
-    Model
-    -> ( Model, Cmd Msg )
-    -> ( Model, Cmd Msg )
-submitQuery old ( new, cmd ) =
+attemptQuery : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+attemptQuery (( model, _ ) as pair) =
     let
-        triggerSearch _ newModel msg makeRequest =
-            if
-                (newModel.query /= Nothing)
-                    && (newModel.query /= Just "")
-                    && List.member newModel.channel Search.channels
-            then
-                ( new
-                , Cmd.batch
-                    [ cmd
-                    , makeRequest
-                        new.elasticsearch
-                        newModel.channel
-                        (Maybe.withDefault "" newModel.query)
-                        newModel.from
-                        newModel.size
-                        newModel.sort
-                        |> Cmd.map msg
-                    ]
+        -- We intentially throw away Cmd
+        -- because we don't want to perform any effects
+        -- in this cases where route itself doesn't change
+        noEffects =
+            Tuple.mapSecond (always Cmd.none)
+
+        submitQuery msg makeRequest searchModel =
+            Tuple.mapSecond
+                (\cmd ->
+                    Cmd.batch
+                        [ cmd
+                        , Cmd.map msg <|
+                            makeRequest
+                                model.elasticsearch
+                                searchModel.channel
+                                (Maybe.withDefault "" searchModel.query)
+                                searchModel.from
+                                searchModel.size
+                                searchModel.sort
+                        ]
                 )
+                pair
+    in
+    case model.page of
+        Packages searchModel ->
+            if Search.shouldLoad searchModel then
+                submitQuery PackagesMsg Page.Packages.makeRequest searchModel
 
             else
-                ( new, cmd )
-    in
-    case ( old.page, new.page ) of
-        ( Packages oldModel, Packages newModel ) ->
-            triggerSearch oldModel newModel PackagesMsg Page.Packages.makeRequest
+                noEffects pair
 
-        ( NotFound, Packages newModel ) ->
-            triggerSearch newModel newModel PackagesMsg Page.Packages.makeRequest
+        Options searchModel ->
+            if Search.shouldLoad searchModel then
+                submitQuery OptionsMsg Page.Options.makeRequest searchModel
 
-        ( Options oldModel, Options newModel ) ->
-            triggerSearch oldModel newModel OptionsMsg Page.Options.makeRequest
+            else
+                noEffects pair
 
-        ( NotFound, Options newModel ) ->
-            triggerSearch newModel newModel OptionsMsg Page.Options.makeRequest
+        _ ->
+            pair
 
-        ( _, _ ) ->
-            ( new, cmd )
+
+pageMatch : Page -> Page -> Bool
+pageMatch m1 m2 =
+    case ( m1, m2 ) of
+        ( NotFound, NotFound ) ->
+            True
+
+        ( Home _, Home _ ) ->
+            True
+
+        ( Packages _, Packages _ ) ->
+            True
+
+        ( Options _, Options _ ) ->
+            True
+
+        _ ->
+            False
 
 
 changeRouteTo :
@@ -159,49 +177,6 @@ changeRouteTo :
     -> Url.Url
     -> ( Model, Cmd Msg )
 changeRouteTo currentModel url =
-    let
-        attempteQuery ( newModel, cmd ) =
-            let
-                -- We intentially throw away Cmd
-                -- because we don't want to perform any effects
-                -- in this cases where route itself doesn't change
-                noEffects =
-                    ( newModel, Cmd.none )
-            in
-            case ( currentModel.route, newModel.route ) of
-                ( Route.Packages arg1, Route.Packages arg2 ) ->
-                    if
-                        (arg1.channel /= arg2.channel)
-                            || (arg1.query /= arg2.query)
-                            || (arg1.from /= arg2.from)
-                            || (arg1.size /= arg2.size)
-                            || (arg1.sort /= arg2.sort)
-                    then
-                        submitQuery newModel ( newModel, cmd )
-
-                    else
-                        noEffects
-
-                ( Route.Options arg1, Route.Options arg2 ) ->
-                    if
-                        (arg1.channel /= arg2.channel)
-                            || (arg1.query /= arg2.query)
-                            || (arg1.from /= arg2.from)
-                            || (arg1.size /= arg2.size)
-                            || (arg1.sort /= arg2.sort)
-                    then
-                        submitQuery newModel ( newModel, cmd )
-
-                    else
-                        noEffects
-
-                ( a, b ) ->
-                    if a /= b then
-                        submitQuery newModel ( newModel, cmd )
-
-                    else
-                        noEffects
-    in
     case Route.fromUrl url of
         Nothing ->
             ( { currentModel | page = NotFound }
@@ -212,6 +187,13 @@ changeRouteTo currentModel url =
             let
                 model =
                     { currentModel | route = route }
+
+                avoidReinit ( newModel, cmd ) =
+                    if pageMatch currentModel.page newModel.page then
+                        ( model, Cmd.none )
+
+                    else
+                        ( newModel, cmd )
             in
             case route of
                 Route.NotFound ->
@@ -234,7 +216,8 @@ changeRouteTo currentModel url =
                     in
                     Page.Packages.init searchArgs modelPage
                         |> updateWith Packages PackagesMsg model
-                        |> attempteQuery
+                        |> avoidReinit
+                        |> attemptQuery
 
                 Route.Options searchArgs ->
                     let
@@ -248,7 +231,8 @@ changeRouteTo currentModel url =
                     in
                     Page.Options.init searchArgs modelPage
                         |> updateWith Options OptionsMsg model
-                        |> attempteQuery
+                        |> avoidReinit
+                        |> attemptQuery
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -263,7 +247,13 @@ update msg model =
 
                 Browser.External href ->
                     ( model
-                    , Browser.Navigation.load href
+                    , case href of
+                        -- ignore links with no `href` attribute
+                        "" ->
+                            Cmd.none
+
+                        _ ->
+                            Browser.Navigation.load href
                     )
 
         ( ChangedUrl url, _ ) ->

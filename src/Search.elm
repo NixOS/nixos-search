@@ -12,6 +12,7 @@ module Search exposing
     , init
     , makeRequest
     , makeRequestBody
+    , shouldLoad
     , update
     , view
     )
@@ -148,8 +149,23 @@ init args model =
                 |> fromSortId
                 |> Maybe.withDefault Relevance
       }
+        |> ensureLoading
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
     )
+
+
+shouldLoad : Model a -> Bool
+shouldLoad model =
+    model.result == RemoteData.Loading
+
+
+ensureLoading : Model a -> Model a
+ensureLoading model =
+    if model.query /= Nothing && model.query /= Just "" && List.member model.channel channels then
+        { model | result = RemoteData.Loading }
+
+    else
+        model
 
 
 
@@ -166,6 +182,7 @@ type Msg a
     | QueryInputSubmit
     | QueryResponse (RemoteData.WebData (SearchResult a))
     | ShowDetails String
+    | ChangePage Int
 
 
 update :
@@ -186,19 +203,15 @@ update toRoute navKey msg model =
                 | sort = fromSortId sortId |> Maybe.withDefault Relevance
                 , from = 0
             }
+                |> ensureLoading
                 |> pushUrl toRoute navKey
 
         ChannelChange channel ->
             { model
                 | channel = channel
-                , result =
-                    if model.query == Nothing || model.query == Just "" then
-                        RemoteData.NotAsked
-
-                    else
-                        RemoteData.Loading
                 , from = 0
             }
+                |> ensureLoading
                 |> pushUrl toRoute navKey
 
         QueryInput query ->
@@ -207,10 +220,8 @@ update toRoute navKey msg model =
             )
 
         QueryInputSubmit ->
-            { model
-                | result = RemoteData.Loading
-                , from = 0
-            }
+            { model | from = 0 }
+                |> ensureLoading
                 |> pushUrl toRoute navKey
 
         QueryResponse result ->
@@ -227,6 +238,11 @@ update toRoute navKey msg model =
                     else
                         Just selected
             }
+                |> pushUrl toRoute navKey
+
+        ChangePage from ->
+            { model | from = from }
+                |> ensureLoading
                 |> pushUrl toRoute navKey
 
 
@@ -487,20 +503,26 @@ view { toRoute, categoryName } title model viewSuccess outMsg =
                     ]
                 ]
             ]
-        , case model.result of
-            RemoteData.NotAsked ->
-                div [] [ text "" ]
+        , div [] <|
+            case model.result of
+                RemoteData.NotAsked ->
+                    [ text "" ]
 
-            RemoteData.Loading ->
-                div [ class "loader" ] [ text "Loading..." ]
+                RemoteData.Loading ->
+                    [ p [] [ em [] [ text "Searching..." ] ]
+                    , div []
+                        [ viewSortSelection outMsg model
+                        , viewPager outMsg model 0 toRoute
+                        ]
+                    , div [ class "loader-wrapper" ] [ div [ class "loader" ] [ text "Loading..." ] ]
+                    , viewPager outMsg model 0 toRoute
+                    ]
 
-            RemoteData.Success result ->
-                if result.hits.total.value == 0 then
-                    div []
+                RemoteData.Success result ->
+                    if result.hits.total.value == 0 then
                         [ h4 [] [ text <| "No " ++ categoryName ++ " found!" ] ]
 
-                else
-                    div []
+                    else
                         [ p []
                             [ em []
                                 [ text
@@ -525,138 +547,128 @@ view { toRoute, categoryName } title model viewSuccess outMsg =
                                     )
                                 ]
                             ]
-                        , form [ class "form-horizontal pull-right" ]
-                            [ div
-                                [ class "control-group"
-                                ]
-                                [ label [ class "control-label" ] [ text "Sort by:" ]
-                                , div
-                                    [ class "controls" ]
-                                    [ select
-                                        [ onInput (\x -> outMsg (SortChange x))
-                                        ]
-                                        (List.map
-                                            (\sort ->
-                                                option
-                                                    [ selected (model.sort == sort)
-                                                    , value (toSortId sort)
-                                                    ]
-                                                    [ text <| toSortTitle sort ]
-                                            )
-                                            sortBy
-                                        )
-                                    ]
-                                ]
+                        , div []
+                            [ viewSortSelection outMsg model
+                            , viewPager outMsg model result.hits.total.value toRoute
                             ]
-                        , viewPager outMsg model result toRoute
                         , viewSuccess model.channel model.show result
-                        , viewPager outMsg model result toRoute
+                        , viewPager outMsg model result.hits.total.value toRoute
                         ]
 
-            RemoteData.Failure error ->
-                let
-                    ( errorTitle, errorMessage ) =
-                        case error of
-                            Http.BadUrl text ->
-                                ( "Bad Url!", text )
+                RemoteData.Failure error ->
+                    let
+                        ( errorTitle, errorMessage ) =
+                            case error of
+                                Http.BadUrl text ->
+                                    ( "Bad Url!", text )
 
-                            Http.Timeout ->
-                                ( "Timeout!", "Request to the server timeout." )
+                                Http.Timeout ->
+                                    ( "Timeout!", "Request to the server timeout." )
 
-                            Http.NetworkError ->
-                                ( "Network Error!", "A network request bonsaisearch.net domain failed. This is either due to a content blocker or a networking issue." )
+                                Http.NetworkError ->
+                                    ( "Network Error!", "A network request bonsaisearch.net domain failed. This is either due to a content blocker or a networking issue." )
 
-                            Http.BadStatus code ->
-                                ( "Bad Status", "Server returned " ++ String.fromInt code )
+                                Http.BadStatus code ->
+                                    ( "Bad Status", "Server returned " ++ String.fromInt code )
 
-                            Http.BadBody text ->
-                                ( "Bad Body", text )
-                in
-                div [ class "alert alert-error" ]
-                    [ h4 [] [ text errorTitle ]
-                    , text errorMessage
+                                Http.BadBody text ->
+                                    ( "Bad Body", text )
+                    in
+                    [ div [ class "alert alert-error" ]
+                        [ h4 [] [ text errorTitle ]
+                        , text errorMessage
+                        ]
                     ]
+        ]
+
+
+viewSortSelection : (Msg a -> b) -> Model a -> Html b
+viewSortSelection outMsg model =
+    form [ class "form-horizontal pull-right sort-form" ]
+        [ div [ class "control-group sort-group" ]
+            [ label [ class "control-label" ] [ text "Sort by:" ]
+            , div
+                [ class "controls" ]
+                [ select
+                    [ onInput (\x -> outMsg (SortChange x))
+                    ]
+                    (List.map
+                        (\sort ->
+                            option
+                                [ selected (model.sort == sort)
+                                , value (toSortId sort)
+                                ]
+                                [ text <| toSortTitle sort ]
+                        )
+                        sortBy
+                    )
+                ]
+            ]
         ]
 
 
 viewPager :
     (Msg a -> b)
     -> Model a
-    -> SearchResult a
+    -> Int
     -> Route.SearchRoute
     -> Html b
-viewPager _ model result toRoute =
-    ul [ class "pager" ]
-        [ li
-            [ classList
-                [ ( "disabled", model.from == 0 )
-                ]
-            ]
-            [ a
-                [ href <|
-                    if model.from == 0 then
-                        ""
+viewPager outMsg model total toRoute =
+    Html.map outMsg <|
+        ul [ class "pager" ]
+            [ li [ classList [ ( "disabled", model.from == 0 ) ] ]
+                [ a
+                    [ Html.Events.onClick <|
+                        if model.from == 0 then
+                            NoOp
 
-                    else
-                        createUrl toRoute { model | from = 0 }
+                        else
+                            ChangePage 0
+                    ]
+                    [ text "First" ]
                 ]
-                [ text "First" ]
-            ]
-        , li
-            [ classList
-                [ ( "disabled", model.from == 0 )
-                ]
-            ]
-            [ a
-                [ href <|
-                    if model.from - model.size < 0 then
-                        ""
+            , li [ classList [ ( "disabled", model.from == 0 ) ] ]
+                [ a
+                    [ Html.Events.onClick <|
+                        if model.from - model.size < 0 then
+                            NoOp
 
-                    else
-                        createUrl toRoute { model | from = model.from - model.size }
+                        else
+                            ChangePage <| model.from - model.size
+                    ]
+                    [ text "Previous" ]
                 ]
-                [ text "Previous" ]
-            ]
-        , li
-            [ classList
-                [ ( "disabled", model.from + model.size >= result.hits.total.value )
-                ]
-            ]
-            [ a
-                [ href <|
-                    if model.from + model.size >= result.hits.total.value then
-                        ""
+            , li [ classList [ ( "disabled", model.from + model.size >= total ) ] ]
+                [ a
+                    [ Html.Events.onClick <|
+                        if model.from + model.size >= total then
+                            NoOp
 
-                    else
-                        createUrl toRoute { model | from = model.from + model.size }
+                        else
+                            ChangePage <| model.from + model.size
+                    ]
+                    [ text "Next" ]
                 ]
-                [ text "Next" ]
-            ]
-        , li
-            [ classList
-                [ ( "disabled", model.from + model.size >= result.hits.total.value )
-                ]
-            ]
-            [ a
-                [ href <|
-                    if model.from + model.size >= result.hits.total.value then
-                        ""
+            , li [ classList [ ( "disabled", model.from + model.size >= total ) ] ]
+                [ a
+                    [ Html.Events.onClick <|
+                        if model.from + model.size >= total then
+                            NoOp
 
-                    else
-                        let
-                            remainder =
-                                if remainderBy model.size result.hits.total.value == 0 then
-                                    1
+                        else
+                            let
+                                remainder =
+                                    if remainderBy model.size total == 0 then
+                                        1
 
-                                else
-                                    0
-                        in
-                        createUrl toRoute
-                            { model | from = ((result.hits.total.value // model.size) - remainder) * model.size }
+                                    else
+                                        0
+                            in
+                            ChangePage <| ((total // model.size) - remainder) * model.size
+                    ]
+                    [ text "Last" ]
                 ]
-                [ text "Last" ]
             ]
-        ]
 
 
 
