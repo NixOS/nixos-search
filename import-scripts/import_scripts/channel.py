@@ -6,6 +6,7 @@ import click_log  # type: ignore
 import dictdiffer  # type: ignore
 import elasticsearch  # type: ignore
 import elasticsearch.helpers  # type: ignore
+import functools
 import json
 import logging
 import os
@@ -523,16 +524,31 @@ def get_options_raw(evaluation):
 def get_options(evaluation):
     options = get_options_raw(evaluation)
 
-    def toNix(value):
+    @functools.cache
+    def jsonToNix(value):
         result = subprocess.run(
             shlex.split(
                 "nix-instantiate --eval --strict -E 'builtins.fromJSON (builtins.readFile /dev/stdin)'"
             ),
-            input=json.dumps(value).encode(),
+            input=value.encode(),
             stdout=subprocess.PIPE,
             check=True,
         )
         return result.stdout.strip().decode()
+
+    def toNix(value):
+        if value is None:
+            return "null"
+        elif isinstance(value, int) or isinstance(value, float):
+            return str(value)
+        elif isinstance(value, bool):
+            return "true" if value else "false"
+        elif value == []:
+            return "[ ]"
+        elif value == {}:
+            return "{ }"
+        else:
+            return jsonToNix(json.dumps(value))
 
     def gen():
         for name, option in options:
