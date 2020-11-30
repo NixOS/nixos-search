@@ -2,7 +2,6 @@ name: "Hourly import channel to Elasticsearch"
 
 on:
 
-  pull_request:
   schedule:
   - cron: '0 * * * *'
 
@@ -17,8 +16,8 @@ jobs:
       matrix:
         channel:
           - unstable
-          # - 20.09
-          # - 20.03
+          - 20.09
+          - 20.03
 
     env:
       AWS_DEFAULT_REGION: us-east-1
