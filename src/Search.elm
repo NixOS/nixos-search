@@ -275,7 +275,6 @@ createUrl toRoute model =
 
 type Channel
     = Unstable
-    | Release_19_09
     | Release_20_03
     | Release_20_09
 
@@ -302,9 +301,6 @@ channelDetails channel =
         Unstable ->
             ChannelDetails "unstable" "unstable" "nixos/trunk-combined" "nixos-unstable"
 
-        Release_19_09 ->
-            ChannelDetails "19.09" "19.09" "nixos/release-19.09" "nixos-19.09"
-
         Release_20_03 ->
             ChannelDetails "20.03" "20.03" "nixos/release-20.03" "nixos-20.03"
 
@@ -317,9 +313,6 @@ channelFromId channel_id =
     case channel_id of
         "unstable" ->
             Just Unstable
-
-        "19.09" ->
-            Just Release_19_09
 
         "20.03" ->
             Just Release_20_03
@@ -339,8 +332,7 @@ channelDetailsFromId channel_id =
 
 channels : List String
 channels =
-    [ "19.09"
-    , "20.03"
+    [ "20.03"
     , "20.09"
     , "unstable"
     ]
