@@ -21,7 +21,8 @@ jobs:
           # - 20.03
 
     env:
-      S3_URL: s3://nix-releases/nixpkgs
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_S3_URL: s3://nix-releases/nixpkgs
 
     steps:
 
@@ -50,17 +51,13 @@ jobs:
     - name: Check for latest evaluation in ${{ matrix.channel }} channel
       run: |
         if [ "${{ matrix.channel }}" = "unstable" ]; then
-          RELEASE=$(aws s3 ls --no-sign-request $S3_URL/ | grep '/$' | cut -d' ' -f29 | sort | tail -1 | sed 's|/||')
+          RELEASE=$(aws s3 ls --no-sign-request "$AWS_S3_URL/" | grep '/$' | cut -d' ' -f29 | sort | tail -1 | sed 's|/||')
         else
-          RELEASE=$(aws s3 ls --no-sign-request $S3_URL/ | grep 'nixpkgs-${{ matrix.channel }}pre' | grep '/$' | cut -d' ' -f29 | sort | tail -1 | sed 's|/||')
+          RELEASE=$(aws s3 ls --no-sign-request "$AWS_S3_URL/" | grep 'nixpkgs-${{ matrix.channel }}pre' | grep '/$' | cut -d' ' -f29 | sort | tail -1 | sed 's|/||')
         fi
-        echo $S3_URL/$RELEASE/src-url
-    - name: DEBUG
-      uses: mxschmitt/action-tmate@v3
-
-      #aws s3 cp --no-sign-request $S3_URL/$RELEASE/src-url ./
-        #EVAL_ID=$(cat src-url | cut -c30-)
-        #echo "EVAL_ID=${EVAL_ID}" >> $GITHUB_ENV
+        aws s3 cp --no-sign-request "$AWS_S3_URL/$RELEASE/src-url" ./
+        EVAL_ID=$(cat src-url | cut -c30-)
+        echo "EVAL_ID=${EVAL_ID}" >> $GITHUB_ENV
 
     - name: Download latest builds for ${{ matrix.channel }} channel (if needed)
       if: steps.eval-cache.outputs.cache-hit != 'true'
