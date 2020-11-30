@@ -537,7 +537,9 @@ def get_options(evaluation):
         return result.stdout.strip().decode()
 
     def toNix(value):
-        if value is None:
+        if isinstance(value, dict) and value.get("_type") == "literalExample":
+            return value["text"]
+        elif value is None:
             return "null"
         elif isinstance(value, int) or isinstance(value, float):
             return str(value)
@@ -552,16 +554,15 @@ def get_options(evaluation):
 
     def gen():
         for name, option in options:
-            default = option.get("default")
-            if default is not None:
-                default = toNix(default)
+            if "default" in option:
+                default = toNix(option.get("default"))
+            else:
+                default = None
 
-            example = option.get("example")
-            if example is not None:
-                if type(example) == dict and example.get("_type") == "literalExample":
-                    example = example["text"]
-                else:
-                    example = toNix(example)
+            if "example" in option:
+                example = toNix(option.get("example"))
+            else:
+                example = None
 
             description = option.get("description")
             if description is not None:
