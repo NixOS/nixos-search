@@ -18,7 +18,6 @@ jobs:
           - unstable
           - 20.09
           - 20.03
-          - 19.09
 
     env:
       S3_URL: s3://nix-releases/nixpkgs

@@ -6,6 +6,7 @@ import click_log  # type: ignore
 import dictdiffer  # type: ignore
 import elasticsearch  # type: ignore
 import elasticsearch.helpers  # type: ignore
+import functools
 import json
 import logging
 import os
@@ -29,7 +30,6 @@ INDEX_SCHEMA_VERSION = os.environ.get("INDEX_SCHEMA_VERSION", 0)
 DIFF_OUTPUT = ["json", "stats"]
 CHANNELS = {
     "unstable": "nixos/unstable/nixos-21.03pre",
-    "19.09": "nixos/19.09/nixos-19.09.",
     "20.03": "nixos/20.03/nixos-20.03.",
     "20.09": "nixos/20.09/nixos-20.09.",
 }
@@ -266,7 +266,7 @@ def parse_query(text):
 
 
 def get_last_evaluation(prefix):
-    logger.debug(f"Retriving last evaluation for {prefix} prefix.")
+    logger.debug(f"Retrieving last evaluation for {prefix} prefix.")
 
     s3 = boto3.client(
         "s3", config=botocore.client.Config(signature_version=botocore.UNSIGNED)
@@ -307,7 +307,7 @@ def get_last_evaluation(prefix):
 
 def get_evaluation_builds(evaluation_id):
     logger.debug(
-        f"get_evaluation_builds: Retriving list of builds for {evaluation_id} evaluation id"
+        f"get_evaluation_builds: Retrieving list of builds for {evaluation_id} evaluation id"
     )
     filename = f"eval-{evaluation_id}.json"
     if not os.path.exists(filename):
@@ -393,7 +393,7 @@ def remove_attr_set(name):
 
 def get_packages_raw(evaluation):
     logger.debug(
-        f"get_packages: Retriving list of packages for '{evaluation['git_revision']}' revision"
+        f"get_packages: Retrieving list of packages for '{evaluation['git_revision']}' revision"
     )
     result = subprocess.run(
         shlex.split(
@@ -502,7 +502,7 @@ def get_packages(evaluation, evaluation_builds):
 
 def get_options_raw(evaluation):
     logger.debug(
-        f"get_packages: Retriving list of options for '{evaluation['git_revision']}' revision"
+        f"get_packages: Retrieving list of options for '{evaluation['git_revision']}' revision"
     )
     result = subprocess.run(
         shlex.split(
@@ -523,18 +523,48 @@ def get_options_raw(evaluation):
 def get_options(evaluation):
     options = get_options_raw(evaluation)
 
+    @functools.lru_cache(maxsize=None)
+    def jsonToNix(value):
+        result = subprocess.run(
+            shlex.split(
+                "nix-instantiate --eval --strict -E 'builtins.fromJSON (builtins.readFile /dev/stdin)'"
+            ),
+            input=value.encode(),
+            stdout=subprocess.PIPE,
+            check=True,
+        )
+        return result.stdout.strip().decode()
+
+    def toNix(value):
+        if isinstance(value, dict) and value.get("_type") == "literalExample":
+            if isinstance(value["text"], str):
+                return value["text"]
+            value = value["text"]
+
+        if value is None:
+            return "null"
+        elif isinstance(value, int) or isinstance(value, float):
+            return str(value)
+        elif isinstance(value, bool):
+            return "true" if value else "false"
+        elif isinstance(value, list) and not value:
+            return "[ ]"
+        elif isinstance(value, dict) and not value:
+            return "{ }"
+        else:
+            return jsonToNix(json.dumps(value))
+
     def gen():
         for name, option in options:
-            default = option.get("default")
-            if default is not None:
-                default = json.dumps(default)
+            if "default" in option:
+                default = toNix(option.get("default"))
+            else:
+                default = None
 
-            example = option.get("example")
-            if example is not None:
-                if type(example) == dict and example.get("_type") == "literalExample":
-                    example = json.dumps(example["text"])
-                else:
-                    example = json.dumps(example)
+            if "example" in option:
+                example = toNix(option.get("example"))
+            else:
+                example = None
 
             description = option.get("description")
             if description is not None:
