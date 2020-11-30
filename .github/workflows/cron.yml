@@ -55,7 +55,8 @@ jobs:
           RELEASE=$(aws s3 ls --no-sign-request "$S3_URL/" | grep "nixpkgs-${{ matrix.channel }}pre" | grep "/$" | cut -d" " -f29 | sort | tail -1 | sed 's|/||')
         fi
         aws s3 cp --no-sign-request "$S3_URL/$RELEASE/src-url" ./
-        echo "EVAL_ID=$(cat src-url | cut -c30-)" >> $GITHUB_ENV
+        EVAL_ID=$(cat src-url | cut -c30-)
+        echo "EVAL_ID=${EVAL_ID}" >> $GITHUB_ENV
 
     - name: Download latest builds for ${{ matrix.channel }} channel (if needed)
       if: steps.eval-cache.outputs.cache-hit != 'true'
