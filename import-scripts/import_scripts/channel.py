@@ -524,7 +524,7 @@ def get_options_raw(evaluation):
 def get_options(evaluation):
     options = get_options_raw(evaluation)
 
-    @functools.cache
+    @functools.lru_cache(maxsize=None)
     def jsonToNix(value):
         result = subprocess.run(
             shlex.split(
