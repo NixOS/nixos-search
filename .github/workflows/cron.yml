@@ -55,7 +55,10 @@ jobs:
           RELEASE=$(aws s3 ls --no-sign-request $S3_URL/ | grep 'nixpkgs-${{ matrix.channel }}pre' | grep '/$' | cut -d' ' -f29 | sort | tail -1 | sed 's|/||')
         fi
         echo $S3_URL/$RELEASE/src-url
-        aws s3 cp --no-sign-request $S3_URL/$RELEASE/src-url ./
+    - name: DEBUG
+      uses: mxschmitt/action-tmate@v3
+
+      #aws s3 cp --no-sign-request $S3_URL/$RELEASE/src-url ./
         #EVAL_ID=$(cat src-url | cut -c30-)
         #echo "EVAL_ID=${EVAL_ID}" >> $GITHUB_ENV
 
