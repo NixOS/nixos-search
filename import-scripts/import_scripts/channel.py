@@ -538,12 +538,11 @@ def get_options(evaluation):
 
     def toNix(value):
         if isinstance(value, dict) and value.get("_type") == "literalExample":
-            return (
-                value["text"]
-                if isinstance(value["text"], str)
-                else jsonToNix(value["text"])
-            )
-        elif value is None:
+            if isinstance(value["text"], str):
+                return value["text"]
+            value = value["text"]
+
+        if value is None:
             return "null"
         elif isinstance(value, int) or isinstance(value, float):
             return str(value)
