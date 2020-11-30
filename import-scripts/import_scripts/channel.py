@@ -547,9 +547,9 @@ def get_options(evaluation):
             return str(value)
         elif isinstance(value, bool):
             return "true" if value else "false"
-        elif value == []:
+        elif isinstance(value, list) and not value:
             return "[ ]"
-        elif value == {}:
+        elif isinstance(value, dict) and not value:
             return "{ }"
         else:
             return jsonToNix(json.dumps(value))
