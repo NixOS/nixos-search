@@ -52,7 +52,7 @@ ANALYSIS = {
         },
     },
     "analyzer": {
-        "edge": {"tokenizer": "edge"},
+        "edge": {"tokenizer": "edge", "filter": ["lowercase"]},
         "lowercase": {
             "type": "custom",
             "tokenizer": "keyword",
@@ -197,9 +197,6 @@ MAPPING = {
         "option_source": {"type": "keyword"},
     },
 }
-
-
-# def field_reverse_str(field):
 
 
 def string_reverse(text):
