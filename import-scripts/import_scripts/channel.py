@@ -462,7 +462,7 @@ def get_packages(evaluation, evaluation_builds):
 
             position = data["meta"].get("position")
             if position and position.startswith("/nix/store"):
-                position = position[44:]
+                position = position.split("/", 4)[-1]
 
             package_attr_name_query = list(parse_query(attr_name))
             package_pname = remove_attr_set(data["pname"])
