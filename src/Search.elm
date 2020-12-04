@@ -346,6 +346,47 @@ sortBy =
     ]
 
 
+toAggs :
+    List String
+    -> ( String, Json.Encode.Value )
+toAggs aggsFields =
+    let
+        fields =
+            List.map
+                (\field ->
+                    ( field
+                    , Json.Encode.object
+                        [ ( "terms"
+                          , Json.Encode.object
+                                [ ( "field"
+                                  , Json.Encode.string field
+                                  )
+                                ]
+                          )
+                        ]
+                    )
+                )
+                aggsFields
+
+        allFields =
+            [ ( "all"
+              , Json.Encode.object
+                    [ ( "global"
+                      , Json.Encode.object []
+                      )
+                    , ( "aggs"
+                      , Json.Encode.object fields
+                      )
+                    ]
+              )
+            ]
+    in
+    ( "aggs"
+    , Json.Encode.object <|
+        List.append fields allFields
+    )
+
+
 toSortQuery :
     Sort
     -> String
@@ -751,9 +792,10 @@ makeRequestBody :
     -> Sort
     -> String
     -> String
+    -> List String
     -> List ( String, Float )
     -> Http.Body
-makeRequestBody query from sizeRaw sort type_ sortField fields =
+makeRequestBody query from sizeRaw sort type_ sortField aggsFields fields =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -772,6 +814,34 @@ makeRequestBody query from sizeRaw sort type_ sortField fields =
               , Json.Encode.int size
               )
             , toSortQuery sort sortField
+            , toAggs aggsFields
+
+            --, ( "aggs"
+            --  , Json.Encode.object
+            --        [ ( "package_attr_set"
+            --          , Json.Encode.object
+            --                [ ( "terms"
+            --                  , Json.Encode.object
+            --                        [ ( "field"
+            --                          , Json.Encode.string "package_attr_set"
+            --                          )
+            --                        ]
+            --                  )
+            --                ]
+            --          )
+            --        , ( "package_license_set"
+            --          , Json.Encode.object
+            --                [ ( "terms"
+            --                  , Json.Encode.object
+            --                        [ ( "field"
+            --                          , Json.Encode.string "package_license_set"
+            --                          )
+            --                        ]
+            --                  )
+            --                ]
+            --          )
+            --        ]
+            --  )
             , ( "query"
               , Json.Encode.object
                     [ ( "bool"

@@ -148,6 +148,7 @@ MAPPING = {
             "type": "nested",
             "properties": {"fullName": {"type": "text"}, "url": {"type": "text"}},
         },
+        "package_license_set": {"type": "keyword"},
         "package_maintainers": {
             "type": "nested",
             "properties": {
@@ -156,6 +157,7 @@ MAPPING = {
                 "github": {"type": "text"},
             },
         },
+        "package_maintainers_set": {"type": "keyword"},
         "package_platforms": {"type": "keyword"},
         "package_position": {"type": "text"},
         "package_homepage": {"type": "keyword"},
@@ -486,7 +488,9 @@ def get_packages(evaluation, evaluation_builds):
                 package_longDescription=package_longDescription,
                 package_longDescription_reverse=field_reverse(package_longDescription),
                 package_license=licenses,
+                package_license_set=[i["fullName"] for i in licenses],
                 package_maintainers=maintainers,
+                package_maintainers_set=[i["name"] for i in maintainers if i["name"]],
                 package_platforms=[i for i in platforms if i],
                 package_position=position,
                 package_homepage=data["meta"].get("homepage"),

@@ -407,6 +407,11 @@ makeRequest options channel query from size sort =
             sort
             "package"
             "package_attr_name"
+            [ "package_attr_set"
+            , "package_license_set"
+            , "package_maintainers_set"
+            , "package_platform"
+            ]
             [ ( "package_attr_name", 9.0 )
             , ( "package_pname", 6.0 )
             , ( "package_attr_name_query", 4.0 )
