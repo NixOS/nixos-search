@@ -1,6 +1,8 @@
+import backoff  # type: ignore
 import boto3  # type: ignore
 import botocore  # type: ignore
 import botocore.client  # type: ignore
+import botocore.errorfactory  # type: ignore
 import click
 import click_log  # type: ignore
 import dictdiffer  # type: ignore
@@ -14,6 +16,7 @@ import os.path
 import pypandoc  # type: ignore
 import re
 import requests
+import requests.exceptions
 import shlex
 import subprocess
 import sys
@@ -262,6 +265,7 @@ def parse_query(text):
     return tokens
 
 
+@backoff.on_exception(backoff.expo, botocore.errorfactory.NoSuchKey)
 def get_last_evaluation(prefix):
     logger.debug(f"Retrieving last evaluation for {prefix} prefix.")
 
@@ -302,6 +306,7 @@ def get_last_evaluation(prefix):
     return evaluation
 
 
+@backoff.on_exception(backoff.expo, requests.exceptions.RequestException)
 def get_evaluation_builds(evaluation_id):
     logger.debug(
         f"get_evaluation_builds: Retrieving list of builds for {evaluation_id} evaluation id"
@@ -388,6 +393,7 @@ def remove_attr_set(name):
     return name
 
 
+@backoff.on_exception(backoff.expo, subprocess.CalledProcessError)
 def get_packages_raw(evaluation):
     logger.debug(
         f"get_packages: Retrieving list of packages for '{evaluation['git_revision']}' revision"
@@ -497,9 +503,10 @@ def get_packages(evaluation, evaluation_builds):
     return len(packages), gen
 
 
+@backoff.on_exception(backoff.expo, subprocess.CalledProcessError)
 def get_options_raw(evaluation):
     logger.debug(
-        f"get_packages: Retrieving list of options for '{evaluation['git_revision']}' revision"
+        f"get_options: Retrieving list of options for '{evaluation['git_revision']}' revision"
     )
     result = subprocess.run(
         shlex.split(
@@ -521,10 +528,11 @@ def get_options(evaluation):
     options = get_options_raw(evaluation)
 
     @functools.lru_cache(maxsize=None)
+    @backoff.on_exception(backoff.expo, subprocess.CalledProcessError)
     def jsonToNix(value):
         result = subprocess.run(
             shlex.split(
-                "nix-instantiate --eval --strict -E 'builtins.fromJSON (builtins.readFile /dev/stdin)'"
+                "nix-instantiate --eval --strict -E 'builtins.fromJSON (builtins.areadFile /dev/stdin)'"
             ),
             input=value.encode(),
             stdout=subprocess.PIPE,
