@@ -540,13 +540,13 @@ def get_options(evaluation):
 
         if value is None:
             return "null"
-        elif isinstance(value, int) or isinstance(value, float):
+        elif type(value) in [int, float]:
             return str(value)
-        elif isinstance(value, bool):
+        elif type(value) == bool:
             return "true" if value else "false"
-        elif isinstance(value, list) and not value:
+        elif type(value) == list and not value:
             return "[ ]"
-        elif isinstance(value, dict) and not value:
+        elif type(value) == dict and not value:
             return "{ }"
         else:
             return jsonToNix(json.dumps(value))
