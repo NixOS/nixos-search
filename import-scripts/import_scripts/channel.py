@@ -2,7 +2,7 @@ import backoff  # type: ignore
 import boto3  # type: ignore
 import botocore  # type: ignore
 import botocore.client  # type: ignore
-import botocore.errorfactory  # type: ignore
+import botocore.exceptions  # type: ignore
 import click
 import click_log  # type: ignore
 import dictdiffer  # type: ignore
@@ -265,7 +265,7 @@ def parse_query(text):
     return tokens
 
 
-@backoff.on_exception(backoff.expo, botocore.errorfactory.NoSuchKey)
+@backoff.on_exception(backoff.expo, botocore.exceptions.ClientError)
 def get_last_evaluation(prefix):
     logger.debug(f"Retrieving last evaluation for {prefix} prefix.")
 
@@ -532,7 +532,7 @@ def get_options(evaluation):
     def jsonToNix(value):
         result = subprocess.run(
             shlex.split(
-                "nix-instantiate --eval --strict -E 'builtins.fromJSON (builtins.areadFile /dev/stdin)'"
+                "nix-instantiate --eval --strict -E 'builtins.fromJSON (builtins.readFile /dev/stdin)'"
             ),
             input=value.encode(),
             stdout=subprocess.PIPE,
