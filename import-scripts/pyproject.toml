@@ -21,6 +21,7 @@ boto3 = "^1.14.5"
 tqdm = "^4.46.1"
 pypandoc = "^1.5"
 dictdiffer = "^0.8.1"
+backoff = "^1.10.0"
 
 [tool.poetry.dev-dependencies]
 ipdb = "^0.13.2"
