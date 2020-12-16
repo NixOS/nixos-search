@@ -197,7 +197,10 @@ viewResultItemDetails channel item =
                         Html.Parser.Util.toVirtualDom nodes
 
                     Err e ->
-                        let _ = Debug.log "AAA" e in
+                        let
+                            _ =
+                                Debug.log "AAA" e
+                        in
                         []
 
         asPre value =
@@ -207,9 +210,9 @@ viewResultItemDetails channel item =
             code [] [ text value ]
 
         asPreCode value =
-            div [ ] [ pre [] [ code[][ text value ] ]]
+            div [] [ pre [] [ code [] [ text value ] ] ]
 
-        encodeHtml value = 
+        encodeHtml value =
             value
                 |> String.replace "<" "&lt;"
                 |> String.replace ">" "&gt;"
