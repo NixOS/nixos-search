@@ -196,7 +196,7 @@ viewResultItemDetails channel item =
                     Ok nodes ->
                         Html.Parser.Util.toVirtualDom nodes
 
-                    Err _ ->
+                    Err e ->
                         []
 
         asPre value =
@@ -204,6 +204,14 @@ viewResultItemDetails channel item =
 
         asCode value =
             code [] [ text value ]
+
+        asPreCode value =
+            div [] [ pre [] [ code [] [ text value ] ] ]
+
+        encodeHtml value =
+            value
+                |> String.replace "<" "&lt;"
+                |> String.replace ">" "&gt;"
 
         githubUrlPrefix branch =
             "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/"
@@ -248,15 +256,15 @@ viewResultItemDetails channel item =
     in
     dl [ class "dl-horizontal" ]
         [ dt [] [ text "Name" ]
-        , dd [] [ withEmpty asText (Just item.source.name) ]
+        , dd [] [ withEmpty asText (Just (encodeHtml item.source.name)) ]
         , dt [] [ text "Description" ]
         , dd [] [ withEmpty asText item.source.description ]
         , dt [] [ text "Default value" ]
-        , dd [] [ withEmpty asCode item.source.default ]
+        , dd [] [ withEmpty (wrapped asPreCode) item.source.default ]
         , dt [] [ text "Type" ]
         , dd [] [ withEmpty asPre item.source.type_ ]
         , dt [] [ text "Example value" ]
-        , dd [] [ withEmpty (wrapped asCode) item.source.example ]
+        , dd [] [ withEmpty (wrapped asPreCode) item.source.example ]
         , dt [] [ text "Declared in" ]
         , dd [] [ withEmpty asGithubLink item.source.source ]
         ]
