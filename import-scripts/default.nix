@@ -13,9 +13,12 @@ mkPoetryApplication {
       '';
     });
   });
-  nativeBuildInputs = [
-    pkgs.poetry
+  nativeBuildInputs = with pkgs; [
+    poetry
+    fd
+    entr
   ];
+  #doCheck = false;
   checkPhase = ''
     export PYTHONPATH=$PWD:$PYTHONPATH
     black --diff --check import_scripts/ tests/

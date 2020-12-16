@@ -8,7 +8,7 @@ import click_log  # type: ignore
 import dictdiffer  # type: ignore
 import elasticsearch  # type: ignore
 import elasticsearch.helpers  # type: ignore
-import functools
+import import_scripts.nix  # type: ignore
 import json
 import logging
 import os
@@ -527,47 +527,15 @@ def get_options_raw(evaluation):
 def get_options(evaluation):
     options = get_options_raw(evaluation)
 
-    @functools.lru_cache(maxsize=None)
-    @backoff.on_exception(backoff.expo, subprocess.CalledProcessError)
-    def jsonToNix(value):
-        result = subprocess.run(
-            shlex.split(
-                "nix-instantiate --eval --strict -E 'builtins.fromJSON (builtins.readFile /dev/stdin)'"
-            ),
-            input=value.encode(),
-            stdout=subprocess.PIPE,
-            check=True,
-        )
-        return result.stdout.strip().decode()
-
-    def toNix(value):
-        if isinstance(value, dict) and value.get("_type") == "literalExample":
-            if isinstance(value["text"], str):
-                return value["text"]
-            value = value["text"]
-
-        if value is None:
-            return "null"
-        elif type(value) in [int, float]:
-            return str(value)
-        elif type(value) == bool:
-            return "true" if value else "false"
-        elif type(value) == list and not value:
-            return "[ ]"
-        elif type(value) == dict and not value:
-            return "{ }"
-        else:
-            return jsonToNix(json.dumps(value))
-
     def gen():
         for name, option in options:
             if "default" in option:
-                default = toNix(option.get("default"))
+                default = import_scripts.nix.prettyPrint(option.get("default"))
             else:
                 default = None
 
             if "example" in option:
-                example = toNix(option.get("example"))
+                example = import_scripts.nix.prettyPrint(option.get("example"))
             else:
                 example = None
 
@@ -626,15 +594,15 @@ def ensure_index(es, index, mapping, force=False):
     return True
 
 
-def create_index_name(channel, evaluation_packages, evaluation_options):
+def create_index_name(channel, evaluation):
     evaluation_name = "-".join(
         [
-            evaluation_packages["id"],
-            str(evaluation_packages["revisions_since_start"]),
-            evaluation_packages["git_revision"],
-            evaluation_options["id"],
-            str(evaluation_options["revisions_since_start"]),
-            evaluation_options["git_revision"],
+            evaluation["id"],
+            str(evaluation["revisions_since_start"]),
+            evaluation["git_revision"],
+            evaluation["id"],
+            str(evaluation["revisions_since_start"]),
+            evaluation["git_revision"],
         ]
     )
     return (
@@ -699,27 +667,20 @@ def setup_logging(verbose):
 def run_import(es_url, channel, force, verbose):
     setup_logging(verbose)
 
-    evaluation_packages = get_last_evaluation(CHANNELS[channel])
-    evaluation_options = get_last_evaluation(CHANNELS[channel])
-    evaluation_packages_builds = (
-        dict()
-    )  # get_evaluation_builds(evaluation_packages["id"])
+    evaluation = get_last_evaluation(CHANNELS[channel])
+    evaluation_builds = dict()
+    # evaluation_builds = get_evaluation_builds(evaluation["id"])
 
     es = elasticsearch.Elasticsearch([es_url])
 
-    alias_name, index_name = create_index_name(
-        channel, evaluation_packages, evaluation_options
-    )
+    alias_name, index_name = create_index_name(channel, evaluation)
     index_created = ensure_index(es, index_name, MAPPING, force)
 
     if index_created:
         write(
-            "packages",
-            es,
-            index_name,
-            *get_packages(evaluation_packages, evaluation_packages_builds),
+            "packages", es, index_name, *get_packages(evaluation, evaluation_builds),
         )
-        write("options", es, index_name, *get_options(evaluation_options))
+        write("options", es, index_name, *get_options(evaluation))
 
     update_alias(es, alias_name, index_name)
 
@@ -813,4 +774,4 @@ def run_diff(channel_from, channel_to, output, verbose):
 
 
 if __name__ == "__main__":
-    run_diff()
+    run_import()
