@@ -197,10 +197,6 @@ viewResultItemDetails channel item =
                         Html.Parser.Util.toVirtualDom nodes
 
                     Err e ->
-                        let
-                            _ =
-                                Debug.log "AAA" e
-                        in
                         []
 
         asPre value =
