@@ -27,7 +27,7 @@ def prettyPrint(item, level=""):
                 + "".join(
                     [f"{next_level}{line}" for line in item.splitlines(keepends=True)]
                 )
-                + f"{level}''"
+                + (f"{level}''" if item[-1] == "\n" else "''")
             )
         return f'"{item.translate(stringEscapes)}"'
 
