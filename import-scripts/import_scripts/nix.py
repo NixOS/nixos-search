@@ -4,6 +4,9 @@ def prettyPrintAttrName(attr_name):
     return attr_name
 
 
+stringEscapes = str.maketrans({"\\": "\\\\", '"': '\\"'})
+
+
 def prettyPrint(item, level=""):
     next_level = level + "  "
     if item is None:
@@ -19,15 +22,21 @@ def prettyPrint(item, level=""):
 
     elif type(item) == str:
         if "\n" in item:
-            return f"''{item}''"
-        return f'"{item}"'
+            return (
+                "''\n"
+                + "".join(
+                    [f"{next_level}{line}" for line in item.splitlines(keepends=True)]
+                )
+                + f"{level}''"
+            )
+        return f'"{item.translate(stringEscapes)}"'
 
     elif type(item) == list:
         if len(item) == 0:
             return "[ ]"
         return (
             "[\n"
-            + ("".join([f"{level}  {prettyPrint(i, next_level)}\n" for i in item]))
+            + ("".join([f"{next_level}{prettyPrint(i, next_level)}\n" for i in item]))
             + f"{level}]"
         )
 
@@ -38,13 +47,13 @@ def prettyPrint(item, level=""):
             if type(item["text"]) == str:
                 return item["text"]
             else:
-                return prettyPrint(item["text"], next_level)
+                return prettyPrint(item["text"], level)
         return (
             "{\n"
             + (
                 "".join(
                     [
-                        f"{level}  {prettyPrintAttrName(n)} = {prettyPrint(v, next_level)};\n"
+                        f"{next_level}{prettyPrintAttrName(n)} = {prettyPrint(v, next_level)};\n"
                         for n, v in item.items()
                     ]
                 )
