@@ -32,14 +32,16 @@ jobs:
         echo 'experimental-features = nix-command flakes' | sudo tee -a /etc/nix/nix.conf
         nix --version
         cat /etc/nix/nix.conf
+        echo "$HOME/.nix-profile/bin" >> $GITHUB_PATH
+
 
     - name: Building import_scripts
       run: |
-        $HOME/.nix-profile/bin/nix build ./#packages.x86_64-linux.import_scripts
+        nix build ./#packages.x86_64-linux.import_scripts
 
     - name: Building search.nixos.org
       run: |
-        $HOME/.nix-profile/bin/nix build ./#packages.x86_64-linux.frontend
+        nix build ./#packages.x86_64-linux.frontend
         mkdir ./dist
         cp -RL ./result/* ./dist/
 
