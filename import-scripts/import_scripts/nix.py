@@ -9,6 +9,7 @@ stringEscapes = str.maketrans({"\\": "\\\\", '"': '\\"'})
 
 def prettyPrint(item, level=""):
     next_level = level + "  "
+
     if item is None:
         return "null"
 
@@ -21,13 +22,19 @@ def prettyPrint(item, level=""):
         return f"{item}"
 
     elif type(item) == str:
+        item = item.strip()
         if "\n" in item:
-            return (
-                "''\n"
-                + "".join(
-                    [f"{next_level}{line}" for line in item.splitlines(keepends=True)]
-                )
-                + (f"{level}''" if item[-1] == "\n" else "''")
+            return "".join(
+                [
+                    "''",
+                    "".join(
+                        [
+                            f"{next_level}{line}"
+                            for line in item.splitlines(keepends=True)
+                        ]
+                    )[len(next_level) :],
+                    f"\n{level}''",
+                ]
             )
         return f'"{item.translate(stringEscapes)}"'
 
