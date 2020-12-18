@@ -7,9 +7,26 @@ import pytest  # type: ignore
         (None, "null",),
         (True, "true",),
         ("text", '"text"',),
+        (
+            "\nnew line is ignored at start and end\n",
+            '"new line is ignored at start and end"',
+        ),
+        ('"double quotes"', '"\\"double quotes\\""',),
+        ("multi\nline\ntext", "''\n  multi\n  line\n  text\n''",),
+        ('"multi line\ndouble quotes"', "''\n  \"multi line\n  double quotes\"\n''",),
         (123, "123",),
         (123.123, "123.123",),
-        ([False, "text"], ("[\n" "  false\n" '  "text"\n' "]"),),
+        (
+            [False, "text", "multi\nline\ntext"],
+            "".join(
+                [
+                    "[\n",
+                    "  false\n",
+                    '  "text"\n',
+                    "  ''\n    multi\n" "    line\n" "    text\n" "  ''\n" "]",
+                ]
+            ),
+        ),
         (
             {"name1": "value1", "name.2": True, "name3": [False, "text"]},
             (
