@@ -12,8 +12,8 @@ import pytest  # type: ignore
             '"new line is ignored at start and end"',
         ),
         ('"double quotes"', '"\\"double quotes\\""',),
-        ("multi\nline\ntext", "''multi\n  line\n  text\n''",),
-        ('"multi line\ndouble quotes"', "''\"multi line\n  double quotes\"\n''",),
+        ("multi\nline\ntext", "''\n  multi\n  line\n  text\n''",),
+        ('"multi line\ndouble quotes"', "''\n  \"multi line\n  double quotes\"\n''",),
         (123, "123",),
         (123.123, "123.123",),
         (
@@ -23,7 +23,7 @@ import pytest  # type: ignore
                     "[\n",
                     "  false\n",
                     '  "text"\n',
-                    "  ''multi\n" "    line\n" "    text\n" "  ''\n" "]",
+                    "  ''\n    multi\n" "    line\n" "    text\n" "  ''\n" "]",
                 ]
             ),
         ),

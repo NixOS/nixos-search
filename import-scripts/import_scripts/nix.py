@@ -26,13 +26,13 @@ def prettyPrint(item, level=""):
         if "\n" in item:
             return "".join(
                 [
-                    "''",
+                    "''\n",
                     "".join(
                         [
                             f"{next_level}{line}"
                             for line in item.splitlines(keepends=True)
                         ]
-                    )[len(next_level) :],
+                    ),
                     f"\n{level}''",
                 ]
             )
