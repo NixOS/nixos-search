@@ -512,7 +512,13 @@ view { toRoute, categoryName } title model viewSuccess outMsg =
 
                 RemoteData.Success result ->
                     if result.hits.total.value == 0 then
-                        [ h4 [] [ text <| "No " ++ categoryName ++ " found!" ] ]
+                        [ h4 [] [ text <| "No " ++ categoryName ++ " found!" ]
+                        , text "How to "
+                        , Html.a [ href "https://nixos.org/manual/nixpkgs/stable/#chap-quick-start"] [ text "add" ]
+                        , text " or "
+                        , a [ href "https://github.com/NixOS/nixpkgs/issues/new?assignees=&labels=0.kind%3A+packaging+request&template=packaging_request.md&title="] [ text "request" ]
+                        , text " package to nixpkgs?"
+                        ]
 
                     else
                         [ p []
