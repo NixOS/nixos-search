@@ -150,7 +150,7 @@ init args model =
                 |> Maybe.withDefault Relevance
       }
         |> ensureLoading
-    , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
+    , Cmd.batch [ Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp) ]
     )
 
 
@@ -183,6 +183,22 @@ type Msg a
     | QueryResponse (RemoteData.WebData (SearchResult a))
     | ShowDetails String
     | ChangePage Int
+
+
+scrollToEntry : Maybe String -> Cmd (Msg a)
+scrollToEntry val =
+    case val of
+        Nothing ->
+            Cmd.none
+
+        Just id ->
+            let
+                _ =
+                    Debug.log "id" id
+            in
+            Browser.Dom.getElement ("result-" ++ id)
+                |> Task.andThen (\{ element } -> Browser.Dom.setViewport element.x element.y)
+                |> Task.attempt (always NoOp)
 
 
 update :
@@ -226,7 +242,7 @@ update toRoute navKey msg model =
 
         QueryResponse result ->
             ( { model | result = result }
-            , Cmd.none
+            , scrollToEntry model.show
             )
 
         ShowDetails selected ->
