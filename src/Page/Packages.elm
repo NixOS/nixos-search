@@ -223,7 +223,7 @@ viewResultItem channel show item =
         |> List.append
             (tr
                 [ onClick (SearchMsg (Search.ShowDetails item.source.attr_name))
-                , Html.Attributes.id <| "result-" ++ item.source.attr_name
+                , Search.elementId item.source.attr_name
                 ]
                 [ td [] [ text <| item.source.attr_name ]
                 , td [] [ text item.source.pname ]

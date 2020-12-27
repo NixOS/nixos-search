@@ -8,6 +8,7 @@ module Search exposing
     , channelDetailsFromId
     , channels
     , decodeResult
+    , elementId
     , fromSortId
     , init
     , makeRequest
@@ -150,7 +151,7 @@ init args model =
                 |> Maybe.withDefault Relevance
       }
         |> ensureLoading
-    , Cmd.batch [ Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp) ]
+    , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
     )
 
 
@@ -166,6 +167,11 @@ ensureLoading model =
 
     else
         model
+
+
+elementId : String -> Html.Attribute msg
+elementId str =
+    Html.Attributes.id <| "result-" ++ str
 
 
 
