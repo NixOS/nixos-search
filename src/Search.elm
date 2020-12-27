@@ -193,18 +193,13 @@ type Msg a
 
 scrollToEntry : Maybe String -> Cmd (Msg a)
 scrollToEntry val =
-    case val of
-        Nothing ->
-            Cmd.none
-
-        Just id ->
-            let
-                _ =
-                    Debug.log "id" id
-            in
+    let
+        doScroll id =
             Browser.Dom.getElement ("result-" ++ id)
                 |> Task.andThen (\{ element } -> Browser.Dom.setViewport element.x element.y)
                 |> Task.attempt (always NoOp)
+    in
+    Maybe.withDefault Cmd.none <| Maybe.map doScroll val
 
 
 update :
