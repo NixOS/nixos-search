@@ -430,11 +430,13 @@ decodeHomepage : Json.Decode.Decoder (List String)
 decodeHomepage =
     Json.Decode.oneOf
         -- null becomes [] (empty list)
+        [ Json.Decode.null []
+
         -- "foo" becomes ["foo"]
+        , Json.Decode.map List.singleton Json.Decode.string
+
         -- arrays are decoded to list as expected
-        [ Json.Decode.map List.singleton Json.Decode.string
         , Json.Decode.list Json.Decode.string
-        , Json.Decode.null []
         ]
 
 
