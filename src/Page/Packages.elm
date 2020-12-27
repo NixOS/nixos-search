@@ -426,8 +426,8 @@ makeRequest options channel query from size sort =
 -- JSON
 
 
-homepageDecoder : Json.Decode.Decoder (List String)
-homepageDecoder =
+decodeHomepage : Json.Decode.Decoder (List String)
+decodeHomepage =
     Json.Decode.oneOf
         -- null becomes [] (empty list)
         -- "foo" becomes ["foo"]
@@ -450,7 +450,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.required "package_maintainers" (Json.Decode.list decodeResultPackageMaintainer)
         |> Json.Decode.Pipeline.required "package_platforms" (Json.Decode.list Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_position" (Json.Decode.nullable Json.Decode.string)
-        |> Json.Decode.Pipeline.required "package_homepage" homepageDecoder
+        |> Json.Decode.Pipeline.required "package_homepage" decodeHomepage
         |> Json.Decode.Pipeline.required "package_system" Json.Decode.string
         |> Json.Decode.Pipeline.required "package_hydra" (Json.Decode.nullable (Json.Decode.list decodeResultPackageHydra))
 
