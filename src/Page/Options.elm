@@ -174,7 +174,10 @@ viewResultItem channel show item =
         -- DEBUG:         ]
         -- DEBUG:     ]
         |> List.append
-            (tr [ onClick (SearchMsg (Search.ShowDetails item.source.name)) ]
+            (tr
+                [ onClick (SearchMsg (Search.ShowDetails item.source.name))
+                , Search.elementId item.source.name
+                ]
                 [ td [] [ text item.source.name ]
                 ]
                 :: packageDetails
