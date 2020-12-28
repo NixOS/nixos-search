@@ -66,7 +66,7 @@ type alias ResultItemSource =
     , maintainers : List ResultPackageMaintainer
     , platforms : List String
     , position : Maybe String
-    , homepage : Maybe String
+    , homepage : List String
     , system : String
     , hydra : Maybe (List ResultPackageHydra)
     }
@@ -374,7 +374,7 @@ viewResultItemDetails channel item =
         , dt [] [ text "Platforms" ]
         , dd [] [ asList (showPlatforms item.source.hydra item.source.platforms) ]
         , dt [] [ text "Homepage" ]
-        , dd [] [ withEmpty asLink item.source.homepage ]
+        , dd [] <| List.intersperse (Html.text ", ") <| List.map asLink item.source.homepage
         , dt [] [ text "Licenses" ]
         , dd [] [ asList (List.map showLicence item.source.licenses) ]
         , dt [] [ text "Maintainers" ]
@@ -426,6 +426,20 @@ makeRequest options channel query from size sort =
 -- JSON
 
 
+decodeHomepage : Json.Decode.Decoder (List String)
+decodeHomepage =
+    Json.Decode.oneOf
+        -- null becomes [] (empty list)
+        [ Json.Decode.null []
+
+        -- "foo" becomes ["foo"]
+        , Json.Decode.map List.singleton Json.Decode.string
+
+        -- arrays are decoded to list as expected
+        , Json.Decode.list Json.Decode.string
+        ]
+
+
 decodeResultItemSource : Json.Decode.Decoder ResultItemSource
 decodeResultItemSource =
     Json.Decode.succeed ResultItemSource
@@ -438,7 +452,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.required "package_maintainers" (Json.Decode.list decodeResultPackageMaintainer)
         |> Json.Decode.Pipeline.required "package_platforms" (Json.Decode.list Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_position" (Json.Decode.nullable Json.Decode.string)
-        |> Json.Decode.Pipeline.required "package_homepage" (Json.Decode.nullable Json.Decode.string)
+        |> Json.Decode.Pipeline.required "package_homepage" decodeHomepage
         |> Json.Decode.Pipeline.required "package_system" Json.Decode.string
         |> Json.Decode.Pipeline.required "package_hydra" (Json.Decode.nullable (Json.Decode.list decodeResultPackageHydra))
 
