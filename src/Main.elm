@@ -202,7 +202,7 @@ changeRouteTo currentModel url =
                 Route.Home ->
                     -- Always redirect to /packages until we have something to show
                     -- on the home page
-                    ( model, Browser.Navigation.pushUrl model.navKey "/packages" )
+                    ( model, Browser.Navigation.replaceUrl model.navKey "/packages" )
 
                 Route.Packages searchArgs ->
                     let

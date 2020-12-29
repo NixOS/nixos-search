@@ -44,7 +44,8 @@ searchQueryParser url =
         rawQuery =
             Route.SearchQuery.toRawQuery url
 
-        maybeQuery = Maybe.andThen (Route.SearchQuery.searchString "query") rawQuery
+        maybeQuery =
+            Maybe.andThen (Route.SearchQuery.searchString "query") rawQuery
     in
     Url.Parser.map (SearchArgs maybeQuery) <|
         Url.Parser.top

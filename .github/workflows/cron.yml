@@ -76,12 +76,13 @@ jobs:
       run: |
         nix-env -iA nixpkgs.nixFlakes
         echo 'experimental-features = nix-command flakes' | sudo tee -a /etc/nix/nix.conf
-        $HOME/.nix-profile/bin/nix --version
+        nix --version
         cat /etc/nix/nix.conf
+        echo "$HOME/.nix-profile/bin" >> $GITHUB_PATH
 
     - name: Building import_scripts
       run: |
-        $HOME/.nix-profile/bin/nix build ./#packages.x86_64-linux.import_scripts
+        nix build ./#packages.x86_64-linux.import_scripts
 
     - name: Import ${{ matrix.channel }} channel
       run: |

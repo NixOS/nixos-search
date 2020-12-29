@@ -8,6 +8,7 @@ module Search exposing
     , channelDetailsFromId
     , channels
     , decodeResult
+    , elementId
     , fromSortId
     , init
     , makeRequest
@@ -168,6 +169,11 @@ ensureLoading model =
         model
 
 
+elementId : String -> Html.Attribute msg
+elementId str =
+    Html.Attributes.id <| "result-" ++ str
+
+
 
 -- ---------------------------
 -- UPDATE
@@ -183,6 +189,17 @@ type Msg a
     | QueryResponse (RemoteData.WebData (SearchResult a))
     | ShowDetails String
     | ChangePage Int
+
+
+scrollToEntry : Maybe String -> Cmd (Msg a)
+scrollToEntry val =
+    let
+        doScroll id =
+            Browser.Dom.getElement ("result-" ++ id)
+                |> Task.andThen (\{ element } -> Browser.Dom.setViewport element.x element.y)
+                |> Task.attempt (always NoOp)
+    in
+    Maybe.withDefault Cmd.none <| Maybe.map doScroll val
 
 
 update :
@@ -226,7 +243,7 @@ update toRoute navKey msg model =
 
         QueryResponse result ->
             ( { model | result = result }
-            , Cmd.none
+            , scrollToEntry model.show
             )
 
         ShowDetails selected ->
@@ -553,7 +570,13 @@ view { toRoute, categoryName } title model viewSuccess outMsg =
 
                 RemoteData.Success result ->
                     if result.hits.total.value == 0 then
-                        [ h4 [] [ text <| "No " ++ categoryName ++ " found!" ] ]
+                        [ h4 [] [ text <| "No " ++ categoryName ++ " found!" ]
+                        , text "How to "
+                        , Html.a [ href "https://nixos.org/manual/nixpkgs/stable/#chap-quick-start"] [ text "add" ]
+                        , text " or "
+                        , a [ href "https://github.com/NixOS/nixpkgs/issues/new?assignees=&labels=0.kind%3A+packaging+request&template=packaging_request.md&title="] [ text "request" ]
+                        , text " package to nixpkgs?"
+                        ]
 
                     else
                         [ p []
