@@ -33,6 +33,7 @@ import Html.Attributes
         ( class
         , colspan
         , href
+        , style
         , target
         )
 import Html.Events
@@ -174,8 +175,11 @@ viewResultItem channel show item =
         -- DEBUG:         ]
         -- DEBUG:     ]
         |> List.append
-            (tr
-                [ onClick (SearchMsg (Search.ShowDetails item.source.name))
+            (a
+                [ style "display" "table-row"
+                , style "color" "unset"
+                , style "text-decoration" "none"
+                , onClick (SearchMsg (Search.ShowDetails item.source.name))
                 , Search.elementId item.source.name
                 ]
                 [ td [] [ text item.source.name ]
