@@ -194,6 +194,9 @@ viewResultItem channel show item =
 
             else
                 []
+
+        open =
+            SearchMsg (Search.ShowDetails item.source.attr_name)
     in
     []
         -- DEBUG: |> List.append
@@ -222,10 +225,21 @@ viewResultItem channel show item =
         -- DEBUG:     ]
         |> List.append
             (tr
-                [ onClick (SearchMsg (Search.ShowDetails item.source.attr_name))
+                [ onClick open
                 , Search.elementId item.source.attr_name
                 ]
-                [ td [] [ text <| item.source.attr_name ]
+                [ td []
+                    [ Html.button
+                        [ class "search-result-button"
+                        , Html.Events.custom "click" <|
+                            Json.Decode.succeed
+                                { message = open
+                                , stopPropagation = True
+                                , preventDefault = True
+                                }
+                        ]
+                        [ text item.source.attr_name ]
+                    ]
                 , td [] [ text item.source.pname ]
                 , td [] [ text item.source.pversion ]
                 , td [] [ text <| Maybe.withDefault "" item.source.description ]
