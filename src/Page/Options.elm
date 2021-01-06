@@ -18,6 +18,8 @@ import Html
         , div
         , dl
         , dt
+        , h4
+        , li
         , pre
         , span
         , table
@@ -27,6 +29,7 @@ import Html
         , th
         , thead
         , tr
+        , ul
         )
 import Html.Attributes
     exposing
@@ -53,7 +56,7 @@ import Search
 
 
 type alias Model =
-    Search.Model ResultItemSource
+    Search.Model ResultItemSource ResultAggregations
 
 
 type alias ResultItemSource =
@@ -63,6 +66,16 @@ type alias ResultItemSource =
     , default : Maybe String
     , example : Maybe String
     , source : Maybe String
+    }
+
+
+type alias ResultAggregations =
+    { all : AggregationsAll
+    }
+
+
+type alias AggregationsAll =
+    { doc_count : Int
     }
 
 
@@ -82,7 +95,7 @@ init searchArgs model =
 
 
 type Msg
-    = SearchMsg (Search.Msg ResultItemSource)
+    = SearchMsg (Search.Msg ResultItemSource ResultAggregations)
 
 
 update :
@@ -114,13 +127,21 @@ view model =
         "Search NixOS options"
         model
         viewSuccess
+        viewSearchFaceted
         SearchMsg
+
+
+viewSearchFaceted :
+    Search.SearchResult ResultItemSource ResultAggregations
+    -> List (Html Msg)
+viewSearchFaceted result =
+    [ ul [ class "nav nav-list" ] [] ]
 
 
 viewSuccess :
     String
     -> Maybe String
-    -> Search.SearchResult ResultItemSource
+    -> Search.SearchResult ResultItemSource ResultAggregations
     -> Html Msg
 viewSuccess channel show result =
     div [ class "search-result" ]
@@ -302,6 +323,7 @@ makeRequest options channel query from size sort =
         )
         ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
         decodeResultItemSource
+        decodeResultAggregations
         options
         Search.QueryResponse
         (Just "query-options")
@@ -321,3 +343,15 @@ decodeResultItemSource =
         (Json.Decode.field "option_default" (Json.Decode.nullable Json.Decode.string))
         (Json.Decode.field "option_example" (Json.Decode.nullable Json.Decode.string))
         (Json.Decode.field "option_source" (Json.Decode.nullable Json.Decode.string))
+
+
+decodeResultAggregations : Json.Decode.Decoder ResultAggregations
+decodeResultAggregations =
+    Json.Decode.map ResultAggregations
+        (Json.Decode.field "all" decodeResultAggregationsAll)
+
+
+decodeResultAggregationsAll : Json.Decode.Decoder AggregationsAll
+decodeResultAggregationsAll =
+    Json.Decode.map AggregationsAll
+        (Json.Decode.field "doc_count" Json.Decode.int)

@@ -1,5 +1,7 @@
 module Search exposing
-    ( Model
+    ( Aggregation
+    , AggregationsBucketItem
+    , Model
     , Msg(..)
     , Options
     , ResultItem
@@ -7,6 +9,7 @@ module Search exposing
     , Sort(..)
     , channelDetailsFromId
     , channels
+    , decodeAggregation
     , decodeResult
     , elementId
     , fromSortId
@@ -72,10 +75,10 @@ import Url
 import Url.Builder
 
 
-type alias Model a =
+type alias Model a b =
     { channel : String
     , query : Maybe String
-    , result : RemoteData.WebData (SearchResult a)
+    , result : RemoteData.WebData (SearchResult a b)
     , show : Maybe String
     , from : Int
     , size : Int
@@ -83,8 +86,9 @@ type alias Model a =
     }
 
 
-type alias SearchResult a =
+type alias SearchResult a b =
     { hits : ResultHits a
+    , aggregations : b
     }
 
 
@@ -111,13 +115,29 @@ type alias ResultItem a =
     }
 
 
+type alias Aggregation =
+    { doc_count_error_upper_bound : Int
+    , sum_other_doc_count : Int
+    , buckets : List AggregationsBucketItem
+    }
+
+
+type alias AggregationsBucketItem =
+    { doc_count : Int
+    , key : String
+    }
+
+
 type Sort
     = Relevance
     | AlphabeticallyAsc
     | AlphabeticallyDesc
 
 
-init : Route.SearchArgs -> Maybe (Model a) -> ( Model a, Cmd (Msg a) )
+init :
+    Route.SearchArgs
+    -> Maybe (Model a b)
+    -> ( Model a b, Cmd (Msg a b) )
 init args model =
     let
         channel =
@@ -155,12 +175,16 @@ init args model =
     )
 
 
-shouldLoad : Model a -> Bool
+shouldLoad :
+    Model a b
+    -> Bool
 shouldLoad model =
     model.result == RemoteData.Loading
 
 
-ensureLoading : Model a -> Model a
+ensureLoading :
+    Model a b
+    -> Model a b
 ensureLoading model =
     if model.query /= Nothing && model.query /= Just "" && List.member model.channel channels then
         { model | result = RemoteData.Loading }
@@ -180,18 +204,20 @@ elementId str =
 -- ---------------------------
 
 
-type Msg a
+type Msg a b
     = NoOp
     | SortChange String
     | ChannelChange String
     | QueryInput String
     | QueryInputSubmit
-    | QueryResponse (RemoteData.WebData (SearchResult a))
+    | QueryResponse (RemoteData.WebData (SearchResult a b))
     | ShowDetails String
     | ChangePage Int
 
 
-scrollToEntry : Maybe String -> Cmd (Msg a)
+scrollToEntry :
+    Maybe String
+    -> Cmd (Msg a b)
 scrollToEntry val =
     let
         doScroll id =
@@ -205,9 +231,9 @@ scrollToEntry val =
 update :
     Route.SearchRoute
     -> Browser.Navigation.Key
-    -> Msg a
-    -> Model a
-    -> ( Model a, Cmd (Msg a) )
+    -> Msg a b
+    -> Model a b
+    -> ( Model a b, Cmd (Msg a b) )
 update toRoute navKey msg model =
     case msg of
         NoOp ->
@@ -263,7 +289,11 @@ update toRoute navKey msg model =
                 |> pushUrl toRoute navKey
 
 
-pushUrl : Route.SearchRoute -> Browser.Navigation.Key -> Model a -> ( Model a, Cmd msg )
+pushUrl :
+    Route.SearchRoute
+    -> Browser.Navigation.Key
+    -> Model a b
+    -> ( Model a b, Cmd msg )
 pushUrl toRoute navKey model =
     Tuple.pair model <|
         if model.query == Nothing || model.query == Just "" then
@@ -273,7 +303,10 @@ pushUrl toRoute navKey model =
             Browser.Navigation.pushUrl navKey <| createUrl toRoute model
 
 
-createUrl : Route.SearchRoute -> Model a -> String
+createUrl :
+    Route.SearchRoute
+    -> Model a b
+    -> String
 createUrl toRoute model =
     Route.routeToString <|
         toRoute
@@ -477,11 +510,12 @@ view :
     , categoryName : String
     }
     -> String
-    -> Model a
-    -> (String -> Maybe String -> SearchResult a -> Html b)
-    -> (Msg a -> b)
-    -> Html b
-view { toRoute, categoryName } title model viewSuccess outMsg =
+    -> Model a b
+    -> (String -> Maybe String -> SearchResult a b -> Html c)
+    -> (SearchResult a b -> List (Html c))
+    -> (Msg a b -> c)
+    -> Html c
+view { toRoute, categoryName } title model viewSuccess viewSearchFaceted outMsg =
     div
         [ class "search-page"
         ]
@@ -572,43 +606,19 @@ view { toRoute, categoryName } title model viewSuccess outMsg =
                     if result.hits.total.value == 0 then
                         [ h4 [] [ text <| "No " ++ categoryName ++ " found!" ]
                         , text "How to "
-                        , Html.a [ href "https://nixos.org/manual/nixpkgs/stable/#chap-quick-start"] [ text "add" ]
+                        , Html.a [ href "https://nixos.org/manual/nixpkgs/stable/#chap-quick-start" ] [ text "add" ]
                         , text " or "
-                        , a [ href "https://github.com/NixOS/nixpkgs/issues/new?assignees=&labels=0.kind%3A+packaging+request&template=packaging_request.md&title="] [ text "request" ]
+                        , a [ href "https://github.com/NixOS/nixpkgs/issues/new?assignees=&labels=0.kind%3A+packaging+request&template=packaging_request.md&title=" ] [ text "request" ]
                         , text " package to nixpkgs?"
                         ]
 
                     else
-                        [ p []
-                            [ em []
-                                [ text
-                                    ("Showing results "
-                                        ++ String.fromInt model.from
-                                        ++ "-"
-                                        ++ String.fromInt
-                                            (if model.from + model.size > result.hits.total.value then
-                                                result.hits.total.value
-
-                                             else
-                                                model.from + model.size
-                                            )
-                                        ++ " of "
-                                        ++ (if result.hits.total.value == 10000 then
-                                                "more than 10000 results, please provide more precise search terms."
-
-                                            else
-                                                String.fromInt result.hits.total.value
-                                                    ++ "."
-                                           )
-                                    )
-                                ]
+                        [ div [ class "row" ]
+                            [ div [ class "span3 search-faceted" ]
+                                (viewSearchFaceted result)
+                            , div [ class "span9" ]
+                                (viewResults model result viewSuccess toRoute outMsg)
                             ]
-                        , div []
-                            [ viewSortSelection outMsg model
-                            , viewPager outMsg model result.hits.total.value toRoute
-                            ]
-                        , viewSuccess model.channel model.show result
-                        , viewPager outMsg model result.hits.total.value toRoute
                         ]
 
                 RemoteData.Failure error ->
@@ -638,7 +648,48 @@ view { toRoute, categoryName } title model viewSuccess outMsg =
         ]
 
 
-viewSortSelection : (Msg a -> b) -> Model a -> Html b
+viewResults :
+    Model a b
+    -> SearchResult a b
+    -> (String -> Maybe String -> SearchResult a b -> Html c)
+    -> Route.SearchRoute
+    -> (Msg a b -> c)
+    -> List (Html c)
+viewResults model result viewSuccess toRoute outMsg =
+    [ p []
+        [ em []
+            [ text
+                ("Showing results "
+                    ++ String.fromInt model.from
+                    ++ "-"
+                    ++ String.fromInt
+                        (if model.from + model.size > result.hits.total.value then
+                            result.hits.total.value
+
+                         else
+                            model.from + model.size
+                        )
+                    ++ " of "
+                    ++ (if result.hits.total.value == 10000 then
+                            "more than 10000 results, please provide more precise search terms."
+
+                        else
+                            String.fromInt result.hits.total.value
+                                ++ "."
+                       )
+                )
+            ]
+        ]
+    , div []
+        [ viewSortSelection outMsg model
+        , viewPager outMsg model result.hits.total.value toRoute
+        ]
+    , viewSuccess model.channel model.show result
+    , viewPager outMsg model result.hits.total.value toRoute
+    ]
+
+
+viewSortSelection : (Msg a b -> c) -> Model a b -> Html c
 viewSortSelection outMsg model =
     form [ class "form-horizontal pull-right sort-form" ]
         [ div [ class "control-group sort-group" ]
@@ -664,11 +715,11 @@ viewSortSelection outMsg model =
 
 
 viewPager :
-    (Msg a -> b)
-    -> Model a
+    (Msg a b -> c)
+    -> Model a b
     -> Int
     -> Route.SearchRoute
-    -> Html b
+    -> Html c
 viewPager outMsg model total toRoute =
     Html.map outMsg <|
         ul [ class "pager" ]
@@ -921,11 +972,12 @@ makeRequest :
     Http.Body
     -> String
     -> Json.Decode.Decoder a
+    -> Json.Decode.Decoder b
     -> Options
-    -> (RemoteData.WebData (SearchResult a) -> Msg a)
+    -> (RemoteData.WebData (SearchResult a b) -> Msg a b)
     -> Maybe String
-    -> Cmd (Msg a)
-makeRequest body index decodeResultItemSource options responseMsg tracker =
+    -> Cmd (Msg a b)
+makeRequest body index decodeResultItemSource decodeResultAggregations options responseMsg tracker =
     Http.riskyRequest
         { method = "POST"
         , headers =
@@ -936,7 +988,7 @@ makeRequest body index decodeResultItemSource options responseMsg tracker =
         , expect =
             Http.expectJson
                 (RemoteData.fromResult >> responseMsg)
-                (decodeResult decodeResultItemSource)
+                (decodeResult decodeResultItemSource decodeResultAggregations)
         , timeout = Nothing
         , tracker = tracker
         }
@@ -948,10 +1000,12 @@ makeRequest body index decodeResultItemSource options responseMsg tracker =
 
 decodeResult :
     Json.Decode.Decoder a
-    -> Json.Decode.Decoder (SearchResult a)
-decodeResult decodeResultItemSource =
-    Json.Decode.map SearchResult
+    -> Json.Decode.Decoder b
+    -> Json.Decode.Decoder (SearchResult a b)
+decodeResult decodeResultItemSource decodeResultAggregations =
+    Json.Decode.map2 SearchResult
         (Json.Decode.field "hits" (decodeResultHits decodeResultItemSource))
+        (Json.Decode.field "aggregations" decodeResultAggregations)
 
 
 decodeResultHits : Json.Decode.Decoder a -> Json.Decode.Decoder (ResultHits a)
@@ -978,3 +1032,18 @@ decodeResultItem decodeResultItemSource =
         (Json.Decode.field "_source" decodeResultItemSource)
         (Json.Decode.maybe (Json.Decode.field "text" Json.Decode.string))
         (Json.Decode.maybe (Json.Decode.field "matched_queries" (Json.Decode.list Json.Decode.string)))
+
+
+decodeAggregation : Json.Decode.Decoder Aggregation
+decodeAggregation =
+    Json.Decode.map3 Aggregation
+        (Json.Decode.field "doc_count_error_upper_bound" Json.Decode.int)
+        (Json.Decode.field "sum_other_doc_count" Json.Decode.int)
+        (Json.Decode.field "buckets" (Json.Decode.list decodeAggregationBucketItem))
+
+
+decodeAggregationBucketItem : Json.Decode.Decoder AggregationsBucketItem
+decodeAggregationBucketItem =
+    Json.Decode.map2 AggregationsBucketItem
+        (Json.Decode.field "doc_count" Json.Decode.int)
+        (Json.Decode.field "key" Json.Decode.string)

@@ -18,8 +18,10 @@ import Html
         , div
         , dl
         , dt
+        , h4
         , li
         , pre
+        , span
         , table
         , tbody
         , td
@@ -42,7 +44,6 @@ import Html.Events
         )
 import Json.Decode
 import Json.Decode.Pipeline
-import Json.Encode
 import Regex
 import Route
 import Search
@@ -53,7 +54,7 @@ import Search
 
 
 type alias Model =
-    Search.Model ResultItemSource
+    Search.Model ResultItemSource ResultAggregations
 
 
 type alias ResultItemSource =
@@ -103,6 +104,24 @@ type alias ResultPackageHydraPath =
     }
 
 
+type alias ResultAggregations =
+    { all : AggregationsAll
+    , package_platform : Search.Aggregation
+    , package_attr_set : Search.Aggregation
+    , package_maintainers_set : Search.Aggregation
+    , package_license_set : Search.Aggregation
+    }
+
+
+type alias AggregationsAll =
+    { doc_count : Int
+    , package_platform : Search.Aggregation
+    , package_attr_set : Search.Aggregation
+    , package_maintainers_set : Search.Aggregation
+    , package_license_set : Search.Aggregation
+    }
+
+
 init : Route.SearchArgs -> Maybe Model -> ( Model, Cmd Msg )
 init searchArgs model =
     let
@@ -119,7 +138,7 @@ init searchArgs model =
 
 
 type Msg
-    = SearchMsg (Search.Msg ResultItemSource)
+    = SearchMsg (Search.Msg ResultItemSource ResultAggregations)
 
 
 update :
@@ -151,13 +170,68 @@ view model =
         "Search NixOS packages"
         model
         viewSuccess
+        viewSearchFaceted
         SearchMsg
+
+
+viewSearchFaceted :
+    Search.SearchResult ResultItemSource ResultAggregations
+    -> List (Html Msg)
+viewSearchFaceted result =
+    -- [ ( "Packages set", "package_attr_set" )
+    -- , ( "Licenses", "package_license_set" )
+    -- , ( "Maintainers", "package_maintainers_set" )
+    -- , ( "Platforms", "package_platform" )
+    -- ]
+    let
+        _ =
+            Debug.log "Result" result.aggregations.package_attr_set
+    in
+    [ ul [ class "nav nav-list" ]
+        ([]
+            |> viewSearchFacetedSet "Package sets" result.aggregations.package_attr_set
+            |> viewSearchFacetedSet "Licenses" result.aggregations.package_license_set
+            |> viewSearchFacetedSet "Platforms" result.aggregations.package_platform
+            |> viewSearchFacetedSet "Maintainers" result.aggregations.package_maintainers_set
+        )
+    ]
+
+
+viewSearchFacetedSet :
+    String
+    -> Search.Aggregation
+    -> List (Html Msg)
+    -> List (Html Msg)
+viewSearchFacetedSet title aggregation sets =
+    List.append
+        sets
+        (if List.isEmpty aggregation.buckets then
+            []
+
+         else
+            [ li []
+                [ h4 [] [ text title ]
+                , ul [ class "nav nav-tabs nav-stacked" ]
+                    (List.map
+                        (\bucket ->
+                            li []
+                                [ a [ href "#" ]
+                                    [ span [] [ text bucket.key ]
+                                    , span [ class "badge badge-info" ] [ text <| String.fromInt bucket.doc_count ]
+                                    ]
+                                ]
+                        )
+                        aggregation.buckets
+                    )
+                ]
+            ]
+        )
 
 
 viewSuccess :
     String
     -> Maybe String
-    -> Search.SearchResult ResultItemSource
+    -> Search.SearchResult ResultItemSource ResultAggregations
     -> Html Msg
 viewSuccess channel show result =
     div [ class "search-result" ]
@@ -424,6 +498,7 @@ makeRequest options channel query from size sort =
         )
         ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
         decodeResultItemSource
+        decodeResultAggregations
         options
         Search.QueryResponse
         (Just "query-packages")
@@ -432,20 +507,6 @@ makeRequest options channel query from size sort =
 
 
 -- JSON
-
-
-decodeHomepage : Json.Decode.Decoder (List String)
-decodeHomepage =
-    Json.Decode.oneOf
-        -- null becomes [] (empty list)
-        [ Json.Decode.null []
-
-        -- "foo" becomes ["foo"]
-        , Json.Decode.map List.singleton Json.Decode.string
-
-        -- arrays are decoded to list as expected
-        , Json.Decode.list Json.Decode.string
-        ]
 
 
 decodeResultItemSource : Json.Decode.Decoder ResultItemSource
@@ -463,6 +524,20 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.required "package_homepage" decodeHomepage
         |> Json.Decode.Pipeline.required "package_system" Json.Decode.string
         |> Json.Decode.Pipeline.required "package_hydra" (Json.Decode.nullable (Json.Decode.list decodeResultPackageHydra))
+
+
+decodeHomepage : Json.Decode.Decoder (List String)
+decodeHomepage =
+    Json.Decode.oneOf
+        -- null becomes [] (empty list)
+        [ Json.Decode.null []
+
+        -- "foo" becomes ["foo"]
+        , Json.Decode.map List.singleton Json.Decode.string
+
+        -- arrays are decoded to list as expected
+        , Json.Decode.list Json.Decode.string
+        ]
 
 
 decodeResultPackageLicense : Json.Decode.Decoder ResultPackageLicense
@@ -498,3 +573,23 @@ decodeResultPackageHydraPath =
     Json.Decode.map2 ResultPackageHydraPath
         (Json.Decode.field "output" Json.Decode.string)
         (Json.Decode.field "path" Json.Decode.string)
+
+
+decodeResultAggregations : Json.Decode.Decoder ResultAggregations
+decodeResultAggregations =
+    Json.Decode.map5 ResultAggregations
+        (Json.Decode.field "all" decodeAggregationsAll)
+        (Json.Decode.field "package_platform" Search.decodeAggregation)
+        (Json.Decode.field "package_attr_set" Search.decodeAggregation)
+        (Json.Decode.field "package_maintainers_set" Search.decodeAggregation)
+        (Json.Decode.field "package_license_set" Search.decodeAggregation)
+
+
+decodeAggregationsAll : Json.Decode.Decoder AggregationsAll
+decodeAggregationsAll =
+    Json.Decode.map5 AggregationsAll
+        (Json.Decode.field "doc_count" Json.Decode.int)
+        (Json.Decode.field "package_platform" Search.decodeAggregation)
+        (Json.Decode.field "package_attr_set" Search.decodeAggregation)
+        (Json.Decode.field "package_maintainers_set" Search.decodeAggregation)
+        (Json.Decode.field "package_license_set" Search.decodeAggregation)

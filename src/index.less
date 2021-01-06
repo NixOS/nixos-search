@@ -59,6 +59,24 @@ header .navbar.navbar-static-top {
     margin-left: 0.2em;
   }
 }
+
+.search-faceted {
+  margin-top: 6.5em;
+
+  & > ul {
+    padding: 0;
+  }
+  
+  ul.nav-stacked > li > a {
+    display: flex;
+    justify-content: space-between;
+
+    & > span:last-child {
+      align-self: center;
+    }
+  }
+}
+
 .search-result {
   tbody > tr {
     cursor: pointer;
