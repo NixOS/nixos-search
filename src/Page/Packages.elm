@@ -44,9 +44,11 @@ import Html.Events
         )
 import Json.Decode
 import Json.Decode.Pipeline
+import Json.Encode
 import Regex
 import Route
 import Search
+import Utils
 
 
 
@@ -106,7 +108,7 @@ type alias ResultPackageHydraPath =
 
 type alias ResultAggregations =
     { all : AggregationsAll
-    , package_platform : Search.Aggregation
+    , package_platforms : Search.Aggregation
     , package_attr_set : Search.Aggregation
     , package_maintainers_set : Search.Aggregation
     , package_license_set : Search.Aggregation
@@ -115,11 +117,38 @@ type alias ResultAggregations =
 
 type alias AggregationsAll =
     { doc_count : Int
-    , package_platform : Search.Aggregation
+    , package_platforms : Search.Aggregation
     , package_attr_set : Search.Aggregation
     , package_maintainers_set : Search.Aggregation
     , package_license_set : Search.Aggregation
     }
+
+
+type alias Buckets =
+    { packageSets : List String
+    , licenses : List String
+    , maintainers : List String
+    , platforms : List String
+    }
+
+
+emptyBuckets : Buckets
+emptyBuckets =
+    { packageSets = []
+    , licenses = []
+    , maintainers = []
+    , platforms = []
+    }
+
+
+initBuckets :
+    Maybe String
+    -> Buckets
+initBuckets bucketsAsString =
+    bucketsAsString
+        |> Maybe.map (Json.Decode.decodeString decodeBuckets)
+        |> Maybe.andThen Result.toMaybe
+        |> Maybe.withDefault emptyBuckets
 
 
 init : Route.SearchArgs -> Maybe Model -> ( Model, Cmd Msg )
@@ -170,42 +199,57 @@ view model =
         "Search NixOS packages"
         model
         viewSuccess
-        viewSearchFaceted
+        viewBuckets
         SearchMsg
 
 
-viewSearchFaceted :
-    Search.SearchResult ResultItemSource ResultAggregations
+viewBuckets :
+    Maybe String
+    -> Search.SearchResult ResultItemSource ResultAggregations
     -> List (Html Msg)
-viewSearchFaceted result =
-    -- [ ( "Packages set", "package_attr_set" )
-    -- , ( "Licenses", "package_license_set" )
-    -- , ( "Maintainers", "package_maintainers_set" )
-    -- , ( "Platforms", "package_platform" )
-    -- ]
+viewBuckets bucketsAsString result =
     let
-        _ =
-            Debug.log "Result" result.aggregations.package_attr_set
+        initialBuckets =
+            initBuckets bucketsAsString
+
+        createBucketsMsg getBucket mergeBuckets value =
+            value
+                |> Utils.toggleList (getBucket initialBuckets)
+                |> mergeBuckets initialBuckets
+                |> encodeBuckets
+                |> Json.Encode.encode 0
+                |> Search.BucketsChange
+                |> SearchMsg
     in
-    [ ul [ class "nav nav-list" ]
-        ([]
-            |> viewSearchFacetedSet "Package sets" result.aggregations.package_attr_set
-            |> viewSearchFacetedSet "Licenses" result.aggregations.package_license_set
-            |> viewSearchFacetedSet "Platforms" result.aggregations.package_platform
-            |> viewSearchFacetedSet "Maintainers" result.aggregations.package_maintainers_set
-        )
-    ]
+    []
+        |> viewSearchFacetedSet
+            "Package sets"
+            (result.aggregations.package_attr_set.buckets |> List.sortBy .doc_count |> List.reverse)
+            (createBucketsMsg .packageSets (\s v -> { s | packageSets = v }))
+        |> viewSearchFacetedSet
+            "Licenses"
+            (result.aggregations.package_license_set.buckets |> List.sortBy .doc_count |> List.reverse)
+            (createBucketsMsg .licenses (\s v -> { s | licenses = v }))
+        |> viewSearchFacetedSet
+            "Platforms"
+            (result.aggregations.package_platforms.buckets |> List.sortBy .doc_count |> List.reverse)
+            (createBucketsMsg .platforms (\s v -> { s | platforms = v }))
+        |> viewSearchFacetedSet
+            "Maintainers"
+            (result.aggregations.package_maintainers_set.buckets |> List.sortBy .doc_count |> List.reverse)
+            (createBucketsMsg .maintainers (\s v -> { s | maintainers = v }))
 
 
 viewSearchFacetedSet :
     String
-    -> Search.Aggregation
+    -> List Search.AggregationsBucketItem
+    -> (String -> Msg)
     -> List (Html Msg)
     -> List (Html Msg)
-viewSearchFacetedSet title aggregation sets =
+viewSearchFacetedSet title buckets searchMsgFor sets =
     List.append
         sets
-        (if List.isEmpty aggregation.buckets then
+        (if List.isEmpty buckets then
             []
 
          else
@@ -215,13 +259,16 @@ viewSearchFacetedSet title aggregation sets =
                     (List.map
                         (\bucket ->
                             li []
-                                [ a [ href "#" ]
+                                [ a
+                                    [ href "#"
+                                    , onClick <| searchMsgFor bucket.key
+                                    ]
                                     [ span [] [ text bucket.key ]
                                     , span [ class "badge badge-info" ] [ text <| String.fromInt bucket.doc_count ]
                                     ]
                                 ]
                         )
-                        aggregation.buckets
+                        buckets
                     )
                 ]
             ]
@@ -231,9 +278,9 @@ viewSearchFacetedSet title aggregation sets =
 viewSuccess :
     String
     -> Maybe String
-    -> Search.SearchResult ResultItemSource ResultAggregations
+    -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
-viewSuccess channel show result =
+viewSuccess channel show hits =
     div [ class "search-result" ]
         [ table [ class "table table-hover" ]
             [ thead []
@@ -248,7 +295,7 @@ viewSuccess channel show result =
                 []
                 (List.concatMap
                     (viewResultItem channel show)
-                    result.hits.hits
+                    hits
                 )
             ]
         ]
@@ -487,9 +534,40 @@ makeRequest :
     -> String
     -> Int
     -> Int
+    -> Maybe String
     -> Search.Sort
     -> Cmd Msg
-makeRequest options channel query from size sort =
+makeRequest options channel query from size maybeBuckets sort =
+    let
+        filterByBucket field value =
+            [ ( "term"
+              , Json.Encode.object
+                    [ ( field
+                      , Json.Encode.object
+                            [ ( "value", Json.Encode.string value )
+                            , ( "_name", Json.Encode.string <| "filter_bucket_" ++ field )
+                            ]
+                      )
+                    ]
+              )
+            ]
+
+        filterByBuckets =
+            let
+                buckets =
+                    initBuckets maybeBuckets
+            in
+            [ ( "package_attr_set", buckets.packageSets )
+            , ( "package_license_set", buckets.licenses )
+            , ( "package_maintainers_set", buckets.maintainers )
+            , ( "package_platforms", buckets.platforms )
+            ]
+                |> List.map
+                    (\( field, items ) ->
+                        List.map (filterByBucket field) items
+                    )
+                |> List.concat
+    in
     Search.makeRequest
         (Search.makeRequestBody
             (String.trim query)
@@ -501,8 +579,9 @@ makeRequest options channel query from size sort =
             [ "package_attr_set"
             , "package_license_set"
             , "package_maintainers_set"
-            , "package_platform"
+            , "package_platforms"
             ]
+            filterByBuckets
             [ ( "package_attr_name", 9.0 )
             , ( "package_pname", 6.0 )
             , ( "package_attr_name_query", 4.0 )
@@ -521,6 +600,25 @@ makeRequest options channel query from size sort =
 
 
 -- JSON
+
+
+encodeBuckets : Buckets -> Json.Encode.Value
+encodeBuckets options =
+    Json.Encode.object
+        [ ( "package_attr_set", Json.Encode.list Json.Encode.string options.packageSets )
+        , ( "package_license_set", Json.Encode.list Json.Encode.string options.licenses )
+        , ( "package_maintainers_set", Json.Encode.list Json.Encode.string options.maintainers )
+        , ( "package_platforms", Json.Encode.list Json.Encode.string options.platforms )
+        ]
+
+
+decodeBuckets : Json.Decode.Decoder Buckets
+decodeBuckets =
+    Json.Decode.map4 Buckets
+        (Json.Decode.field "package_attr_set" (Json.Decode.list Json.Decode.string))
+        (Json.Decode.field "package_license_set" (Json.Decode.list Json.Decode.string))
+        (Json.Decode.field "package_maintainers_set" (Json.Decode.list Json.Decode.string))
+        (Json.Decode.field "package_platforms" (Json.Decode.list Json.Decode.string))
 
 
 decodeResultItemSource : Json.Decode.Decoder ResultItemSource
@@ -593,7 +691,7 @@ decodeResultAggregations : Json.Decode.Decoder ResultAggregations
 decodeResultAggregations =
     Json.Decode.map5 ResultAggregations
         (Json.Decode.field "all" decodeAggregationsAll)
-        (Json.Decode.field "package_platform" Search.decodeAggregation)
+        (Json.Decode.field "package_platforms" Search.decodeAggregation)
         (Json.Decode.field "package_attr_set" Search.decodeAggregation)
         (Json.Decode.field "package_maintainers_set" Search.decodeAggregation)
         (Json.Decode.field "package_license_set" Search.decodeAggregation)
@@ -603,7 +701,7 @@ decodeAggregationsAll : Json.Decode.Decoder AggregationsAll
 decodeAggregationsAll =
     Json.Decode.map5 AggregationsAll
         (Json.Decode.field "doc_count" Json.Decode.int)
-        (Json.Decode.field "package_platform" Search.decodeAggregation)
+        (Json.Decode.field "package_platforms" Search.decodeAggregation)
         (Json.Decode.field "package_attr_set" Search.decodeAggregation)
         (Json.Decode.field "package_maintainers_set" Search.decodeAggregation)
         (Json.Decode.field "package_license_set" Search.decodeAggregation)

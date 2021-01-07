@@ -28,6 +28,7 @@ type alias SearchArgs =
     , show : Maybe String
     , from : Maybe Int
     , size : Maybe Int
+    , selectedBuckets : Maybe String
 
     -- TODO: embed sort type
     , sort : Maybe String
@@ -53,6 +54,7 @@ searchQueryParser url =
             <?> Url.Parser.Query.string "show"
             <?> Url.Parser.Query.int "from"
             <?> Url.Parser.Query.int "size"
+            <?> Url.Parser.Query.string "selectedBuckets"
             <?> Url.Parser.Query.string "sort"
 
 
@@ -63,6 +65,7 @@ searchArgsToUrl args =
         , Maybe.map (Url.Builder.string "show") args.show
         , Maybe.map (Url.Builder.int "from") args.from
         , Maybe.map (Url.Builder.int "size") args.size
+        , Maybe.map (Url.Builder.string "selectedBuckets") args.selectedBuckets
         , Maybe.map (Url.Builder.string "sort") args.sort
         ]
     , Maybe.map (Tuple.pair "query") args.query
@@ -82,7 +85,7 @@ parser url =
         [ Url.Parser.map Home Url.Parser.top
         , Url.Parser.map NotFound <| Url.Parser.s "not-found"
         , Url.Parser.map Packages <| Url.Parser.s "packages" </> searchQueryParser url
-        , Url.Parser.map Options <| Url.Parser.s "options" </> searchQueryParser url
+        , Url.Parser.map Options <| Url.Parser.s "selectedBuckets" </> searchQueryParser url
         ]
 
 

@@ -127,23 +127,24 @@ view model =
         "Search NixOS options"
         model
         viewSuccess
-        viewSearchFaceted
+        viewBuckets
         SearchMsg
 
 
-viewSearchFaceted :
-    Search.SearchResult ResultItemSource ResultAggregations
+viewBuckets :
+    Maybe String
+    -> Search.SearchResult ResultItemSource ResultAggregations
     -> List (Html Msg)
-viewSearchFaceted result =
-    [ ul [ class "nav nav-list" ] [] ]
+viewBuckets _ _ =
+    []
 
 
 viewSuccess :
     String
     -> Maybe String
-    -> Search.SearchResult ResultItemSource ResultAggregations
+    -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
-viewSuccess channel show result =
+viewSuccess channel show hits =
     div [ class "search-result" ]
         [ table [ class "table table-hover" ]
             [ thead []
@@ -155,7 +156,7 @@ viewSuccess channel show result =
                 []
                 (List.concatMap
                     (viewResultItem channel show)
-                    result.hits.hits
+                    hits
                 )
             ]
         ]
@@ -319,9 +320,10 @@ makeRequest :
     -> String
     -> Int
     -> Int
+    -> Maybe String
     -> Search.Sort
     -> Cmd Msg
-makeRequest options channel query from size sort =
+makeRequest options channel query from size buckets sort =
     Search.makeRequest
         (Search.makeRequestBody
             (String.trim query)
@@ -330,6 +332,7 @@ makeRequest options channel query from size sort =
             sort
             "option"
             "option_name"
+            []
             []
             [ ( "option_name", 6.0 )
             , ( "option_name_query", 3.0 )

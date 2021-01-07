@@ -71,8 +71,6 @@ import Route exposing (Route)
 import Route.SearchQuery
 import Set
 import Task
-import Url
-import Url.Builder
 
 
 type alias Model a b =
@@ -82,6 +80,7 @@ type alias Model a b =
     , show : Maybe String
     , from : Int
     , size : Int
+    , selectedBuckets : Maybe String
     , sort : Sort
     }
 
@@ -138,32 +137,37 @@ init :
     Route.SearchArgs
     -> Maybe (Model a b)
     -> ( Model a b, Cmd (Msg a b) )
-init args model =
+init args maybeModel =
     let
-        channel =
-            model
-                |> Maybe.map (\x -> x.channel)
-                |> Maybe.withDefault defaultChannel
+        getField getFn default =
+            maybeModel
+                |> Maybe.map getFn
+                |> Maybe.withDefault default
 
-        from =
-            model
-                |> Maybe.map (\x -> x.from)
-                |> Maybe.withDefault 0
+        modelChannel =
+            getField .channel defaultChannel
 
-        size =
-            model
-                |> Maybe.map (\x -> x.size)
-                |> Maybe.withDefault 30
+        modelFrom =
+            getField .from 0
+
+        modelSize =
+            getField .size 30
     in
-    ( { channel = Maybe.withDefault channel args.channel
-      , query = Maybe.andThen Route.SearchQuery.searchQueryToString args.query
-      , result =
-            model
-                |> Maybe.map (\x -> x.result)
-                |> Maybe.withDefault RemoteData.NotAsked
+    ( { channel =
+            args.channel
+                |> Maybe.withDefault modelChannel
+      , query =
+            args.query
+                |> Maybe.andThen Route.SearchQuery.searchQueryToString
+      , result = getField .result RemoteData.NotAsked
       , show = args.show
-      , from = Maybe.withDefault from args.from
-      , size = Maybe.withDefault size args.size
+      , from =
+            args.from
+                |> Maybe.withDefault modelFrom
+      , size =
+            args.size
+                |> Maybe.withDefault modelSize
+      , selectedBuckets = args.selectedBuckets
       , sort =
             args.sort
                 |> Maybe.withDefault ""
@@ -207,6 +211,7 @@ elementId str =
 type Msg a b
     = NoOp
     | SortChange String
+    | BucketsChange String
     | ChannelChange String
     | QueryInput String
     | QueryInputSubmit
@@ -244,6 +249,19 @@ update toRoute navKey msg model =
         SortChange sortId ->
             { model
                 | sort = fromSortId sortId |> Maybe.withDefault Relevance
+                , from = 0
+            }
+                |> ensureLoading
+                |> pushUrl toRoute navKey
+
+        BucketsChange selectedBuckets ->
+            { model
+                | selectedBuckets =
+                    if selectedBuckets == "" then
+                        Nothing
+
+                    else
+                        Just selectedBuckets
                 , from = 0
             }
                 |> ensureLoading
@@ -315,6 +333,7 @@ createUrl toRoute model =
             , show = model.show
             , from = Just model.from
             , size = Just model.size
+            , selectedBuckets = model.selectedBuckets
             , sort = Just <| toSortId model.sort
             }
 
@@ -399,7 +418,7 @@ sortBy =
 toAggs :
     List String
     -> ( String, Json.Encode.Value )
-toAggs aggsFields =
+toAggs bucketsFields =
     let
         fields =
             List.map
@@ -416,7 +435,7 @@ toAggs aggsFields =
                         ]
                     )
                 )
-                aggsFields
+                bucketsFields
 
         allFields =
             [ ( "all"
@@ -511,11 +530,20 @@ view :
     }
     -> String
     -> Model a b
-    -> (String -> Maybe String -> SearchResult a b -> Html c)
-    -> (SearchResult a b -> List (Html c))
+    ->
+        (String
+         -> Maybe String
+         -> List (ResultItem a)
+         -> Html c
+        )
+    ->
+        (Maybe String
+         -> SearchResult a b
+         -> List (Html c)
+        )
     -> (Msg a b -> c)
     -> Html c
-view { toRoute, categoryName } title model viewSuccess viewSearchFaceted outMsg =
+view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg =
     div
         [ class "search-page"
         ]
@@ -613,13 +641,26 @@ view { toRoute, categoryName } title model viewSuccess viewSearchFaceted outMsg 
                         ]
 
                     else
-                        [ div [ class "row" ]
-                            [ div [ class "span3 search-faceted" ]
-                                (viewSearchFaceted result)
-                            , div [ class "span9" ]
-                                (viewResults model result viewSuccess toRoute outMsg)
+                        let
+                            selectedBuckets =
+                                viewBuckets model.selectedBuckets result
+                        in
+                        if List.length selectedBuckets > 0 then
+                            [ div [ class "row" ]
+                                [ div
+                                    [ class "span3 search-faceted" ]
+                                    [ ul [ class "nav nav-list" ] selectedBuckets ]
+                                , div [ class "span9" ]
+                                    (viewResults model result viewSuccess toRoute outMsg)
+                                ]
                             ]
-                        ]
+
+                        else
+                            [ div [ class "row" ]
+                                [ div [ class "span12" ]
+                                    (viewResults model result viewSuccess toRoute outMsg)
+                                ]
+                            ]
 
                 RemoteData.Failure error ->
                     let
@@ -651,7 +692,12 @@ view { toRoute, categoryName } title model viewSuccess viewSearchFaceted outMsg 
 viewResults :
     Model a b
     -> SearchResult a b
-    -> (String -> Maybe String -> SearchResult a b -> Html c)
+    ->
+        (String
+         -> Maybe String
+         -> List (ResultItem a)
+         -> Html c
+        )
     -> Route.SearchRoute
     -> (Msg a b -> c)
     -> List (Html c)
@@ -684,7 +730,7 @@ viewResults model result viewSuccess toRoute outMsg =
         [ viewSortSelection outMsg model
         , viewPager outMsg model result.hits.total.value toRoute
         ]
-    , viewSuccess model.channel model.show result
+    , viewSuccess model.channel model.show result.hits.hits
     , viewPager outMsg model result.hits.total.value toRoute
     ]
 
@@ -790,10 +836,10 @@ type alias Options =
     }
 
 
-filter_by_type :
+filterByType :
     String
     -> List ( String, Json.Encode.Value )
-filter_by_type type_ =
+filterByType type_ =
     [ ( "term"
       , Json.Encode.object
             [ ( "type"
@@ -867,9 +913,10 @@ makeRequestBody :
     -> String
     -> String
     -> List String
+    -> List (List ( String, Json.Encode.Value ))
     -> List ( String, Float )
     -> Http.Body
-makeRequestBody query from sizeRaw sort type_ sortField aggsFields fields =
+makeRequestBody query from sizeRaw sort type_ sortField bucketsFields filterByBuckets fields =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -888,41 +935,27 @@ makeRequestBody query from sizeRaw sort type_ sortField aggsFields fields =
               , Json.Encode.int size
               )
             , toSortQuery sort sortField
-            , toAggs aggsFields
-
-            --, ( "aggs"
-            --  , Json.Encode.object
-            --        [ ( "package_attr_set"
-            --          , Json.Encode.object
-            --                [ ( "terms"
-            --                  , Json.Encode.object
-            --                        [ ( "field"
-            --                          , Json.Encode.string "package_attr_set"
-            --                          )
-            --                        ]
-            --                  )
-            --                ]
-            --          )
-            --        , ( "package_license_set"
-            --          , Json.Encode.object
-            --                [ ( "terms"
-            --                  , Json.Encode.object
-            --                        [ ( "field"
-            --                          , Json.Encode.string "package_license_set"
-            --                          )
-            --                        ]
-            --                  )
-            --                ]
-            --          )
-            --        ]
-            --  )
+            , toAggs bucketsFields
             , ( "query"
               , Json.Encode.object
                     [ ( "bool"
                       , Json.Encode.object
                             [ ( "filter"
                               , Json.Encode.list Json.Encode.object
-                                    [ filter_by_type type_ ]
+                                    [ filterByType type_
+                                    , [ ( "bool"
+                                        , Json.Encode.object
+                                            [ --( "must"
+                                              --, Json.Encode.object (filterByType type_)
+                                              --)
+                                              ( "should"
+                                              , Json.Encode.list Json.Encode.object
+                                                    filterByBuckets
+                                              )
+                                            ]
+                                        )
+                                      ]
+                                    ]
                               )
                             , ( "must"
                               , Json.Encode.list Json.Encode.object
@@ -932,28 +965,6 @@ makeRequestBody query from sizeRaw sort type_ sortField aggsFields fields =
                                             , ( "queries"
                                               , Json.Encode.list Json.Encode.object
                                                     (searchFields query fields)
-                                                -- [ [ ( "bool"
-                                                --     , Json.Encode.object
-                                                --         [ ( "must"
-                                                --           , Json.Encode.list Json.Encode.object <|
-                                                --                 searchFields query fields
-                                                --           )
-                                                --         ]
-                                                --     )
-                                                --   ]
-                                                -- ]
-                                                -- , [ ( "bool"
-                                                --     , Json.Encode.object
-                                                --         [ ( "must"
-                                                --           , Json.Encode.list Json.Encode.object <|
-                                                --                 searchFields
-                                                --                     0.8
-                                                --                     (String.words query |> List.map String.reverse)
-                                                --           )
-                                                --         ]
-                                                --     )
-                                                --   ]
-                                                --]
                                               )
                                             ]
                                         )
