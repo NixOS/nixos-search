@@ -80,7 +80,7 @@ type alias Model a b =
     , show : Maybe String
     , from : Int
     , size : Int
-    , selectedBuckets : Maybe String
+    , buckets : Maybe String
     , sort : Sort
     }
 
@@ -167,7 +167,7 @@ init args maybeModel =
       , size =
             args.size
                 |> Maybe.withDefault modelSize
-      , selectedBuckets = args.selectedBuckets
+      , buckets = args.buckets
       , sort =
             args.sort
                 |> Maybe.withDefault ""
@@ -254,14 +254,14 @@ update toRoute navKey msg model =
                 |> ensureLoading
                 |> pushUrl toRoute navKey
 
-        BucketsChange selectedBuckets ->
+        BucketsChange buckets ->
             { model
-                | selectedBuckets =
-                    if selectedBuckets == "" then
+                | buckets =
+                    if buckets == "" then
                         Nothing
 
                     else
-                        Just selectedBuckets
+                        Just buckets
                 , from = 0
             }
                 |> ensureLoading
@@ -281,12 +281,17 @@ update toRoute navKey msg model =
             )
 
         QueryInputSubmit ->
-            { model | from = 0 }
+            { model
+                | from = 0
+                , buckets = Nothing
+            }
                 |> ensureLoading
                 |> pushUrl toRoute navKey
 
         QueryResponse result ->
-            ( { model | result = result }
+            ( { model
+                | result = result
+              }
             , scrollToEntry model.show
             )
 
@@ -333,7 +338,7 @@ createUrl toRoute model =
             , show = model.show
             , from = Just model.from
             , size = Just model.size
-            , selectedBuckets = model.selectedBuckets
+            , buckets = model.buckets
             , sort = Just <| toSortId model.sort
             }
 
@@ -642,14 +647,14 @@ view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg =
 
                     else
                         let
-                            selectedBuckets =
-                                viewBuckets model.selectedBuckets result
+                            buckets =
+                                viewBuckets model.buckets result
                         in
-                        if List.length selectedBuckets > 0 then
+                        if List.length buckets > 0 then
                             [ div [ class "row" ]
                                 [ div
                                     [ class "span3 search-faceted" ]
-                                    [ ul [ class "nav nav-list" ] selectedBuckets ]
+                                    [ ul [ class "nav nav-list" ] buckets ]
                                 , div [ class "span9" ]
                                     (viewResults model result viewSuccess toRoute outMsg)
                                 ]
@@ -913,7 +918,7 @@ makeRequestBody :
     -> String
     -> String
     -> List String
-    -> List (List ( String, Json.Encode.Value ))
+    -> List ( String, Json.Encode.Value )
     -> List ( String, Float )
     -> Http.Body
 makeRequestBody query from sizeRaw sort type_ sortField bucketsFields filterByBuckets fields =
@@ -936,26 +941,14 @@ makeRequestBody query from sizeRaw sort type_ sortField bucketsFields filterByBu
               )
             , toSortQuery sort sortField
             , toAggs bucketsFields
+            , ( "post_filter", Json.Encode.object filterByBuckets )
             , ( "query"
               , Json.Encode.object
                     [ ( "bool"
                       , Json.Encode.object
                             [ ( "filter"
                               , Json.Encode.list Json.Encode.object
-                                    [ filterByType type_
-                                    , [ ( "bool"
-                                        , Json.Encode.object
-                                            [ --( "must"
-                                              --, Json.Encode.object (filterByType type_)
-                                              --)
-                                              ( "should"
-                                              , Json.Encode.list Json.Encode.object
-                                                    filterByBuckets
-                                              )
-                                            ]
-                                        )
-                                      ]
-                                    ]
+                                    [ filterByType type_ ]
                               )
                             , ( "must"
                               , Json.Encode.list Json.Encode.object

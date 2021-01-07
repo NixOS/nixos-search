@@ -128,7 +128,7 @@ attemptQuery (( model, _ ) as pair) =
                                 (Maybe.withDefault "" searchModel.query)
                                 searchModel.from
                                 searchModel.size
-                                searchModel.selectedBuckets
+                                searchModel.buckets
                                 searchModel.sort
                         ]
                 )

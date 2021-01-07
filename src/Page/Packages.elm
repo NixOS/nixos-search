@@ -19,6 +19,7 @@ import Html
         , dl
         , dt
         , h4
+        , input
         , li
         , pre
         , span
@@ -33,10 +34,12 @@ import Html
         )
 import Html.Attributes
     exposing
-        ( class
+        ( checked
+        , class
         , colspan
         , href
         , target
+        , type_
         )
 import Html.Events
     exposing
@@ -212,6 +215,16 @@ viewBuckets bucketsAsString result =
         initialBuckets =
             initBuckets bucketsAsString
 
+        allBuckets =
+            { packageSets = List.map .key result.aggregations.package_attr_set.buckets
+            , licenses = List.map .key result.aggregations.package_license_set.buckets
+            , maintainers = List.map .key result.aggregations.package_platforms.buckets
+            , platforms = List.map .key result.aggregations.package_maintainers_set.buckets
+            }
+
+        selectedBucket =
+            initialBuckets
+
         createBucketsMsg getBucket mergeBuckets value =
             value
                 |> Utils.toggleList (getBucket initialBuckets)
@@ -222,31 +235,36 @@ viewBuckets bucketsAsString result =
                 |> SearchMsg
     in
     []
-        |> viewSearchFacetedSet
+        |> viewBucket
             "Package sets"
             (result.aggregations.package_attr_set.buckets |> List.sortBy .doc_count |> List.reverse)
             (createBucketsMsg .packageSets (\s v -> { s | packageSets = v }))
-        |> viewSearchFacetedSet
+            selectedBucket.packageSets
+        |> viewBucket
             "Licenses"
             (result.aggregations.package_license_set.buckets |> List.sortBy .doc_count |> List.reverse)
             (createBucketsMsg .licenses (\s v -> { s | licenses = v }))
-        |> viewSearchFacetedSet
+            selectedBucket.licenses
+        |> viewBucket
             "Platforms"
             (result.aggregations.package_platforms.buckets |> List.sortBy .doc_count |> List.reverse)
             (createBucketsMsg .platforms (\s v -> { s | platforms = v }))
-        |> viewSearchFacetedSet
+            selectedBucket.platforms
+        |> viewBucket
             "Maintainers"
             (result.aggregations.package_maintainers_set.buckets |> List.sortBy .doc_count |> List.reverse)
             (createBucketsMsg .maintainers (\s v -> { s | maintainers = v }))
+            selectedBucket.maintainers
 
 
-viewSearchFacetedSet :
+viewBucket :
     String
     -> List Search.AggregationsBucketItem
     -> (String -> Msg)
+    -> List String
     -> List (Html Msg)
     -> List (Html Msg)
-viewSearchFacetedSet title buckets searchMsgFor sets =
+viewBucket title buckets searchMsgFor selectedBucket sets =
     List.append
         sets
         (if List.isEmpty buckets then
@@ -263,8 +281,15 @@ viewSearchFacetedSet title buckets searchMsgFor sets =
                                     [ href "#"
                                     , onClick <| searchMsgFor bucket.key
                                     ]
-                                    [ span [] [ text bucket.key ]
-                                    , span [ class "badge badge-info" ] [ text <| String.fromInt bucket.doc_count ]
+                                    [ span []
+                                        [ input
+                                            [ type_ "checkbox"
+                                            , checked <| List.member bucket.key selectedBucket
+                                            ]
+                                            []
+                                        ]
+                                    , span [] [ text bucket.key ]
+                                    , span [] [ span [ class "badge badge-info" ] [ text <| String.fromInt bucket.doc_count ] ]
                                     ]
                                 ]
                         )
@@ -567,6 +592,17 @@ makeRequest options channel query from size maybeBuckets sort =
                         List.map (filterByBucket field) items
                     )
                 |> List.concat
+                |> (\x ->
+                        [ ( "bool"
+                          , Json.Encode.object
+                                [ ( "should"
+                                  , Json.Encode.list Json.Encode.object
+                                        x
+                                  )
+                                ]
+                          )
+                        ]
+                   )
     in
     Search.makeRequest
         (Search.makeRequestBody

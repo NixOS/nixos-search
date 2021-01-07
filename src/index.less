@@ -68,11 +68,11 @@ header .navbar.navbar-static-top {
   }
   
   ul.nav-stacked > li > a {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 2em auto auto;
 
     & > span:last-child {
-      align-self: center;
+      text-align: right;
     }
   }
 }
