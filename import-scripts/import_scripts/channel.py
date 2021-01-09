@@ -88,42 +88,34 @@ MAPPING = {
         },
         "package_attr_name": {
             "type": "keyword",
-            "normalizer": "lowercase",
             "fields": {"edge": {"type": "text", "analyzer": "edge"}},
         },
         "package_attr_name_reverse": {
             "type": "keyword",
-            "normalizer": "lowercase",
             "fields": {"edge": {"type": "text", "analyzer": "edge"}},
         },
         "package_attr_name_query": {
             "type": "keyword",
-            "normalizer": "lowercase",
             "fields": {"edge": {"type": "text", "analyzer": "edge"}},
         },
         "package_attr_name_query_reverse": {
             "type": "keyword",
-            "normalizer": "lowercase",
             "fields": {"edge": {"type": "text", "analyzer": "edge"}},
         },
         "package_attr_set": {
             "type": "keyword",
-            "normalizer": "lowercase",
             "fields": {"edge": {"type": "text", "analyzer": "edge"}},
         },
         "package_attr_set_reverse": {
             "type": "keyword",
-            "normalizer": "lowercase",
             "fields": {"edge": {"type": "text", "analyzer": "edge"}},
         },
         "package_pname": {
             "type": "keyword",
-            "normalizer": "lowercase",
             "fields": {"edge": {"type": "text", "analyzer": "edge"}},
         },
         "package_pname_reverse": {
             "type": "keyword",
-            "normalizer": "lowercase",
             "fields": {"edge": {"type": "text", "analyzer": "edge"}},
         },
         "package_pversion": {"type": "keyword"},
@@ -168,22 +160,18 @@ MAPPING = {
         # Options fields
         "option_name": {
             "type": "keyword",
-            "normalizer": "lowercase",
             "fields": {"edge": {"type": "text", "analyzer": "edge"}},
         },
         "option_name_reverse": {
             "type": "keyword",
-            "normalizer": "lowercase",
             "fields": {"edge": {"type": "text", "analyzer": "edge"}},
         },
         "option_name_query": {
             "type": "keyword",
-            "normalizer": "lowercase",
             "fields": {"edge": {"type": "text", "analyzer": "edge"}},
         },
         "option_name_query_reverse": {
             "type": "keyword",
-            "normalizer": "lowercase",
             "fields": {"edge": {"type": "text", "analyzer": "edge"}},
         },
         "option_description": {
