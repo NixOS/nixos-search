@@ -308,6 +308,14 @@ viewResultItem :
     -> List (Html Msg)
 viewResultItem channel showNixOSDetails show item =
     let
+        onClickStop message =
+            Html.Events.custom "click" <|
+                Json.Decode.succeed
+                    { message = message
+                    , stopPropagation = True
+                    , preventDefault = True
+                    }
+
         cleanPosition =
             Regex.fromString "^[0-9a-f]+\\.tar\\.gz\\/"
                 |> Maybe.withDefault Regex.never
@@ -464,7 +472,7 @@ viewResultItem channel showNixOSDetails show item =
                                         ]
                                         [ a
                                             [ href "#"
-                                            , onClick <| SearchMsg (Search.ShowNixOSDetails True)
+                                            , onClickStop <| SearchMsg (Search.ShowNixOSDetails True)
                                             ]
                                             [ text "On NixOS" ]
                                         ]
@@ -476,7 +484,7 @@ viewResultItem channel showNixOSDetails show item =
                                         ]
                                         [ a
                                             [ href "#"
-                                            , onClick <| SearchMsg (Search.ShowNixOSDetails False)
+                                            , onClickStop <| SearchMsg (Search.ShowNixOSDetails False)
                                             ]
                                             [ text "On non-NixOS" ]
                                         ]
