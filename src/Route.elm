@@ -85,7 +85,7 @@ parser url =
         [ Url.Parser.map Home Url.Parser.top
         , Url.Parser.map NotFound <| Url.Parser.s "not-found"
         , Url.Parser.map Packages <| Url.Parser.s "packages" </> searchQueryParser url
-        , Url.Parser.map Options <| Url.Parser.s "buckets" </> searchQueryParser url
+        , Url.Parser.map Options <| Url.Parser.s "options" </> searchQueryParser url
         ]
 
 

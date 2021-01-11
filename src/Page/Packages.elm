@@ -13,33 +13,24 @@ import Html
     exposing
         ( Html
         , a
-        , code
-        , dd
         , div
-        , dl
-        , dt
+        , em
         , h4
-        , input
         , li
+        , p
         , pre
         , span
-        , table
-        , tbody
-        , td
+        , strong
         , text
-        , th
-        , thead
-        , tr
         , ul
         )
 import Html.Attributes
     exposing
-        ( checked
-        , class
-        , colspan
+        ( class
+        , classList
         , href
+        , id
         , target
-        , type_
         )
 import Html.Events
     exposing
@@ -110,7 +101,7 @@ type alias ResultPackageHydraPath =
 
 
 type alias ResultAggregations =
-    { all : AggregationsAll
+    { all : Aggregations
     , package_platforms : Search.Aggregation
     , package_attr_set : Search.Aggregation
     , package_maintainers_set : Search.Aggregation
@@ -118,7 +109,7 @@ type alias ResultAggregations =
     }
 
 
-type alias AggregationsAll =
+type alias Aggregations =
     { doc_count : Int
     , package_platforms : Search.Aggregation
     , package_attr_set : Search.Aggregation
@@ -199,7 +190,9 @@ update navKey msg model =
 view : Model -> Html Msg
 view model =
     Search.view { toRoute = Route.Packages, categoryName = "packages" }
-        "Search NixOS packages"
+        [ text "Search more than "
+        , strong [] [ text "80 000 packages" ]
+        ]
         model
         viewSuccess
         viewBuckets
@@ -214,13 +207,6 @@ viewBuckets bucketsAsString result =
     let
         initialBuckets =
             initBuckets bucketsAsString
-
-        allBuckets =
-            { packageSets = List.map .key result.aggregations.package_attr_set.buckets
-            , licenses = List.map .key result.aggregations.package_license_set.buckets
-            , maintainers = List.map .key result.aggregations.package_platforms.buckets
-            , platforms = List.map .key result.aggregations.package_maintainers_set.buckets
-            }
 
         selectedBucket =
             initialBuckets
@@ -272,28 +258,28 @@ viewBucket title buckets searchMsgFor selectedBucket sets =
 
          else
             [ li []
-                [ h4 [] [ text title ]
-                , ul [ class "nav nav-tabs nav-stacked" ]
-                    (List.map
-                        (\bucket ->
-                            li []
-                                [ a
-                                    [ href "#"
-                                    , onClick <| searchMsgFor bucket.key
-                                    ]
-                                    [ span []
-                                        [ input
-                                            [ type_ "checkbox"
-                                            , checked <| List.member bucket.key selectedBucket
+                [ ul []
+                    (List.append
+                        [ li [ class "header" ] [ text title ] ]
+                        (List.map
+                            (\bucket ->
+                                li []
+                                    [ a
+                                        [ href "#"
+                                        , onClick <| searchMsgFor bucket.key
+                                        , classList
+                                            [ ( "selected"
+                                              , List.member bucket.key selectedBucket
+                                              )
                                             ]
-                                            []
                                         ]
-                                    , span [] [ text bucket.key ]
-                                    , span [] [ span [ class "badge badge-info" ] [ text <| String.fromInt bucket.doc_count ] ]
+                                        [ span [] [ text bucket.key ]
+                                        , span [] [ span [ class "badge" ] [ text <| String.fromInt bucket.doc_count ] ]
+                                        ]
                                     ]
-                                ]
+                            )
+                            buckets
                         )
-                        buckets
                     )
                 ]
             ]
@@ -302,40 +288,227 @@ viewBucket title buckets searchMsgFor selectedBucket sets =
 
 viewSuccess :
     String
+    -> Bool
     -> Maybe String
     -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
-viewSuccess channel show hits =
-    div [ class "search-result" ]
-        [ table [ class "table table-hover" ]
-            [ thead []
-                [ tr []
-                    [ th [] [ text "Attribute name" ]
-                    , th [] [ text "Name" ]
-                    , th [] [ text "Version" ]
-                    , th [] [ text "Description" ]
-                    ]
-                ]
-            , tbody
-                []
-                (List.concatMap
-                    (viewResultItem channel show)
-                    hits
-                )
-            ]
-        ]
+viewSuccess channel showNixOSDetails show hits =
+    ul []
+        (List.concatMap
+            (viewResultItem channel showNixOSDetails show)
+            hits
+        )
 
 
 viewResultItem :
     String
+    -> Bool
     -> Maybe String
     -> Search.ResultItem ResultItemSource
     -> List (Html Msg)
-viewResultItem channel show item =
+viewResultItem channel showNixOSDetails show item =
     let
-        packageDetails =
+        cleanPosition =
+            Regex.fromString "^[0-9a-f]+\\.tar\\.gz\\/"
+                |> Maybe.withDefault Regex.never
+                >> (\reg -> Regex.replace reg (\_ -> ""))
+
+        createGithubUrl branch value =
+            let
+                uri =
+                    value
+                        |> String.replace ":" "#L"
+                        |> cleanPosition
+            in
+            "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/" ++ uri
+
+        createShortDetailsItem title url =
+            [ li []
+                [ a
+                    [ href url
+                    , target "_blank"
+                    ]
+                    [ text title ]
+                ]
+            ]
+
+        shortPackageDetails =
+            ul []
+                ([]
+                    |> List.append
+                        (item.source.position
+                            |> Maybe.map
+                                (\position ->
+                                    case Search.channelDetailsFromId channel of
+                                        Nothing ->
+                                            []
+
+                                        Just channelDetails ->
+                                            createShortDetailsItem
+                                                "source"
+                                                (createGithubUrl channelDetails.branch position)
+                                )
+                            |> Maybe.withDefault []
+                        )
+                    |> List.append
+                        (item.source.homepage
+                            |> List.head
+                            |> Maybe.map (createShortDetailsItem "homepage")
+                            |> Maybe.withDefault []
+                        )
+                    |> List.append
+                        (item.source.licenses
+                            |> List.head
+                            |> Maybe.map
+                                (\license ->
+                                    case ( license.fullName, license.url ) of
+                                        ( Nothing, Nothing ) ->
+                                            []
+
+                                        ( Just fullName, Nothing ) ->
+                                            [ text fullName ]
+
+                                        ( Nothing, Just url ) ->
+                                            createShortDetailsItem "license" url
+
+                                        ( Just fullName, Just url ) ->
+                                            createShortDetailsItem fullName url
+                                )
+                            |> Maybe.withDefault []
+                        )
+                    |> List.append
+                        [ li [] [ text item.source.pname ]
+                        , li [] [ text item.source.pversion ]
+                        ]
+                )
+
+        showMaintainer maintainer =
+            li []
+                [ a
+                    [ href <|
+                        case maintainer.github of
+                            Just github ->
+                                "https://github.com/" ++ github
+
+                            Nothing ->
+                                "#"
+                    ]
+                    [ text <| Maybe.withDefault "" maintainer.name ++ " <" ++ Maybe.withDefault "" maintainer.email ++ ">" ]
+                ]
+
+        showPlatform platform =
+            case Search.channelDetailsFromId channel of
+                Just channelDetails ->
+                    let
+                        url =
+                            "https://hydra.nixos.org/job/" ++ channelDetails.jobset ++ "/nixpkgs." ++ item.source.attr_name ++ "." ++ platform
+                    in
+                    li []
+                        [ a
+                            [ href url
+                            ]
+                            [ text platform ]
+                        ]
+
+                Nothing ->
+                    li [] [ text platform ]
+
+        maintainersAndPlatforms =
+            --[ dt [] [ text "Platforms" ]
+            --, dd [] [ asList (showPlatforms item.source.hydra item.source.platforms) ]
+            [ div []
+                [ div []
+                    (List.append [ h4 [] [ text "Maintainers" ] ]
+                        (if List.isEmpty item.source.maintainers then
+                            [ p [] [ text "This package has no maintainers." ] ]
+
+                         else
+                            [ ul [] (List.map showMaintainer item.source.maintainers) ]
+                        )
+                    )
+                , div []
+                    (List.append [ h4 [] [ text "Platforms" ] ]
+                        (if List.isEmpty item.source.maintainers then
+                            [ p [] [ text "This package is not available on any platform." ] ]
+
+                         else
+                            [ ul [] (List.map showPlatform item.source.platforms) ]
+                        )
+                    )
+                ]
+            ]
+
+        longerPackageDetails =
             if Just item.source.attr_name == show then
-                [ td [ colspan 4 ] [ viewResultItemDetails channel item ]
+                [ div []
+                    ([]
+                        |> List.append maintainersAndPlatforms
+                        |> List.append
+                            (item.source.longDescription
+                                |> Maybe.map (\desc -> [ p [] [ text desc ] ])
+                                |> Maybe.withDefault []
+                            )
+                        |> List.append
+                            [ div []
+                                [ h4 []
+                                    [ text "How to install "
+                                    , em [] [ text item.source.attr_name ]
+                                    , text "?"
+                                    ]
+                                , ul [ class "nav nav-tabs" ]
+                                    [ li
+                                        [ classList
+                                            [ ( "active", showNixOSDetails )
+                                            , ( "pull-right", True )
+                                            ]
+                                        ]
+                                        [ a
+                                            [ href "#"
+                                            , onClick <| SearchMsg (Search.ShowNixOSDetails True)
+                                            ]
+                                            [ text "On NixOS" ]
+                                        ]
+                                    , li
+                                        [ classList
+                                            [ ( "active", not showNixOSDetails )
+                                            , ( "pull-right", True )
+                                            ]
+                                        ]
+                                        [ a
+                                            [ href "#"
+                                            , onClick <| SearchMsg (Search.ShowNixOSDetails False)
+                                            ]
+                                            [ text "On non-NixOS" ]
+                                        ]
+                                    ]
+                                , div [ class "tab-content" ]
+                                    [ div
+                                        [ classList
+                                            [ ( "tab-pane", True )
+                                            , ( "active", not showNixOSDetails )
+                                            ]
+                                        , id "package-details-nixpkgs"
+                                        ]
+                                        [ pre []
+                                            [ text "nix-env -iA nixpkgs."
+                                            , strong [] [ text item.source.attr_name ]
+                                            ]
+                                        ]
+                                    , div
+                                        [ classList
+                                            [ ( "tab-pane", True )
+                                            , ( "active", showNixOSDetails )
+                                            ]
+                                        ]
+                                        [ pre []
+                                            [ text <| "nix-env -iA nixos."
+                                            , strong [] [ text item.source.attr_name ]
+                                            ]
+                                        ]
+                                    ]
+                                ]
+                            ]
+                    )
                 ]
 
             else
@@ -344,209 +517,22 @@ viewResultItem channel show item =
         open =
             SearchMsg (Search.ShowDetails item.source.attr_name)
     in
-    []
-        -- DEBUG: |> List.append
-        -- DEBUG:     [ tr []
-        -- DEBUG:         [ td [ colspan 4 ]
-        -- DEBUG:             [ div []
-        -- DEBUG:                 [ text <|
-        -- DEBUG:                     "score: "
-        -- DEBUG:                         ++ (item.score
-        -- DEBUG:                                 |> Maybe.map String.fromFloat
-        -- DEBUG:                                 |> Maybe.withDefault "No score"
-        -- DEBUG:                            )
-        -- DEBUG:                 ]
-        -- DEBUG:             , div []
-        -- DEBUG:                 [ text <|
-        -- DEBUG:                     "matched queries: "
-        -- DEBUG:                 , ul []
-        -- DEBUG:                     (item.matched_queries
-        -- DEBUG:                         |> Maybe.withDefault []
-        -- DEBUG:                         |> List.sort
-        -- DEBUG:                         |> List.map (\q -> li [] [ text q ])
-        -- DEBUG:                     )
-        -- DEBUG:                 ]
-        -- DEBUG:             ]
-        -- DEBUG:         ]
-        -- DEBUG:     ]
-        |> List.append
-            (tr
-                [ onClick open
-                , Search.elementId item.source.attr_name
-                ]
-                [ td []
-                    [ Html.button
-                        [ class "search-result-button"
-                        , Html.Events.custom "click" <|
-                            Json.Decode.succeed
-                                { message = open
-                                , stopPropagation = True
-                                , preventDefault = True
-                                }
-                        ]
-                        [ text item.source.attr_name ]
-                    ]
-                , td [] [ text item.source.pname ]
-                , td [] [ text item.source.pversion ]
-                , td [] [ text <| Maybe.withDefault "" item.source.description ]
-                ]
-                :: packageDetails
-            )
-
-
-viewResultItemDetails :
-    String
-    -> Search.ResultItem ResultItemSource
-    -> Html Msg
-viewResultItemDetails channel item =
-    let
-        default =
-            "Not specified"
-
-        asText =
-            text
-
-        asLink value =
-            a [ href value ] [ text value ]
-
-        githubUrlPrefix branch =
-            "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/"
-
-        cleanPosition =
-            Regex.fromString "^[0-9a-f]+\\.tar\\.gz\\/"
-                |> Maybe.withDefault Regex.never
-                >> (\reg -> Regex.replace reg (\_ -> ""))
-
-        asGithubLink value =
-            case Search.channelDetailsFromId channel of
-                Just channelDetails ->
-                    a
-                        [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L" |> cleanPosition)
-                        , target "_blank"
-                        ]
-                        [ text <| cleanPosition value ]
-
-                Nothing ->
-                    text <| cleanPosition value
-
-        mainPlatforms platform =
-            List.member platform
-                [ "x86_64-linux"
-                , "aarch64-linux"
-                , "x86_64-darwin"
-                , "i686-linux"
-                ]
-
-        getHydraDetailsForPlatform hydra platform =
-            hydra
-                |> Maybe.andThen
-                    (\hydras ->
-                        hydras
-                            |> List.filter (\x -> x.platform == platform)
-                            |> List.head
-                    )
-
-        showPlatforms hydra platforms =
-            platforms
-                |> List.filter mainPlatforms
-                |> List.map (showPlatform hydra)
-
-        showPlatform hydra platform =
-            case
-                ( getHydraDetailsForPlatform hydra platform
-                , Search.channelDetailsFromId channel
-                )
-            of
-                ( Just hydraDetails, _ ) ->
-                    a
-                        [ href <| "https://hydra.nixos.org/build/" ++ String.fromInt hydraDetails.build_id
-                        ]
-                        [ text platform
-                        ]
-
-                ( Nothing, Just channelDetails ) ->
-                    a
-                        [ href <| "https://hydra.nixos.org/job/" ++ channelDetails.jobset ++ "/nixpkgs." ++ item.source.attr_name ++ "." ++ platform
-                        ]
-                        [ text platform
-                        ]
-
-                ( _, _ ) ->
-                    text platform
-
-        showLicence license =
-            case ( license.fullName, license.url ) of
-                ( Nothing, Nothing ) ->
-                    text default
-
-                ( Just fullName, Nothing ) ->
-                    text fullName
-
-                ( Nothing, Just url ) ->
-                    a [ href url ] [ text default ]
-
-                ( Just fullName, Just url ) ->
-                    a [ href url ] [ text fullName ]
-
-        showMaintainer maintainer =
-            a
-                [ href <|
-                    case maintainer.github of
-                        Just github ->
-                            "https://github.com/" ++ github
-
-                        Nothing ->
-                            "#"
-                ]
-                [ text <| Maybe.withDefault "" maintainer.name ++ " <" ++ Maybe.withDefault "" maintainer.email ++ ">" ]
-
-        asPre value =
-            pre [] [ text value ]
-
-        asCode value =
-            code [] [ text value ]
-
-        asList list =
-            case list of
-                [] ->
-                    asPre default
-
-                _ ->
-                    ul [ class "inline" ] <| List.map (\i -> li [] [ i ]) list
-
-        withEmpty wrapWith maybe =
-            case maybe of
-                Nothing ->
-                    asPre default
-
-                Just "" ->
-                    asPre default
-
-                Just value ->
-                    wrapWith value
-    in
-    dl [ class "dl-horizontal" ]
-        [ dt [] [ text "Attribute Name" ]
-        , dd [] [ withEmpty asText (Just item.source.attr_name) ]
-        , dt [] [ text "Name" ]
-        , dd [] [ withEmpty asText (Just item.source.pname) ]
-        , dt [] [ text "Install command" ]
-        , dd [] [ withEmpty asCode (Just ("nix-env -iA nixos." ++ item.source.attr_name)) ]
-        , dt [] [ text "Nix expression" ]
-        , dd [] [ withEmpty asGithubLink item.source.position ]
-        , dt [] [ text "Platforms" ]
-        , dd [] [ asList (showPlatforms item.source.hydra item.source.platforms) ]
-        , dt [] [ text "Homepage" ]
-        , dd [] <| List.intersperse (Html.text ", ") <| List.map asLink item.source.homepage
-        , dt [] [ text "Licenses" ]
-        , dd [] [ asList (List.map showLicence item.source.licenses) ]
-        , dt [] [ text "Maintainers" ]
-        , dd [] [ asList (List.map showMaintainer item.source.maintainers) ]
-        , dt [] [ text "Description" ]
-        , dd [] [ withEmpty asText item.source.description ]
-        , dt [] [ text "Long description" ]
-        , dd [] [ withEmpty asText item.source.longDescription ]
+    [ li
+        [ class "package"
+        , onClick open
+        , Search.elementId item.source.attr_name
         ]
+        ([]
+            |> List.append longerPackageDetails
+            |> List.append
+                [ Html.button
+                    [ class "search-result-button" ]
+                    [ text item.source.attr_name ]
+                , div [] [ text <| Maybe.withDefault "" item.source.description ]
+                , shortPackageDetails
+                ]
+        )
+    ]
 
 
 
@@ -564,6 +550,16 @@ makeRequest :
     -> Cmd Msg
 makeRequest options channel query from size maybeBuckets sort =
     let
+        currentBuckets =
+            initBuckets maybeBuckets
+
+        aggregations =
+            [ ( "package_attr_set", currentBuckets.packageSets )
+            , ( "package_license_set", currentBuckets.licenses )
+            , ( "package_maintainers_set", currentBuckets.maintainers )
+            , ( "package_platforms", currentBuckets.platforms )
+            ]
+
         filterByBucket field value =
             [ ( "term"
               , Json.Encode.object
@@ -578,31 +574,30 @@ makeRequest options channel query from size maybeBuckets sort =
             ]
 
         filterByBuckets =
-            let
-                buckets =
-                    initBuckets maybeBuckets
-            in
-            [ ( "package_attr_set", buckets.packageSets )
-            , ( "package_license_set", buckets.licenses )
-            , ( "package_maintainers_set", buckets.maintainers )
-            , ( "package_platforms", buckets.platforms )
+            [ ( "bool"
+              , Json.Encode.object
+                    [ ( "must"
+                      , Json.Encode.list Json.Encode.object
+                            (List.map
+                                (\( aggregation, buckets ) ->
+                                    [ ( "bool"
+                                      , Json.Encode.object
+                                            [ ( "should"
+                                              , Json.Encode.list Json.Encode.object <|
+                                                    List.map
+                                                        (filterByBucket aggregation)
+                                                        buckets
+                                              )
+                                            ]
+                                      )
+                                    ]
+                                )
+                                aggregations
+                            )
+                      )
+                    ]
+              )
             ]
-                |> List.map
-                    (\( field, items ) ->
-                        List.map (filterByBucket field) items
-                    )
-                |> List.concat
-                |> (\x ->
-                        [ ( "bool"
-                          , Json.Encode.object
-                                [ ( "should"
-                                  , Json.Encode.list Json.Encode.object
-                                        x
-                                  )
-                                ]
-                          )
-                        ]
-                   )
     in
     Search.makeRequest
         (Search.makeRequestBody
@@ -726,16 +721,16 @@ decodeResultPackageHydraPath =
 decodeResultAggregations : Json.Decode.Decoder ResultAggregations
 decodeResultAggregations =
     Json.Decode.map5 ResultAggregations
-        (Json.Decode.field "all" decodeAggregationsAll)
+        (Json.Decode.field "all" decodeAggregations)
         (Json.Decode.field "package_platforms" Search.decodeAggregation)
         (Json.Decode.field "package_attr_set" Search.decodeAggregation)
         (Json.Decode.field "package_maintainers_set" Search.decodeAggregation)
         (Json.Decode.field "package_license_set" Search.decodeAggregation)
 
 
-decodeAggregationsAll : Json.Decode.Decoder AggregationsAll
-decodeAggregationsAll =
-    Json.Decode.map5 AggregationsAll
+decodeAggregations : Json.Decode.Decoder Aggregations
+decodeAggregations =
+    Json.Decode.map5 Aggregations
         (Json.Decode.field "doc_count" Json.Decode.int)
         (Json.Decode.field "package_platforms" Search.decodeAggregation)
         (Json.Decode.field "package_attr_set" Search.decodeAggregation)

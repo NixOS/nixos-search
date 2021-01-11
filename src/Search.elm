@@ -30,16 +30,14 @@ import Html
         , a
         , button
         , div
-        , em
         , form
         , h1
+        , h2
         , h4
         , input
-        , label
         , li
-        , option
         , p
-        , select
+        , span
         , strong
         , text
         , ul
@@ -53,7 +51,6 @@ import Html.Attributes
         , href
         , id
         , placeholder
-        , selected
         , type_
         , value
         )
@@ -67,7 +64,7 @@ import Http
 import Json.Decode
 import Json.Encode
 import RemoteData
-import Route exposing (Route)
+import Route
 import Route.SearchQuery
 import Set
 import Task
@@ -82,6 +79,7 @@ type alias Model a b =
     , size : Int
     , buckets : Maybe String
     , sort : Sort
+    , showNixOSDetails : Bool
     }
 
 
@@ -151,7 +149,7 @@ init args maybeModel =
             getField .from 0
 
         modelSize =
-            getField .size 30
+            getField .size 50
     in
     ( { channel =
             args.channel
@@ -173,6 +171,7 @@ init args maybeModel =
                 |> Maybe.withDefault ""
                 |> fromSortId
                 |> Maybe.withDefault Relevance
+      , showNixOSDetails = False
       }
         |> ensureLoading
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
@@ -218,6 +217,7 @@ type Msg a b
     | QueryResponse (RemoteData.WebData (SearchResult a b))
     | ShowDetails String
     | ChangePage Int
+    | ShowNixOSDetails Bool
 
 
 scrollToEntry :
@@ -309,6 +309,10 @@ update toRoute navKey msg model =
         ChangePage from ->
             { model | from = from }
                 |> ensureLoading
+                |> pushUrl toRoute navKey
+
+        ShowNixOSDetails show ->
+            { model | showNixOSDetails = show }
                 |> pushUrl toRoute navKey
 
 
@@ -420,10 +424,10 @@ sortBy =
     ]
 
 
-toAggs :
+toAggregations :
     List String
     -> ( String, Json.Encode.Value )
-toAggs bucketsFields =
+toAggregations bucketsFields =
     let
         fields =
             List.map
@@ -448,14 +452,14 @@ toAggs bucketsFields =
                     [ ( "global"
                       , Json.Encode.object []
                       )
-                    , ( "aggs"
+                    , ( "aggregations"
                       , Json.Encode.object fields
                       )
                     ]
               )
             ]
     in
-    ( "aggs"
+    ( "aggregations"
     , Json.Encode.object <|
         List.append fields allFields
     )
@@ -497,7 +501,7 @@ toSortTitle sort =
             "Alphabetically Descending"
 
         Relevance ->
-            "Relevance"
+            "Best match"
 
 
 toSortId : Sort -> String
@@ -533,10 +537,11 @@ view :
     { toRoute : Route.SearchRoute
     , categoryName : String
     }
-    -> String
+    -> List (Html c)
     -> Model a b
     ->
         (String
+         -> Bool
          -> Maybe String
          -> List (ResultItem a)
          -> Html c
@@ -549,149 +554,192 @@ view :
     -> (Msg a b -> c)
     -> Html c
 view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg =
-    div
-        [ class "search-page"
-        ]
-        [ h1 [ class "page-header" ] [ text title ]
-        , div
-            [ class "search-input"
-            ]
-            [ form [ onSubmit (outMsg QueryInputSubmit) ]
-                [ p
-                    []
-                    ([]
-                        |> List.append
-                            (if List.member model.channel channels then
-                                []
-
-                             else
-                                [ p [ class "alert alert-error" ]
-                                    [ h4 [] [ text "Wrong channel selected!" ]
-                                    , text <| "Please select one of the channels above!"
-                                    ]
-                                ]
-                            )
-                        |> List.append
-                            [ p []
-                                [ strong []
-                                    [ text "Channel: " ]
-                                , div
-                                    [ class "btn-group"
-                                    , attribute "data-toggle" "buttons-radio"
-                                    ]
-                                    (List.filterMap
-                                        (\channel_id ->
-                                            channelDetailsFromId channel_id
-                                                |> Maybe.map
-                                                    (\channel ->
-                                                        button
-                                                            [ type_ "button"
-                                                            , classList
-                                                                [ ( "btn", True )
-                                                                , ( "active", channel.id == model.channel )
-                                                                ]
-                                                            , onClick <| outMsg (ChannelChange channel.id)
-                                                            ]
-                                                            [ text channel.title ]
-                                                    )
-                                        )
-                                        channels
-                                    )
-                                ]
-                            ]
-                    )
-                , p
-                    [ class "input-append"
-                    ]
-                    [ input
-                        [ type_ "text"
-                        , id "search-query-input"
-                        , autofocus True
-                        , placeholder <| "Search for " ++ categoryName
-                        , onInput (outMsg << QueryInput)
-                        , value <| Maybe.withDefault "" model.query
-                        ]
-                        []
-                    , div [ class "loader" ] []
-                    , div [ class "btn-group" ]
-                        [ button [ class "btn", type_ "submit" ]
-                            [ text "Search" ]
-                        ]
-                    ]
-                ]
-            ]
-        , div [] <|
+    let
+        resultStatus =
             case model.result of
                 RemoteData.NotAsked ->
-                    [ text "" ]
+                    "not-asked"
 
                 RemoteData.Loading ->
-                    [ p [] [ em [] [ text "Searching..." ] ]
-                    , div []
-                        [ viewSortSelection outMsg model
-                        , viewPager outMsg model 0 toRoute
-                        ]
-                    , div [ class "loader-wrapper" ] [ div [ class "loader" ] [ text "Loading..." ] ]
-                    , viewPager outMsg model 0 toRoute
-                    ]
+                    "loading"
 
-                RemoteData.Success result ->
-                    if result.hits.total.value == 0 then
-                        [ h4 [] [ text <| "No " ++ categoryName ++ " found!" ]
-                        , text "How to "
-                        , Html.a [ href "https://nixos.org/manual/nixpkgs/stable/#chap-quick-start" ] [ text "add" ]
-                        , text " or "
-                        , a [ href "https://github.com/NixOS/nixpkgs/issues/new?assignees=&labels=0.kind%3A+packaging+request&template=packaging_request.md&title=" ] [ text "request" ]
-                        , text " package to nixpkgs?"
-                        ]
+                RemoteData.Success _ ->
+                    "success"
 
-                    else
-                        let
-                            buckets =
-                                viewBuckets model.buckets result
-                        in
-                        if List.length buckets > 0 then
-                            [ div [ class "row" ]
-                                [ div
-                                    [ class "span3 search-faceted" ]
-                                    [ ul [ class "nav nav-list" ] buckets ]
-                                , div [ class "span9" ]
-                                    (viewResults model result viewSuccess toRoute outMsg)
-                                ]
-                            ]
-
-                        else
-                            [ div [ class "row" ]
-                                [ div [ class "span12" ]
-                                    (viewResults model result viewSuccess toRoute outMsg)
-                                ]
-                            ]
-
-                RemoteData.Failure error ->
-                    let
-                        ( errorTitle, errorMessage ) =
-                            case error of
-                                Http.BadUrl text ->
-                                    ( "Bad Url!", text )
-
-                                Http.Timeout ->
-                                    ( "Timeout!", "Request to the server timeout." )
-
-                                Http.NetworkError ->
-                                    ( "Network Error!", "A network request bonsaisearch.net domain failed. This is either due to a content blocker or a networking issue." )
-
-                                Http.BadStatus code ->
-                                    ( "Bad Status", "Server returned " ++ String.fromInt code )
-
-                                Http.BadBody text ->
-                                    ( "Bad Body", text )
-                    in
-                    [ div [ class "alert alert-error" ]
-                        [ h4 [] [ text errorTitle ]
-                        , text errorMessage
-                        ]
-                    ]
+                RemoteData.Failure _ ->
+                    "failure"
+    in
+    div [ class <| "search-page " ++ resultStatus ]
+        [ h1 [] title
+        , viewSearchInput outMsg categoryName model.channel model.query
+        , viewResult outMsg toRoute categoryName model viewSuccess viewBuckets
         ]
+
+
+viewResult :
+    (Msg a b -> c)
+    -> Route.SearchRoute
+    -> String
+    -> Model a b
+    ->
+        (String
+         -> Bool
+         -> Maybe String
+         -> List (ResultItem a)
+         -> Html c
+        )
+    ->
+        (Maybe String
+         -> SearchResult a b
+         -> List (Html c)
+        )
+    -> Html c
+viewResult outMsg toRoute categoryName model viewSuccess viewBuckets =
+    case model.result of
+        RemoteData.NotAsked ->
+            div [] [ text "" ]
+
+        RemoteData.Loading ->
+            div [ class "loader-wrapper" ]
+                [ div [ class "loader" ] [ text "Loading..." ]
+                , h2 [] [ text "Searching..." ]
+                ]
+
+        RemoteData.Success result ->
+            if result.hits.total.value == 0 then
+                viewNoResults categoryName
+
+            else
+                let
+                    buckets =
+                        viewBuckets model.buckets result
+                in
+                if List.length buckets > 0 then
+                    div [ class "search-results" ]
+                        [ ul [] buckets
+                        , div []
+                            (viewResults model result viewSuccess toRoute outMsg categoryName)
+                        ]
+
+                else
+                    div [ class "search-results" ]
+                        [ div []
+                            (viewResults model result viewSuccess toRoute outMsg categoryName)
+                        ]
+
+        RemoteData.Failure error ->
+            let
+                ( errorTitle, errorMessage ) =
+                    case error of
+                        Http.BadUrl text ->
+                            ( "Bad Url!", text )
+
+                        Http.Timeout ->
+                            ( "Timeout!", "Request to the server timeout." )
+
+                        Http.NetworkError ->
+                            ( "Network Error!", "A network request bonsaisearch.net domain failed. This is either due to a content blocker or a networking issue." )
+
+                        Http.BadStatus code ->
+                            ( "Bad Status", "Server returned " ++ String.fromInt code )
+
+                        Http.BadBody text ->
+                            ( "Bad Body", text )
+            in
+            div []
+                [ div [ class "alert alert-error" ]
+                    [ h4 [] [ text errorTitle ]
+                    , text errorMessage
+                    ]
+                ]
+
+
+viewNoResults :
+    String
+    -> Html c
+viewNoResults categoryName =
+    div [ class "search-no-results" ]
+        [ h2 [] [ text <| "No " ++ categoryName ++ " found!" ]
+        , text "How to "
+        , Html.a [ href "https://nixos.org/manual/nixpkgs/stable/#chap-quick-start" ] [ text "add" ]
+        , text " or "
+        , a [ href "https://github.com/NixOS/nixpkgs/issues/new?assignees=&labels=0.kind%3A+packaging+request&template=packaging_request.md&title=" ] [ text "request" ]
+        , text " package to nixpkgs?"
+        ]
+
+
+viewSearchInput :
+    (Msg a b -> c)
+    -> String
+    -> String
+    -> Maybe String
+    -> Html c
+viewSearchInput outMsg categoryName selectedChannel searchQuery =
+    form
+        [ onSubmit (outMsg QueryInputSubmit)
+        , class "search-input"
+        ]
+        [ div []
+            [ div []
+                [ input
+                    [ type_ "text"
+                    , id "search-query-input"
+                    , autofocus True
+                    , placeholder <| "Search for " ++ categoryName
+                    , onInput (outMsg << QueryInput)
+                    , value <| Maybe.withDefault "" searchQuery
+                    ]
+                    []
+                ]
+            , button [ class "btn", type_ "submit" ]
+                [ text "Search" ]
+            ]
+        , div [] (viewChannels outMsg selectedChannel)
+        ]
+
+
+viewChannels :
+    (Msg a b -> c)
+    -> String
+    -> List (Html c)
+viewChannels outMsg selectedChannel =
+    List.append
+        [ div []
+            [ h4 [] [ text "Channel: " ]
+            , div
+                [ class "btn-group"
+                , attribute "data-toggle" "buttons-radio"
+                ]
+                (List.filterMap
+                    (\channelId ->
+                        channelDetailsFromId channelId
+                            |> Maybe.map
+                                (\channel ->
+                                    button
+                                        [ type_ "button"
+                                        , classList
+                                            [ ( "btn", True )
+                                            , ( "active", channel.id == selectedChannel )
+                                            ]
+                                        , onClick <| outMsg (ChannelChange channel.id)
+                                        ]
+                                        [ text channel.title ]
+                                )
+                    )
+                    channels
+                )
+            ]
+        ]
+        (if List.member selectedChannel channels then
+            []
+
+         else
+            [ p [ class "alert alert-error" ]
+                [ h4 [] [ text "Wrong channel selected!" ]
+                , text <| "Please select one of the channels above!"
+                ]
+            ]
+        )
 
 
 viewResults :
@@ -699,132 +747,190 @@ viewResults :
     -> SearchResult a b
     ->
         (String
+         -> Bool
          -> Maybe String
          -> List (ResultItem a)
          -> Html c
         )
     -> Route.SearchRoute
     -> (Msg a b -> c)
+    -> String
     -> List (Html c)
-viewResults model result viewSuccess toRoute outMsg =
-    [ p []
-        [ em []
-            [ text
-                ("Showing results "
-                    ++ String.fromInt model.from
-                    ++ "-"
-                    ++ String.fromInt
-                        (if model.from + model.size > result.hits.total.value then
-                            result.hits.total.value
+viewResults model result viewSuccess toRoute outMsg categoryName =
+    let
+        from =
+            String.fromInt model.from
 
-                         else
-                            model.from + model.size
-                        )
-                    ++ " of "
-                    ++ (if result.hits.total.value == 10000 then
-                            "more than 10000 results, please provide more precise search terms."
+        to =
+            String.fromInt
+                (if model.from + model.size > result.hits.total.value then
+                    result.hits.total.value
 
-                        else
-                            String.fromInt result.hits.total.value
-                                ++ "."
-                       )
+                 else
+                    model.from + model.size
                 )
-            ]
+
+        total =
+            String.fromInt result.hits.total.value
+    in
+    [ div []
+        [ viewSortSelection toRoute model
+        , div []
+            (List.append
+                [ text "Showing results "
+                , text from
+                , text "-"
+                , text to
+                , text " of "
+                ]
+                (if result.hits.total.value == 10000 then
+                    [ text "more than 10000."
+                    , p [] [ text "Please provide more precise search terms." ]
+                    ]
+
+                 else
+                    [ strong []
+                        [ text total
+                        , text " "
+                        , text categoryName
+                        ]
+                    , text "."
+                    ]
+                )
+            )
         ]
-    , div []
-        [ viewSortSelection outMsg model
-        , viewPager outMsg model result.hits.total.value toRoute
-        ]
-    , viewSuccess model.channel model.show result.hits.hits
-    , viewPager outMsg model result.hits.total.value toRoute
+    , viewSuccess model.channel model.showNixOSDetails model.show result.hits.hits
+    , viewPager outMsg model result.hits.total.value
     ]
 
 
-viewSortSelection : (Msg a b -> c) -> Model a b -> Html c
-viewSortSelection outMsg model =
-    form [ class "form-horizontal pull-right sort-form" ]
-        [ div [ class "control-group sort-group" ]
-            [ label [ class "control-label" ] [ text "Sort by:" ]
-            , div
-                [ class "controls" ]
-                [ select
-                    [ onInput (\x -> outMsg (SortChange x))
-                    ]
-                    (List.map
-                        (\sort ->
-                            option
-                                [ selected (model.sort == sort)
-                                , value (toSortId sort)
-                                ]
-                                [ text <| toSortTitle sort ]
-                        )
-                        sortBy
-                    )
-                ]
+viewSortSelection :
+    Route.SearchRoute
+    -> Model a b
+    -> Html c
+viewSortSelection toRoute model =
+    div [ class "btn-group dropdown pull-right" ]
+        [ button
+            [ class "btn"
+            , attribute "data-toggle" "dropdown"
             ]
+            [ span [] [ text <| "Sort: " ]
+            , span [ class "selected" ] [ text <| toSortTitle model.sort ]
+            , span [ class "caret" ] []
+            ]
+        , ul [ class "dropdown-menu pull-right" ]
+            (List.append
+                [ li [ class " header" ] [ text "Sort options" ]
+                , li [ class "divider" ] []
+                ]
+                (List.map
+                    (\sort ->
+                        let
+                            url =
+                                createUrl toRoute
+                                    { model | sort = sort }
+                        in
+                        li
+                            [ classList
+                                [ ( "selected", model.sort == sort )
+                                ]
+                            ]
+                            [ a
+                                [ href url ]
+                                [ text <| toSortTitle sort ]
+                            ]
+                    )
+                    sortBy
+                )
+            )
         ]
+
+
+
+--form [ class "form-horizontal pull-right sort-form" ]
+--    [ div [ class "control-group sort-group" ]
+--        [ label [ class "control-label" ] [ text "Sort by:" ]
+--        , div
+--            [ class "controls" ]
+--            [ select
+--                [ onInput (\x -> outMsg (SortChange x))
+--                ]
+--                (List.map
+--                    (\sort ->
+--                        option
+--                            [ selected (model.sort == sort)
+--                            , value (toSortId sort)
+--                            ]
+--                            [ text <| toSortTitle sort ]
+--                    )
+--                    sortBy
+--                )
+--            ]
+--        ]
+--    ]
 
 
 viewPager :
     (Msg a b -> c)
     -> Model a b
     -> Int
-    -> Route.SearchRoute
     -> Html c
-viewPager outMsg model total toRoute =
+viewPager outMsg model total =
     Html.map outMsg <|
-        ul [ class "pager" ]
-            [ li [ classList [ ( "disabled", model.from == 0 ) ] ]
-                [ a
-                    [ Html.Events.onClick <|
-                        if model.from == 0 then
-                            NoOp
+        div []
+            [ ul [ class "pager" ]
+                [ li [ classList [ ( "disabled", model.from == 0 ) ] ]
+                    [ a
+                        [ Html.Events.onClick <|
+                            if model.from == 0 then
+                                NoOp
 
-                        else
-                            ChangePage 0
+                            else
+                                ChangePage 0
+                        ]
+                        [ text "First" ]
                     ]
-                    [ text "First" ]
-                ]
-            , li [ classList [ ( "disabled", model.from == 0 ) ] ]
-                [ a
-                    [ Html.Events.onClick <|
-                        if model.from - model.size < 0 then
-                            NoOp
+                , li [ classList [ ( "disabled", model.from == 0 ) ] ]
+                    [ a
+                        [ Html.Events.onClick <|
+                            if model.from - model.size < 0 then
+                                NoOp
 
-                        else
-                            ChangePage <| model.from - model.size
+                            else
+                                ChangePage <| model.from - model.size
+                        ]
+                        [ text "Previous" ]
                     ]
-                    [ text "Previous" ]
-                ]
-            , li [ classList [ ( "disabled", model.from + model.size >= total ) ] ]
-                [ a
-                    [ Html.Events.onClick <|
-                        if model.from + model.size >= total then
-                            NoOp
+                , li [ classList [ ( "disabled", model.from + model.size >= total ) ] ]
+                    [ a
+                        [ Html.Events.onClick <|
+                            if model.from + model.size >= total then
+                                NoOp
 
-                        else
-                            ChangePage <| model.from + model.size
+                            else
+                                ChangePage <| model.from + model.size
+                        ]
+                        [ text "Next" ]
                     ]
-                    [ text "Next" ]
-                ]
-            , li [ classList [ ( "disabled", model.from + model.size >= total ) ] ]
-                [ a
-                    [ Html.Events.onClick <|
-                        if model.from + model.size >= total then
-                            NoOp
+                , li [ classList [ ( "disabled", model.from + model.size >= total ) ] ]
+                    [ a
+                        [ Html.Events.onClick <|
+                            if model.from + model.size >= total then
+                                NoOp
 
-                        else
-                            let
-                                remainder =
-                                    if remainderBy model.size total == 0 then
-                                        1
+                            else
+                                let
+                                    remainder =
+                                        if remainderBy model.size total == 0 then
+                                            1
 
-                                    else
-                                        0
-                            in
-                            ChangePage <| ((total // model.size) - remainder) * model.size
+                                        else
+                                            0
+                                in
+                                ChangePage <| ((total // model.size) - remainder) * model.size
+                        ]
+                        [ text "Last" ]
                     ]
-                    [ text "Last" ]
                 ]
             ]
 
@@ -933,42 +1039,49 @@ makeRequestBody query from sizeRaw sort type_ sortField bucketsFields filterByBu
     in
     Http.jsonBody
         (Json.Encode.object
-            [ ( "from"
-              , Json.Encode.int from
-              )
-            , ( "size"
-              , Json.Encode.int size
-              )
-            , toSortQuery sort sortField
-            , toAggs bucketsFields
-            , ( "post_filter", Json.Encode.object filterByBuckets )
-            , ( "query"
-              , Json.Encode.object
-                    [ ( "bool"
-                      , Json.Encode.object
-                            [ ( "filter"
-                              , Json.Encode.list Json.Encode.object
-                                    [ filterByType type_ ]
-                              )
-                            , ( "must"
-                              , Json.Encode.list Json.Encode.object
-                                    [ [ ( "dis_max"
-                                        , Json.Encode.object
-                                            [ ( "tie_breaker", Json.Encode.float 0.7 )
-                                            , ( "queries"
-                                              , Json.Encode.list Json.Encode.object
-                                                    (searchFields query fields)
-                                              )
-                                            ]
-                                        )
-                                      ]
-                                    ]
-                              )
-                            ]
-                      )
-                    ]
-              )
-            ]
+            (List.append
+                [ ( "from"
+                  , Json.Encode.int from
+                  )
+                , ( "size"
+                  , Json.Encode.int size
+                  )
+                , toSortQuery sort sortField
+                , toAggregations bucketsFields
+                , ( "query"
+                  , Json.Encode.object
+                        [ ( "bool"
+                          , Json.Encode.object
+                                [ ( "filter"
+                                  , Json.Encode.list Json.Encode.object
+                                        [ filterByType type_ ]
+                                  )
+                                , ( "must"
+                                  , Json.Encode.list Json.Encode.object
+                                        [ [ ( "dis_max"
+                                            , Json.Encode.object
+                                                [ ( "tie_breaker", Json.Encode.float 0.7 )
+                                                , ( "queries"
+                                                  , Json.Encode.list Json.Encode.object
+                                                        (searchFields query fields)
+                                                  )
+                                                ]
+                                            )
+                                          ]
+                                        ]
+                                  )
+                                ]
+                          )
+                        ]
+                  )
+                ]
+                (if List.isEmpty filterByBuckets then
+                    []
+
+                 else
+                    [ ( "post_filter", Json.Encode.object filterByBuckets ) ]
+                )
+            )
         )
 
 
