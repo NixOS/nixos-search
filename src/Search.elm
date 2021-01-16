@@ -16,7 +16,9 @@ module Search exposing
     , init
     , makeRequest
     , makeRequestBody
+    , onClickStop
     , shouldLoad
+    , trapClick
     , update
     , view
     )
@@ -1164,3 +1166,23 @@ decodeAggregationBucketItem =
     Json.Decode.map2 AggregationsBucketItem
         (Json.Decode.field "doc_count" Json.Decode.int)
         (Json.Decode.field "key" Json.Decode.string)
+
+
+
+-- Html Event Helpers
+
+
+onClickStop : msg -> Html.Attribute msg
+onClickStop message =
+    Html.Events.custom "click" <|
+        Json.Decode.succeed
+            { message = message
+            , stopPropagation = True
+            , preventDefault = True
+            }
+
+
+trapClick : Html.Attribute (Msg a b)
+trapClick =
+    Html.Events.stopPropagationOn "click" <|
+        Json.Decode.succeed ( NoOp, True )

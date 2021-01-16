@@ -32,10 +32,7 @@ import Html.Attributes
         , id
         , target
         )
-import Html.Events
-    exposing
-        ( onClick
-        )
+import Html.Events exposing (onClick)
 import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
@@ -308,14 +305,6 @@ viewResultItem :
     -> List (Html Msg)
 viewResultItem channel showNixOSDetails show item =
     let
-        onClickStop message =
-            Html.Events.custom "click" <|
-                Json.Decode.succeed
-                    { message = message
-                    , stopPropagation = True
-                    , preventDefault = True
-                    }
-
         cleanPosition =
             Regex.fromString "^[0-9a-f]+\\.tar\\.gz\\/"
                 |> Maybe.withDefault Regex.never
@@ -331,7 +320,7 @@ viewResultItem channel showNixOSDetails show item =
             "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/" ++ uri
 
         createShortDetailsItem title url =
-            [ li []
+            [ li [ Html.Attributes.map SearchMsg Search.trapClick ]
                 [ a
                     [ href url
                     , target "_blank"
@@ -448,9 +437,8 @@ viewResultItem channel showNixOSDetails show item =
 
         longerPackageDetails =
             if Just item.source.attr_name == show then
-                [ div []
-                    ([]
-                        |> List.append maintainersAndPlatforms
+                [ div [ Html.Attributes.map SearchMsg Search.trapClick ]
+                    (maintainersAndPlatforms
                         |> List.append
                             (item.source.longDescription
                                 |> Maybe.map (\desc -> [ p [] [ text desc ] ])
@@ -472,7 +460,9 @@ viewResultItem channel showNixOSDetails show item =
                                         ]
                                         [ a
                                             [ href "#"
-                                            , onClickStop <| SearchMsg (Search.ShowNixOSDetails True)
+                                            , Search.onClickStop <|
+                                                SearchMsg <|
+                                                    Search.ShowNixOSDetails True
                                             ]
                                             [ text "On NixOS" ]
                                         ]
@@ -484,12 +474,15 @@ viewResultItem channel showNixOSDetails show item =
                                         ]
                                         [ a
                                             [ href "#"
-                                            , onClickStop <| SearchMsg (Search.ShowNixOSDetails False)
+                                            , Search.onClickStop <|
+                                                SearchMsg <|
+                                                    Search.ShowNixOSDetails False
                                             ]
                                             [ text "On non-NixOS" ]
                                         ]
                                     ]
-                                , div [ class "tab-content" ]
+                                , div
+                                    [ class "tab-content" ]
                                     [ div
                                         [ classList
                                             [ ( "tab-pane", True )
