@@ -483,12 +483,12 @@ viewResultItem channel showNixOSDetails show item =
                                     [ class "tab-content" ]
                                     [ div
                                         [ classList
-                                            [ ( "tab-pane", True )
-                                            , ( "active", not showNixOSDetails )
+                                            [ ( "active", not showNixOSDetails )
                                             ]
+                                        , class "tab-pane"
                                         , id "package-details-nixpkgs"
                                         ]
-                                        [ pre []
+                                        [ pre [ class "code-block" ]
                                             [ text "nix-env -iA nixpkgs."
                                             , strong [] [ text item.source.attr_name ]
                                             ]
