@@ -27,6 +27,11 @@ body {
   }
 }
 
+.code-block {
+  display: block;
+  cursor: text;
+}
+
 #content {
   padding-bottom: 4rem;
 }
@@ -341,7 +346,7 @@ header .navbar.navbar-static-top {
 
                 div.tab-content {
                   padding: 1em;
-                  border: 1px solid #ddd; 
+                  border: 1px solid #ddd;
                   border-top: 0;
                 }
 
@@ -366,13 +371,20 @@ header .navbar.navbar-static-top {
           }
 
           &.option {
+            &:hover {
+              cursor: pointer;
+
+              .search-result-button {
+                  text-decoration: underline;
+              }
+            }
 
             // short details of a pacakge
             & > :nth-child(3) {
               margin-top: 1em;
               margin-left: 1em;
               display: grid;
-              grid-template-columns: 100px max-content;
+              grid-template-columns: 100px 1fr;
               column-gap: 1em;
               row-gap: 0.5em;
 

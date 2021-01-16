@@ -331,22 +331,20 @@ viewResultItem channel showNixOSDetails show item =
 
         shortPackageDetails =
             ul []
-                ([]
-                    |> List.append
-                        (item.source.position
-                            |> Maybe.map
-                                (\position ->
-                                    case Search.channelDetailsFromId channel of
-                                        Nothing ->
-                                            []
+                ((item.source.position
+                    |> Maybe.map
+                        (\position ->
+                            case Search.channelDetailsFromId channel of
+                                Nothing ->
+                                    []
 
-                                        Just channelDetails ->
-                                            createShortDetailsItem
-                                                "source"
-                                                (createGithubUrl channelDetails.branch position)
-                                )
-                            |> Maybe.withDefault []
+                                Just channelDetails ->
+                                    createShortDetailsItem
+                                        "source"
+                                        (createGithubUrl channelDetails.branch position)
                         )
+                    |> Maybe.withDefault []
+                 )
                     |> List.append
                         (item.source.homepage
                             |> List.head
