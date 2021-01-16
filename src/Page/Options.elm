@@ -136,7 +136,7 @@ viewSuccess :
     -> Html Msg
 viewSuccess channel showNixOSDetails show hits =
     ul []
-        (List.concatMap
+        (List.map
             (viewResultItem channel showNixOSDetails show)
             hits
         )
@@ -147,7 +147,7 @@ viewResultItem :
     -> Bool
     -> Maybe String
     -> Search.ResultItem ResultItemSource
-    -> List (Html Msg)
+    -> Html Msg
 viewResultItem channel _ show item =
     let
         showHtml value =
@@ -230,7 +230,7 @@ viewResultItem channel _ show item =
         open =
             SearchMsg (Search.ShowDetails item.source.name)
     in
-    [ li
+    li
         [ class "option"
         , onClick open
         , Search.elementId item.source.name
@@ -247,7 +247,6 @@ viewResultItem channel _ show item =
                     [ text item.source.name ]
                 ]
         )
-    ]
 
 
 

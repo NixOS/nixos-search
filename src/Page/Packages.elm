@@ -291,7 +291,7 @@ viewSuccess :
     -> Html Msg
 viewSuccess channel showNixOSDetails show hits =
     ul []
-        (List.concatMap
+        (List.map
             (viewResultItem channel showNixOSDetails show)
             hits
         )
@@ -302,7 +302,7 @@ viewResultItem :
     -> Bool
     -> Maybe String
     -> Search.ResultItem ResultItemSource
-    -> List (Html Msg)
+    -> Html Msg
 viewResultItem channel showNixOSDetails show item =
     let
         cleanPosition =
@@ -516,7 +516,7 @@ viewResultItem channel showNixOSDetails show item =
         open =
             SearchMsg (Search.ShowDetails item.source.attr_name)
     in
-    [ li
+    li
         [ class "package"
         , onClick open
         , Search.elementId item.source.attr_name
@@ -531,7 +531,6 @@ viewResultItem channel showNixOSDetails show item =
                 , shortPackageDetails
                 ]
         )
-    ]
 
 
 
