@@ -184,6 +184,15 @@ update navKey msg model =
 -- VIEW
 
 
+allowedPlatforms : List String
+allowedPlatforms =
+    [ "x86_64-linux"
+    , "aarch64-linux"
+    , "x86_64-darwin"
+    , "i686-linux"
+    ]
+
+
 view : Model -> Html Msg
 view model =
     Search.view { toRoute = Route.Packages, categoryName = "packages" }
@@ -216,28 +225,37 @@ viewBuckets bucketsAsString result =
                 |> Json.Encode.encode 0
                 |> Search.BucketsChange
                 |> SearchMsg
+
+        sortBuckets items =
+            items
+                |> List.sortBy .doc_count
+                |> List.reverse
+
+        filterPlatforms =
+            List.filter
+                (\bucket -> List.member bucket.key allowedPlatforms)
     in
     []
         |> viewBucket
             "Package sets"
-            (result.aggregations.package_attr_set.buckets |> List.sortBy .doc_count |> List.reverse)
+            (result.aggregations.package_attr_set.buckets |> sortBuckets)
             (createBucketsMsg .packageSets (\s v -> { s | packageSets = v }))
             selectedBucket.packageSets
         |> viewBucket
             "Licenses"
-            (result.aggregations.package_license_set.buckets |> List.sortBy .doc_count |> List.reverse)
+            (result.aggregations.package_license_set.buckets |> sortBuckets)
             (createBucketsMsg .licenses (\s v -> { s | licenses = v }))
             selectedBucket.licenses
         |> viewBucket
-            "Platforms"
-            (result.aggregations.package_platforms.buckets |> List.sortBy .doc_count |> List.reverse)
-            (createBucketsMsg .platforms (\s v -> { s | platforms = v }))
-            selectedBucket.platforms
-        |> viewBucket
             "Maintainers"
-            (result.aggregations.package_maintainers_set.buckets |> List.sortBy .doc_count |> List.reverse)
+            (result.aggregations.package_maintainers_set.buckets |> sortBuckets)
             (createBucketsMsg .maintainers (\s v -> { s | maintainers = v }))
             selectedBucket.maintainers
+        |> viewBucket
+            "Platforms"
+            (result.aggregations.package_platforms.buckets |> filterPlatforms |> sortBuckets)
+            (createBucketsMsg .platforms (\s v -> { s | platforms = v }))
+            selectedBucket.platforms
 
 
 viewBucket :
@@ -409,8 +427,6 @@ viewResultItem channel showNixOSDetails show item =
                     li [] [ text platform ]
 
         maintainersAndPlatforms =
-            --[ dt [] [ text "Platforms" ]
-            --, dd [] [ asList (showPlatforms item.source.hydra item.source.platforms) ]
             [ div []
                 [ div []
                     (List.append [ h4 [] [ text "Maintainers" ] ]
@@ -423,11 +439,16 @@ viewResultItem channel showNixOSDetails show item =
                     )
                 , div []
                     (List.append [ h4 [] [ text "Platforms" ] ]
-                        (if List.isEmpty item.source.maintainers then
+                        (let
+                            platforms =
+                                List.filter (\platform -> List.member platform allowedPlatforms)
+                                    item.source.platforms
+                         in
+                         if List.isEmpty platforms then
                             [ p [] [ text "This package is not available on any platform." ] ]
 
                          else
-                            [ ul [] (List.map showPlatform item.source.platforms) ]
+                            [ ul [] (List.map showPlatform platforms) ]
                         )
                     )
                 ]
