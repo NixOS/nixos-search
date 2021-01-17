@@ -338,14 +338,13 @@ viewResultItem channel showNixOSDetails show item =
             "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/" ++ uri
 
         createShortDetailsItem title url =
-            [ li [ Html.Attributes.map SearchMsg Search.trapClick ]
+            li [ Html.Attributes.map SearchMsg Search.trapClick ]
                 [ a
                     [ href url
                     , target "_blank"
                     ]
                     [ text title ]
                 ]
-            ]
 
         shortPackageDetails =
             ul []
@@ -357,40 +356,43 @@ viewResultItem channel showNixOSDetails show item =
                                     []
 
                                 Just channelDetails ->
-                                    createShortDetailsItem
-                                        "source"
+                                    [ createShortDetailsItem
+                                        "Source"
                                         (createGithubUrl channelDetails.branch position)
+                                    ]
                         )
                     |> Maybe.withDefault []
                  )
                     |> List.append
                         (item.source.homepage
                             |> List.head
-                            |> Maybe.map (createShortDetailsItem "homepage")
+                            |> Maybe.map (\x -> [ createShortDetailsItem "Homepage" x ])
                             |> Maybe.withDefault []
                         )
                     |> List.append
                         (item.source.licenses
-                            |> List.head
-                            |> Maybe.map
+                            |> List.filterMap
                                 (\license ->
                                     case ( license.fullName, license.url ) of
                                         ( Nothing, Nothing ) ->
-                                            []
+                                            Nothing
 
                                         ( Just fullName, Nothing ) ->
-                                            [ text fullName ]
+                                            Just (text fullName)
 
                                         ( Nothing, Just url ) ->
-                                            createShortDetailsItem "license" url
+                                            Just (createShortDetailsItem "Unknown" url)
 
                                         ( Just fullName, Just url ) ->
-                                            createShortDetailsItem fullName url
+                                            Just (createShortDetailsItem fullName url)
                                 )
-                            |> Maybe.withDefault []
+                            |> List.intersperse (text ", ")
+                            |> List.append [ text "Licenses: " ]
                         )
                     |> List.append
-                        [ li [] [ text item.source.pname ]
+                        [ text "Name: "
+                        , li [] [ text item.source.pname ]
+                        , text "Version: "
                         , li [] [ text item.source.pversion ]
                         ]
                 )
