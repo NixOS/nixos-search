@@ -12,14 +12,6 @@
   }
 }
 
-.search-result-item() {
-  &:hover {
-    .search-result-button {
-      text-decoration: underline;
-    }
-  }
-}
-
 /* ------------------------------------------------------------------------- */
 /* -- Layout --------------------------------------------------------------- */
 /* ------------------------------------------------------------------------- */
@@ -146,6 +138,13 @@ header .navbar.navbar-static-top {
      & > h2 {
        margin-top: 0;
      }
+  }
+
+
+  .search-result-button {
+    &:hover {
+      text-decoration: underline;
+    }
   }
 
   & > .search-results {
@@ -315,8 +314,6 @@ header .navbar.navbar-static-top {
           }
 
           &.package {
-            .search-result-item();
-
             // short details of a pacakge
             & > :nth-child(3) {
               color: #666;
@@ -410,8 +407,6 @@ header .navbar.navbar-static-top {
           }
 
           &.option {
-            .search-result-item();
-
             // short details of a pacakge
             & > :nth-child(3) {
               margin-top: 1em;
