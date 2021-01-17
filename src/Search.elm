@@ -251,6 +251,7 @@ update toRoute navKey msg model =
         SortChange sort ->
             { model
                 | sort = sort
+                , show = Nothing
                 , from = 0
             }
                 |> ensureLoading
@@ -264,6 +265,7 @@ update toRoute navKey msg model =
 
                     else
                         Just buckets
+                , show = Nothing
                 , from = 0
             }
                 |> ensureLoading
@@ -272,6 +274,7 @@ update toRoute navKey msg model =
         ChannelChange channel ->
             { model
                 | channel = channel
+                , show = Nothing
                 , from = 0
             }
                 |> ensureLoading
@@ -285,6 +288,7 @@ update toRoute navKey msg model =
         QueryInputSubmit ->
             { model
                 | from = 0
+                , show = Nothing
                 , buckets = Nothing
             }
                 |> ensureLoading
