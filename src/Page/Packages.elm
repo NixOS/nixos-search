@@ -546,11 +546,13 @@ viewResultItem channel showNixOSDetails show item =
 
         trapClick =
             Html.Attributes.map SearchMsg Search.trapClick
+
+        isOpen =
+            Just item.source.attr_name == show
     in
     li
         [ class "package"
-        , classList
-            [ ( "opened", Just item.source.attr_name == show ) ]
+        , classList [ ( "opened", isOpen ) ]
         , Search.elementId item.source.attr_name
         ]
         ([]
@@ -563,18 +565,7 @@ viewResultItem channel showNixOSDetails show item =
                     [ text item.source.attr_name ]
                 , div [] [ text <| Maybe.withDefault "" item.source.description ]
                 , shortPackageDetails
-                , a
-                    [ href "#"
-                    , onClick toggle
-                    ]
-                    [ text
-                        (if Just item.source.attr_name == show then
-                            "▲▲▲ Hide package details ▲▲▲"
-
-                         else
-                            "▾▾▾ Show more package details ▾▾▾"
-                        )
-                    ]
+                , Search.showMoreButton toggle isOpen
                 ]
         )
 
