@@ -499,7 +499,7 @@ viewResultItem channel showNixOSDetails show item =
                                             , ( "active", showNixOSDetails )
                                             ]
                                         ]
-                                        [ pre []
+                                        [ pre [ class "code-block" ]
                                             [ text <| "nix-env -iA nixos."
                                             , strong [] [ text item.source.attr_name ]
                                             ]
@@ -518,14 +518,15 @@ viewResultItem channel showNixOSDetails show item =
     in
     li
         [ class "package"
-        , onClick open
         , Search.elementId item.source.attr_name
         ]
         ([]
             |> List.append longerPackageDetails
             |> List.append
                 [ Html.button
-                    [ class "search-result-button" ]
+                    [ class "search-result-button"
+                    , onClick open
+                    ]
                     [ text item.source.attr_name ]
                 , div [] [ text <| Maybe.withDefault "" item.source.description ]
                 , shortPackageDetails
