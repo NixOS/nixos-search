@@ -284,10 +284,12 @@ header .navbar.navbar-static-top {
         list-style: none;
         margin: 2em 0 0 0;
 
+        // Result item
         & > li {
           border-bottom: 1px solid #ccc;
           padding-bottom: 2em;
           margin-bottom: 2em;
+          text-align: center;
 
           &:last-child {
             border-bottom: 0;
@@ -301,22 +303,25 @@ header .navbar.navbar-static-top {
             color: #08c;
             font-size: 1.5em;
             margin-bottom: 0.5em;
+            text-align: left;
+            display: block;
           }
 
           // Description
           & > :nth-child(2) {
             font-size: 1.2em;
             margin-bottom: 0.5em;
-
+            text-align: left;
           }
 
           &.package {
-              .search-result-item();
+            .search-result-item();
 
             // short details of a pacakge
             & > :nth-child(3) {
               color: #666;
               list-style: none;
+              text-align: left;
               margin: 0;
 
               & > li {
@@ -332,9 +337,34 @@ header .navbar.navbar-static-top {
               }
             }
 
-            // longer details of a pacakge
+            // show longer details link
             & > :nth-child(4) {
-              margin: 1em 0 1em 1em;
+              margin: 0 auto;
+              display: none;
+              text-align: center;
+              text-decoration: none;
+              line-height: 1.5em;
+              color: #666;
+              background: #FFF;
+              padding: 0 1em;
+              position: relative;
+              top: 0.75em;
+              outline: none;
+            }
+            &.opened,
+            &:hover {
+              padding-bottom: 0;
+
+              & > :nth-child(4) {
+                display: inline-block;
+                padding-top: 0.5em;
+              }
+            }
+
+            // longer details of a pacakge
+            & > :nth-child(5) {
+              margin: 2em 0 1em 1em;
+              text-align: left;
 
               // how to install a package
               & > :nth-child(1) {
@@ -416,6 +446,7 @@ header .navbar.navbar-static-top {
             }
           }
         }
+
       }
 
       // Search results footer

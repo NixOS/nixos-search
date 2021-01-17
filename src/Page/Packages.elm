@@ -338,13 +338,11 @@ viewResultItem channel showNixOSDetails show item =
             "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/" ++ uri
 
         createShortDetailsItem title url =
-            li [ Html.Attributes.map SearchMsg Search.trapClick ]
-                [ a
-                    [ href url
-                    , target "_blank"
-                    ]
-                    [ text title ]
+            a
+                [ href url
+                , target "_blank"
                 ]
+                [ text title ]
 
         shortPackageDetails =
             ul []
@@ -356,9 +354,11 @@ viewResultItem channel showNixOSDetails show item =
                                     []
 
                                 Just channelDetails ->
-                                    [ createShortDetailsItem
-                                        "Source"
-                                        (createGithubUrl channelDetails.branch position)
+                                    [ li [ trapClick ]
+                                        [ createShortDetailsItem
+                                            "Source"
+                                            (createGithubUrl channelDetails.branch position)
+                                        ]
                                     ]
                         )
                     |> Maybe.withDefault []
@@ -366,7 +366,12 @@ viewResultItem channel showNixOSDetails show item =
                     |> List.append
                         (item.source.homepage
                             |> List.head
-                            |> Maybe.map (\x -> [ createShortDetailsItem "Homepage" x ])
+                            |> Maybe.map
+                                (\x ->
+                                    [ li [ trapClick ]
+                                        [ createShortDetailsItem "Homepage" x ]
+                                    ]
+                                )
                             |> Maybe.withDefault []
                         )
                     |> List.append
@@ -387,7 +392,7 @@ viewResultItem channel showNixOSDetails show item =
                                             Just (createShortDetailsItem fullName url)
                                 )
                             |> List.intersperse (text ", ")
-                            |> List.append [ text "Licenses: " ]
+                            |> (\x -> [ li [] (List.append [ text "Licenses: " ] x) ])
                         )
                     |> List.append
                         [ text "Name: "
@@ -458,7 +463,7 @@ viewResultItem channel showNixOSDetails show item =
 
         longerPackageDetails =
             if Just item.source.attr_name == show then
-                [ div [ Html.Attributes.map SearchMsg Search.trapClick ]
+                [ div [ trapClick ]
                     (maintainersAndPlatforms
                         |> List.append
                             (item.source.longDescription
@@ -536,11 +541,16 @@ viewResultItem channel showNixOSDetails show item =
             else
                 []
 
-        open =
+        toggle =
             SearchMsg (Search.ShowDetails item.source.attr_name)
+
+        trapClick =
+            Html.Attributes.map SearchMsg Search.trapClick
     in
     li
         [ class "package"
+        , classList
+            [ ( "opened", Just item.source.attr_name == show ) ]
         , Search.elementId item.source.attr_name
         ]
         ([]
@@ -548,11 +558,23 @@ viewResultItem channel showNixOSDetails show item =
             |> List.append
                 [ Html.button
                     [ class "search-result-button"
-                    , onClick open
+                    , onClick toggle
                     ]
                     [ text item.source.attr_name ]
                 , div [] [ text <| Maybe.withDefault "" item.source.description ]
                 , shortPackageDetails
+                , a
+                    [ href "#"
+                    , onClick toggle
+                    ]
+                    [ text
+                        (if Just item.source.attr_name == show then
+                            "▲▲▲ Hide package details ▲▲▲"
+
+                         else
+                            "▾▾▾ Show more package details ▾▾▾"
+                        )
+                    ]
                 ]
         )
 
