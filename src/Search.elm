@@ -211,7 +211,7 @@ elementId str =
 
 type Msg a b
     = NoOp
-    | SortChange String
+    | SortChange Sort
     | BucketsChange String
     | ChannelChange String
     | QueryInput String
@@ -248,9 +248,9 @@ update toRoute navKey msg model =
             , Cmd.none
             )
 
-        SortChange sortId ->
+        SortChange sort ->
             { model
-                | sort = fromSortId sortId |> Maybe.withDefault Relevance
+                | sort = sort
                 , from = 0
             }
                 |> ensureLoading
@@ -776,7 +776,7 @@ viewResults model result viewSuccess toRoute outMsg categoryName =
             String.fromInt result.hits.total.value
     in
     [ div []
-        [ viewSortSelection toRoute model
+        [ Html.map outMsg <| viewSortSelection toRoute model
         , div []
             (List.append
                 [ text "Showing results "
@@ -802,14 +802,14 @@ viewResults model result viewSuccess toRoute outMsg categoryName =
             )
         ]
     , viewSuccess model.channel model.showNixOSDetails model.show result.hits.hits
-    , viewPager outMsg model result.hits.total.value
+    , Html.map outMsg <| viewPager model result.hits.total.value
     ]
 
 
 viewSortSelection :
     Route.SearchRoute
     -> Model a b
-    -> Html c
+    -> Html (Msg a b)
 viewSortSelection toRoute model =
     div [ class "btn-group dropdown pull-right" ]
         [ button
@@ -827,18 +827,15 @@ viewSortSelection toRoute model =
                 ]
                 (List.map
                     (\sort ->
-                        let
-                            url =
-                                createUrl toRoute
-                                    { model | sort = sort }
-                        in
                         li
                             [ classList
                                 [ ( "selected", model.sort == sort )
                                 ]
                             ]
                             [ a
-                                [ href url ]
+                                [ href "#"
+                                , onClick <| SortChange sort
+                                ]
                                 [ text <| toSortTitle sort ]
                             ]
                     )
@@ -848,93 +845,67 @@ viewSortSelection toRoute model =
         ]
 
 
-
---form [ class "form-horizontal pull-right sort-form" ]
---    [ div [ class "control-group sort-group" ]
---        [ label [ class "control-label" ] [ text "Sort by:" ]
---        , div
---            [ class "controls" ]
---            [ select
---                [ onInput (\x -> outMsg (SortChange x))
---                ]
---                (List.map
---                    (\sort ->
---                        option
---                            [ selected (model.sort == sort)
---                            , value (toSortId sort)
---                            ]
---                            [ text <| toSortTitle sort ]
---                    )
---                    sortBy
---                )
---            ]
---        ]
---    ]
-
-
 viewPager :
-    (Msg a b -> c)
-    -> Model a b
+    Model a b
     -> Int
-    -> Html c
-viewPager outMsg model total =
-    Html.map outMsg <|
-        div []
-            [ ul [ class "pager" ]
-                [ li [ classList [ ( "disabled", model.from == 0 ) ] ]
-                    [ a
-                        [ Html.Events.onClick <|
-                            if model.from == 0 then
-                                NoOp
+    -> Html (Msg a b)
+viewPager model total =
+    div []
+        [ ul [ class "pager" ]
+            [ li [ classList [ ( "disabled", model.from == 0 ) ] ]
+                [ a
+                    [ onClick <|
+                        if model.from == 0 then
+                            NoOp
 
-                            else
-                                ChangePage 0
-                        ]
-                        [ text "First" ]
+                        else
+                            ChangePage 0
                     ]
-                , li [ classList [ ( "disabled", model.from == 0 ) ] ]
-                    [ a
-                        [ Html.Events.onClick <|
-                            if model.from - model.size < 0 then
-                                NoOp
+                    [ text "First" ]
+                ]
+            , li [ classList [ ( "disabled", model.from == 0 ) ] ]
+                [ a
+                    [ onClick <|
+                        if model.from - model.size < 0 then
+                            NoOp
 
-                            else
-                                ChangePage <| model.from - model.size
-                        ]
-                        [ text "Previous" ]
+                        else
+                            ChangePage <| model.from - model.size
                     ]
-                , li [ classList [ ( "disabled", model.from + model.size >= total ) ] ]
-                    [ a
-                        [ Html.Events.onClick <|
-                            if model.from + model.size >= total then
-                                NoOp
+                    [ text "Previous" ]
+                ]
+            , li [ classList [ ( "disabled", model.from + model.size >= total ) ] ]
+                [ a
+                    [ onClick <|
+                        if model.from + model.size >= total then
+                            NoOp
 
-                            else
-                                ChangePage <| model.from + model.size
-                        ]
-                        [ text "Next" ]
+                        else
+                            ChangePage <| model.from + model.size
                     ]
-                , li [ classList [ ( "disabled", model.from + model.size >= total ) ] ]
-                    [ a
-                        [ Html.Events.onClick <|
-                            if model.from + model.size >= total then
-                                NoOp
+                    [ text "Next" ]
+                ]
+            , li [ classList [ ( "disabled", model.from + model.size >= total ) ] ]
+                [ a
+                    [ onClick <|
+                        if model.from + model.size >= total then
+                            NoOp
 
-                            else
-                                let
-                                    remainder =
-                                        if remainderBy model.size total == 0 then
-                                            1
+                        else
+                            let
+                                remainder =
+                                    if remainderBy model.size total == 0 then
+                                        1
 
-                                        else
-                                            0
-                                in
-                                ChangePage <| ((total // model.size) - remainder) * model.size
-                        ]
-                        [ text "Last" ]
+                                    else
+                                        0
+                            in
+                            ChangePage <| ((total // model.size) - remainder) * model.size
                     ]
+                    [ text "Last" ]
                 ]
             ]
+        ]
 
 
 
