@@ -546,12 +546,13 @@ viewResultItem channel showNixOSDetails show item =
 
         trapClick =
             Html.Attributes.map SearchMsg Search.trapClick
+
         isOpen =
             Just item.source.attr_name == show
     in
     li
         [ class "package"
-        , classList [ ( "opened", isOpen) ]
+        , classList [ ( "opened", isOpen ) ]
         , Search.elementId item.source.attr_name
         ]
         ([]

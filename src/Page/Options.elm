@@ -24,9 +24,9 @@ import Html
 import Html.Attributes
     exposing
         ( class
+        , classList
         , href
         , target
-        , classList
         )
 import Html.Events
     exposing
