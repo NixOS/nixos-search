@@ -12,6 +12,37 @@
   }
 }
 
+
+.search-result-item() {
+  .result-item-show-more-wrapper {
+      text-align: center;
+  }
+
+  // show longer details link
+  .result-item-show-more {
+    margin: 0 auto;
+    display: none;
+    text-align: center;
+    text-decoration: none;
+    line-height: 1.5em;
+    color: #666;
+    background: #FFF;
+    padding: 0 1em;
+    position: relative;
+    top: 0.75em;
+    outline: none;
+  }
+  &.opened,
+  &:hover {
+    padding-bottom: 0;
+
+    .result-item-show-more {
+      display: inline-block;
+      padding-top: 0.5em;
+    }
+  }
+}
+
 /* ------------------------------------------------------------------------- */
 /* -- Layout --------------------------------------------------------------- */
 /* ------------------------------------------------------------------------- */
@@ -275,7 +306,6 @@ header .navbar.navbar-static-top {
             font-size: 0.7em;
           }
         }
-
       }
 
       // Search results list
@@ -288,7 +318,6 @@ header .navbar.navbar-static-top {
           border-bottom: 1px solid #ccc;
           padding-bottom: 2em;
           margin-bottom: 2em;
-          text-align: center;
 
           &:last-child {
             border-bottom: 0;
@@ -314,6 +343,8 @@ header .navbar.navbar-static-top {
           }
 
           &.package {
+            .search-result-item()
+            
             // short details of a pacakge
             & > :nth-child(3) {
               color: #666;
@@ -331,30 +362,6 @@ header .navbar.navbar-static-top {
               }
               & > li:last-child {
                 margin-right: 0;
-              }
-            }
-
-            // show longer details link
-            & > :nth-child(4) {
-              margin: 0 auto;
-              display: none;
-              text-align: center;
-              text-decoration: none;
-              line-height: 1.5em;
-              color: #666;
-              background: #FFF;
-              padding: 0 1em;
-              position: relative;
-              top: 0.75em;
-              outline: none;
-            }
-            &.opened,
-            &:hover {
-              padding-bottom: 0;
-
-              & > :nth-child(4) {
-                display: inline-block;
-                padding-top: 0.5em;
               }
             }
 
@@ -407,10 +414,11 @@ header .navbar.navbar-static-top {
           }
 
           &.option {
+            .search-result-item()
+            
             // short details of a pacakge
-            & > :nth-child(3) {
-              margin-top: 1em;
-              margin-left: 1em;
+            & > :nth-child(4) {
+              margin: 2em 0 1em 1em;
               display: grid;
               grid-template-columns: 100px 1fr;
               column-gap: 1em;

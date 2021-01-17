@@ -1,13 +1,13 @@
-module Utils exposing
-    ( toggleList
-    )
+module Utils exposing (toggleList)
 
 
-toggleList : 
+toggleList :
     List a
-    -> a 
+    -> a
     -> List a
 toggleList list item =
-    if List.member item list
-    then List.filter (\x -> x /= item) list
-    else List.append list [item]
+    if List.member item list then
+        List.filter (\x -> x /= item) list
+
+    else
+        List.append list [ item ]

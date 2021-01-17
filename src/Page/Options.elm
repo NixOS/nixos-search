@@ -24,6 +24,7 @@ import Html
 import Html.Attributes
     exposing
         ( class
+        , classList
         , href
         , target
         )
@@ -151,14 +152,13 @@ viewResultItem :
 viewResultItem channel _ show item =
     let
         showHtml value =
-            [ div [] <|
+            div [] <|
                 case Html.Parser.run value of
                     Ok nodes ->
                         Html.Parser.Util.toVirtualDom nodes
 
                     Err _ ->
                         []
-            ]
 
         default =
             "Not given"
@@ -212,7 +212,7 @@ viewResultItem channel _ show item =
 
         showDetails =
             if Just item.source.name == show then
-                [ div [ Html.Attributes.map SearchMsg Search.trapClick ]
+                div [ Html.Attributes.map SearchMsg Search.trapClick ]
                     [ div [] [ text "Default value" ]
                     , div [] [ withEmpty (wrapped asPreCode) item.source.default ]
                     , div [] [ text "Type" ]
@@ -222,31 +222,35 @@ viewResultItem channel _ show item =
                     , div [] [ text "Declared in" ]
                     , div [] [ withEmpty asGithubLink item.source.source ]
                     ]
-                ]
+                    |> Just
 
             else
-                []
+                Nothing
 
-        open =
+        toggle =
             SearchMsg (Search.ShowDetails item.source.name)
+
+        isOpen =
+            Just item.source.name == show
     in
     li
         [ class "option"
-        , onClick open
+        , classList [ ( "opened", isOpen ) ]
         , Search.elementId item.source.name
         ]
-        (showDetails
-            |> List.append
-                (item.source.description
-                    |> Maybe.map showHtml
-                    |> Maybe.withDefault []
-                )
-            |> List.append
-                [ Html.button
-                    [ class "search-result-button" ]
+    <|
+        List.filterMap identity
+            [ Just <|
+                Html.button
+                    [ class "search-result-button"
+                    , onClick toggle
+                    ]
                     [ text item.source.name ]
-                ]
-        )
+            , Maybe.map showHtml item.source.description
+            , Just <|
+                Search.showMoreButton toggle isOpen
+            , showDetails
+            ]
 
 
 
