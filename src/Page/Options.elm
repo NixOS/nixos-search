@@ -136,7 +136,7 @@ viewSuccess :
     -> Html Msg
 viewSuccess channel showNixOSDetails show hits =
     ul []
-        (List.concatMap
+        (List.map
             (viewResultItem channel showNixOSDetails show)
             hits
         )
@@ -147,7 +147,7 @@ viewResultItem :
     -> Bool
     -> Maybe String
     -> Search.ResultItem ResultItemSource
-    -> List (Html Msg)
+    -> Html Msg
 viewResultItem channel _ show item =
     let
         showHtml value =
@@ -167,7 +167,7 @@ viewResultItem channel _ show item =
             pre [] [ text value ]
 
         asPreCode value =
-            div [] [ pre [] [ code [] [ text value ] ] ]
+            div [] [ pre [] [ code [ class "code-block" ] [ text value ] ] ]
 
         githubUrlPrefix branch =
             "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/"
@@ -186,7 +186,7 @@ viewResultItem channel _ show item =
                         [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L")
                         , target "_blank"
                         ]
-                        [ text <| value ]
+                        [ text value ]
 
                 Nothing ->
                     text <| cleanPosition value
@@ -212,7 +212,7 @@ viewResultItem channel _ show item =
 
         showDetails =
             if Just item.source.name == show then
-                [ div []
+                [ div [ Html.Attributes.map SearchMsg Search.trapClick ]
                     [ div [] [ text "Default value" ]
                     , div [] [ withEmpty (wrapped asPreCode) item.source.default ]
                     , div [] [ text "Type" ]
@@ -230,13 +230,12 @@ viewResultItem channel _ show item =
         open =
             SearchMsg (Search.ShowDetails item.source.name)
     in
-    [ li
+    li
         [ class "option"
         , onClick open
         , Search.elementId item.source.name
         ]
-        ([]
-            |> List.append showDetails
+        (showDetails
             |> List.append
                 (item.source.description
                     |> Maybe.map showHtml
@@ -248,7 +247,6 @@ viewResultItem channel _ show item =
                     [ text item.source.name ]
                 ]
         )
-    ]
 
 
 
