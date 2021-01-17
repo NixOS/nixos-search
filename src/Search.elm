@@ -612,26 +612,25 @@ viewResult outMsg toRoute categoryName model viewSuccess viewBuckets =
                 ]
 
         RemoteData.Success result ->
-            if result.hits.total.value == 0 then
+            let
+                buckets =
+                    viewBuckets model.buckets result
+            in
+            if result.hits.total.value == 0 && List.length buckets == 0 then
                 viewNoResults categoryName
 
-            else
-                let
-                    buckets =
-                        viewBuckets model.buckets result
-                in
-                if List.length buckets > 0 then
-                    div [ class "search-results" ]
-                        [ ul [] buckets
-                        , div []
-                            (viewResults model result viewSuccess toRoute outMsg categoryName)
-                        ]
+            else if List.length buckets > 0 then
+                div [ class "search-results" ]
+                    [ ul [] buckets
+                    , div []
+                        (viewResults model result viewSuccess toRoute outMsg categoryName)
+                    ]
 
-                else
-                    div [ class "search-results" ]
-                        [ div []
-                            (viewResults model result viewSuccess toRoute outMsg categoryName)
-                        ]
+            else
+                div [ class "search-results" ]
+                    [ div []
+                        (viewResults model result viewSuccess toRoute outMsg categoryName)
+                    ]
 
         RemoteData.Failure error ->
             let
