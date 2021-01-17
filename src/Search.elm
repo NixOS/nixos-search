@@ -18,6 +18,7 @@ module Search exposing
     , makeRequestBody
     , onClickStop
     , shouldLoad
+    , showMoreButton
     , trapClick
     , update
     , view
@@ -1140,6 +1141,28 @@ decodeAggregationBucketItem =
     Json.Decode.map2 AggregationsBucketItem
         (Json.Decode.field "doc_count" Json.Decode.int)
         (Json.Decode.field "key" Json.Decode.string)
+
+
+
+-- Html Helper elemetnts
+
+
+showMoreButton : msg -> Bool -> Html msg
+showMoreButton toggle isOpen =
+    div [ class "result-item-show-more-wrapper" ]
+        [ a
+            [ href "#"
+            , onClick toggle
+            , class "result-item-show-more"
+            ]
+            [ text <|
+                if isOpen then
+                    "▲▲▲ Hide package details ▲▲▲"
+
+                else
+                    "▾▾▾ Show more package details ▾▾▾"
+            ]
+        ]
 
 
 
