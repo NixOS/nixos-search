@@ -784,7 +784,7 @@ viewResults model result viewSuccess toRoute outMsg categoryName =
         , div []
             (List.append
                 [ text "Showing results "
-                , text from
+                , text <| from + 1
                 , text "-"
                 , text to
                 , text " of "
