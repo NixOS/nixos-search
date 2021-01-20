@@ -765,7 +765,7 @@ viewResults :
 viewResults model result viewSuccess toRoute outMsg categoryName =
     let
         from =
-            String.fromInt model.from
+            String.fromInt (model.from + 1)
 
         to =
             String.fromInt
@@ -784,7 +784,7 @@ viewResults model result viewSuccess toRoute outMsg categoryName =
         , div []
             (List.append
                 [ text "Showing results "
-                , text <| from + 1
+                , text from
                 , text "-"
                 , text to
                 , text " of "
