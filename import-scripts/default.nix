@@ -13,12 +13,13 @@ mkPoetryApplication {
       '';
     });
   });
+  preferLocalBuild = true;
   nativeBuildInputs = with pkgs; [
     poetry
     fd
     entr
+    nixStable
   ];
-  #doCheck = false;
   checkPhase = ''
     export PYTHONPATH=$PWD:$PYTHONPATH
     black --diff --check import_scripts/ tests/
@@ -27,8 +28,13 @@ mkPoetryApplication {
     pytest -vv tests/
   '';
   postInstall = ''
-    wrapProgram $out/bin/import-channel --set INDEX_SCHEMA_VERSION "${version}"
-    wrapProgram $out/bin/channel-diff --set INDEX_SCHEMA_VERSION "${version}"
+    wrapProgram $out/bin/import-channel \
+      --set INDEX_SCHEMA_VERSION "${version}" \
+      --prefix PATH : "${pkgs.nixStable}/bin"
+    wrapProgram $out/bin/channel-diff \
+      --set INDEX_SCHEMA_VERSION "${version}" \
+      --prefix PATH : "${pkgs.nixStable}/bin"
+
   '';
   shellHook = ''
     cd import-scripts/

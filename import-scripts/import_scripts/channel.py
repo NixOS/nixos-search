@@ -36,6 +36,7 @@ CHANNELS = {
     "20.03": "nixos/20.03/nixos-20.03.",
     "20.09": "nixos/20.09/nixos-20.09.",
 }
+ALLOWED_PLATFORMS = ["x86_64-linux", "aarch64-linux", "x86_64-darwin", "i686-linux"]
 ANALYSIS = {
     "normalizer": {
         "lowercase": {"type": "custom", "char_filter": [], "filter": ["lowercase"]}
@@ -386,7 +387,7 @@ def remove_attr_set(name):
 @backoff.on_exception(backoff.expo, subprocess.CalledProcessError)
 def get_packages_raw(evaluation):
     logger.debug(
-        f"get_packages: Retrieving list of packages for '{evaluation['git_revision']}' revision"
+        f"get_packages_raw: Retrieving list of packages for '{evaluation['git_revision']}' revision"
     )
     result = subprocess.run(
         shlex.split(
@@ -407,7 +408,7 @@ def get_packages(evaluation, evaluation_builds):
             licenses = data["meta"].get("license")
             if licenses:
                 if type(licenses) == str:
-                    licenses = [dict(fullName=licenses)]
+                    licenses = [dict(fullName=licenses, url=None)]
                 elif type(licenses) == dict:
                     licenses = [licenses]
                 licenses = [
@@ -417,24 +418,27 @@ def get_packages(evaluation, evaluation_builds):
                     for license in licenses
                 ]
             else:
-                licenses = []
+                licenses = [dict(fullName="No license", url=None)]
 
             maintainers = get_maintainer(data["meta"].get("maintainers", []))
+            if len(maintainers) == 0:
+                maintainers = [dict(name="No maintainers", email=None, github=None)]
 
             platforms = [
-                type(platform) == str and platform or None
+                platform
                 for platform in data["meta"].get("platforms", [])
+                if type(platform) == str and platform in ALLOWED_PLATFORMS
             ]
 
-            attr_set = None
+            attr_set = "No package set"
             if "." in attr_name:
-                attr_set = attr_name.split(".")[0]
+                maybe_attr_set = attr_name.split(".")[0]
                 if (
-                    not attr_set.endswith("Packages")
-                    and not attr_set.endswith("Plugins")
-                    and not attr_set.endswith("Extensions")
+                    maybe_attr_set.endswith("Packages")
+                    or maybe_attr_set.endswith("Plugins")
+                    or maybe_attr_set.endswith("Extensions")
                 ):
-                    attr_set = None
+                    attr_set = maybe_attr_set
 
             hydra = None
             if data["name"] in evaluation_builds:
@@ -485,7 +489,7 @@ def get_packages(evaluation, evaluation_builds):
                 package_license_set=[i["fullName"] for i in licenses],
                 package_maintainers=maintainers,
                 package_maintainers_set=[i["name"] for i in maintainers if i["name"]],
-                package_platforms=[i for i in platforms if i],
+                package_platforms=platforms,
                 package_position=position,
                 package_homepage=data["meta"].get("homepage"),
                 package_system=data["system"],

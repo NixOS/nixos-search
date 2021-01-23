@@ -184,15 +184,6 @@ update navKey msg model =
 -- VIEW
 
 
-allowedPlatforms : List String
-allowedPlatforms =
-    [ "x86_64-linux"
-    , "aarch64-linux"
-    , "x86_64-darwin"
-    , "i686-linux"
-    ]
-
-
 view : Model -> Html Msg
 view model =
     Search.view { toRoute = Route.Packages, categoryName = "packages" }
@@ -230,10 +221,6 @@ viewBuckets bucketsAsString result =
             items
                 |> List.sortBy .doc_count
                 |> List.reverse
-
-        filterPlatforms =
-            List.filter
-                (\bucket -> List.member bucket.key allowedPlatforms)
     in
     []
         |> viewBucket
@@ -253,7 +240,7 @@ viewBuckets bucketsAsString result =
             selectedBucket.maintainers
         |> viewBucket
             "Platforms"
-            (result.aggregations.package_platforms.buckets |> filterPlatforms |> sortBuckets)
+            (result.aggregations.package_platforms.buckets |> sortBuckets)
             (createBucketsMsg .platforms (\s v -> { s | platforms = v }))
             selectedBucket.platforms
 
@@ -446,16 +433,11 @@ viewResultItem channel showNixOSDetails show item =
                     )
                 , div []
                     (List.append [ h4 [] [ text "Platforms" ] ]
-                        (let
-                            platforms =
-                                List.filter (\platform -> List.member platform allowedPlatforms)
-                                    item.source.platforms
-                         in
-                         if List.isEmpty platforms then
+                        (if List.isEmpty item.source.platforms then
                             [ p [] [ text "This package is not available on any platform." ] ]
 
                          else
-                            [ ul [] (List.map showPlatform platforms) ]
+                            [ ul [] (List.map showPlatform item.source.platforms) ]
                         )
                     )
                 ]

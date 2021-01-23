@@ -31,6 +31,8 @@ pkgs.stdenv.mkDerivation {
   name = "${package.name}-${package.version}";
   src = pkgs.lib.cleanSource ./.;
 
+  preferLocalBuild = true;
+
   buildInputs =
     [
       yarnPkg
