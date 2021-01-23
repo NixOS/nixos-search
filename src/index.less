@@ -1,7 +1,66 @@
+/* ------------------------------------------------------------------------- */
+/* -- Utils ---------------------------------------------------------------- */
+/* ------------------------------------------------------------------------- */
+
+.terminal() {
+  background: #333;
+  color: #fff;
+  margin: 0;
+
+  &:before {
+    content: "$ "
+  }
+}
+
+
+.search-result-item() {
+  .result-item-show-more-wrapper {
+      text-align: center;
+  }
+
+  // show longer details link
+  .result-item-show-more {
+    margin: 0 auto;
+    display: none;
+    text-align: center;
+    text-decoration: none;
+    line-height: 1.5em;
+    color: #666;
+    background: #FFF;
+    padding: 0 1em;
+    position: relative;
+    top: 0.75em;
+    outline: none;
+  }
+  &.opened,
+  &:hover {
+    padding-bottom: 0;
+
+    .result-item-show-more {
+      display: inline-block;
+      padding-top: 0.5em;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* -- Layout --------------------------------------------------------------- */
+/* ------------------------------------------------------------------------- */
+
 body {
   position: relative;
   min-height: 100vh;
-  overflow-y: scroll;
+  overflow-y: auto;
+
+  & > div:first-child {
+    position: relative;
+    min-height: 100vh;
+  }
+}
+
+.code-block {
+  display: block;
+  cursor: text;
 }
 
 #content {
@@ -30,91 +89,394 @@ header .navbar.navbar-static-top {
   }
 }
 
-.search-input {
-  .input-append {
-    input {
-      font-size: 18px;
-      height: 40px;
-      width: 25em;
-    }
-    div.loader {
-      display: none;
-      z-index: 100;
-      position: absolute;
-      margin: 0;
-      top: 37px;
-      right: 125px;
-      font-size: 6px;
-      color: #999999;
-    }
-    button {
-      font-size: 24px;
-      height: 50px;
-      min-width: 4em;
+// Search seatch
+.search-page {
+
+  &.not-asked {
+
+    & > h1 {
+      margin-top: 2.5em;
+      margin-bottom: 0.8em;
     }
   }
-  form > p > strong {
-    vertical-align: middle;
-    font-size: 1.2em;
-    margin-left: 0.2em;
-  }
-}
-.search-result {
-  tbody > tr {
-    cursor: pointer;
-  }
-  tbody > td > dl > dd > ul.inline {
-    margin: 0;
-    li {
-      margin: 0;
-      padding: 0;
-    }
-    li::after {
-      content: ", ";
-      padding-right: 0.5em;
-    }
-    li:last-child::after {
-      content: "";
+
+  // Search section title title
+  & > h1 {
+    font-weight: normal;
+    font-size: 2.3em;
+
+    &:before {
+      content: "\2315";
+      display: inline-block;
+      font-size: 1.5em;
+      margin-right: 0.2em;
+      -moz-transform: scale(-1, 1);
+      -webkit-transform: scale(-1, 1);
+      -o-transform: scale(-1, 1);
+      -ms-transform: scale(-1, 1);
+      transform: scale(-1,  1);
     }
   }
-  tbody > td > dl > dd > pre {
-    background: transparent;
-    border: 0;
-    padding: 0;
-    line-height: 20px;
-    margin: 0;
+
+  // Search input section
+  & > .search-input {
+
+    // Search Input and Button
+    & > div:nth-child(1) {
+      display: grid;
+      grid-template-columns: auto 8em;
+
+      & > div > input {
+        font-size: 18px;
+        height: 40px;
+        width: 100%;
+      }
+
+      & > button {
+        font-size: 24px;
+        height: 50px;
+        min-width: 4em;
+      }
+    }
+
+    // List of channels
+    & > div:nth-child(2) {
+      margin-bottom: 0.5em;
+
+      // "Channels: " label
+      & > div > h4 {
+        display: inline;
+        vertical-align: middle;
+        font-size: 1.2em;
+        margin-left: 0.2em;
+      }
+    }
   }
-  tbody > td > dl > dt,
-  tbody > td > dl > dd {
-    margin-bottom: 1em;
+
+  // Loader during loading the search results
+  & > .loader-wrapper > h2 {
+    position: absolute;
+    top: 3em;
+    width: 100%;
+    text-align: center;
   }
+
+  & > .search-no-results {
+    padding: 2em 1em;
+    text-align: center;
+    margin-bottom: 2em;
+
+     & > h2 {
+       margin-top: 0;
+     }
+  }
+
 
   .search-result-button {
-      margin: 0;
-      padding: 0;
-      border: 0;
-      background: transparent;
-      display: inline;
-      font: inherit;
-      color: inherit;
-      text-align: inherit;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  & > .search-results {
+    display: flex;
+    flex-direction: row;
+
+    // Buckets
+    & > ul {
+      list-style: none;
+      margin: 0 1em 0 0;
+
+      & > li {
+        margin-bottom: 1em;
+        border: 1px solid #ccc;
+        padding: 1em;
+        border-radius: 4px;
+
+        & > ul {
+          list-style: none;
+          margin: 0;
+
+          & > li {
+            margin-bottom: 0.2em;
+
+            &.header {
+              font-size: 1.2em;
+              font-weight: bold;
+              margin-bottom: 0.5em;
+            }
+
+            & > a {
+              display: grid;
+              grid-template-columns: auto auto;
+              color: #333;
+              padding: 0.5em 0.5em 0.5em 1em;
+              text-decoration: none;
+
+              &:hover {
+                text-decoration: none;
+                background: #eee;
+                border-radius: 4px;
+              }
+
+              & > span:first-child {
+                overflow: hidden;
+              }
+              & > span:last-child {
+                text-align: right;
+                margin-left: 0.3em;
+              }
+
+              &.selected {
+                background: #0081c2;
+                color: #FFF;
+                border-radius: 4px;
+                position: relative;
+
+                &:after {
+                  content: "\2715";
+                  font-size: 1.7em;
+                  color: #fff;
+                  position: absolute;
+                  top: 4px;
+                  right: 4px;
+                  background: #0081c2;
+                  bottom: 4px;
+                  width: 1em;
+                  padding: 2px;
+                }
+
+                & > span:last-child {
+                  display: none;
+
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Results section
+    & > div {
+      width: 100%;
+
+      // Search results header
+      & > :nth-child(1) {
+
+        // Dropdown to show sorting options
+        & > div:nth-child(1) {
+
+          & > button {
+            & > .selected {
+              margin-right: 0.5em;
+            }
+          }
+
+          & > ul > li {
+
+            & > a {
+              padding: 3px 10px;
+            }
+
+            & > a:before {
+              display: inline-block;
+              content: " ";
+              width: 24.5px;
+            }
+
+            &.selected > a:before {
+              content: "\2714";
+            }
+          }
+
+          & > ul > li.header {
+            font-weight: bold;
+            padding: 3px 10px;
+          }
+
+          & > ul > li.header:before,
+          & > ul > li.divider:before {
+            display: none;
+          }
+        }
+
+        // Text that displays number of results
+        & > div:nth-child(2) {
+          font-size: 1.7em;
+          line-height: 1.3em;
+
+          & > p {
+            font-size: 0.7em;
+          }
+        }
+      }
+
+      // Search results list
+      & > :nth-child(2) {
+        list-style: none;
+        margin: 2em 0 0 0;
+
+        // Result item
+        & > li {
+          border-bottom: 1px solid #ccc;
+          padding-bottom: 2em;
+          margin-bottom: 2em;
+
+          &:last-child {
+            border-bottom: 0;
+          }
+
+          // Attribute name or option name
+          & > :nth-child(1) {
+            background: inherit;
+            border: 0;
+            padding: 0;
+            color: #08c;
+            font-size: 1.5em;
+            margin-bottom: 0.5em;
+            text-align: left;
+            display: block;
+          }
+
+          // Description
+          & > :nth-child(2) {
+            font-size: 1.2em;
+            margin-bottom: 0.5em;
+            text-align: left;
+          }
+
+          &.package {
+            .search-result-item();
+
+            // short details of a pacakge
+            & > :nth-child(3) {
+              color: #666;
+              list-style: none;
+              text-align: left;
+              margin: 0;
+
+              & > li {
+                display: inline-block;
+                margin-right: 1em;
+
+                & > a {
+                  color: #666;
+                }
+              }
+              & > li:last-child {
+                margin-right: 0;
+              }
+            }
+
+            // longer details of a pacakge
+            & > :nth-child(5) {
+              margin: 2em 0 1em 1em;
+              text-align: left;
+
+              // how to install a package
+              & > :nth-child(1) {
+
+                h4 {
+                  font-size: 1.2em;
+                  line-height: 1em;
+                  float: left;
+                }
+
+                ul.nav-tabs {
+                  margin: 0;
+
+                  & > li > a {
+                    margin-right: 0;
+                  }
+                }
+
+                div.tab-content {
+                  padding: 1em;
+                  border: 1px solid #ddd;
+                  border-top: 0;
+                }
+
+                pre {
+                  .terminal();
+                }
+
+              }
+
+              // long description of a package
+              & > :nth-child(2) {
+                margin-top: 1em;
+              }
+
+              // maintainers and platforms
+              & > :nth-child(3) {
+                margin-top: 1em;
+                display: grid;
+                grid-template-columns: auto auto;
+              }
+            }
+          }
+
+          &.option {
+            .search-result-item();
+
+            // short details of a pacakge
+            & > :nth-child(4) {
+              margin: 2em 0 1em 1em;
+              display: grid;
+              grid-template-columns: 100px 1fr;
+              column-gap: 1em;
+              row-gap: 0.5em;
+
+              & > div:nth-child(2n+1) {
+                font-weight: bold;
+                text-align: right;
+              }
+
+              & > div:nth-child(2n) {
+                pre {
+                  background: transparent;
+                  margin: 0;
+                  padding: 0;
+                  border: 0;
+                  vertical-align: inherit;
+                  display: inline;
+                }
+
+                pre code {
+                  background: #333;
+                  color: #fff;
+                  padding: 0.5em
+                }
+              }
+
+            }
+          }
+        }
+
+      }
+
+      // Search results footer
+      & > :nth-child(3) {
+        margin-top: 1em;
+
+        & > ul > li > a {
+          cursor: pointer;
+          margin: 0 2px;
+        }
+      }
+    }
   }
 }
 
-.sort-form,
-.sort-form > .sort-group {
-  margin-bottom: 0;
-}
-.pager {
-  & > li > a {
-    cursor: pointer;
-    margin: 0 2px;
-  }
-}
+/* ------------------------------------------------------------------------- */
+/* -- Loader --------------------------------------------------------------- */
+/* ------------------------------------------------------------------------- */
 
 .loader-wrapper {
   height: 200px;
   overflow: hidden;
+  position: relative;
 }
 .loader,
 .loader:before,

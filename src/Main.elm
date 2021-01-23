@@ -32,7 +32,6 @@ import Page.Packages
 import Route
 import Search
 import Url
-import Url.Builder
 
 
 
@@ -129,6 +128,7 @@ attemptQuery (( model, _ ) as pair) =
                                 (Maybe.withDefault "" searchModel.query)
                                 searchModel.from
                                 searchModel.size
+                                searchModel.buckets
                                 searchModel.sort
                         ]
                 )
@@ -365,7 +365,7 @@ viewNavigation route =
                     f searchArgs
 
                 _ ->
-                    f <| Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing
+                    f <| Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing
     in
     li [] [ a [ href "https://nixos.org" ] [ text "Back to nixos.org" ] ]
         :: List.map

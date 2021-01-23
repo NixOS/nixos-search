@@ -14,24 +14,17 @@ import Html
         ( Html
         , a
         , code
-        , dd
         , div
-        , dl
-        , dt
+        , li
         , pre
-        , span
-        , table
-        , tbody
-        , td
+        , strong
         , text
-        , th
-        , thead
-        , tr
+        , ul
         )
 import Html.Attributes
     exposing
         ( class
-        , colspan
+        , classList
         , href
         , target
         )
@@ -42,8 +35,6 @@ import Html.Events
 import Html.Parser
 import Html.Parser.Util
 import Json.Decode
-import Json.Encode
-import Regex
 import Route
 import Search
 
@@ -53,7 +44,7 @@ import Search
 
 
 type alias Model =
-    Search.Model ResultItemSource
+    Search.Model ResultItemSource ResultAggregations
 
 
 type alias ResultItemSource =
@@ -63,6 +54,16 @@ type alias ResultItemSource =
     , default : Maybe String
     , example : Maybe String
     , source : Maybe String
+    }
+
+
+type alias ResultAggregations =
+    { all : AggregationsAll
+    }
+
+
+type alias AggregationsAll =
+    { doc_count : Int
     }
 
 
@@ -82,7 +83,7 @@ init searchArgs model =
 
 
 type Msg
-    = SearchMsg (Search.Msg ResultItemSource)
+    = SearchMsg (Search.Msg ResultItemSource ResultAggregations)
 
 
 update :
@@ -111,125 +112,62 @@ update navKey msg model =
 view : Model -> Html Msg
 view model =
     Search.view { toRoute = Route.Options, categoryName = "options" }
-        "Search NixOS options"
+        [ text "Search more than "
+        , strong [] [ text "10 000 options" ]
+        ]
         model
         viewSuccess
+        viewBuckets
         SearchMsg
+
+
+viewBuckets :
+    Maybe String
+    -> Search.SearchResult ResultItemSource ResultAggregations
+    -> List (Html Msg)
+viewBuckets _ _ =
+    []
 
 
 viewSuccess :
     String
+    -> Bool
     -> Maybe String
-    -> Search.SearchResult ResultItemSource
+    -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
-viewSuccess channel show result =
-    div [ class "search-result" ]
-        [ table [ class "table table-hover" ]
-            [ thead []
-                [ tr []
-                    [ th [] [ text "Option name" ]
-                    ]
-                ]
-            , tbody
-                []
-                (List.concatMap
-                    (viewResultItem channel show)
-                    result.hits.hits
-                )
-            ]
-        ]
+viewSuccess channel showNixOSDetails show hits =
+    ul []
+        (List.map
+            (viewResultItem channel showNixOSDetails show)
+            hits
+        )
 
 
 viewResultItem :
     String
+    -> Bool
     -> Maybe String
     -> Search.ResultItem ResultItemSource
-    -> List (Html Msg)
-viewResultItem channel show item =
-    let
-        packageDetails =
-            if Just item.source.name == show then
-                [ td [ colspan 1 ] [ viewResultItemDetails channel item ]
-                ]
-
-            else
-                []
-
-        open =
-            SearchMsg (Search.ShowDetails item.source.name)
-    in
-    []
-        -- DEBUG: |> List.append
-        -- DEBUG:     [ tr []
-        -- DEBUG:         [ td [ colspan 1 ]
-        -- DEBUG:             [ div [] [ text <| "score: " ++ String.fromFloat (Maybe.withDefault 0 item.score) ]
-        -- DEBUG:             , div []
-        -- DEBUG:                 [ text <|
-        -- DEBUG:                     "matched queries: "
-        -- DEBUG:                 , ul []
-        -- DEBUG:                     (item.matched_queries
-        -- DEBUG:                         |> Maybe.withDefault []
-        -- DEBUG:                         |> List.sort
-        -- DEBUG:                         |> List.map (\q -> li [] [ text q ])
-        -- DEBUG:                     )
-        -- DEBUG:                 ]
-        -- DEBUG:             ]
-        -- DEBUG:         ]
-        -- DEBUG:     ]
-        |> List.append
-            (tr
-                [ onClick open
-                , Search.elementId item.source.name
-                ]
-                [ td []
-                    [ Html.button
-                        [ class "search-result-button"
-                        , Html.Events.custom "click" <|
-                            Json.Decode.succeed
-                                { message = open
-                                , stopPropagation = True
-                                , preventDefault = True
-                                }
-                        ]
-                        [ text item.source.name
-                        ]
-                    ]
-                ]
-                :: packageDetails
-            )
-
-
-viewResultItemDetails :
-    String
-    -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItemDetails channel item =
+viewResultItem channel _ show item =
     let
-        default =
-            "Not given"
-
-        asText value =
-            span [] <|
+        showHtml value =
+            div [] <|
                 case Html.Parser.run value of
                     Ok nodes ->
                         Html.Parser.Util.toVirtualDom nodes
 
-                    Err e ->
+                    Err _ ->
                         []
+
+        default =
+            "Not given"
 
         asPre value =
             pre [] [ text value ]
 
-        asCode value =
-            code [] [ text value ]
-
         asPreCode value =
-            div [] [ pre [] [ code [] [ text value ] ] ]
-
-        encodeHtml value =
-            value
-                |> String.replace "<" "&lt;"
-                |> String.replace ">" "&gt;"
+            div [] [ pre [] [ code [ class "code-block" ] [ text value ] ] ]
 
         githubUrlPrefix branch =
             "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/"
@@ -248,18 +186,10 @@ viewResultItemDetails channel item =
                         [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L")
                         , target "_blank"
                         ]
-                        [ text <| value ]
+                        [ text value ]
 
                 Nothing ->
                     text <| cleanPosition value
-
-        wrapped wrapWith value =
-            case value of
-                "" ->
-                    wrapWith <| "\"" ++ value ++ "\""
-
-                _ ->
-                    wrapWith value
 
         withEmpty wrapWith maybe =
             case maybe of
@@ -271,21 +201,56 @@ viewResultItemDetails channel item =
 
                 Just value ->
                     wrapWith value
+
+        wrapped wrapWith value =
+            case value of
+                "" ->
+                    wrapWith <| "\"" ++ value ++ "\""
+
+                _ ->
+                    wrapWith value
+
+        showDetails =
+            if Just item.source.name == show then
+                div [ Html.Attributes.map SearchMsg Search.trapClick ]
+                    [ div [] [ text "Default value" ]
+                    , div [] [ withEmpty (wrapped asPreCode) item.source.default ]
+                    , div [] [ text "Type" ]
+                    , div [] [ withEmpty asPre item.source.type_ ]
+                    , div [] [ text "Example" ]
+                    , div [] [ withEmpty (wrapped asPreCode) item.source.example ]
+                    , div [] [ text "Declared in" ]
+                    , div [] [ withEmpty asGithubLink item.source.source ]
+                    ]
+                    |> Just
+
+            else
+                Nothing
+
+        toggle =
+            SearchMsg (Search.ShowDetails item.source.name)
+
+        isOpen =
+            Just item.source.name == show
     in
-    dl [ class "dl-horizontal" ]
-        [ dt [] [ text "Name" ]
-        , dd [] [ withEmpty asText (Just (encodeHtml item.source.name)) ]
-        , dt [] [ text "Description" ]
-        , dd [] [ withEmpty asText item.source.description ]
-        , dt [] [ text "Default value" ]
-        , dd [] [ withEmpty (wrapped asPreCode) item.source.default ]
-        , dt [] [ text "Type" ]
-        , dd [] [ withEmpty asPre item.source.type_ ]
-        , dt [] [ text "Example value" ]
-        , dd [] [ withEmpty (wrapped asPreCode) item.source.example ]
-        , dt [] [ text "Declared in" ]
-        , dd [] [ withEmpty asGithubLink item.source.source ]
+    li
+        [ class "option"
+        , classList [ ( "opened", isOpen ) ]
+        , Search.elementId item.source.name
         ]
+    <|
+        List.filterMap identity
+            [ Just <|
+                Html.button
+                    [ class "search-result-button"
+                    , onClick toggle
+                    ]
+                    [ text item.source.name ]
+            , Maybe.map showHtml item.source.description
+            , Just <|
+                Search.showMoreButton toggle isOpen
+            , showDetails
+            ]
 
 
 
@@ -298,9 +263,10 @@ makeRequest :
     -> String
     -> Int
     -> Int
+    -> Maybe String
     -> Search.Sort
     -> Cmd Msg
-makeRequest options channel query from size sort =
+makeRequest options channel query from size _ sort =
     Search.makeRequest
         (Search.makeRequestBody
             (String.trim query)
@@ -309,6 +275,8 @@ makeRequest options channel query from size sort =
             sort
             "option"
             "option_name"
+            []
+            []
             [ ( "option_name", 6.0 )
             , ( "option_name_query", 3.0 )
             , ( "option_description", 1.0 )
@@ -316,6 +284,7 @@ makeRequest options channel query from size sort =
         )
         ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
         decodeResultItemSource
+        decodeResultAggregations
         options
         Search.QueryResponse
         (Just "query-options")
@@ -335,3 +304,15 @@ decodeResultItemSource =
         (Json.Decode.field "option_default" (Json.Decode.nullable Json.Decode.string))
         (Json.Decode.field "option_example" (Json.Decode.nullable Json.Decode.string))
         (Json.Decode.field "option_source" (Json.Decode.nullable Json.Decode.string))
+
+
+decodeResultAggregations : Json.Decode.Decoder ResultAggregations
+decodeResultAggregations =
+    Json.Decode.map ResultAggregations
+        (Json.Decode.field "all" decodeResultAggregationsAll)
+
+
+decodeResultAggregationsAll : Json.Decode.Decoder AggregationsAll
+decodeResultAggregationsAll =
+    Json.Decode.map AggregationsAll
+        (Json.Decode.field "doc_count" Json.Decode.int)
