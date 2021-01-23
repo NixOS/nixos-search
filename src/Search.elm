@@ -276,6 +276,7 @@ update toRoute navKey msg model =
             { model
                 | channel = channel
                 , show = Nothing
+                , buckets = Nothing
                 , from = 0
             }
                 |> ensureLoading
