@@ -540,9 +540,10 @@ viewResultItem channel showNixOSDetails show item =
         ([]
             |> List.append longerPackageDetails
             |> List.append
-                [ Html.button
+                [ Html.a
                     [ class "search-result-button"
                     , onClick toggle
+                    , href ""
                     ]
                     [ text item.source.attr_name ]
                 , div [] [ text <| Maybe.withDefault "" item.source.description ]

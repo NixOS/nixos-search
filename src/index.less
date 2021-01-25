@@ -292,7 +292,7 @@ header .navbar.navbar-static-top {
 
           & > ul > li.header {
             font-weight: bold;
-            padding: 3px 10px;
+            padding: 3px 10px 0 10px;
           }
 
           & > ul > li.header:before,
@@ -339,15 +339,15 @@ header .navbar.navbar-static-top {
             display: block;
           }
 
-          // Description
-          & > :nth-child(2) {
-            font-size: 1.2em;
-            margin-bottom: 0.5em;
-            text-align: left;
-          }
-
           &.package {
             .search-result-item();
+
+            // Description
+            & > :nth-child(2) {
+              font-size: 1.2em;
+              margin-bottom: 0.5em;
+              text-align: left;
+            }
 
             // short details of a pacakge
             & > :nth-child(3) {
@@ -418,10 +418,15 @@ header .navbar.navbar-static-top {
           }
 
           &.option {
-            .search-result-item();
+            margin: 0;
+            padding: 0;
+
+            & > :nth-child(1) {
+              padding: 0.5em 0;
+            }
 
             // short details of a pacakge
-            & > :nth-child(4) {
+            & > :nth-child(2) {
               margin: 2em 0 1em 1em;
               display: grid;
               grid-template-columns: 100px 1fr;

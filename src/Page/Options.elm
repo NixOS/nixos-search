@@ -152,13 +152,12 @@ viewResultItem :
 viewResultItem channel _ show item =
     let
         showHtml value =
-            div [] <|
-                case Html.Parser.run value of
-                    Ok nodes ->
-                        Html.Parser.Util.toVirtualDom nodes
+            case Html.Parser.run value of
+                Ok nodes ->
+                    Html.Parser.Util.toVirtualDom nodes
 
-                    Err _ ->
-                        []
+                Err _ ->
+                    []
 
         default =
             "Not given"
@@ -213,7 +212,15 @@ viewResultItem channel _ show item =
         showDetails =
             if Just item.source.name == show then
                 div [ Html.Attributes.map SearchMsg Search.trapClick ]
-                    [ div [] [ text "Default value" ]
+                    [ div [] [ text "Name" ]
+                    , div [] [ wrapped asPreCode item.source.name ]
+                    , div [] [ text "Description" ]
+                    , div [] <|
+                        (item.source.description
+                            |> Maybe.map showHtml
+                            |> Maybe.withDefault []
+                        )
+                    , div [] [ text "Default value" ]
                     , div [] [ withEmpty (wrapped asPreCode) item.source.default ]
                     , div [] [ text "Type" ]
                     , div [] [ withEmpty asPre item.source.type_ ]
@@ -241,14 +248,12 @@ viewResultItem channel _ show item =
     <|
         List.filterMap identity
             [ Just <|
-                Html.button
+                Html.a
                     [ class "search-result-button"
                     , onClick toggle
+                    , href ""
                     ]
                     [ text item.source.name ]
-            , Maybe.map showHtml item.source.description
-            , Just <|
-                Search.showMoreButton toggle isOpen
             , showDetails
             ]
 

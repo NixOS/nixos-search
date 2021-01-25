@@ -82,6 +82,7 @@ type alias Model a b =
     , size : Int
     , buckets : Maybe String
     , sort : Sort
+    , showSort : Bool
     , showNixOSDetails : Bool
     }
 
@@ -174,6 +175,7 @@ init args maybeModel =
                 |> Maybe.withDefault ""
                 |> fromSortId
                 |> Maybe.withDefault Relevance
+      , showSort = False
       , showNixOSDetails = False
       }
         |> ensureLoading
@@ -213,6 +215,7 @@ elementId str =
 type Msg a b
     = NoOp
     | SortChange Sort
+    | ToggleSort
     | BucketsChange String
     | ChannelChange String
     | QueryInput String
@@ -257,6 +260,13 @@ update toRoute navKey msg model =
             }
                 |> ensureLoading
                 |> pushUrl toRoute navKey
+
+        ToggleSort ->
+            ( { model
+                | showSort = not model.showSort
+              }
+            , Cmd.none
+            )
 
         BucketsChange buckets ->
             { model
@@ -577,7 +587,16 @@ view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg =
                 RemoteData.Failure _ ->
                     "failure"
     in
-    div [ class <| "search-page " ++ resultStatus ]
+    div
+        (List.append
+            [ class <| "search-page " ++ resultStatus ]
+            (if model.showSort then
+                [ onClick (outMsg ToggleSort) ]
+
+             else
+                []
+            )
+        )
         [ h1 [] title
         , viewSearchInput outMsg categoryName model.channel model.query
         , viewResult outMsg toRoute categoryName model viewSuccess viewBuckets
@@ -781,7 +800,7 @@ viewResults model result viewSuccess toRoute outMsg categoryName =
             String.fromInt result.hits.total.value
     in
     [ div []
-        [ Html.map outMsg <| viewSortSelection toRoute model
+        [ Html.map outMsg <| viewSortSelection model
         , div []
             (List.append
                 [ text "Showing results "
@@ -812,20 +831,27 @@ viewResults model result viewSuccess toRoute outMsg categoryName =
 
 
 viewSortSelection :
-    Route.SearchRoute
-    -> Model a b
+    Model a b
     -> Html (Msg a b)
-viewSortSelection toRoute model =
-    div [ class "btn-group dropdown pull-right" ]
+viewSortSelection model =
+    div
+        [ class "btn-group dropdown pull-right"
+        , classList
+            [ ( "open", model.showSort )
+            ]
+        , onClickStop NoOp
+        ]
         [ button
             [ class "btn"
-            , attribute "data-toggle" "dropdown"
+            , onClick ToggleSort
             ]
             [ span [] [ text <| "Sort: " ]
             , span [ class "selected" ] [ text <| toSortTitle model.sort ]
             , span [ class "caret" ] []
             ]
-        , ul [ class "dropdown-menu pull-right" ]
+        , ul
+            [ class "pull-right dropdown-menu"
+            ]
             (List.append
                 [ li [ class " header" ] [ text "Sort options" ]
                 , li [ class "divider" ] []
