@@ -418,8 +418,12 @@ header .navbar.navbar-static-top {
           }
 
           &.option {
-            margin-bottom: 1em;
-            padding-bottom: 1em;
+            margin: 0;
+            padding: 0;
+
+            & > :nth-child(1) {
+              padding: 0.5em 0;
+            }
 
             // short details of a pacakge
             & > :nth-child(2) {
