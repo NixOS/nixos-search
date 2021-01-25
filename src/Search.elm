@@ -587,7 +587,16 @@ view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg =
                 RemoteData.Failure _ ->
                     "failure"
     in
-    div [ class <| "search-page " ++ resultStatus ]
+    div
+        (List.append
+            [ class <| "search-page " ++ resultStatus ]
+            (if model.showSort then
+                [ onClick (outMsg ToggleSort) ]
+
+             else
+                []
+            )
+        )
         [ h1 [] title
         , viewSearchInput outMsg categoryName model.channel model.query
         , viewResult outMsg toRoute categoryName model viewSuccess viewBuckets
@@ -830,6 +839,7 @@ viewSortSelection model =
         , classList
             [ ( "open", model.showSort )
             ]
+        , onClickStop NoOp
         ]
         [ button
             [ class "btn"
