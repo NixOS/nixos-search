@@ -306,20 +306,10 @@ view model =
                 [ div [ class "navbar navbar-static-top" ]
                     [ div [ class "navbar-inner" ]
                         [ div [ class "container" ]
-                            [ button
-                                [ type_ "button"
-                                , class "btn btn-navbar"
-                                , attribute "data-toggle" "collapse"
-                                , attribute "data-target" ".nav-collapse"
-                                ]
-                                [ span [ class "icon-bar" ] []
-                                , span [ class "icon-bar" ] []
-                                , span [ class "icon-bar" ] []
-                                ]
-                            , a [ class "brand", href "https://nixos.org" ]
+                            [ a [ class "brand", href "https://nixos.org" ]
                                 [ img [ src "https://nixos.org/logo/nix-wiki.png", class "logo" ] []
                                 ]
-                            , div [ class "nav-collapse collapse" ]
+                            , div [ ]
                                 [ ul [ class "nav pull-left" ]
                                     (viewNavigation model.route)
                                 ]
