@@ -213,7 +213,9 @@ viewResultItem channel _ show item =
         showDetails =
             if Just item.source.name == show then
                 div [ Html.Attributes.map SearchMsg Search.trapClick ]
-                    [ div [] [ text "Default value" ]
+                    [ div [] [ text "Name" ]
+                    , div [] [ wrapped asPreCode item.source.name ]
+                    , div [] [ text "Default value" ]
                     , div [] [ withEmpty (wrapped asPreCode) item.source.default ]
                     , div [] [ text "Type" ]
                     , div [] [ withEmpty asPre item.source.type_ ]
@@ -241,9 +243,10 @@ viewResultItem channel _ show item =
     <|
         List.filterMap identity
             [ Just <|
-                Html.button
+                Html.a
                     [ class "search-result-button"
                     , onClick toggle
+                    , href ""
                     ]
                     [ text item.source.name ]
             , Maybe.map showHtml item.source.description
