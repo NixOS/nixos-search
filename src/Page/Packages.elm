@@ -382,10 +382,17 @@ viewResultItem channel showNixOSDetails show item =
                             |> (\x -> [ li [] (List.append [ text "Licenses: " ] x) ])
                         )
                     |> List.append
+                        (if item.source.pversion == "" then
+                            []
+
+                         else
+                            [ text "Version: "
+                            , li [] [ text item.source.pversion ]
+                            ]
+                        )
+                    |> List.append
                         [ text "Name: "
                         , li [] [ text item.source.pname ]
-                        , text "Version: "
-                        , li [] [ text item.source.pversion ]
                         ]
                 )
 
