@@ -1017,7 +1017,7 @@ searchFields query fields =
               )
             ]
         )
-        (queryVariations (String.words query))
+        (queryVariations (String.words (String.toLower query)))
 
 
 makeRequestBody :
