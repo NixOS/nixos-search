@@ -282,6 +282,8 @@ makeRequest options channel query from size _ sort =
             "option_name"
             []
             []
+            []
+            "option_name"
             [ ( "option_name", 6.0 )
             , ( "option_name_query", 3.0 )
             , ( "option_description", 1.0 )
