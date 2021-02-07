@@ -1095,9 +1095,15 @@ makeRequestBody query from sizeRaw sort type_ sortField otherSortFields bucketsF
                       , Json.Encode.object
                             [ ( "filter"
                               , Json.Encode.list Json.Encode.object
-                                    [ filterByType type_
-                                    , filterByBuckets
-                                    ]
+                                    (List.append
+                                        [ filterByType type_ ]
+                                        (if List.isEmpty filterByBuckets then
+                                            []
+
+                                         else
+                                            [ filterByBuckets ]
+                                        )
+                                    )
                               )
                             , ( "must"
                               , Json.Encode.list Json.Encode.object
