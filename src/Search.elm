@@ -486,25 +486,43 @@ toAggregations bucketsFields =
 toSortQuery :
     Sort
     -> String
+    -> List String
     -> ( String, Json.Encode.Value )
-toSortQuery sort field =
+toSortQuery sort field fields =
     ( "sort"
     , case sort of
         AlphabeticallyAsc ->
             Json.Encode.list Json.Encode.object
-                [ [ ( field, Json.Encode.string "asc" )
-                  ]
+                [ List.append
+                    [ ( field, Json.Encode.string "asc" )
+                    ]
+                    (List.map
+                        (\x -> ( x, Json.Encode.string "asc" ))
+                        fields
+                    )
                 ]
 
         AlphabeticallyDesc ->
             Json.Encode.list Json.Encode.object
-                [ [ ( field, Json.Encode.string "desc" )
-                  ]
+                [ List.append
+                    [ ( field, Json.Encode.string "desc" )
+                    ]
+                    (List.map
+                        (\x -> ( x, Json.Encode.string "desc" ))
+                        fields
+                    )
                 ]
 
         Relevance ->
-            Json.Encode.list Json.Encode.string
-                [ "_score"
+            Json.Encode.list Json.Encode.object
+                [ List.append
+                    [ ( "_score", Json.Encode.string "desc" )
+                    , ( field, Json.Encode.string "desc" )
+                    ]
+                    (List.map
+                        (\x -> ( x, Json.Encode.string "desc" ))
+                        fields
+                    )
                 ]
     )
 
@@ -970,9 +988,10 @@ filterByType type_ =
 
 searchFields :
     String
+    -> String
     -> List ( String, Float )
     -> List (List ( String, Json.Encode.Value ))
-searchFields query fields =
+searchFields query mainField fields =
     let
         queryVariations q =
             case ( List.head q, List.tail q ) of
@@ -1002,22 +1021,39 @@ searchFields query fields =
                 |> List.map (\( field, score ) -> [ field ++ "^" ++ String.fromFloat score, field ++ ".edge^" ++ String.fromFloat score ])
                 |> List.concat
     in
-    List.map
-        (\queryWords ->
-            [ ( "multi_match"
-              , Json.Encode.object
-                    [ ( "type", Json.Encode.string "cross_fields" )
-                    , ( "query", Json.Encode.string <| String.join " " queryWords )
-                    , ( "analyzer", Json.Encode.string "whitespace" )
-                    , ( "auto_generate_synonyms_phrase_query", Json.Encode.bool False )
-                    , ( "operator", Json.Encode.string "and" )
-                    , ( "_name", Json.Encode.string <| "multi_match_" ++ String.join "_" queryWords )
-                    , ( "fields", Json.Encode.list Json.Encode.string allFields )
-                    ]
-              )
-            ]
+    List.append
+        (List.map
+            (\queryWords ->
+                [ ( "multi_match"
+                  , Json.Encode.object
+                        [ ( "type", Json.Encode.string "cross_fields" )
+                        , ( "query", Json.Encode.string <| String.join " " queryWords )
+                        , ( "analyzer", Json.Encode.string "whitespace" )
+                        , ( "auto_generate_synonyms_phrase_query", Json.Encode.bool False )
+                        , ( "operator", Json.Encode.string "and" )
+                        , ( "_name", Json.Encode.string <| "multi_match_" ++ String.join "_" queryWords )
+                        , ( "fields", Json.Encode.list Json.Encode.string allFields )
+                        ]
+                  )
+                ]
+            )
+            (queryVariations (String.words (String.toLower query)))
         )
-        (queryVariations (String.words (String.toLower query)))
+        (List.map
+            (\queryWord ->
+                [ ( "wildcard"
+                  , Json.Encode.object
+                        [ ( mainField
+                          , Json.Encode.object
+                                [ ( "value", Json.Encode.string ("*" ++ queryWord ++ "*") )
+                                ]
+                          )
+                        ]
+                  )
+                ]
+            )
+            (String.words (String.toLower query))
+        )
 
 
 makeRequestBody :
@@ -1028,10 +1064,12 @@ makeRequestBody :
     -> String
     -> String
     -> List String
+    -> List String
     -> List ( String, Json.Encode.Value )
+    -> String
     -> List ( String, Float )
     -> Http.Body
-makeRequestBody query from sizeRaw sort type_ sortField bucketsFields filterByBuckets fields =
+makeRequestBody query from sizeRaw sort type_ sortField otherSortFields bucketsFields filterByBuckets mainField fields =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -1043,49 +1081,43 @@ makeRequestBody query from sizeRaw sort type_ sortField bucketsFields filterByBu
     in
     Http.jsonBody
         (Json.Encode.object
-            (List.append
-                [ ( "from"
-                  , Json.Encode.int from
-                  )
-                , ( "size"
-                  , Json.Encode.int size
-                  )
-                , toSortQuery sort sortField
-                , toAggregations bucketsFields
-                , ( "query"
-                  , Json.Encode.object
-                        [ ( "bool"
-                          , Json.Encode.object
-                                [ ( "filter"
-                                  , Json.Encode.list Json.Encode.object
-                                        [ filterByType type_ ]
-                                  )
-                                , ( "must"
-                                  , Json.Encode.list Json.Encode.object
-                                        [ [ ( "dis_max"
-                                            , Json.Encode.object
-                                                [ ( "tie_breaker", Json.Encode.float 0.7 )
-                                                , ( "queries"
-                                                  , Json.Encode.list Json.Encode.object
-                                                        (searchFields query fields)
-                                                  )
-                                                ]
-                                            )
-                                          ]
-                                        ]
-                                  )
-                                ]
-                          )
-                        ]
-                  )
-                ]
-                (if List.isEmpty filterByBuckets then
-                    []
-
-                 else
-                    [ ( "post_filter", Json.Encode.object filterByBuckets ) ]
-                )
-            )
+            [ ( "from"
+              , Json.Encode.int from
+              )
+            , ( "size"
+              , Json.Encode.int size
+              )
+            , toSortQuery sort sortField otherSortFields
+            , toAggregations bucketsFields
+            , ( "query"
+              , Json.Encode.object
+                    [ ( "bool"
+                      , Json.Encode.object
+                            [ ( "filter"
+                              , Json.Encode.list Json.Encode.object
+                                    [ filterByType type_
+                                    , filterByBuckets
+                                    ]
+                              )
+                            , ( "must"
+                              , Json.Encode.list Json.Encode.object
+                                    [ [ ( "dis_max"
+                                        , Json.Encode.object
+                                            [ ( "tie_breaker", Json.Encode.float 0.7 )
+                                            , ( "queries"
+                                              , Json.Encode.list Json.Encode.object
+                                                    (searchFields query mainField fields)
+                                              )
+                                            ]
+                                        )
+                                      ]
+                                    ]
+                              )
+                            ]
+                      )
+                    ]
+              )
+            ]
         )
 
 

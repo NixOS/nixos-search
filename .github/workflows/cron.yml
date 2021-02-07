@@ -2,6 +2,7 @@ name: "Hourly import channel to Elasticsearch"
 
 on:
 
+  pull_request:
   schedule:
   - cron: '0 * * * *'
 
@@ -72,9 +73,9 @@ jobs:
         path: ./eval-cache
         key: eval-cache-${{ env.EVAL_ID }}
 
-    - name: Installing NixFlakes
+    - name: Installing nixFlakes (and jq)
       run: |
-        nix-env -iA nixpkgs.nixFlakes
+        nix-env -iA nixpkgs.nixFlakes nixpkgs.jq
         echo 'experimental-features = nix-command flakes' | sudo tee -a /etc/nix/nix.conf
         nix --version
         cat /etc/nix/nix.conf
@@ -88,4 +89,11 @@ jobs:
       run: |
         cp ./eval-cache/builds.json ./eval-${{ env.EVAL_ID }}.json
         ./result/bin/import-channel --es-url ${{ secrets.ELASTICSEARCH_URL }} --channel ${{ matrix.channel }} -vvv
+      if: github.repository == 'NixOS/nixos-search'
+
+    - name: Warmup ${{ matrix.channel }} channel
+      run: |
+        curl ${{ secrets.ELASTICSEARCH_URL }}/latest-$(cat VERSION)-${{ matrix.channel }}/_search | jq '.took'
+        curl ${{ secrets.ELASTICSEARCH_URL }}/latest-$(cat VERSION)-${{ matrix.channel }}/_search | jq '.took'
+        curl ${{ secrets.ELASTICSEARCH_URL }}/latest-$(cat VERSION)-${{ matrix.channel }}/_search | jq '.took'
       if: github.repository == 'NixOS/nixos-search'
