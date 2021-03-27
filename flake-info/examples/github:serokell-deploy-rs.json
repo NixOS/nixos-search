@@ -1,0 +1,50 @@
+[
+  {
+    "flake_description": "A Simple multi-profile Nix-flake deploy tool.",
+    "flake_resolved": {
+      "type": "github",
+      "owner": "serokell",
+      "repo": "deploy-rs"
+    },
+    "flake_name": "deploy-rs",
+    "flake_source": {
+      "type": "git",
+      "url": "github:serokell/deploy-rs"
+    },
+    "package_attr_name": "deploy-rs",
+    "package_pname": "deploy-rs-0.1.0",
+    "package_pversion": "0.1.0",
+    "package_platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "i686-linux",
+      "aarch64-linux"
+    ],
+    "package_outputs": [
+      "out"
+    ],
+    "package_license": {}
+  },
+  {
+    "flake_description": "A Simple multi-profile Nix-flake deploy tool.",
+    "flake_resolved": {
+      "type": "github",
+      "owner": "serokell",
+      "repo": "deploy-rs"
+    },
+    "flake_name": "deploy-rs",
+    "flake_source": {
+      "type": "git",
+      "url": "github:serokell/deploy-rs"
+    },
+    "app_bin": "/nix/store/lw8c19dkrr8a766qbl89nsfwbgwhp43q-deploy-rs-0.1.0/bin/deploy",
+    "app_attr_name": "deploy-rs",
+    "app_platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "i686-linux",
+      "aarch64-linux"
+    ],
+    "app_type": "app"
+  }
+]

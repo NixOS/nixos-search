@@ -1,0 +1,46 @@
+[
+  {
+    "flake_description": "LiterateFStar",
+    "flake_resolved": {
+      "type": "github",
+      "owner": "W95Psp",
+      "repo": "LiterateFStar"
+    },
+    "flake_name": "LiterateFStar",
+    "flake_source": {
+      "type": "git",
+      "url": "github:W95Psp/LiterateFStar"
+    },
+    "package_attr_name": "fstar",
+    "package_pname": "fstar-c671957efe8769b8fc421cd3e9da47b3fa57d510",
+    "package_pversion": "",
+    "package_platforms": [
+      "x86_64-linux",
+      "x86_64-darwin"
+    ],
+    "package_outputs": [
+      "out"
+    ],
+    "package_license": {}
+  },
+  {
+    "flake_description": "LiterateFStar",
+    "flake_resolved": {
+      "type": "github",
+      "owner": "W95Psp",
+      "repo": "LiterateFStar"
+    },
+    "flake_name": "LiterateFStar",
+    "flake_source": {
+      "type": "git",
+      "url": "github:W95Psp/LiterateFStar"
+    },
+    "app_bin": "/nix/store/mwwn9wzbgkdfac4ijj176akbkr9bxk5k-build",
+    "app_attr_name": "build",
+    "app_platforms": [
+      "x86_64-linux",
+      "x86_64-darwin"
+    ],
+    "app_type": "derivation"
+  }
+]

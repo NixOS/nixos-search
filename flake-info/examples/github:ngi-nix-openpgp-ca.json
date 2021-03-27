@@ -1,0 +1,50 @@
+[
+  {
+    "flake_description": "OpenPGP CA is a tool for managing OpenPGP keys within an organization.",
+    "flake_resolved": {
+      "type": "github",
+      "owner": "ngi-nix",
+      "repo": "openpgp-ca"
+    },
+    "flake_name": "openpgp-ca",
+    "flake_source": {
+      "type": "git",
+      "url": "github:ngi-nix/openpgp-ca"
+    },
+    "package_attr_name": "openpgp-ca",
+    "package_pname": "openpgp-ca",
+    "package_pversion": "20200717",
+    "package_platforms": [
+      "x86_64-linux",
+      "x86_64-darwin"
+    ],
+    "package_outputs": [
+      "out"
+    ],
+    "package_description": "OpenPGP CA is a tool for managing OpenPGP keys within an organization.",
+    "package_license": {}
+  },
+  {
+    "flake_description": "OpenPGP CA is a tool for managing OpenPGP keys within an organization.",
+    "flake_resolved": {
+      "type": "github",
+      "owner": "ngi-nix",
+      "repo": "openpgp-ca"
+    },
+    "flake_name": "openpgp-ca",
+    "flake_source": {
+      "type": "git",
+      "url": "github:ngi-nix/openpgp-ca"
+    },
+    "package_attr_name": "openpgp-ca-docker",
+    "package_pname": "docker-image-openpgp-ca.tar.gz",
+    "package_pversion": "",
+    "package_platforms": [
+      "x86_64-linux"
+    ],
+    "package_outputs": [
+      "out"
+    ],
+    "package_license": {}
+  }
+]
