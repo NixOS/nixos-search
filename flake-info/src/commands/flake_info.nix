@@ -2,35 +2,18 @@
 let
   resolved = builtins.getFlake (toString flake);
 
-  nixpkgs = (import <nixpkgs> {});
-  lib = nixpkgs.lib;
-
-
+  lib = (import <nixpkgs> {}).lib;
   default = drv: attr: default: if drv ? ${attr} then drv.${attr} else default;
 
   # filter = lib.filterAttrs (key: _ : key == "apps" || key == "packages");
 
   withSystem = fn: lib.mapAttrs (system: drvs: (fn system drvs));
-  isValid = d:
-    let
-      r = builtins.tryEval (lib.isDerivation d && ! (lib.attrByPath [ "meta" "broken" ] false d) && builtins.seq d.name true && d ? outputs);
-    in
-      r.success && r.value;
-  all = pkgs:
-    let
-      validPkgs = lib.filterAttrs (k: v: isValid v) pkgs;
-    in
-      validPkgs;
-
-
-
   readPackages = system: drvs: lib.mapAttrsToList (
     attribute_name: drv: (
-      # if isValid drv then
       {
         attribute_name = attribute_name;
         system = system;
-        name = drv.name;
+        name = drv.meta.name;
         # TODO consider using `builtins.parseDrvName`
         version = default drv "version" "";
         outputs = drv.outputs;
@@ -38,10 +21,9 @@ let
       }
       // lib.optionalAttrs (drv ? meta && drv.meta ? description) { inherit (drv.meta) description; }
       // lib.optionalAttrs (drv ? meta && drv.meta ? license) { inherit (drv.meta) license; }
-
-      # else {}
     )
-  ) (all drvs);
+  ) drvs;
+
   readApps = system: apps: lib.mapAttrsToList (
     attribute_name: app: (
       {
@@ -54,65 +36,10 @@ let
     )
   ) apps;
 
-  readOptions = modules: isNixOS: let
 
-    declarations = module: (
-      lib.evalModules {
-        modules = (if lib.isList module then module else [ module ]) ++ [
-          (
-            { ... }: {
-              _module.check = false;
-              nixpkgs.system = lib.mkDefault "x86_64-linux";
-              nixpkgs.config.allowBroken = true;
-            }
-          )
-        ];
-      }
-    ).options;
+  packages' = lib.lists.flatten (lib.attrValues (withSystem readPackages (default resolved "packages" {})));
 
-    cleanUpOption = module: opt:
-      let
-        applyOnAttr = n: f: lib.optionalAttrs (lib.hasAttr n opt) { ${n} = f opt.${n}; };
-        # mkDeclaration = decl: rec {
-        #   path = stripModulePathPrefixes decl;
-        #   url = mkModuleUrl path;
-        #   channelPath = "${channelName}/${path}";
-        # };
-        # Replace functions by the string <function>
-        substFunction = x:
-          if builtins.isAttrs x then
-            lib.mapAttrs (name: substFunction) x
-          else if builtins.isList x then
-            map substFunction x
-          else if lib.isFunction x then
-            "<function>"
-          else
-            x;
-      in
-       opt
-        // applyOnAttr "example" substFunction
-        // applyOnAttr "default" substFunction
-        // applyOnAttr "type" substFunction
-        // lib.optionalAttrs (!isNixOS) { flake = [ flake module ]; };
-    # // applyOnAttr "declarations" (map mkDeclaration)
-
-
-    options = lib.mapAttrs (
-      attr: module: let
-        list = lib.optionAttrSetToDocList (declarations module);
-      in
-        map (cleanUpOption attr) (lib.filter (x: !x.internal) list )
-    ) modules;
-  in
-    lib.flatten (builtins.attrValues options);
-
-
-  read = reader: set: lib.flatten (lib.attrValues (withSystem reader set));
-
-  legacyPackages' = read readPackages (default resolved "legacyPackages" {});
-  packages' = read readPackages (default resolved "packages" {});
-
-  apps' = read readApps (default resolved "apps" {});
+  apps' = lib.lists.flatten (lib.attrValues (withSystem readApps (default resolved "apps" {})));
 
 
   collectSystems = lib.lists.foldr (
@@ -133,14 +60,7 @@ let
 in
 
 rec {
-  legacyPackages = lib.attrValues (collectSystems legacyPackages');
   packages = lib.attrValues (collectSystems packages');
   apps = lib.attrValues (collectSystems apps');
-  options = readOptions (default resolved "nixosModules" {}) false;
-  nixos-options = readOptions (
-    {
-      "nixos" = import "${builtins.fetchTarball { url = flake; }}/nixos/modules/module-list.nix";
-    }
-  ) true;
-  all = packages ++ apps ++ options;
+  all = packages ++ apps;
 }

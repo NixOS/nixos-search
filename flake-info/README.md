@@ -5,105 +5,48 @@ A tool that fetches packages and apps from nix flakes.
 ## Usage
 
 ```
-flake-info 0.3.0
+flake-info 0.2.0
 Extracts various information from a given flake
 
 USAGE:
-    flake-info [FLAGS] [OPTIONS] [extra]... <SUBCOMMAND>
+    flake-info [FLAGS] [OPTIONS] [extra]...
 
 FLAGS:
-        --push       Push to Elasticsearch (Configure using FI_ES_* environment variables)
-    -h, --help       Prints help information
-        --json       Print ElasticSeach Compatible JSON output
-    -V, --version    Prints version information
+        --elastic-recreate-index    Elasticsearch instance url
+        --push                      Push to Elasticsearch (Configure using FI_ES_* environment variables)
+        --gc                        Whether to use a temporary store or not. Located at /tmp/flake-info-store
+    -h, --help                      Prints help information
+        --temp-store                Whether to use a temporary store or not. Located at /tmp/flake-info-store
+    -V, --version                   Prints version information
 
 OPTIONS:
-        --elastic-exists <elastic-exists>
-            How to react to existing indices [env: FI_ES_EXISTS_STRATEGY=]  [default: abort]  [possible values: Abort,
-            Ignore, Recreate]
-        --elastic-index-name <elastic-index-name>            Name of the index to store results to [env: FI_ES_INDEX=]
-    -p, --elastic-pw <elastic-pw>
-            Elasticsearch password (unimplemented) [env: FI_ES_PASSWORD=]
+        --elastic-index-name <elastic-index-name>
+            Name of the index to store results to [env: FI_ES_INDEX=]  [default: flakes_index]
 
-        --elastic-schema-version <elastic-schema-version>
-            Which schema version to associate with the operation [env: FI_ES_VERSION=]
-
+    -p, --elastic-pw <elastic-pw>                    Elasticsearch password (unimplemented) [env: FI_ES_PASSWORD=]
         --elastic-url <elastic-url>
             Elasticsearch instance url [env: FI_ES_URL=]  [default: http://localhost:9200]
 
-    -u, --elastic-user <elastic-user>                        Elasticsearch username (unimplemented) [env: FI_ES_USER=]
-    -k, --kind <kind>
-            Kind of data to extract (packages|options|apps|all) [default: all]
-
+    -u, --elastic-user <elastic-user>                Elasticsearch username (unimplemented) [env: FI_ES_USER=]
+    -f, --flake <flake>                              Flake identifier passed to nix to gather information about
+    -k, --kind <kind>                                Kind of data to extract (packages|options|apps|all) [default: all]
+    -t, --targets <targets>                          Points to a JSON file containing info targets
 
 ARGS:
     <extra>...    Extra arguments that are passed to nix as it
-
-SUBCOMMANDS:
-    flake
-    group
-    help       Prints this message or the help of the given subcommand(s)
-    nixpkgs
 ```
 
-### flake
+### flake/targets
 
-Flakes can be imported using the flake subcommand
+Use either of these options to define which flake you want to query.
 
-```
-USAGE:
-    flake-info flake [FLAGS] <flake>
-
-FLAGS:
-        --gc            Whether to gc the store after info or not
-    -h, --help          Prints help information
-        --temp-store    Whether to use a temporary store or not. Located at /tmp/flake-info-store
-    -V, --version       Prints version information
-
-ARGS:
-    <flake>    Flake identifier passed to nix to gather information about
-```
-
-The `<flake>` argument should contain a valid reference to a flake. It accepts all formats nix accepts:
+`--flake | -f`: takes a flake reference in the same format as nix
 
 > use git+<url> to checkout a git repository at <url>
 > use /local/absolute/path or ./relative/path to load a local source
 > use gitlab:<user>/<repo>/github:<user>/<repo> to shortcut gitlab or github repositories
 
-
-Optionally, analyzing can be done in a temporary store enabled by the `--temp-store` option.
-
-#### Example
-
-```
-$ flake-info flake github:ngi-nix/offen
-```
-
-### nixpkgs
-
-nixpkgs currently have to be imported in a different way. This is what the `nixpkgs` subcommand exists for.
-
-It takes any valid git reference to the upstream [`nixos/nixpkgs`](https://github.com/iixos/nixpkgs/) repo as an argument and produces a complete output.
-
-**This operation may take a short while and produces lots of output**
-
-#### Example
-
-```
-$ flake-info nixpkgs nixos-21.05
-```
-
-### group
-
-to perform a bulk import grouping multiple inputs under the same name/index use the group command.
-
-It expects a json file as input that contains references to flakes or nixpkgs. If those resources are on github or gitlab they can be extended with more meta information including pinning the commit hash/ref.
-
-The second argument is the group name that is used to provide the index name.
-
-#### Example
-
-An example `targets.json` file can look like the following
+`--targets | -t`: refers to a json file that contains a list of queried repositories:
 
 ```json
 [
@@ -125,42 +68,7 @@ An example `targets.json` file can look like the following
 ]
 ```
 
-```
-$ flake-info group ./targets.json small-group
-```
-
-### Elasticsearch
-
-A number of flags is dedicated to pushing to elasticsearch.
-
-```
-    --elastic-exists <elastic-exists>
-        How to react to existing indices [env: FI_ES_EXISTS_STRATEGY=]  [default: abort]
-                                            [possible values: Abort, Ignore, Recreate]
-    --elastic-index-name <elastic-index-name>
-        Name of the index to store results to [env: FI_ES_INDEX=]
--p, --elastic-pw <elastic-pw>
-        Elasticsearch password (unimplemented) [env: FI_ES_PASSWORD=]
-
-    --elastic-schema-version <elastic-schema-version>
-        Which schema version to associate with the operation [env: FI_ES_VERSION=]
-
-    --elastic-url <elastic-url>
-        Elasticsearch instance url [env: FI_ES_URL=]  [default: http://localhost:9200]
-
--u, --elastic-user <elastic-user>                        Elasticsearch username (unimplemented) [env: FI_ES_USER=]
-```
-
-
-#### Example
-
-```
-$ flake-info --push \
-             --elastic-url http://localhost:5555 \
-             --elastic-index-name latest-21-21.05
-             --elastic-schema-version 21 group ./examples/ngi-nix.json ngi-nix
-```
-
+Currently `github` and `gitlab` can be used as source repos with hash. the `hash` attribute defines the fetched git reference (branch, commit, tag, etc).
 
 ## Installation
 

@@ -1,15 +1,15 @@
-use anyhow::{Context, Result};
-use log::warn;
 use std::{
     path::{self, PathBuf},
     process::Command,
 };
 use thiserror::Error;
+use anyhow::{Context, Result};
+use log::warn;
 
 #[derive(Error, Debug)]
 pub enum GCError {
     #[error("Unexpected exit status: {0}")]
-    ExitStatusError(String),
+    ExitStatusError(String)
 }
 
 pub fn run_gc() -> Result<()> {
@@ -20,11 +20,7 @@ pub fn run_gc() -> Result<()> {
     }
 
     let mut command = Command::new("nix-store");
-    command.args(&[
-        "--gc",
-        "--store",
-        temp_store_path.canonicalize()?.to_str().unwrap(),
-    ]);
+    command.args(&["--gc", "--store", temp_store_path.canonicalize()?.to_str().unwrap()]);
 
     dbg!(&command);
 
@@ -42,6 +38,7 @@ pub fn run_gc() -> Result<()> {
 
     Ok(())
 }
+
 
 #[cfg(test)]
 mod tests {

@@ -1,16 +1,11 @@
 use anyhow::{Context, Result};
 use commands::run_gc;
-use flake_info::data::import::{Kind, NixOption};
-use flake_info::data::{self, Export, Nixpkgs, Source};
-use flake_info::elastic::{ElasticsearchError, ExistsStrategy};
+use flake_info::data::{self, Export, Source};
 use flake_info::{commands, elastic};
-use log::{debug, error, info, warn};
-use sha2::Digest;
+use log::{error, info, warn};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::ptr::hash;
 use structopt::{clap::ArgGroup, StructOpt};
-use thiserror::Error;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -19,8 +14,24 @@ use thiserror::Error;
     group = ArgGroup::with_name("sources").required(false)
 )]
 struct Args {
-    #[structopt(subcommand)]
-    command: Command,
+    #[structopt(
+        short,
+        long,
+        help = "Flake identifier passed to nix to gather information about",
+        group = "sources"
+    )]
+    flake: Option<String>,
+
+    #[structopt(help="Extra arguments that are passed to nix as it")]
+    extra: Vec<String>,
+
+    #[structopt(
+        short,
+        long,
+        help = "Points to a JSON file containing info targets",
+        group = "sources"
+    )]
+    targets: Option<PathBuf>,
 
     #[structopt(
         short,
@@ -28,60 +39,28 @@ struct Args {
         help = "Kind of data to extract (packages|options|apps|all)",
         default_value
     )]
-    kind: data::import::Kind,
+    kind: data::Kind,
+
+    #[structopt(
+        long,
+        help = "Whether to use a temporary store or not. Located at /tmp/flake-info-store"
+    )]
+    temp_store: bool,
+
+    #[structopt(
+        long,
+        help = "Whether to use a temporary store or not. Located at /tmp/flake-info-store"
+    )]
+    gc: bool,
 
     #[structopt(flatten)]
     elastic: ElasticOpts,
-
-    #[structopt(help = "Extra arguments that are passed to nix as it")]
-    extra: Vec<String>,
 }
-
-#[derive(StructOpt, Debug)]
-enum Command {
-    Flake {
-        #[structopt(help = "Flake identifier passed to nix to gather information about")]
-        flake: String,
-
-        #[structopt(
-            long,
-            help = "Whether to use a temporary store or not. Located at /tmp/flake-info-store"
-        )]
-        temp_store: bool,
-
-        #[structopt(long, help = "Whether to gc the store after info or not")]
-        gc: bool,
-    },
-    Nixpkgs {
-        #[structopt(help = "Nixpkgs channel to import")]
-        channel: String,
-    },
-    Group {
-        #[structopt(help = "Points to a JSON file containing info targets")]
-        targets: PathBuf,
-
-        name: String,
-
-        #[structopt(
-            long,
-            help = "Whether to use a temporary store or not. Located at /tmp/flake-info-store"
-        )]
-        temp_store: bool,
-
-        #[structopt(long, help = "Whether to gc the store after info or not")]
-        gc: bool,
-    },
-}
-
 #[derive(StructOpt, Debug)]
 struct ElasticOpts {
-    #[structopt(long = "json", help = "Print ElasticSeach Compatible JSON output")]
-    json: bool,
-
     #[structopt(
         long = "push",
-        help = "Push to Elasticsearch (Configure using FI_ES_* environment variables)",
-        requires("elastic-schema-version")
+        help = "Push to Elasticsearch (Configure using FI_ES_* environment variables)"
     )]
     enable: bool,
 
@@ -113,33 +92,12 @@ struct ElasticOpts {
         long,
         help = "Name of the index to store results to",
         env = "FI_ES_INDEX",
-        required_if("enable", "true")
+        default_value = "flakes_index"
     )]
-    elastic_index_name: Option<String>,
+    elastic_index_name: String,
 
-    #[structopt(
-        long,
-        help = "How to react to existing indices",
-        possible_values = &ExistsStrategy::variants(),
-        case_insensitive = true,
-        default_value = "abort",
-        env = "FI_ES_EXISTS_STRATEGY"
-    )]
-    elastic_exists: ExistsStrategy,
-
-    #[structopt(
-        long,
-        help = "Which schema version to associate with the operation",
-        env = "FI_ES_VERSION"
-    )]
-    elastic_schema_version: Option<usize>,
-
-    #[structopt(
-        long,
-        help = "Whether to disable `latest` alias creation",
-        env = "FI_ES_VERSION"
-    )]
-    no_alias: bool,
+    #[structopt(long, help = "Elasticsearch instance url")]
+    elastic_recreate_index: bool,
 }
 
 #[tokio::main]
@@ -148,206 +106,63 @@ async fn main() -> Result<()> {
 
     let args = Args::from_args();
 
-    let command_result = run_command(args.command, args.kind, &args.extra).await;
-
-    if let Err(error) = command_result {
-        match error {
-            FlakeInfoError::Flake(ref e)
-            | FlakeInfoError::Nixpkgs(ref e)
-            | FlakeInfoError::IO(ref e) => {
-                error!("{}", e);
-            }
-            FlakeInfoError::Group(ref el) => {
-                el.iter().for_each(|e| error!("{}", e));
-            }
-        }
-
-        return Err(error.into());
-    }
-
-    let (successes, ident) = command_result.unwrap();
-
-    if args.elastic.enable {
-        push_to_elastic(&args.elastic, &successes, ident).await?;
-    }
-
-    if args.elastic.json {
-        println!("{}", serde_json::to_string(&successes)?);
-    }
-    Ok(())
-}
-
-#[derive(Debug, Error)]
-enum FlakeInfoError {
-    #[error("Getting flake info caused an error: {0}")]
-    Flake(anyhow::Error),
-    #[error("Getting nixpkgs info caused an error: {0}")]
-    Nixpkgs(anyhow::Error),
-    #[error("Getting group info caused one or more errors: {0:?}")]
-    Group(Vec<anyhow::Error>),
-
-    #[error("Couldn't perform IO: {0}")]
-    IO(anyhow::Error),
-}
-
-async fn run_command(
-    command: Command,
-    kind: Kind,
-    extra: &[String],
-) -> Result<(Vec<Export>, (String, String, String)), FlakeInfoError> {
-    match command {
-        Command::Flake {
-            flake,
-            temp_store,
-            gc,
-        } => {
-            let source = Source::Git { url: flake };
-            let exports = flake_info::process_flake(&source, &kind, temp_store, extra)
-                .map_err(FlakeInfoError::Flake)?;
-
-            let info = flake_info::get_flake_info(source.to_flake_ref(), temp_store, extra)
-                .map_err(FlakeInfoError::Flake)?;
-
-            let ident = ("flake".to_owned(), info.name, info.revision);
-
-            Ok((exports, ident))
-        }
-        Command::Nixpkgs { channel } => {
-            let nixpkgs = Source::nixpkgs(channel)
-                .await
-                .map_err(FlakeInfoError::Nixpkgs)?;
-            let ident = (
-                "nixpkgs".to_owned(),
-                nixpkgs.channel.clone(),
-                nixpkgs.git_ref.clone(),
-            );
-            let exports = flake_info::process_nixpkgs(&Source::Nixpkgs(nixpkgs), &kind)
-                .map_err(FlakeInfoError::Nixpkgs)?;
-
-            Ok((exports, ident))
-        }
-        Command::Group {
-            targets,
-            temp_store,
-            gc,
-            name,
-        } => {
-            let sources = Source::read_sources_file(&targets).map_err(FlakeInfoError::IO)?;
-            let (exports_and_hashes, errors) = sources
-                .iter()
-                .map(|source| match source {
-                    Source::Nixpkgs(nixpkgs) => flake_info::process_nixpkgs(source, &kind)
-                        .map(|result| (result, nixpkgs.git_ref.to_owned())),
-                    _ => flake_info::process_flake(source, &kind, temp_store, &extra).and_then(
-                        |result| {
-                            flake_info::get_flake_info(source.to_flake_ref(), temp_store, extra)
-                                .map(|info| (result, info.revision))
-                        },
-                    ),
-                })
-                .partition::<Vec<_>, _>(Result::is_ok);
-
-            let (exports, hashes) = exports_and_hashes
-                .into_iter()
-                .map(|result| result.unwrap())
-                .fold(
-                    (Vec::new(), Vec::new()),
-                    |(mut exports, mut hashes), (export, hash)| {
-                        exports.extend(export);
-                        hashes.push(hash);
-                        (exports, hashes)
-                    },
-                );
-
-            let errors = errors
-                .into_iter()
-                .map(Result::unwrap_err)
-                .collect::<Vec<_>>();
-
-            if !errors.is_empty() {
-                return Err(FlakeInfoError::Group(errors));
-            }
-
-            let hash = {
-                let mut sha = sha2::Sha256::new();
-                for hash in hashes {
-                    sha.update(hash);
-                }
-                format!("{:08x}", sha.finalize())
-            };
-
-            let ident = ("group".to_owned(), name, hash);
-
-            Ok((exports, ident))
-        }
-    }
-}
-
-async fn push_to_elastic(
-    elastic: &ElasticOpts,
-    successes: &[Export],
-    ident: (String, String, String),
-) -> Result<()> {
-    let (index, alias) = elastic
-        .elastic_index_name
-        .to_owned()
-        .map(|ident| {
-            (
-                format!("{}-{}", elastic.elastic_schema_version.unwrap(), ident),
-                None,
-            )
-        })
-        .or_else(|| {
-            let (kind, name, hash) = ident;
-            let ident = format!(
-                "{}-{}-{}-{}",
-                kind,
-                elastic.elastic_schema_version.unwrap(),
-                &name,
-                hash
-            );
-            let alias = format!(
-                "latest-{}-{}-{}",
-                elastic.elastic_schema_version.unwrap(),
-                kind,
-                &name
-            );
-
-            warn!("Using automatic index identifier: {}", ident);
-            Some((ident, Some(alias)))
-        })
-        .unwrap();
-
-    info!("Pushing to elastic");
-    let es = elastic::Elasticsearch::new(elastic.elastic_url.as_str())?;
-    let config = elastic::Config {
-        index: &index,
-        exists_strategy: elastic.elastic_exists,
+    let sources = match (&args.flake, &args.targets) {
+        (Some(ref url), None) => vec![data::Source::Git {
+            url: url.to_owned(),
+        }],
+        (None, Some(targets)) => Source::read_sources_file(targets)?,
+        (None, None) => {
+            warn!("No inputs specified!");
+            vec![]
+        },
+        _ => unreachable!(),
     };
 
-    // catch error variant if abort strategy was triggered
-    let ensure = es.ensure_index(&config).await;
-    if let Err(ElasticsearchError::IndexExistsError(_)) = ensure {
-        // abort on abort
-        return Ok(());
-    } else {
-        // throw error if present
-        ensure?;
+    let (successes, errors) = sources
+        .iter()
+        .map(|source| flake_info::process_flake(source, &args.kind, args.temp_store, &args.extra))
+        .partition::<Vec<_>, _>(Result::is_ok);
+
+    let successes = successes
+        .into_iter()
+        .map(Result::unwrap)
+        .flatten()
+        .collect::<Vec<_>>();
+    let errors = errors
+        .into_iter()
+        .map(Result::unwrap_err)
+        .collect::<Vec<_>>();
+
+    println!("{}", serde_json::to_string(&successes)?);
+
+    if !errors.is_empty() {
+        error!("{} errors occured:", errors.len());
+        errors.iter().for_each(|e| {
+            error!("{}", e);
+        })
     }
 
+    if args.gc {
+        run_gc()?
+    }
 
-    es.push_exports(&config, successes)
-        .await
-        .with_context(|| "Failed to push results to elasticsearch".to_string())?;
+    if args.elastic.enable {
+        info!("Pushing to elastic");
+        let es = elastic::Elasticsearch::new(args.elastic.elastic_url.as_str())?;
+        let config = elastic::Config {
+            index: args.elastic.elastic_index_name.as_str(),
+            recreate: args.elastic.elastic_recreate_index,
+        };
 
-    if let Some(alias) = alias {
-        if !elastic.no_alias {
-            es.write_alias(&config, &index, &alias)
-                .await
-                .with_context(|| "Failed to create alias".to_string())?;
-        } else {
-            warn!("Creating alias disabled")
-        }
+        es.ensure_index(&config).await.with_context(|| {
+            format!(
+                "Failed to ensure elastic seach index {} exists",
+                args.elastic.elastic_index_name
+            )
+        })?;
+        es.push_exports(&config, &successes)
+            .await
+            .with_context(|| "Failed to push results to elasticsearch".to_string())?
     }
 
     Ok(())

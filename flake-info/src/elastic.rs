@@ -1,10 +1,11 @@
-use std::{borrow::Borrow, collections::HashMap};
-
-use clap::arg_enum;
 pub use elasticsearch::http::transport::Transport;
-use elasticsearch::{BulkOperation, Elasticsearch as Client, http::response::{self, Response}, indices::{IndicesCreateParts, IndicesDeleteAliasParts, IndicesDeleteParts, IndicesExistsParts, IndicesGetAliasParts, IndicesPutAliasParts, IndicesUpdateAliasesParts}};
+use elasticsearch::{
+    http::response,
+    indices::{IndicesCreateParts, IndicesDeleteParts, IndicesExistsParts},
+    BulkOperation, Elasticsearch as Client,
+};
 use lazy_static::lazy_static;
-use log::{info, warn};
+use log::warn;
 use serde_json::{json, Value};
 use thiserror::Error;
 
@@ -13,7 +14,6 @@ lazy_static! {
     static ref MAPPING: Value = json!({
         "mappings": {
             "properties": {
-                "type": {"type": "keyword"},
                 "flake_name": {
                     "type": "text",
                     "analyzer": "english",
@@ -62,35 +62,9 @@ lazy_static! {
                 },
                 "package_attr_name": {
                     "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "package_attr_name_reverse": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "package_attr_name_query": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "package_attr_name_query_reverse": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "package_attr_set": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "package_attr_set_reverse": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
                 },
                 "package_pname": {
                     "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "package_pname_reverse": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
                 },
                 "package_pversion": {
                     "type": "keyword"
@@ -98,114 +72,27 @@ lazy_static! {
                 "package_platforms": {
                     "type": "keyword"
                 },
-                "package_system": {
-                    "type": "keyword"
-                },
-                "package_position": {
-                    "type": "text"
-                },
                 "package_outputs": {
                     "type": "keyword"
                 },
                 "package_description": {
                     "type": "text",
                     "analyzer": "english",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "package_description_reverse": {
-                    "type": "text",
-                    "analyzer": "english",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "package_longDescription": {
-                    "type": "text",
-                    "analyzer": "english",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "package_longDescription_reverse": {
-                    "type": "text",
-                    "analyzer": "english",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
                 },
                 "package_license": {
                     "type": "nested",
                     "properties": {
-                        "fullName": {"type": "text"},
-                        "url": {"type": "text"}},
-                },
-                "package_license_set": {"type": "keyword"},
-                "package_maintainers": {
-                    "type": "nested",
-                    "properties": {
-                        "name": {"type": "text"},
-                        "email": {"type": "text"},
-                        "github": {"type": "text"},
-                    },
-                },
-                "package_maintainers_set": {"type": "keyword"},
-                "package_homepage": {
-                    "type": "keyword"
-                },
-                // Options fields
-                "option_name": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "option_name_reverse": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "option_name": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "option_name_reverse": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "option_description": {
-                    "type": "text",
-                    "analyzer": "english",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "option_description_reverse": {
-                    "type": "text",
-                    "analyzer": "english",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "option_type": {"type": "keyword"},
-                "option_default": {"type": "text"},
-                "option_example": {"type": "text"},
-                "option_source": {"type": "keyword"},
-            }
-        },
-        "settings": {
-            "analysis": {
-                "normalizer": {
-                    "lowercase": {"type": "custom", "char_filter": [], "filter": ["lowercase"]}
-                },
-                "tokenizer": {
-                    "edge": {
-                        "type": "edge_ngram",
-                        "min_gram": 2,
-                        "max_gram": 50,
-                        "token_chars": [
-                            "letter",
-                            "digit",
-                            // Either we use them or we would need to strip them before that.
-                            "punctuation",
-                            "symbol",
-                        ],
-                    },
-                },
-                "analyzer": {
-                    "edge": {"tokenizer": "edge", "filter": ["lowercase"]},
-                    "lowercase": {
-                        "type": "custom",
-                        "tokenizer": "keyword",
-                        "filter": ["lowercase"],
-                    },
-                },
+                        "license_long": {
+                            "type": "text"
+                        },
+                        "license": {
+                            "type": "keyword"
+                        },
+                        "license_url": {
+                            "type": "keyword"
+                        }
+                    }
+                }
             }
         }
     });
@@ -236,9 +123,6 @@ pub enum ElasticsearchError {
 
     #[error("Failed to serialize exported data: {0}")]
     SerializationError(#[from] serde_json::Error),
-
-    #[error("An index with the name \"{0}\" already exists and the (default) stategy is abort")]
-    IndexExistsError(String),
 }
 
 impl Elasticsearch {
@@ -260,60 +144,36 @@ impl Elasticsearch {
     ) -> Result<(), ElasticsearchError> {
         // let exports: Result<Vec<Value>, serde_json::Error> = exports.iter().map(serde_json::to_value).collect();
         // let exports = exports?;
-        let bodies = exports.chunks(10_000).map(|chunk| {
-            chunk
-                .iter()
-                .map(|e| BulkOperation::from(BulkOperation::index(e)))
-        });
+        let body = exports
+            .iter()
+            .map(|e| BulkOperation::from(BulkOperation::index(e)))
+            .collect();
 
-        for body in bodies {
-            let response = self
-                .client
-                .bulk(elasticsearch::BulkParts::Index(config.index))
-                .body(body.collect())
-                .send()
-                .await
-                .map_err(ElasticsearchError::PushError)?;
+        let response = self
+            .client
+            .bulk(elasticsearch::BulkParts::Index(config.index))
+            .body(body)
+            .send()
+            .await
+            .map_err(ElasticsearchError::PushError)?;
 
-            dbg!(response)
-                .exception()
-                .await
-                .map_err(ElasticsearchError::ClientError)?
-                .map(ElasticsearchError::PushResponseError)
-                .map_or(Ok(()), Err)?;
-        }
-
-        Ok(())
+        dbg!(response)
+            .exception()
+            .await
+            .map_err(ElasticsearchError::ClientError)?
+            .map(ElasticsearchError::PushResponseError)
+            .map_or(Ok(()), Err)
     }
 
     pub async fn ensure_index(&self, config: &Config<'_>) -> Result<(), ElasticsearchError> {
         let exists = self.check_index(config).await?;
 
         if exists {
-            match config.exists_strategy {
-                ExistsStrategy::Abort => {
-                    warn!(
-                        "Index \"{}\" already exists, strategy is: Abort push",
-                        config.index
-                    );
-                    return Err(ElasticsearchError::IndexExistsError(
-                        config.index.to_owned(),
-                    ));
-                }
-                ExistsStrategy::Ignore => {
-                    warn!(
-                        "Index \"{}\" already exists, strategy is: Ignore, proceed push",
-                        config.index
-                    );
-                    return Ok(());
-                }
-                ExistsStrategy::Recreate => {
-                    warn!(
-                        "Index \"{}\" already exists, strategy is: Recreate index",
-                        config.index
-                    );
-                    self.clear_index(config).await?;
-                }
+            if config.recreate {
+                self.clear_index(config).await?;
+            } else {
+                warn!("Index \"{}\" exists, not recreating", config.index);
+                return Ok(());
             }
         }
 
@@ -364,63 +224,11 @@ impl Elasticsearch {
             .map(ElasticsearchError::PushResponseError)
             .map_or(Ok(()), Err)
     }
-
-    pub async fn write_alias(
-        &self,
-        config: &Config<'_>,
-        index: &str,
-        alias: &str,
-    ) -> Result<(), ElasticsearchError> {
-        // delete old alias
-        info!("Try deletig old alias");
-        let response = self.client.indices().get_alias(IndicesGetAliasParts::Name(&[alias])).send().await
-        .map_err(ElasticsearchError::InitIndexError)?;
-        let indices = response.json::<HashMap<String,Value>>().await.map_err(ElasticsearchError::InitIndexError)?.keys().cloned().collect::<Vec<String>>();
-        
-        self
-            .client
-            .indices()
-            .delete_alias(IndicesDeleteAliasParts::IndexName(&indices.iter().map(AsRef::as_ref).collect::<Vec<_>>(), &[alias]))
-            .send()
-            .await
-            .map_err(ElasticsearchError::InitIndexError)?;
-
-        // put new alias
-        info!("Putting new alias");
-        let response = self
-            .client
-            .indices()
-            .put_alias(IndicesPutAliasParts::IndexName(&[index], alias))
-            .send()
-            .await
-            .map_err(ElasticsearchError::InitIndexError)?;
-
-        dbg!(response)
-            .exception()
-            .await
-            .map_err(ElasticsearchError::ClientError)?
-            .map(ElasticsearchError::PushResponseError)
-            .map_or(Ok(()), Err)
-    }
 }
 
-#[derive(Debug)]
 pub struct Config<'a> {
     pub index: &'a str,
-    pub exists_strategy: ExistsStrategy,
-}
-
-arg_enum! {
-    /// Different strategies to deal with eisting indices
-    /// Abort: cancel push, return with an error
-    /// Ignore: Reuse existing index, appending new data
-    /// Recreate: Drop the existing index and start with a new one
-    #[derive(Debug, Clone, Copy)]
-    pub enum ExistsStrategy {
-        Abort,
-        Ignore,
-        Recreate,
-    }
+    pub recreate: bool,
 }
 
 #[cfg(test)]
@@ -429,7 +237,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        data::{self, import::Kind},
+        data::{self, Kind},
         process_flake,
     };
 
@@ -438,7 +246,7 @@ mod tests {
         let es = Elasticsearch::new("http://localhost:9200").unwrap();
         let config = &Config {
             index: "flakes_index",
-            exists_strategy: ExistsStrategy::Ignore,
+            recreate: false,
         };
         es.ensure_index(config).await?;
         es.clear_index(config).await?;
@@ -454,7 +262,7 @@ mod tests {
         let es = Elasticsearch::new("http://localhost:9200").unwrap();
         let config = &Config {
             index: "flakes_index",
-            exists_strategy: ExistsStrategy::Recreate,
+            recreate: true,
         };
 
         es.ensure_index(config).await?;
@@ -480,35 +288,11 @@ mod tests {
         let es = Elasticsearch::new("http://localhost:9200").unwrap();
         let config = &Config {
             index: "flakes_index",
-            exists_strategy: ExistsStrategy::Recreate,
+            recreate: true,
         };
 
         es.ensure_index(config).await?;
         es.push_exports(config, &exports).await?;
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_abort_if_index_exists() -> Result<(), Box<dyn std::error::Error>> {
-        let es = Elasticsearch::new("http://localhost:9200").unwrap();
-        let config = &Config {
-            index: "flakes_index",
-            exists_strategy: ExistsStrategy::Abort,
-        };
-
-        es.ensure_index(&Config {
-            exists_strategy: ExistsStrategy::Ignore,
-            ..*config
-        })
-        .await?;
-
-        assert!(matches!(
-            es.ensure_index(config).await,
-            Err(ElasticsearchError::IndexExistsError(_)),
-        ));
-
-        es.clear_index(config).await?;
 
         Ok(())
     }
