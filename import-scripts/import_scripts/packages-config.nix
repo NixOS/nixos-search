@@ -1,6 +1,6 @@
 {
   # Ensures no aliases are in the results.
-  allowAliases = true;
+  allowAliases = false;
 
   # Also list unfree packages
   allowUnfree = true;
