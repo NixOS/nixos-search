@@ -32,7 +32,8 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 INDEX_SCHEMA_VERSION = os.environ.get("INDEX_SCHEMA_VERSION", 0)
 DIFF_OUTPUT = ["json", "stats"]
 CHANNELS = {
-    "unstable": "nixos/unstable/nixos-21.05pre",
+    "unstable": "nixos/unstable/nixos-21.11pre",
+    "20.05": "nixos/20.05/nixos-20.05beta",
     "20.03": "nixos/20.03/nixos-20.03.",
     "20.09": "nixos/20.09/nixos-20.09.",
 }
