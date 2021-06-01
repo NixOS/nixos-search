@@ -371,8 +371,8 @@ createUrl toRoute model =
 
 type Channel
     = Unstable
-    | Release_20_03
     | Release_20_09
+    | Release_21_05
 
 
 {-| TODO: we should consider using more dynamic approach here
@@ -388,7 +388,7 @@ type alias ChannelDetails =
 
 defaultChannel : String
 defaultChannel =
-    "20.09"
+    "21.05"
 
 
 channelDetails : Channel -> ChannelDetails
@@ -397,8 +397,8 @@ channelDetails channel =
         Unstable ->
             ChannelDetails "unstable" "unstable" "nixos/trunk-combined" "nixos-unstable"
 
-        Release_20_03 ->
-            ChannelDetails "20.03" "20.03" "nixos/release-20.03" "nixos-20.03"
+        Release_21_05 ->
+            ChannelDetails "21.05" "21.05" "nixos/release-21.05" "nixos-21.05"
 
         Release_20_09 ->
             ChannelDetails "20.09" "20.09" "nixos/release-20.09" "nixos-20.09"
@@ -410,8 +410,8 @@ channelFromId channel_id =
         "unstable" ->
             Just Unstable
 
-        "20.03" ->
-            Just Release_20_03
+        "21.05" ->
+            Just Release_21_05
 
         "20.09" ->
             Just Release_20_09
@@ -428,7 +428,7 @@ channelDetailsFromId channel_id =
 
 channels : List String
 channels =
-    [ "20.03"
+    [ "21.05"
     , "20.09"
     , "unstable"
     ]
