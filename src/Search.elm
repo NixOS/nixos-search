@@ -397,11 +397,11 @@ channelDetails channel =
         Unstable ->
             ChannelDetails "unstable" "unstable" "nixos/trunk-combined" "nixos-unstable"
 
-        Release_21_05 ->
-            ChannelDetails "21.05" "21.05" "nixos/release-21.05" "nixos-21.05"
-
         Release_20_09 ->
             ChannelDetails "20.09" "20.09" "nixos/release-20.09" "nixos-20.09"
+
+        Release_21_05 ->
+            ChannelDetails "21.05" "21.05" "nixos/release-21.05" "nixos-21.05"
 
 
 channelFromId : String -> Maybe Channel
@@ -410,11 +410,11 @@ channelFromId channel_id =
         "unstable" ->
             Just Unstable
 
-        "21.05" ->
-            Just Release_21_05
-
         "20.09" ->
             Just Release_20_09
+
+        "21.05" ->
+            Just Release_21_05
 
         _ ->
             Nothing
@@ -428,8 +428,8 @@ channelDetailsFromId channel_id =
 
 channels : List String
 channels =
-    [ "21.05"
-    , "20.09"
+    [ "20.09"
+    , "21.05"
     , "unstable"
     ]
 
