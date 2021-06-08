@@ -8,12 +8,21 @@ let
   # filter = lib.filterAttrs (key: _ : key == "apps" || key == "packages");
 
   withSystem = fn: lib.mapAttrs (system: drvs: (fn system drvs));
-  readPackages = system: drvs: lib.mapAttrsToList (
+      isValid = d:
+        let r = builtins.tryEval (lib.isDerivation d && ! (lib.attrByPath [ "meta" "broken" ] false d) && builtins.seq d.name true &&  d ? outputs);
+        in r.success && r.value;
+  all = pkgs:
+    let
+      validPkgs = lib.filterAttrs (k: v: isValid v) pkgs;
+    in validPkgs;
+
+  readPackages = system: drvs:  lib.mapAttrsToList (
     attribute_name: drv: (
+      # if isValid drv then
       {
         attribute_name = attribute_name;
         system = system;
-        name = drv.meta.name;
+        name = drv.name;
         # TODO consider using `builtins.parseDrvName`
         version = default drv "version" "";
         outputs = drv.outputs;
@@ -21,8 +30,10 @@ let
       }
       // lib.optionalAttrs (drv ? meta && drv.meta ? description) { inherit (drv.meta) description; }
       // lib.optionalAttrs (drv ? meta && drv.meta ? license) { inherit (drv.meta) license; }
+
+      # else {}
     )
-  ) drvs;
+  ) (all drvs);
 
   readApps = system: apps: lib.mapAttrsToList (
     attribute_name: app: (
@@ -37,9 +48,12 @@ let
   ) apps;
 
 
-  packages' = lib.lists.flatten (lib.attrValues (withSystem readPackages (default resolved "packages" {})));
+  read = reader: set: lib.lists.flatten (lib.attrValues (withSystem reader set));
 
-  apps' = lib.lists.flatten (lib.attrValues (withSystem readApps (default resolved "apps" {})));
+  legacyPackages' = read readPackages (default resolved "legacyPackages" {});
+  packages' = read readPackages (default resolved "packages" {});
+
+  apps' = read readApps (default resolved "apps" {});
 
 
   collectSystems = lib.lists.foldr (
@@ -60,6 +74,7 @@ let
 in
 
 rec {
+  legacyPackages = lib.attrValues (collectSystems legacyPackages');
   packages = lib.attrValues (collectSystems packages');
   apps = lib.attrValues (collectSystems apps');
   all = packages ++ apps;
