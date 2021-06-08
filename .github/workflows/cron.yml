@@ -16,8 +16,8 @@ jobs:
       matrix:
         channel:
           - unstable
+          - 21.05
           - 20.09
-          - 20.03
 
     env:
       AWS_DEFAULT_REGION: us-east-1
