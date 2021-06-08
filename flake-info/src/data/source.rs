@@ -25,6 +25,9 @@ pub enum Source {
     Git {
         url: String,
     },
+    Nixpkgs {
+        channel: String,
+    },
 }
 
 impl Source {
@@ -56,6 +59,8 @@ impl Source {
                     .map_or("".to_string(), |f| format!("?ref={}", f))
             ),
             Source::Git { url } => url.to_string(),
+            Source::Nixpkgs { channel } => format!("https://github.com/NixOS/nixpkgs/archive/{}.tar.gz", channel),
+
         }
     }
 

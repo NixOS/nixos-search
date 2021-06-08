@@ -120,7 +120,10 @@ async fn main() -> Result<()> {
 
     let (successes, errors) = sources
         .iter()
-        .map(|source| flake_info::process_flake(source, &args.kind, args.temp_store, &args.extra))
+        .map(|source| match source {
+            nixpkgs @ Source::Nixpkgs { .. } => flake_info::process_nixpkgs(nixpkgs),
+            _ => flake_info::process_flake(source, &args.kind, args.temp_store, &args.extra)
+        })
         .partition::<Vec<_>, _>(Result::is_ok);
 
     let successes = successes

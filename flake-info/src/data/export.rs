@@ -3,10 +3,14 @@ use serde::Serialize;
 use super::{Derivation, Flake};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct Export {
-    #[serde(flatten)]
-    pub flake: Flake,
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum Export {
+    Flake {
+        #[serde(flatten)]
+        flake: Flake,
 
-    #[serde(flatten)]
-    pub item: Derivation,
+        #[serde(flatten)]
+        item: Derivation,
+    },
+    Nixpkgs(Derivation)
 }

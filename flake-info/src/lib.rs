@@ -17,11 +17,17 @@ pub fn process_flake(source: &Source, kind: &data::Kind, temp_store: bool, extra
 
     let exports: Vec<Export> = packages
         .into_iter()
-        .map(|p| Export {
+        .map(|p| Export::Flake {
             flake: info.clone(),
             item: p,
         })
         .collect();
 
+    Ok(exports)
+}
+
+pub fn process_nixpkgs(nixpkgs: &Source) -> Result<Vec<Export>, anyhow::Error> {
+    let drvs = commands::get_nixpkgs_info(nixpkgs.to_flake_ref())?;
+    let exports = drvs.into_iter().map(Export::Nixpkgs).collect();
     Ok(exports)
 }
