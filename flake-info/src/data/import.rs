@@ -3,8 +3,8 @@ use std::marker::PhantomData;
 use std::{path::PathBuf, str::FromStr};
 
 use serde::de::{self, MapAccess, Visitor};
-use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
 
 use super::system::System;
@@ -84,7 +84,52 @@ pub enum Derivation {
         )]
         flake: Option<(String, String)>,
     },
+    Nixpkgs {
+        #[serde(rename(serialize = "package_attr_name"))]
+        attribute_name: String,
+
+        #[serde(rename(serialize = "package_pname"))]
+        pname: String,
+
+        #[serde(rename(serialize = "package_pversion"))]
+        version: String,
+
+        #[serde(flatten)]
+        meta: Meta,
+    },
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Meta {
+    #[serde(rename(deserialize = "outputsToInstall", serialize = "package_outputs"))]
+    outputs: Vec<String>,
+
+    // licenses: Option<OneOrMany<License>>,
+    // maintainer: Option<OneOrMany<String>>,
+    homepage: Option<String>,
+    // platforms: Vec<System>,
+    position: Option<String>,
+    description: Option<String>,
+    long_description: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum OneOrMany<T> {
+    #[serde(serialize_with = "list")]
+    One(T),
+    Many(Vec<T>),
+}
+
+pub fn list<T, S>(item: &T, s: S) -> Result<S::Ok, S::Error>
+where
+    T: Serialize,
+    S: Serializer,
+{
+    s.collect_seq(vec![item].iter())
+}
+
+
 
 /// The type of derivation (placed in packages.<system> or apps.<system>)
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -221,10 +266,68 @@ where
     deserializer.deserialize_any(StringOrStruct(PhantomData))
 }
 
-// fn optional_string_or_struct<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
-// where
-//     T: Deserialize<'de> + FromStr<Err = anyhow::Error>,
-//     D: Deserializer<'de>,
-// {
-//     string_or_struct(deserializer).map(Some).map_err(Some(None))
-// }
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use serde_json::Value;
+
+    use super::*;
+
+    #[test]
+    fn test_nixpkgs_deserialize() {
+        let json = r#"
+        {
+            "nixpkgs-unstable._0verkill": {
+              "name": "0verkill-unstable-2011-01-13",
+              "pname": "0verkill-unstable",
+              "version": "2011-01-13",
+              "system": "x86_64-darwin",
+              "meta": {
+                "available": true,
+                "broken": false,
+                "description": "ASCII-ART bloody 2D action deathmatch-like game",
+                "homepage": "https://github.com/hackndev/0verkill",
+                "insecure": false,
+                "license": {
+                  "fullName": "GNU General Public License v2.0 only",
+                  "shortName": "gpl2Only",
+                  "spdxId": "GPL-2.0-only",
+                  "url": "https://spdx.org/licenses/GPL-2.0-only.html"
+                },
+                "maintainers": [
+                  {
+                    "email": "torres.anderson.85@protonmail.com",
+                    "github": "AndersonTorres",
+                    "githubId": 5954806,
+                    "name": "Anderson Torres"
+                  }
+                ],
+                "name": "0verkill-unstable-2011-01-13",
+                "outputsToInstall": [
+                  "out"
+                ],
+                "platforms": [
+                  "powerpc64-linux",
+                  "powerpc64le-linux",
+                  "riscv32-linux",
+                  "riscv64-linux"
+                ],
+                "position": "/nix/store/97lxf2n6zip41j5flbv6b0928mxv9za8-nixpkgs-unstable-21.03pre268853.d9c6f13e13f/nixpkgs-unstable/pkgs/games/0verkill/default.nix:34",
+                "unfree": false,
+                "unsupported": false
+              }
+            }
+        }
+        "#;
+
+        let mut map: serde_json::Map<String, Value> = serde_json::from_str(json).unwrap();
+        let result: Result<Vec<Derivation>, _> = map.iter_mut().map(|(attribute_name, value)| {
+            let mut drv = value.as_object_mut().unwrap().clone();
+            drv.insert("attribute_name".into(), Value::String(attribute_name.to_string()));
+            serde_json::from_value(Value::Object(drv))
+        }).collect();
+
+        result.unwrap();
+    }
+}
