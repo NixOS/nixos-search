@@ -21,6 +21,7 @@
       packages = system:
         {
           import_scripts = mkPackage ./import-scripts system;
+          flake_info = mkPackage ./flake-info system;
           frontend = mkPackage ./. system;
         };
     in

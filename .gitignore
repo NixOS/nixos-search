@@ -5,6 +5,7 @@
 .vscode
 .node_repl_history
 .npm
+target/
 build/Release
 dist
 elm-stuff/
