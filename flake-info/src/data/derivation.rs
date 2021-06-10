@@ -4,6 +4,7 @@ use std::{path::PathBuf, str::FromStr};
 
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
+use serde_json::Value;
 use thiserror::Error;
 
 use super::system::System;
@@ -51,6 +52,37 @@ pub enum Derivation {
         platforms: Vec<System>,
         #[serde(rename(deserialize = "type"), skip_serializing_if = "Option::is_none")]
         app_type: Option<String>,
+    },
+    Option {
+        #[serde(rename(serialize = "option_source"))]
+        declarations: Vec<String>,
+        #[serde(
+            rename(serialize = "option_description"),
+            skip_serializing_if = "Option::is_none"
+        )]
+        description: Option<String>,
+        #[serde(rename(serialize = "option_name"))]
+        name: String,
+        #[serde(
+            rename(serialize = "option_type"),
+            skip_serializing_if = "Option::is_none"
+        )]
+        option_type: Option<String>,
+        #[serde(
+            rename(serialize = "option_default"),
+            skip_serializing_if = "Option::is_none"
+        )]
+        default: Option<Value>,
+        #[serde(
+            rename(serialize = "option_example"),
+            skip_serializing_if = "Option::is_none"
+        )]
+        example: Option<String>,
+        #[serde(
+            rename(serialize = "option_flake"),
+            skip_serializing_if = "Option::is_none"
+        )]
+        flake: Option<(String, String)>,
     },
 }
 
@@ -112,7 +144,7 @@ impl Default for Kind {
 pub enum License {
     None {
         #[serde(skip_serializing)]
-        license: ()
+        license: (),
     },
     Simple {
         license: String,
@@ -129,7 +161,7 @@ pub enum License {
 
 impl Default for License {
     fn default() -> Self {
-        License::None {license: ( )}
+        License::None { license: () }
     }
 }
 
