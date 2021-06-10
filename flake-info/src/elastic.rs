@@ -92,7 +92,25 @@ lazy_static! {
                             "type": "keyword"
                         }
                     }
-                }
+                },
+                // Options fields
+                "option_name": {
+                    "type": "keyword",
+                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+                },
+                "option_name_reverse": {
+                    "type": "keyword",
+                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+                },
+                "option_description": {
+                    "type": "text",
+                    "analyzer": "english",
+                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+                },
+                "option_type": {"type": "keyword"},
+                "option_default": {"type": "text"},
+                "option_example": {"type": "text"},
+                "option_source": {"type": "keyword"},
             }
         }
     });
