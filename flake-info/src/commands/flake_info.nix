@@ -2,21 +2,29 @@
 let
   resolved = builtins.getFlake (toString flake);
 
-  lib = (import <nixpkgs> {}).lib;
+  nixpkgs = (import <nixpkgs> {});
+  lib = nixpkgs.lib;
+
+
   default = drv: attr: default: if drv ? ${attr} then drv.${attr} else default;
 
   # filter = lib.filterAttrs (key: _ : key == "apps" || key == "packages");
 
   withSystem = fn: lib.mapAttrs (system: drvs: (fn system drvs));
-      isValid = d:
-        let r = builtins.tryEval (lib.isDerivation d && ! (lib.attrByPath [ "meta" "broken" ] false d) && builtins.seq d.name true &&  d ? outputs);
-        in r.success && r.value;
+  isValid = d:
+    let
+      r = builtins.tryEval (lib.isDerivation d && ! (lib.attrByPath [ "meta" "broken" ] false d) && builtins.seq d.name true && d ? outputs);
+    in
+      r.success && r.value;
   all = pkgs:
     let
       validPkgs = lib.filterAttrs (k: v: isValid v) pkgs;
-    in validPkgs;
+    in
+      validPkgs;
 
-  readPackages = system: drvs:  lib.mapAttrsToList (
+
+
+  readPackages = system: drvs: lib.mapAttrsToList (
     attribute_name: drv: (
       # if isValid drv then
       {
@@ -34,7 +42,6 @@ let
       # else {}
     )
   ) (all drvs);
-
   readApps = system: apps: lib.mapAttrsToList (
     attribute_name: app: (
       {
@@ -46,6 +53,52 @@ let
       // lib.optionalAttrs (app ? type) { type = app.type; }
     )
   ) apps;
+
+  readOptions = let
+
+    declarations = module: (
+      lib.evalModules {
+        modules = [ module ({ ... }: { _module.check = false; }) ];
+      }
+    ).options;
+
+    cleanUpOption = module: opt:
+      let
+        applyOnAttr = n: f: lib.optionalAttrs (lib.hasAttr n opt) { ${n} = f opt.${n}; };
+        # mkDeclaration = decl: rec {
+        #   path = stripModulePathPrefixes decl;
+        #   url = mkModuleUrl path;
+        #   channelPath = "${channelName}/${path}";
+        # };
+        # Replace functions by the string <function>
+        substFunction = x:
+          if builtins.isAttrs x then
+            lib.mapAttrs (name: substFunction) x
+          else if builtins.isList x then
+            map substFunction x
+          else if lib.isFunction x then
+            "<function>"
+          else
+            x;
+
+
+      in
+        opt
+        // applyOnAttr "example" substFunction
+        // applyOnAttr "default" substFunction
+        // applyOnAttr "type" substFunction
+        // {flake = [flake module]; };
+    # // applyOnAttr "declarations" (map mkDeclaration)
+
+
+    options = lib.mapAttrs (
+      attr: module: let
+          list = lib.optionAttrSetToDocList (declarations module);
+      in
+        map (cleanUpOption attr) (lib.filter (x: !x.internal) list)
+    ) resolved.nixosModules;
+  in
+    options.offen;
 
 
   read = reader: set: lib.lists.flatten (lib.attrValues (withSystem reader set));
@@ -77,5 +130,6 @@ rec {
   legacyPackages = lib.attrValues (collectSystems legacyPackages');
   packages = lib.attrValues (collectSystems packages');
   apps = lib.attrValues (collectSystems apps');
-  all = packages ++ apps;
+  options = readOptions;
+  all = packages ++ apps ++ options;
 }
