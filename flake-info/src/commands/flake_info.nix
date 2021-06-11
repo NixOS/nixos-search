@@ -98,7 +98,7 @@ let
         map (cleanUpOption attr) (lib.filter (x: !x.internal) list)
     ) resolved.nixosModules;
   in
-    options.offen;
+    if resolved ? nixosModules then lib.flatten (builtins.attrValues options) else [];
 
 
   read = reader: set: lib.lists.flatten (lib.attrValues (withSystem reader set));
