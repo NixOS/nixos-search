@@ -112,6 +112,35 @@ lazy_static! {
                 "option_example": {"type": "text"},
                 "option_source": {"type": "keyword"},
             }
+        },
+        "settings": {
+            "analysis": {
+                "normalizer": {
+                    "lowercase": {"type": "custom", "char_filter": [], "filter": ["lowercase"]}
+                },
+                "tokenizer": {
+                    "edge": {
+                        "type": "edge_ngram",
+                        "min_gram": 2,
+                        "max_gram": 50,
+                        "token_chars": [
+                            "letter",
+                            "digit",
+                            // Either we use them or we would need to strip them before that.
+                            "punctuation",
+                            "symbol",
+                        ],
+                    },
+                },
+                "analyzer": {
+                    "edge": {"tokenizer": "edge", "filter": ["lowercase"]},
+                    "lowercase": {
+                        "type": "custom",
+                        "tokenizer": "keyword",
+                        "filter": ["lowercase"],
+                    },
+                },
+            }
         }
     });
 }
