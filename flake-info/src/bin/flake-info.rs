@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use commands::run_gc;
 use flake_info::data::{self, Export, Source};
 use flake_info::{commands, elastic};
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use std::fs;
 use std::path::{Path, PathBuf};
 use structopt::{clap::ArgGroup, StructOpt};
@@ -138,7 +138,8 @@ async fn main() -> Result<()> {
     if !errors.is_empty() {
         error!("{} errors occured:", errors.len());
         errors.iter().for_each(|e| {
-            error!("{}", e);
+            error!("{:?}", e);
+            debug!("{}", e.backtrace())
         })
     }
 
