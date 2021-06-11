@@ -64,7 +64,7 @@ pub enum Derivation {
         #[serde(rename(serialize = "option_name"))]
         name: String,
         #[serde(
-            rename(serialize = "option_type"),
+            rename(deserialize = "type", serialize = "option_type"),
             skip_serializing_if = "Option::is_none"
         )]
         option_type: Option<String>,
@@ -77,7 +77,7 @@ pub enum Derivation {
             rename(serialize = "option_example"),
             skip_serializing_if = "Option::is_none"
         )]
-        example: Option<String>,
+        example: Option<Value>,
         #[serde(
             rename(serialize = "option_flake"),
             skip_serializing_if = "Option::is_none"
