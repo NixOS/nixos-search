@@ -87,13 +87,13 @@ let
         // applyOnAttr "example" substFunction
         // applyOnAttr "default" substFunction
         // applyOnAttr "type" substFunction
-        // {flake = [flake module]; };
+        // { flake = [ flake module ]; };
     # // applyOnAttr "declarations" (map mkDeclaration)
 
 
     options = lib.mapAttrs (
       attr: module: let
-          list = lib.optionAttrSetToDocList (declarations module);
+        list = lib.optionAttrSetToDocList (declarations module);
       in
         map (cleanUpOption attr) (lib.filter (x: !x.internal) list)
     ) resolved.nixosModules;
@@ -101,7 +101,7 @@ let
     if resolved ? nixosModules then lib.flatten (builtins.attrValues options) else [];
 
 
-  read = reader: set: lib.lists.flatten (lib.attrValues (withSystem reader set));
+  read = reader: set: lib.flatten (lib.attrValues (withSystem reader set));
 
   legacyPackages' = read readPackages (default resolved "legacyPackages" {});
   packages' = read readPackages (default resolved "packages" {});
