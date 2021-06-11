@@ -43,7 +43,7 @@ pub fn get_derivation_info<T: AsRef<str> + Display>(
         .with_context(|| format!("Failed to gather information about {}", flake_ref))
         .and_then(|o| {
             debug!("stderr: {}", o.stderr_string_lossy());
-            Ok(serde_json::de::from_str(&o.stdout_string_lossy())?)
+            serde_json::de::from_str(&o.stdout_string_lossy()).with_context(|| format!("Failed to analyze flake {}", flake_ref))
         });
     parsed
 }
