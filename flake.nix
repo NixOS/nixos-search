@@ -24,9 +24,19 @@
           flake_info = mkPackage ./flake-info system;
           frontend = mkPackage ./. system;
         };
+
+      devShell = system:
+        nixpkgs.legacyPackages.${system}.mkShell {
+          inputsFrom = builtins.attrValues (packages system);
+          shellHook = ''
+            # undo import_scripts' shell hook
+            cd ..
+          '';
+        };
     in
-    {
-      defaultPackage = forAllSystems (mkPackage ./.);
-      packages = forAllSystems packages;
-    };
+      {
+        defaultPackage = forAllSystems (mkPackage ./.);
+        packages = forAllSystems packages;
+        devShell = forAllSystems devShell;
+      };
 }
