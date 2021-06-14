@@ -77,6 +77,7 @@ type Route
     | Home
     | Packages SearchArgs
     | Options SearchArgs
+    | Flakes SearchArgs
 
 
 parser : Url.Url -> Url.Parser.Parser (Route -> msg) msg
@@ -86,6 +87,7 @@ parser url =
         , Url.Parser.map NotFound <| Url.Parser.s "not-found"
         , Url.Parser.map Packages <| Url.Parser.s "packages" </> searchQueryParser url
         , Url.Parser.map Options <| Url.Parser.s "options" </> searchQueryParser url
+        , Url.Parser.map Flakes <| Url.Parser.s "flakes" </> searchQueryParser url
         ]
 
 
@@ -143,3 +145,7 @@ routeToPieces page =
         Options searchArgs ->
             searchArgsToUrl searchArgs
                 |> (\( query, raw ) -> ( [ "options" ], query, raw ))
+
+        Flakes searchArgs ->
+            searchArgsToUrl searchArgs
+                |> (\( query, raw ) -> ( [ "flakes" ], query, raw ))
