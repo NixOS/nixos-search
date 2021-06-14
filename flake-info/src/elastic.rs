@@ -284,7 +284,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        data::{self, Kind},
+        data::{self, import::Kind},
         process_flake,
     };
 

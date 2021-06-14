@@ -3,8 +3,8 @@ use std::marker::PhantomData;
 use std::{path::PathBuf, str::FromStr};
 
 use serde::de::{self, MapAccess, Visitor};
-use serde_json::Value;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_json::Value;
 use thiserror::Error;
 
 use super::system::System;
@@ -84,33 +84,34 @@ pub enum Derivation {
         )]
         flake: Option<(String, String)>,
     },
-    Nixpkgs {
-        #[serde(rename(serialize = "package_attr_name"))]
-        attribute_name: String,
+}
 
-        #[serde(rename(serialize = "package_pname"))]
-        pname: String,
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Nixpkgs {
+    #[serde(rename(serialize = "package_attr_name"))]
+    pub attribute_name: String,
 
-        #[serde(rename(serialize = "package_pversion"))]
-        version: String,
+    #[serde(rename(serialize = "package_pname"))]
+    pub pname: String,
 
-        #[serde(flatten)]
-        meta: Meta,
-    },
+    #[serde(rename(serialize = "package_pversion"))]
+    pub version: String,
+
+    #[serde(flatten)]
+    pub meta: Meta,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Meta {
-    #[serde(rename(deserialize = "outputsToInstall", serialize = "package_outputs"))]
-    outputs: Vec<String>,
-
-    // licenses: Option<OneOrMany<License>>,
-    // maintainer: Option<OneOrMany<String>>,
-    homepage: Option<String>,
-    // platforms: Vec<System>,
-    position: Option<String>,
-    description: Option<String>,
-    long_description: Option<String>,
+    #[serde(rename = "outputsToInstall")]
+    pub outputs: Vec<String>,
+    pub licenses: Option<OneOrMany<License>>,
+    pub maintainer: Option<OneOrMany<String>>,
+    pub homepage: Option<String>,
+    pub platforms: Vec<System>,
+    pub position: Option<String>,
+    pub description: Option<String>,
+    pub long_description: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -128,8 +129,6 @@ where
 {
     s.collect_seq(vec![item].iter())
 }
-
-
 
 /// The type of derivation (placed in packages.<system> or apps.<system>)
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -195,11 +194,8 @@ pub enum License {
         license: String,
     },
     Full {
-        #[serde(rename(serialize = "license_long"))]
         fullName: String,
-        #[serde(rename(serialize = "license"))]
         shortName: String,
-        #[serde(rename(serialize = "license_url"))]
         url: Option<String>,
     },
 }
@@ -322,11 +318,17 @@ mod tests {
         "#;
 
         let mut map: serde_json::Map<String, Value> = serde_json::from_str(json).unwrap();
-        let result: Result<Vec<Derivation>, _> = map.iter_mut().map(|(attribute_name, value)| {
-            let mut drv = value.as_object_mut().unwrap().clone();
-            drv.insert("attribute_name".into(), Value::String(attribute_name.to_string()));
-            serde_json::from_value(Value::Object(drv))
-        }).collect();
+        let result: Result<Vec<Derivation>, _> = map
+            .iter_mut()
+            .map(|(attribute_name, value)| {
+                let mut drv = value.as_object_mut().unwrap().clone();
+                drv.insert(
+                    "attribute_name".into(),
+                    Value::String(attribute_name.to_string()),
+                );
+                serde_json::from_value(Value::Object(drv))
+            })
+            .collect();
 
         result.unwrap();
     }

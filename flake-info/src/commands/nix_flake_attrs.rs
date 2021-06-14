@@ -5,7 +5,7 @@ use std::fmt::Display;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
-use crate::data::{Derivation, Kind};
+use crate::data::import::{Derivation, Kind};
 
 const SCRIPT: &str = include_str!("flake_info.nix");
 const ARGS: [&str; 3] = ["eval", "--json", "--no-write-lock-file"];
