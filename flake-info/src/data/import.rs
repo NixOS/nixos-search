@@ -87,18 +87,15 @@ pub enum Derivation {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Nixpkgs {
-    #[serde(rename(serialize = "package_attr_name"))]
-    pub attribute_name: String,
-
-    #[serde(rename(serialize = "package_pname"))]
+pub struct Package {
     pub pname: String,
-
-    #[serde(rename(serialize = "package_pversion"))]
     pub version: String,
-
-    #[serde(flatten)]
     pub meta: Meta,
+}
+
+pub struct NixpkgsEntry{
+    pub attribute: String,
+    pub package: Package
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -317,19 +314,8 @@ mod tests {
         }
         "#;
 
-        let mut map: serde_json::Map<String, Value> = serde_json::from_str(json).unwrap();
-        let result: Result<Vec<Derivation>, _> = map
-            .iter_mut()
-            .map(|(attribute_name, value)| {
-                let mut drv = value.as_object_mut().unwrap().clone();
-                drv.insert(
-                    "attribute_name".into(),
-                    Value::String(attribute_name.to_string()),
-                );
-                serde_json::from_value(Value::Object(drv))
-            })
-            .collect();
+        let  map: HashMap<String, Package> = serde_json::from_str(json).unwrap();
 
-        result.unwrap();
+        map.into_iter().map(|(attribute, package)| NixpkgsEntry {attribute, package});
     }
 }

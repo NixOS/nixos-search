@@ -131,17 +131,17 @@ impl From<(import::Derivation, super::Flake)> for Derivation {
     }
 }
 
-impl From<import::Nixpkgs> for Derivation {
-    fn from(n: import::Nixpkgs) -> Self {
+impl From<import::NixpkgsEntry> for Derivation {
+    fn from(entry: import::NixpkgsEntry) -> Self {
         Derivation::Package {
-            package_attr_name: n.attribute_name,
-            package_pname: n.pname,
-            package_pversion: n.version,
-            package_platforms: n.meta.platforms,
-            package_outputs: n.meta.outputs,
+            package_attr_name: entry.attribute,
+            package_pname: entry.package.pname,
+            package_pversion: entry.package.version,
+            package_platforms: entry.package.meta.platforms,
+            package_outputs: entry.package.meta.outputs,
             package_licenses: vec![],
             package_maintainers: vec![],
-            package_description: n.meta.description,
+            package_description: entry.package.meta.description,
         }
     }
 }
@@ -190,7 +190,7 @@ impl Export {
         }
     }
 
-    pub fn nixpkgs(item: import::Nixpkgs) -> Self {
+    pub fn nixpkgs(item: import::NixpkgsEntry) -> Self {
         Self {
             flake: None,
             item: Derivation::from(item),
