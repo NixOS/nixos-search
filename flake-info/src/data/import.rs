@@ -13,7 +13,7 @@ use super::system::System;
 /// Holds information about a specific derivation
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum Derivation {
+pub enum FlakeEntry {
     Package {
         #[serde(rename(serialize = "package_attr_name"))]
         attribute_name: String,

@@ -78,10 +78,10 @@ pub enum Derivation {
     },
 }
 
-impl From<(import::Derivation, super::Flake)> for Derivation {
-    fn from((d, f): (import::Derivation, super::Flake)) -> Self {
+impl From<(import::FlakeEntry, super::Flake)> for Derivation {
+    fn from((d, f): (import::FlakeEntry, super::Flake)) -> Self {
         match d {
-            import::Derivation::Package {
+            import::FlakeEntry::Package {
                 attribute_name,
                 name,
                 version,
@@ -99,7 +99,7 @@ impl From<(import::Derivation, super::Flake)> for Derivation {
                 package_description: description,
                 package_maintainers: vec![f.into()],
             },
-            import::Derivation::App {
+            import::FlakeEntry::App {
                 bin,
                 attribute_name,
                 platforms,
@@ -110,7 +110,7 @@ impl From<(import::Derivation, super::Flake)> for Derivation {
                 app_bin: bin,
                 app_type,
             },
-            import::Derivation::Option {
+            import::FlakeEntry::Option {
                 declarations,
                 description,
                 name,
@@ -183,7 +183,7 @@ pub struct Export {
 }
 
 impl Export {
-    pub fn flake(flake: Flake, item: import::Derivation) -> Self {
+    pub fn flake(flake: Flake, item: import::FlakeEntry) -> Self {
         Self {
             flake: Some(flake.clone()),
             item: Derivation::from((item, flake))

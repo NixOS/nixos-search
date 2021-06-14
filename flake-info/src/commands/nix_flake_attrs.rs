@@ -5,7 +5,7 @@ use std::fmt::Display;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
-use crate::data::import::{Derivation, Kind};
+use crate::data::import::{FlakeEntry, Kind};
 
 const SCRIPT: &str = include_str!("flake_info.nix");
 const ARGS: [&str; 3] = ["eval", "--json", "--no-write-lock-file"];
@@ -17,7 +17,7 @@ pub fn get_derivation_info<T: AsRef<str> + Display>(
     kind: Kind,
     temp_store: bool,
     extra: &[String]
-) -> Result<Vec<Derivation>> {
+) -> Result<Vec<FlakeEntry>> {
     let script_dir = tempfile::tempdir()?;
     let script_path = script_dir.path().join("extract.nix");
     writeln!(File::create(&script_path)?, "{}", SCRIPT)?;
@@ -38,7 +38,7 @@ pub fn get_derivation_info<T: AsRef<str> + Display>(
     command.log_to = LogTo::Log;
     command.log_output_on_error = true;
 
-    let parsed: Result<Vec<Derivation>> = command
+    let parsed: Result<Vec<FlakeEntry>> = command
         .run()
         .with_context(|| format!("Failed to gather information about {}", flake_ref))
         .and_then(|o| {
