@@ -39,7 +39,7 @@ struct Args {
         help = "Kind of data to extract (packages|options|apps|all)",
         default_value
     )]
-    kind: data::Kind,
+    kind: data::import::Kind,
 
     #[structopt(
         long,
