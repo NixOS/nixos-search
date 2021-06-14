@@ -57,6 +57,8 @@ pub enum System {
     X86_64Redox,
     #[serde(rename = "powerpc64le-linux")]
     Powerpc64leLinux,
+    #[serde(rename = "powerpc64-linux")]
+    Powerpc64Linux,
     #[serde(rename = "riscv32-linux")]
     Riscv32Linux,
     #[serde(rename = "riscv64-linux")]

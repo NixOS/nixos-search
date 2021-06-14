@@ -8,103 +8,126 @@ use serde_json::Value;
 use thiserror::Error;
 
 use super::system::System;
-use super::utility::{Flatten, OneOrMany};
 
+// TODO: Implement as typed object? -- Derivation<Kind>
 /// Holds information about a specific derivation
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum FlakeEntry {
-    /// A package as it may be defined in a flake
-    ///
-    /// Note: As flakes do not enforce any particular structure to be necessarily
-    /// present, the data represented is an idealization that _should_ match in
-    /// most cases and is open to extension.
+pub enum Derivation {
     Package {
+        #[serde(rename(serialize = "package_attr_name"))]
         attribute_name: String,
+
+        #[serde(rename(serialize = "package_pname"))]
         name: String,
+
+        #[serde(rename(serialize = "package_pversion"))]
         version: String,
+
+        #[serde(rename(serialize = "package_platforms"))]
         platforms: Vec<System>,
+
+        #[serde(rename(serialize = "package_outputs"))]
         outputs: Vec<String>,
+
+        #[serde(
+            rename(serialize = "package_description"),
+            skip_serializing_if = "Option::is_none"
+        )]
         description: Option<String>,
-        #[serde(deserialize_with = "string_or_struct", default)]
+
+        #[serde(
+            rename(serialize = "package_license"),
+            deserialize_with = "string_or_struct",
+            default
+        )]
         license: License,
     },
-    /// An "application" that can be called using nix run <..>
     App {
+        #[serde(rename(serialize = "app_bin"), skip_serializing_if = "Option::is_none")]
         bin: Option<PathBuf>,
+        #[serde(rename(serialize = "app_attr_name"))]
         attribute_name: String,
+        #[serde(rename(serialize = "app_platforms"))]
         platforms: Vec<System>,
+        #[serde(rename(deserialize = "type"), skip_serializing_if = "Option::is_none")]
         app_type: Option<String>,
     },
-    /// an option defined in a module of a flake
-    Option(NixOption),
+    Option {
+        #[serde(rename(serialize = "option_source"))]
+        declarations: Vec<String>,
+        #[serde(
+            rename(serialize = "option_description"),
+            skip_serializing_if = "Option::is_none"
+        )]
+        description: Option<String>,
+        #[serde(rename(serialize = "option_name"))]
+        name: String,
+        #[serde(
+            rename(deserialize = "type", serialize = "option_type"),
+            skip_serializing_if = "Option::is_none"
+        )]
+        option_type: Option<String>,
+        #[serde(
+            rename(serialize = "option_default"),
+            skip_serializing_if = "Option::is_none"
+        )]
+        default: Option<Value>,
+        #[serde(
+            rename(serialize = "option_example"),
+            skip_serializing_if = "Option::is_none"
+        )]
+        example: Option<Value>,
+        #[serde(
+            rename(serialize = "option_flake"),
+            skip_serializing_if = "Option::is_none"
+        )]
+        flake: Option<(String, String)>,
+    },
 }
 
-/// The representation of an option that is part of some module and can be used
-/// in some nixos configuration
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct NixOption {
-    /// Location of the defining module(s)
-    pub declarations: Vec<String>,
-
-    pub description: Option<String>,
-    pub name: String,
-    #[serde(rename = "type")]
-    /// Nix generated description of the options type
-    pub option_type: Option<String>,
-    pub default: Option<Value>,
-    pub example: Option<Value>,
-
-    /// If defined in a flake, contains defining flake and module
-    pub flake: Option<(String, String)>,
-}
-
-/// Package as defined in nixpkgs
-/// These packages usually have a "more" homogenic structure that is given by
-/// nixpkgs
-/// note: This is the parsing module that deals with nested input. A flattened,
-/// unified representation can be found in [crate::data::export::Derivation]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Package {
     pub pname: String,
     pub version: String,
-    pub system: String,
     pub meta: Meta,
 }
 
-/// The nixpkgs output lists attribute names as keys of a map.
-/// Name and Package definition are combined using this struct
-#[derive(Debug, Clone)]
-pub enum NixpkgsEntry {
-    Derivation { attribute: String, package: Package },
-    Option(NixOption),
+pub struct NixpkgsEntry{
+    pub attribute: String,
+    pub package: Package
 }
 
-/// Most information about packages in nixpkgs is contained in the meta key
-/// This struct represents a subset of that metadata
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Meta {
     #[serde(rename = "outputsToInstall")]
-    pub outputs: Option<Vec<String>>,
-    pub license: Option<OneOrMany<StringOrStruct<License>>>,
-    pub maintainers: Option<Flatten<Maintainer>>,
-    pub homepage: Option<OneOrMany<String>>,
-    pub platforms: Option<Flatten<System>>,
+    pub outputs: Vec<String>,
+    pub licenses: Option<OneOrMany<License>>,
+    pub maintainer: Option<OneOrMany<String>>,
+    pub homepage: Option<String>,
+    pub platforms: Vec<System>,
     pub position: Option<String>,
     pub description: Option<String>,
-    #[serde(rename = "longDescription")]
     pub long_description: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Maintainer {
-    pub name: Option<String>,
-    pub github: Option<String>,
-    pub email: Option<String>,
+#[serde(untagged)]
+pub enum OneOrMany<T> {
+    #[serde(serialize_with = "list")]
+    One(T),
+    Many(Vec<T>),
+}
+
+pub fn list<T, S>(item: &T, s: S) -> Result<S::Ok, S::Error>
+where
+    T: Serialize,
+    S: Serializer,
+{
+    s.collect_seq(vec![item].iter())
 }
 
 /// The type of derivation (placed in packages.<system> or apps.<system>)
-/// Used to command the extraction script
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum Kind {
     App,
@@ -157,22 +180,6 @@ impl Default for Kind {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct StringOrStruct<T>(pub T);
-
-impl<'de, T> Deserialize<'de> for StringOrStruct<T>
-where
-    T: Deserialize<'de> + FromStr<Err = anyhow::Error>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        Ok(StringOrStruct(string_or_struct(deserializer)?))
-    }
-}
-
-/// Different representations of the licence attribute
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum License {
@@ -185,11 +192,8 @@ pub enum License {
     },
     Full {
         fullName: String,
-        // shortName: String,
+        shortName: String,
         url: Option<String>,
-    },
-    Url {
-        url: String,
     },
 }
 
@@ -211,7 +215,6 @@ impl FromStr for License {
     }
 }
 
-/// Deserialization helper that parses an item using either serde or fromString
 fn string_or_struct<'de, T, D>(deserializer: D) -> Result<T, D::Error>
 where
     T: Deserialize<'de> + FromStr<Err = anyhow::Error>,
@@ -311,11 +314,8 @@ mod tests {
         }
         "#;
 
-        let map: HashMap<String, Package> = serde_json::from_str(json).unwrap();
+        let  map: HashMap<String, Package> = serde_json::from_str(json).unwrap();
 
-        let _: Vec<NixpkgsEntry> = map
-            .into_iter()
-            .map(|(attribute, package)| NixpkgsEntry::Derivation { attribute, package })
-            .collect();
+        map.into_iter().map(|(attribute, package)| NixpkgsEntry {attribute, package});
     }
 }
