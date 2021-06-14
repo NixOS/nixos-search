@@ -373,7 +373,6 @@ type Channel
     = Unstable
     | Release_20_09
     | Release_21_05
-    | Flakes
 
 
 {-| TODO: we should consider using more dynamic approach here
@@ -416,8 +415,6 @@ channelFromId channel_id =
         "21.05" ->
             Just Release_21_05
 
-        "flakes" ->
-            Just Flakes
         _ ->
             Nothing
 
@@ -433,7 +430,6 @@ channels =
     [ "20.09"
     , "21.05"
     , "unstable"
-    , "flakes"
     ]
 
 
