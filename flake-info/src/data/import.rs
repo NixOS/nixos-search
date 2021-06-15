@@ -321,8 +321,11 @@ mod tests {
         }
         "#;
 
-        let  map: HashMap<String, Package> = serde_json::from_str(json).unwrap();
+        let map: HashMap<String, Package> = serde_json::from_str(json).unwrap();
 
-        map.into_iter().map(|(attribute, package)| NixpkgsEntry {attribute, package});
+        let _: Vec<NixpkgsEntry> = map
+            .into_iter()
+            .map(|(attribute, package)| NixpkgsEntry { attribute, package })
+            .collect();
     }
 }
