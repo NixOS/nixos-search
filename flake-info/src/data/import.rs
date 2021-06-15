@@ -14,6 +14,11 @@ use super::system::System;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum FlakeEntry {
+    /// A package as it may be defined in a flake
+    ///
+    /// Note: As flakes do not enforce any particular structure to be necessarily
+    /// present, the data represented is an idealization that _should_ match in
+    /// most cases and is open to extension.
     Package {
         #[serde(rename(serialize = "package_attr_name"))]
         attribute_name: String,
@@ -43,6 +48,7 @@ pub enum FlakeEntry {
         )]
         license: License,
     },
+    /// An "application" that can be called using nix run <..>
     App {
         #[serde(rename(serialize = "app_bin"), skip_serializing_if = "Option::is_none")]
         bin: Option<PathBuf>,
@@ -84,8 +90,19 @@ pub enum FlakeEntry {
         )]
         flake: Option<(String, String)>,
     },
+    /// an option defined in a module of a flake
+/// The representation of an option that is part of some module and can be used
+/// in some nixos configuration
+    /// Location of the defining module(s)
+    /// Nix generated description of the options type
+    /// If defined in a flake, contains defining flake and module
 }
 
+/// Package as defined in nixpkgs
+/// These packages usually have a "more" homogenic structure that is given by
+/// nixpkgs
+/// note: This is the parsing module that deals with nested input. A flattened,
+/// unified representation can be found in [crate::data::export::Derivation]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Package {
     pub pname: String,
@@ -93,11 +110,15 @@ pub struct Package {
     pub meta: Meta,
 }
 
-pub struct NixpkgsEntry{
+/// The nixpkgs output lists attribute names as keys of a map.
+/// Name and Package definition are combined using this struct
+pub struct NixpkgsEntry {
     pub attribute: String,
     pub package: Package
 }
 
+/// Most information about packages in nixpkgs is contained in the meta key
+/// This struct represents a subset of that metadata
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Meta {
     #[serde(rename = "outputsToInstall")]
@@ -111,6 +132,9 @@ pub struct Meta {
     pub long_description: Option<String>,
 }
 
+/// A utility type that can represent the presence of either a single associated
+/// value or a list of those. Adding absence can be achieved by wrapping the type
+/// in an [Option]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum OneOrMany<T> {
@@ -119,6 +143,9 @@ pub enum OneOrMany<T> {
     Many(Vec<T>),
 }
 
+// TODO: use this or a to_ist function?
+/// Serialization helper that serializes single elements as a list with a single
+/// item
 pub fn list<T, S>(item: &T, s: S) -> Result<S::Ok, S::Error>
 where
     T: Serialize,
@@ -128,6 +155,7 @@ where
 }
 
 /// The type of derivation (placed in packages.<system> or apps.<system>)
+/// Used to command the extraction script
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum Kind {
     App,
@@ -180,6 +208,7 @@ impl Default for Kind {
     }
 }
 
+/// Different representations of the licence attribute
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum License {
@@ -215,6 +244,7 @@ impl FromStr for License {
     }
 }
 
+/// Deserialization helper that parses an item using either serde or fromString
 fn string_or_struct<'de, T, D>(deserializer: D) -> Result<T, D::Error>
 where
     T: Deserialize<'de> + FromStr<Err = anyhow::Error>,
