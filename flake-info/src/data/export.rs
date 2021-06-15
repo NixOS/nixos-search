@@ -46,7 +46,6 @@ pub enum Derivation {
         package_licenses: Vec<License>,
         package_maintainers: Vec<Maintainer>,
 
-        #[serde(skip_serializing_if = "Option::is_none")]
         package_description: Option<String>,
         package_description_reverse: Option<Reverse<String>>,
 
@@ -58,10 +57,8 @@ pub enum Derivation {
         app_attr_name: String,
         app_platforms: Vec<System>,
 
-        #[serde(skip_serializing_if = "Option::is_none")]
         app_type: Option<String>,
 
-        #[serde(skip_serializing_if = "Option::is_none")]
         app_bin: Option<PathBuf>,
     },
     Option {
@@ -69,20 +66,15 @@ pub enum Derivation {
         option_name: String,
         option_name_reverse: Reverse<String>,
 
-        #[serde(skip_serializing_if = "Option::is_none")]
         option_description: Option<String>,
         option_description_reverse: Option<Reverse<String>>,
 
-        #[serde(skip_serializing_if = "Option::is_none")]
         option_type: Option<String>,
 
-        #[serde(skip_serializing_if = "Option::is_none")]
         option_default: Option<Value>,
 
-        #[serde(skip_serializing_if = "Option::is_none")]
         option_example: Option<Value>,
 
-        #[serde(skip_serializing_if = "Option::is_none")]
         option_flake: Option<(String, String)>,
     },
 }
