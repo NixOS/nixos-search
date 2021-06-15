@@ -201,10 +201,10 @@ impl From<super::Flake> for Maintainer {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Export {
     #[serde(flatten)]
-    pub flake: Option<Flake>,
+    flake: Option<Flake>,
 
     #[serde(flatten)]
-    pub item: Derivation,
+    item: Derivation,
 }
 
 impl Export {
