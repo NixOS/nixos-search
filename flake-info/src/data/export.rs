@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use tokio::macros::support;
 
@@ -195,5 +195,57 @@ impl Export {
             flake: None,
             item: Derivation::from(item),
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Reverse<T: Reversable + Serialize>(T);
+
+pub trait Reversable {
+    fn reverse(&self) -> Self;
+}
+
+impl Reversable for String {
+    fn reverse(&self) -> Self {
+        self.chars().rev().collect::<String>()
+    }
+}
+
+impl<T: Reversable + Clone> Reversable for Vec<T> {
+    fn reverse(&self) -> Self {
+        self.iter().cloned().map(|item| item.reverse()).collect()
+    }
+}
+
+impl<T> Reversable for Reverse<T>
+where
+    T: Reversable + Serialize,
+{
+    fn reverse(&self) -> Self {
+        Reverse(self.0.reverse())
+    }
+}
+
+impl<T> Serialize for Reverse<T>
+where
+    T: Reversable + Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.reverse().serialize(serializer)
+    }
+}
+
+impl<'de, T> Deserialize<'de> for Reverse<T>
+where
+    T: Reversable + Serialize + Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Reverse<T>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(Reverse(T::deserialize(deserializer)?.reverse()))
     }
 }
