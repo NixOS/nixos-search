@@ -91,6 +91,7 @@ pub struct Meta {
     pub position: Option<String>,
     pub description: Option<String>,
     pub long_description: Option<String>,
+    pub system: String,
 }
 
 /// A utility type that can represent the presence of either a single associated
