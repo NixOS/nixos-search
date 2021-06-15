@@ -33,7 +33,7 @@ impl From<import::License> for License {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(untagged)]
+#[serde(tag="type")]
 pub enum Derivation {
     Package {
         package_attr_name: String,
