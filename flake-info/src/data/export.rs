@@ -35,7 +35,7 @@ impl From<import::License> for License {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag="type")]
+#[serde(tag = "type")]
 pub enum Derivation {
     Package {
         package_attr_name: String,
@@ -45,7 +45,7 @@ pub enum Derivation {
         package_pversion: String,
         package_platforms: Vec<System>,
         package_outputs: Vec<String>,
-        package_licenses: Vec<License>,
+        package_license: Vec<License>,
         package_maintainers: Vec<Maintainer>,
 
         package_description: Option<String>,
@@ -54,6 +54,10 @@ pub enum Derivation {
         // #[serde(skip_serializing_if = "Option::is_none")]
         package_longDescription: Option<String>,
         package_longDescription_reverse: Option<Reverse<String>>,
+        package_hydra: (),
+        package_system: String,
+        package_homepage: Option<String>,
+        package_position: Option<String>,
     },
     App {
         app_attr_name: String,
@@ -73,9 +77,9 @@ pub enum Derivation {
 
         option_type: Option<String>,
 
-        option_default: Option<Value>,
+        option_default: Option<String>,
 
-        option_example: Option<Value>,
+        option_example: Option<String>,
 
         option_flake: Option<(String, String)>,
     },
@@ -98,7 +102,7 @@ impl From<(import::FlakeEntry, super::Flake)> for Derivation {
                 package_pversion: version,
                 package_platforms: platforms,
                 package_outputs: outputs,
-                package_licenses: vec![license.into()],
+                package_license: vec![license.into()],
                 package_description: description.clone(),
                 package_maintainers: vec![f.into()],
                 package_attr_name_reverse: Reverse(attribute_name),
@@ -106,6 +110,10 @@ impl From<(import::FlakeEntry, super::Flake)> for Derivation {
                 package_description_reverse: description.map(Reverse),
                 package_longDescription: None,
                 package_longDescription_reverse: None,
+                package_hydra: (),
+                package_system: String::new(),
+                package_homepage: None,
+                package_position: None,
             },
             import::FlakeEntry::App {
                 bin,
@@ -130,8 +138,8 @@ impl From<(import::FlakeEntry, super::Flake)> for Derivation {
                 option_source: declarations.get(0).map(Clone::clone),
                 option_name: name.clone(),
                 option_description: description.clone(),
-                option_default: default,
-                option_example: example,
+                option_default: default.map(|v| v.to_string()),
+                option_example: example.map(|v| v.to_string()),
                 option_flake: flake,
                 option_type,
                 option_name_reverse: Reverse(name),
@@ -149,7 +157,7 @@ impl From<import::NixpkgsEntry> for Derivation {
             package_pversion: entry.package.version,
             package_platforms: entry.package.meta.platforms,
             package_outputs: entry.package.meta.outputs,
-            package_licenses: vec![],
+            package_license: vec![],
             package_maintainers: vec![],
             package_description: entry.package.meta.description.clone(),
             package_attr_name_reverse: Reverse(entry.attribute),
@@ -157,16 +165,18 @@ impl From<import::NixpkgsEntry> for Derivation {
             package_description_reverse: entry.package.meta.description.map(Reverse),
             package_longDescription: entry.package.meta.long_description.clone(),
             package_longDescription_reverse: entry.package.meta.long_description.map(Reverse),
+            package_hydra: (),
+            package_system: entry.package.meta.system,
+            package_homepage: entry.package.meta.homepage,
+            package_position: entry.package.meta.position,
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Maintainer {
-    #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
     github: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     email: Option<String>,
 }
 
@@ -201,7 +211,7 @@ impl Export {
     pub fn flake(flake: Flake, item: import::FlakeEntry) -> Self {
         Self {
             flake: Some(flake.clone()),
-            item: Derivation::from((item, flake))
+            item: Derivation::from((item, flake)),
         }
     }
 
