@@ -20,43 +20,20 @@ pub enum FlakeEntry {
     /// present, the data represented is an idealization that _should_ match in
     /// most cases and is open to extension.
     Package {
-        #[serde(rename(serialize = "package_attr_name"))]
         attribute_name: String,
-
-        #[serde(rename(serialize = "package_pname"))]
         name: String,
-
-        #[serde(rename(serialize = "package_pversion"))]
         version: String,
-
-        #[serde(rename(serialize = "package_platforms"))]
         platforms: Vec<System>,
-
-        #[serde(rename(serialize = "package_outputs"))]
         outputs: Vec<String>,
-
-        #[serde(
-            rename(serialize = "package_description"),
-            skip_serializing_if = "Option::is_none"
-        )]
         description: Option<String>,
-
-        #[serde(
-            rename(serialize = "package_license"),
-            deserialize_with = "string_or_struct",
-            default
-        )]
+        #[serde(deserialize_with = "string_or_struct", default)]
         license: License,
     },
     /// An "application" that can be called using nix run <..>
     App {
-        #[serde(rename(serialize = "app_bin"), skip_serializing_if = "Option::is_none")]
         bin: Option<PathBuf>,
-        #[serde(rename(serialize = "app_attr_name"))]
         attribute_name: String,
-        #[serde(rename(serialize = "app_platforms"))]
         platforms: Vec<System>,
-        #[serde(rename(deserialize = "type"), skip_serializing_if = "Option::is_none")]
         app_type: Option<String>,
     },
     Option {
