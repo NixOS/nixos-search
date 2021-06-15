@@ -36,43 +36,27 @@ pub enum FlakeEntry {
         platforms: Vec<System>,
         app_type: Option<String>,
     },
-    Option {
-        #[serde(rename(serialize = "option_source"))]
-        declarations: Vec<String>,
-        #[serde(
-            rename(serialize = "option_description"),
-            skip_serializing_if = "Option::is_none"
-        )]
-        description: Option<String>,
-        #[serde(rename(serialize = "option_name"))]
-        name: String,
-        #[serde(
-            rename(deserialize = "type", serialize = "option_type"),
-            skip_serializing_if = "Option::is_none"
-        )]
-        option_type: Option<String>,
-        #[serde(
-            rename(serialize = "option_default"),
-            skip_serializing_if = "Option::is_none"
-        )]
-        default: Option<Value>,
-        #[serde(
-            rename(serialize = "option_example"),
-            skip_serializing_if = "Option::is_none"
-        )]
-        example: Option<Value>,
-        #[serde(
-            rename(serialize = "option_flake"),
-            skip_serializing_if = "Option::is_none"
-        )]
-        flake: Option<(String, String)>,
-    },
     /// an option defined in a module of a flake
+    Option(NixOption),
+}
+
 /// The representation of an option that is part of some module and can be used
 /// in some nixos configuration
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NixOption {
     /// Location of the defining module(s)
+    pub declarations: Vec<String>,
+
+    pub description: Option<String>,
+    pub name: String,
+    #[serde(rename = "type")]
     /// Nix generated description of the options type
+    pub option_type: Option<String>,
+    pub default: Option<Value>,
+    pub example: Option<Value>,
+
     /// If defined in a flake, contains defining flake and module
+    pub flake: Option<(String, String)>,
 }
 
 /// Package as defined in nixpkgs
