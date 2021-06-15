@@ -124,7 +124,7 @@ impl From<(import::FlakeEntry, super::Flake)> for Derivation {
                 app_bin: bin,
                 app_type,
             },
-            import::FlakeEntry::Option {
+            import::FlakeEntry::Option(NixOption {
                 declarations,
                 description,
                 name,
@@ -132,10 +132,6 @@ impl From<(import::FlakeEntry, super::Flake)> for Derivation {
                 default,
                 example,
                 flake,
-            } => Derivation::Option {
-                option_source: declarations,
-                option_name: name,
-                option_description: description,
             }) => Derivation::Option {
                 option_source: declarations.get(0).map(Clone::clone),
                 option_name: name.clone(),
