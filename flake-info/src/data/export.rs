@@ -37,7 +37,9 @@ impl From<import::License> for License {
 pub enum Derivation {
     Package {
         package_attr_name: String,
+        package_attr_name_reverse: Reverse<String>,
         package_pname: String,
+        package_pname_reverse: Reverse<String>,
         package_pversion: String,
         package_platforms: Vec<System>,
         package_outputs: Vec<String>,
@@ -46,6 +48,11 @@ pub enum Derivation {
 
         #[serde(skip_serializing_if = "Option::is_none")]
         package_description: Option<String>,
+        package_description_reverse: Option<Reverse<String>>,
+
+        // #[serde(skip_serializing_if = "Option::is_none")]
+        package_longDescription: Option<String>,
+        package_longDescription_reverse: Option<Reverse<String>>,
     },
     App {
         app_attr_name: String,
@@ -60,9 +67,11 @@ pub enum Derivation {
     Option {
         option_source: Vec<String>,
         option_name: String,
+        option_name_reverse: Reverse<String>,
 
         #[serde(skip_serializing_if = "Option::is_none")]
         option_description: Option<String>,
+        option_description_reverse: Option<Reverse<String>>,
 
         #[serde(skip_serializing_if = "Option::is_none")]
         option_type: Option<String>,
@@ -90,14 +99,19 @@ impl From<(import::FlakeEntry, super::Flake)> for Derivation {
                 description,
                 license,
             } => Derivation::Package {
-                package_attr_name: attribute_name,
-                package_pname: name,
+                package_attr_name: attribute_name.clone(),
+                package_pname: name.clone(),
                 package_pversion: version,
                 package_platforms: platforms,
                 package_outputs: outputs,
                 package_licenses: vec![license.into()],
-                package_description: description,
+                package_description: description.clone(),
                 package_maintainers: vec![f.into()],
+                package_attr_name_reverse: Reverse(attribute_name),
+                package_pname_reverse: Reverse(name),
+                package_description_reverse: description.map(Reverse),
+                package_longDescription: None,
+                package_longDescription_reverse: None,
             },
             import::FlakeEntry::App {
                 bin,
@@ -122,11 +136,17 @@ impl From<(import::FlakeEntry, super::Flake)> for Derivation {
                 option_source: declarations,
                 option_name: name,
                 option_description: description,
+            }) => Derivation::Option {
+                option_source: declarations.get(0).map(Clone::clone),
+                option_name: name.clone(),
+                option_description: description.clone(),
                 option_default: default,
                 option_example: example,
                 option_flake: flake,
                 option_type,
-            }
+                option_name_reverse: Reverse(name),
+                option_description_reverse: description.map(Reverse),
+            },
         }
     }
 }
@@ -134,14 +154,19 @@ impl From<(import::FlakeEntry, super::Flake)> for Derivation {
 impl From<import::NixpkgsEntry> for Derivation {
     fn from(entry: import::NixpkgsEntry) -> Self {
         Derivation::Package {
-            package_attr_name: entry.attribute,
-            package_pname: entry.package.pname,
+            package_attr_name: entry.attribute.clone(),
+            package_pname: entry.package.pname.clone(),
             package_pversion: entry.package.version,
             package_platforms: entry.package.meta.platforms,
             package_outputs: entry.package.meta.outputs,
             package_licenses: vec![],
             package_maintainers: vec![],
-            package_description: entry.package.meta.description,
+            package_description: entry.package.meta.description.clone(),
+            package_attr_name_reverse: Reverse(entry.attribute),
+            package_pname_reverse: Reverse(entry.package.pname),
+            package_description_reverse: entry.package.meta.description.map(Reverse),
+            package_longDescription: entry.package.meta.long_description.clone(),
+            package_longDescription_reverse: entry.package.meta.long_description.map(Reverse),
         }
     }
 }
