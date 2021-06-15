@@ -4,6 +4,8 @@ use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use tokio::macros::support;
 
+use crate::data::import::NixOption;
+
 use super::{import, system::System};
 
 type Flake = super::Flake;
@@ -62,7 +64,7 @@ pub enum Derivation {
         app_bin: Option<PathBuf>,
     },
     Option {
-        option_source: Vec<String>,
+        option_source: Option<String>,
         option_name: String,
         option_name_reverse: Reverse<String>,
 
