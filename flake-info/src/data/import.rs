@@ -113,6 +113,26 @@ impl<T> OneOrMany<T> {
         }
     }
 }
+
+/// A utility type that flattens lists of lists as seen with `maintainers` and `platforms` on selected packages
+/// in an [Option]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Flatten<T> {
+    #[serde(serialize_with = "list")]
+    Single(T),
+    Deep(Vec<Flatten<T>>),
+}
+
+impl<T: Clone> Flatten<T> {
+    pub fn flatten(self) -> Vec<T> {
+        match self {
+            Flatten::Single(s) => vec![s],
+            Flatten::Deep(v) => v.into_iter().map(Flatten::flatten).flatten().collect(),
+        }
+    }
+}
+
 // TODO: use this or a to_ist function?
 /// Serialization helper that serializes single elements as a list with a single
 /// item
