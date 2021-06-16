@@ -14,6 +14,7 @@ lazy_static! {
     static ref MAPPING: Value = json!({
         "mappings": {
             "properties": {
+                "type": {"type": "keyword"},
                 "flake_name": {
                     "type": "text",
                     "analyzer": "english",
@@ -62,9 +63,19 @@ lazy_static! {
                 },
                 "package_attr_name": {
                     "type": "keyword",
+                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+                },
+                "package_attr_name_reverse": {
+                    "type": "keyword",
+                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
                 },
                 "package_pname": {
                     "type": "keyword",
+                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+                },
+                "package_pname_reverse": {
+                    "type": "keyword",
+                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
                 },
                 "package_pversion": {
                     "type": "keyword"
@@ -72,26 +83,43 @@ lazy_static! {
                 "package_platforms": {
                     "type": "keyword"
                 },
+                "package_system": {
+                    "type": "keyword"
+                },
+                "package_position": {
+                    "type": "text"
+                },
                 "package_outputs": {
                     "type": "keyword"
                 },
                 "package_description": {
                     "type": "text",
                     "analyzer": "english",
+                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+                },
+                "package_description_reverse": {
+                    "type": "text",
+                    "analyzer": "english",
+                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+                },
+                "package_longDescription": {
+                    "type": "text",
+                    "analyzer": "english",
+                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+                },
+                "package_longDescription_reverse": {
+                    "type": "text",
+                    "analyzer": "english",
+                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
                 },
                 "package_license": {
                     "type": "nested",
                     "properties": {
-                        "license_long": {
-                            "type": "text"
-                        },
-                        "license": {
-                            "type": "keyword"
-                        },
-                        "license_url": {
-                            "type": "keyword"
-                        }
-                    }
+                        "fullName": {"type": "text"},
+                        "url": {"type": "text"}},
+                },
+                "package_homepage": {
+                    "type": "keyword"
                 },
                 // Options fields
                 "option_name": {
@@ -103,6 +131,11 @@ lazy_static! {
                     "fields": {"edge": {"type": "text", "analyzer": "edge"}},
                 },
                 "option_description": {
+                    "type": "text",
+                    "analyzer": "english",
+                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+                },
+                "option_description_reverse": {
                     "type": "text",
                     "analyzer": "english",
                     "fields": {"edge": {"type": "text", "analyzer": "edge"}},
