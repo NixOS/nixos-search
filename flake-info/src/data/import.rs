@@ -105,6 +105,14 @@ pub enum OneOrMany<T> {
     Many(Vec<T>),
 }
 
+impl<T> OneOrMany<T> {
+    pub fn into_list(self) -> Vec<T> {
+        match self {
+            OneOrMany::One(one) => vec![one],
+            OneOrMany::Many(many) => many,
+        }
+    }
+}
 // TODO: use this or a to_ist function?
 /// Serialization helper that serializes single elements as a list with a single
 /// item
