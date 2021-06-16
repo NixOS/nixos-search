@@ -207,15 +207,17 @@ impl Default for Kind {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct StringOrStruct<T>(pub T);
 
-impl <'de, T> Deserialize<'de> for StringOrStruct<T>
-    where T: Deserialize<'de> + FromStr<Err = anyhow::Error> {
+impl<'de, T> Deserialize<'de> for StringOrStruct<T>
+where
+    T: Deserialize<'de> + FromStr<Err = anyhow::Error>,
+{
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: Deserializer<'de> {
+        D: Deserializer<'de>,
+    {
         Ok(StringOrStruct(string_or_struct(deserializer)?))
     }
 }
-
 
 /// Different representations of the licence attribute
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
