@@ -36,6 +36,15 @@ struct Args {
     #[structopt(
         short,
         long,
+        help = "Nixpkgs channel to import",
+        group = "sources"
+    )]
+    channel: Option<String>,
+
+
+    #[structopt(
+        short,
+        long,
         help = "Kind of data to extract (packages|options|apps|all)",
         default_value
     )]
@@ -106,15 +115,17 @@ async fn main() -> Result<()> {
 
     let args = Args::from_args();
 
-    let sources = match (&args.flake, &args.targets) {
-        (Some(ref url), None) => vec![data::Source::Git {
+    let sources = match (&args.flake, &args.targets, &args.channel) {
+        (Some(ref url), None, None) => vec![data::Source::Git {
             url: url.to_owned(),
         }],
-        (None, Some(targets)) => Source::read_sources_file(targets)?,
-        (None, None) => {
+        (None, Some(targets), None) => Source::read_sources_file(targets)?,
+        (None, None, Some(channel)) => vec![data::Source::Nixpkgs { channel: channel.to_owned() }],
+        (None, None, None) => {
             warn!("No inputs specified!");
             vec![]
         },
+        // Any other combination is filtered by clap
         _ => unreachable!(),
     };
 
