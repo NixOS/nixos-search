@@ -5,7 +5,7 @@ use std::{collections::HashMap, fmt::Display, fs::File};
 use command_run::Command;
 use log::debug;
 
-use crate::data::import::{NixpkgsEntry, OneOrMany, Package};
+use crate::data::import::{NixpkgsEntry, Package};
 
 const NIXPKGS_SCRIPT: &str = include_str!("packages-config.nix");
 
@@ -37,11 +37,11 @@ pub fn get_nixpkgs_info<T: AsRef<str> + Display>(nixpkgs_channel: T) -> Result<V
         })
         .and_then(|o| {
             debug!("stderr: {}", o.stderr_string_lossy());
-            let attr_set: HashMap<String, OneOrMany<Package>> =
+            let attr_set: HashMap<String, Package> =
                 serde_json::de::from_str(&o.stdout_string_lossy())?;
             Ok(attr_set
                 .into_iter()
-                .map(|(attribute, package)| NixpkgsEntry { attribute, package: package.into_list().get(0).unwrap().clone() })
+                .map(|(attribute, package)| NixpkgsEntry { attribute, package })
                 .collect())
         });
 
