@@ -92,6 +92,12 @@ pub struct Meta {
     pub description: Option<String>,
     pub long_description: Option<String>,
     pub system: String,
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Maintainer {
+    pub name: Option<String>,
+    pub github: Option<String>,
+    pub email: Option<String>,
 }
 
 /// A utility type that can represent the presence of either a single associated
