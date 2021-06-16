@@ -183,8 +183,11 @@ pub enum License {
     },
     Full {
         fullName: String,
-        shortName: String,
+        // shortName: String,
         url: Option<String>,
+    },
+    Url {
+        url: String,
     },
 }
 
