@@ -4,7 +4,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use tokio::macros::support;
 
-use crate::data::import::NixOption;
+use crate::data::import::{Flatten, NixOption, OneOrMany};
 
 use super::{import, system::System};
 
@@ -30,6 +30,10 @@ impl From<import::License> for License {
                 fullName: license,
             },
             import::License::Full { fullName, url, .. } => License { url, fullName },
+            import::License::Url { url } => License {
+                url: Some(url),
+                fullName: "No Name".into(),
+            },
         }
     }
 }
@@ -37,6 +41,7 @@ impl From<import::License> for License {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum Derivation {
+    #[serde(rename = "package")]
     Package {
         package_attr_name: String,
         package_attr_name_reverse: Reverse<String>,
@@ -47,18 +52,16 @@ pub enum Derivation {
         package_outputs: Vec<String>,
         package_license: Vec<License>,
         package_maintainers: Vec<Maintainer>,
-
         package_description: Option<String>,
         package_description_reverse: Option<Reverse<String>>,
-
-        // #[serde(skip_serializing_if = "Option::is_none")]
         package_longDescription: Option<String>,
         package_longDescription_reverse: Option<Reverse<String>>,
         package_hydra: (),
         package_system: String,
-        package_homepage: Option<String>,
+        package_homepage: Vec<String>,
         package_position: Option<String>,
     },
+    #[serde(rename = "app")]
     App {
         app_attr_name: String,
         app_platforms: Vec<System>,
@@ -67,6 +70,7 @@ pub enum Derivation {
 
         app_bin: Option<PathBuf>,
     },
+    #[serde(rename = "option")]
     Option {
         option_source: Option<String>,
         option_name: String,
@@ -112,7 +116,7 @@ impl From<(import::FlakeEntry, super::Flake)> for Derivation {
                 package_longDescription_reverse: None,
                 package_hydra: (),
                 package_system: String::new(),
-                package_homepage: None,
+                package_homepage: Vec::new(),
                 package_position: None,
             },
             import::FlakeEntry::App {
@@ -155,10 +159,27 @@ impl From<import::NixpkgsEntry> for Derivation {
             package_attr_name: entry.attribute.clone(),
             package_pname: entry.package.pname.clone(),
             package_pversion: entry.package.version,
-            package_platforms: entry.package.meta.platforms,
-            package_outputs: entry.package.meta.outputs,
-            package_license: vec![],
-            package_maintainers: vec![],
+            package_platforms: entry
+                .package
+                .meta
+                .platforms
+                .map(Flatten::flatten)
+                .unwrap_or_default(),
+            package_outputs: entry.package.meta.outputs.unwrap_or_default(),
+            package_license: entry
+                .package
+                .meta
+                .license
+                .map(OneOrMany::into_list)
+                .unwrap_or_default()
+                .into_iter()
+                .map(|sos| sos.0.into())
+                .collect(),
+            package_maintainers: entry
+                .package
+                .meta
+                .maintainers
+                .map_or(Default::default(), Flatten::flatten),
             package_description: entry.package.meta.description.clone(),
             package_attr_name_reverse: Reverse(entry.attribute),
             package_pname_reverse: Reverse(entry.package.pname),
@@ -166,19 +187,18 @@ impl From<import::NixpkgsEntry> for Derivation {
             package_longDescription: entry.package.meta.long_description.clone(),
             package_longDescription_reverse: entry.package.meta.long_description.map(Reverse),
             package_hydra: (),
-            package_system: entry.package.meta.system,
-            package_homepage: entry.package.meta.homepage,
+            package_system: entry.package.system,
+            package_homepage: entry
+                .package
+                .meta
+                .homepage
+                .map_or(Default::default(), OneOrMany::into_list),
             package_position: entry.package.meta.position,
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Maintainer {
-    name: Option<String>,
-    github: String,
-    email: Option<String>,
-}
+type Maintainer = import::Maintainer;
 
 impl From<super::Flake> for Maintainer {
     fn from(flake: super::Flake) -> Self {
@@ -191,7 +211,7 @@ impl From<super::Flake> for Maintainer {
             .unwrap_or_else(|| "Maintainer Unknown".to_string());
 
         Maintainer {
-            github,
+            github: Some(github),
             email: None,
             name: None,
         }
