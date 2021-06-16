@@ -68,14 +68,16 @@ pub struct NixOption {
 pub struct Package {
     pub pname: String,
     pub version: String,
+    pub system: String,
     pub meta: Meta,
 }
 
 /// The nixpkgs output lists attribute names as keys of a map.
 /// Name and Package definition are combined using this struct
+#[derive(Debug, Clone)]
 pub struct NixpkgsEntry {
     pub attribute: String,
-    pub package: Package
+    pub package: Package,
 }
 
 /// Most information about packages in nixpkgs is contained in the meta key
@@ -83,15 +85,16 @@ pub struct NixpkgsEntry {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Meta {
     #[serde(rename = "outputsToInstall")]
-    pub outputs: Vec<String>,
-    pub licenses: Option<OneOrMany<License>>,
-    pub maintainer: Option<OneOrMany<String>>,
-    pub homepage: Option<String>,
-    pub platforms: Vec<System>,
+    pub outputs: Option<Vec<String>>,
+    pub license: Option<OneOrMany<StringOrStruct<License>>>,
+    pub maintainers: Option<Flatten<Maintainer>>,
+    pub homepage: Option<OneOrMany<String>>,
+    pub platforms: Option<Flatten<System>>,
     pub position: Option<String>,
     pub description: Option<String>,
+    #[serde(rename = "longDescription")]
     pub long_description: Option<String>,
-    pub system: String,
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Maintainer {
