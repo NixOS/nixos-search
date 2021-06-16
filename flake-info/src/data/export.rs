@@ -6,8 +6,11 @@ use tokio::macros::support;
 
 use crate::data::import::NixOption;
 
-
-use super::{import, system::System, utility::{Flatten, OneOrMany, Reverse}};
+use super::{
+    import,
+    system::System,
+    utility::{AttributeQuery, Flatten, OneOrMany, Reverse},
+};
 
 type Flake = super::Flake;
 
@@ -46,6 +49,8 @@ pub enum Derivation {
     Package {
         package_attr_name: String,
         package_attr_name_reverse: Reverse<String>,
+        package_attr_name_query: AttributeQuery,
+        package_attr_name_query_reverse: Reverse<AttributeQuery>,
         package_pname: String,
         package_pname_reverse: Reverse<String>,
         package_pversion: String,
@@ -102,16 +107,18 @@ impl From<(import::FlakeEntry, super::Flake)> for Derivation {
                 description,
                 license,
             } => Derivation::Package {
+                package_attr_name_query: AttributeQuery::new(&attribute_name),
+                package_attr_name_query_reverse: Reverse(AttributeQuery::new(&attribute_name)),
                 package_attr_name: attribute_name.clone(),
+                package_attr_name_reverse: Reverse(attribute_name),
                 package_pname: name.clone(),
+                package_pname_reverse: Reverse(name),
                 package_pversion: version,
                 package_platforms: platforms,
                 package_outputs: outputs,
                 package_license: vec![license.into()],
                 package_description: description.clone(),
                 package_maintainers: vec![f.into()],
-                package_attr_name_reverse: Reverse(attribute_name),
-                package_pname_reverse: Reverse(name),
                 package_description_reverse: description.map(Reverse),
                 package_longDescription: None,
                 package_longDescription_reverse: None,
@@ -158,7 +165,11 @@ impl From<import::NixpkgsEntry> for Derivation {
     fn from(entry: import::NixpkgsEntry) -> Self {
         Derivation::Package {
             package_attr_name: entry.attribute.clone(),
+            package_attr_name_reverse: Reverse(entry.attribute.clone()),
+            package_attr_name_query: AttributeQuery::new(&entry.attribute),
+            package_attr_name_query_reverse: Reverse(AttributeQuery::new(&entry.attribute)),
             package_pname: entry.package.pname.clone(),
+            package_pname_reverse: Reverse(entry.package.pname),
             package_pversion: entry.package.version,
             package_platforms: entry
                 .package
@@ -182,8 +193,7 @@ impl From<import::NixpkgsEntry> for Derivation {
                 .maintainers
                 .map_or(Default::default(), Flatten::flatten),
             package_description: entry.package.meta.description.clone(),
-            package_attr_name_reverse: Reverse(entry.attribute),
-            package_pname_reverse: Reverse(entry.package.pname),
+
             package_description_reverse: entry.package.meta.description.map(Reverse),
             package_longDescription: entry.package.meta.long_description.clone(),
             package_longDescription_reverse: entry.package.meta.long_description.map(Reverse),
