@@ -75,9 +75,12 @@ pub struct Package {
 /// The nixpkgs output lists attribute names as keys of a map.
 /// Name and Package definition are combined using this struct
 #[derive(Debug, Clone)]
-pub struct NixpkgsEntry {
-    pub attribute: String,
-    pub package: Package,
+pub enum NixpkgsEntry {
+    Derivation {
+        attribute: String,
+        package: Package,
+    },
+    Option(NixOption),
 }
 
 /// Most information about packages in nixpkgs is contained in the meta key
@@ -316,7 +319,7 @@ mod tests {
 
         let _: Vec<NixpkgsEntry> = map
             .into_iter()
-            .map(|(attribute, package)| NixpkgsEntry { attribute, package })
+            .map(|(attribute, package)| NixpkgsEntry::Derivation { attribute, package })
             .collect();
     }
 }
