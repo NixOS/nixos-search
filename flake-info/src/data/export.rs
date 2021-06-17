@@ -273,8 +273,18 @@ impl From<import::NixOption> for Derivation {
             option_name_reverse: Reverse(name.clone()),
             option_description: description.clone(),
             option_description_reverse: description.map(Reverse),
-            option_default: default.map(|v| v.to_string()),
-            option_example: example.map(|v| v.to_string()),
+            option_default: default.map(|v| {
+                v.as_str().map_or_else(
+                    || serde_json::to_string_pretty(&v).unwrap(),
+                    |s| s.to_owned(),
+                )
+            }),
+            option_example: example.map(|v| {
+                v.as_str().map_or_else(
+                    || serde_json::to_string_pretty(&v).unwrap(),
+                    |s| s.to_owned(),
+                )
+            }),
             option_flake: flake,
             option_type,
             option_name_query: AttributeQuery::new(&name),
@@ -330,5 +340,30 @@ impl Export {
             flake: None,
             item: Derivation::from(item),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_option() {
+        let option: NixOption = serde_json::from_str(r#"
+        {
+            "declarations":["/nix/store/s1q1238ahiks5a4g6j6qhhfb3rlmamvz-source/nixos/modules/system/boot/luksroot.nix"],
+            "default":"",
+            "description":"Commands that should be run right after we have mounted our LUKS device.\n",
+            "example":"oneline\ntwoline\nthreeline\n",
+            "internal":false,
+            "loc":["boot","initrd","luks","devices","<name>","postOpenCommands"],
+            "name":"boot.initrd.luks.devices.<name>.postOpenCommands",
+            "readOnly":false,"type":
+            "strings concatenated with \"\\n\"","visible":true
+        }"#).unwrap();
+
+        let option: Derivation = option.into();
+
+        println!("{}", serde_json::to_string_pretty(&option).unwrap());
     }
 }
