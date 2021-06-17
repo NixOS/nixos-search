@@ -41,7 +41,9 @@ pub fn get_nixpkgs_info<T: AsRef<str> + Display>(nixpkgs_channel: T) -> Result<V
                 serde_json::de::from_str(&o.stdout_string_lossy())?;
             Ok(attr_set
                 .into_iter()
-                .map(|(attribute, package)| NixpkgsEntry { attribute, package })
+                .map(|(attribute, package)| NixpkgsEntry::Derivation { attribute, package })
+                .collect())
+        });
                 .collect())
         });
 
