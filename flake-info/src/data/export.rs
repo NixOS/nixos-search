@@ -1,9 +1,10 @@
+/// This module defines the unified putput format as expected by the elastic search
+/// Additionally, we implement converseions from the two possible input formats, i.e.
+/// Flakes, or Nixpkgs.
+
 use std::path::PathBuf;
 
-use serde::{Deserialize, Deserializer, Serialize};
-use serde_json::Value;
-use tokio::macros::support;
-
+use serde::{Deserialize, Serialize};
 use crate::data::import::NixOption;
 
 use super::{
@@ -41,6 +42,9 @@ impl From<import::License> for License {
         }
     }
 }
+
+
+// ----- Unified derivation representation
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -98,6 +102,8 @@ pub enum Derivation {
         option_flake: Option<(String, String)>,
     },
 }
+
+// ----- Conversions
 
 impl From<(import::FlakeEntry, super::Flake)> for Derivation {
     fn from((d, f): (import::FlakeEntry, super::Flake)) -> Self {
@@ -286,6 +292,9 @@ impl From<super::Flake> for Maintainer {
     }
 }
 
+// ----- output type
+
+/// Export type that brings together derivation and optional flake info
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Export {
     #[serde(flatten)]
@@ -296,6 +305,7 @@ pub struct Export {
 }
 
 impl Export {
+    /// Construct Export from Flake and Flake entry
     pub fn flake(flake: Flake, item: import::FlakeEntry) -> Self {
         Self {
             flake: Some(flake.clone()),
@@ -303,6 +313,7 @@ impl Export {
         }
     }
 
+    /// Construct Export from NixpkgsEntry
     pub fn nixpkgs(item: import::NixpkgsEntry) -> Self {
         Self {
             flake: None,
