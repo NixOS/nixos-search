@@ -59,7 +59,7 @@ impl Source {
                     .map_or("".to_string(), |f| format!("?ref={}", f))
             ),
             Source::Git { url } => url.to_string(),
-            Source::Nixpkgs { channel } => format!("https://github.com/NixOS/nixpkgs/archive/{}.tar.gz", channel),
+            Source::Nixpkgs { channel } => format!("https://github.com/NixOS/nixpkgs/archive/refs/heads/{}.tar.gz", channel),
 
         }
     }
