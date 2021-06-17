@@ -144,6 +144,12 @@ impl AttributeQuery {
     }
 }
 
+impl Reversable for AttributeQuery {
+    fn reverse(&self) -> Self {
+        AttributeQuery(self.query().to_owned().reverse())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
