@@ -51,13 +51,17 @@ pub enum Derivation {
         package_attr_name_reverse: Reverse<String>,
         package_attr_name_query: AttributeQuery,
         package_attr_name_query_reverse: Reverse<AttributeQuery>,
+        package_attr_set: String,
+        package_attr_set_reverse: Reverse<String>,
         package_pname: String,
         package_pname_reverse: Reverse<String>,
         package_pversion: String,
         package_platforms: Vec<System>,
         package_outputs: Vec<String>,
         package_license: Vec<License>,
+        package_license_set: Vec<String>,
         package_maintainers: Vec<Maintainer>,
+        package_maintainers_set: Vec<String>,
         package_description: Option<String>,
         package_description_reverse: Option<Reverse<String>>,
         package_longDescription: Option<String>,
@@ -106,27 +110,52 @@ impl From<(import::FlakeEntry, super::Flake)> for Derivation {
                 outputs,
                 description,
                 license,
-            } => Derivation::Package {
-                package_attr_name_query: AttributeQuery::new(&attribute_name),
-                package_attr_name_query_reverse: Reverse(AttributeQuery::new(&attribute_name)),
-                package_attr_name: attribute_name.clone(),
-                package_attr_name_reverse: Reverse(attribute_name),
-                package_pname: name.clone(),
-                package_pname_reverse: Reverse(name),
-                package_pversion: version,
-                package_platforms: platforms,
-                package_outputs: outputs,
-                package_license: vec![license.into()],
-                package_description: description.clone(),
-                package_maintainers: vec![f.into()],
-                package_description_reverse: description.map(Reverse),
-                package_longDescription: None,
-                package_longDescription_reverse: None,
-                package_hydra: (),
-                package_system: String::new(),
-                package_homepage: Vec::new(),
-                package_position: None,
-            },
+            } => {
+                let package_attr_set: Vec<_> = attribute_name.split(".").collect();
+                let package_attr_set: String = (if package_attr_set.len() > 1 {
+                    package_attr_set[0]
+                } else {
+                    "No package set"
+                })
+                .into();
+
+                let package_attr_set_reverse = Reverse(package_attr_set.clone());
+
+                let package_license: Vec<License> = vec![license.into()];
+                let package_license_set: Vec<String> = package_license
+                    .iter()
+                    .clone()
+                    .map(|l| l.fullName.to_owned())
+                    .collect();
+
+                let maintainer: Maintainer = f.into();
+
+                Derivation::Package {
+                    package_attr_name_query: AttributeQuery::new(&attribute_name),
+                    package_attr_name_query_reverse: Reverse(AttributeQuery::new(&attribute_name)),
+                    package_attr_name: attribute_name.clone(),
+                    package_attr_name_reverse: Reverse(attribute_name),
+                    package_attr_set,
+                    package_attr_set_reverse,
+                    package_pname: name.clone(),
+                    package_pname_reverse: Reverse(name),
+                    package_pversion: version,
+                    package_platforms: platforms,
+                    package_outputs: outputs,
+                    package_license,
+                    package_license_set,
+                    package_description: description.clone(),
+                    package_maintainers: vec![maintainer.clone()],
+                    package_maintainers_set: maintainer.name.map_or(vec![], |n| vec![n]),
+                    package_description_reverse: description.map(Reverse),
+                    package_longDescription: None,
+                    package_longDescription_reverse: None,
+                    package_hydra: (),
+                    package_system: String::new(),
+                    package_homepage: Vec::new(),
+                    package_position: None,
+                }
+            }
             import::FlakeEntry::App {
                 bin,
                 attribute_name,
@@ -163,11 +192,50 @@ impl From<(import::FlakeEntry, super::Flake)> for Derivation {
 
 impl From<import::NixpkgsEntry> for Derivation {
     fn from(entry: import::NixpkgsEntry) -> Self {
+        let package_attr_set: Vec<_> = entry.attribute.split(".").collect();
+        let package_attr_set: String = (if package_attr_set.len() > 1 {
+            package_attr_set[0]
+        } else {
+            "No package set"
+        })
+        .into();
+
+        let package_attr_set_reverse = Reverse(package_attr_set.clone());
+
+        let package_license: Vec<_> = entry
+            .package
+            .meta
+            .license
+            .map(OneOrMany::into_list)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|sos| sos.0.into())
+            .collect();
+
+        let package_license_set = package_license
+            .iter()
+            .map(|l: &License| l.fullName.to_owned())
+            .collect();
+
+        let package_maintainers = entry
+            .package
+            .meta
+            .maintainers
+            .map_or(Default::default(), Flatten::flatten);
+
+        let package_maintainers_set = package_maintainers
+            .iter()
+            .filter(|m| m.name.is_some())
+            .map(|m| m.name.to_owned().unwrap())
+            .collect();
+
         Derivation::Package {
             package_attr_name: entry.attribute.clone(),
             package_attr_name_reverse: Reverse(entry.attribute.clone()),
             package_attr_name_query: AttributeQuery::new(&entry.attribute),
             package_attr_name_query_reverse: Reverse(AttributeQuery::new(&entry.attribute)),
+            package_attr_set,
+            package_attr_set_reverse,
             package_pname: entry.package.pname.clone(),
             package_pname_reverse: Reverse(entry.package.pname),
             package_pversion: entry.package.version,
@@ -178,22 +246,11 @@ impl From<import::NixpkgsEntry> for Derivation {
                 .map(Flatten::flatten)
                 .unwrap_or_default(),
             package_outputs: entry.package.meta.outputs.unwrap_or_default(),
-            package_license: entry
-                .package
-                .meta
-                .license
-                .map(OneOrMany::into_list)
-                .unwrap_or_default()
-                .into_iter()
-                .map(|sos| sos.0.into())
-                .collect(),
-            package_maintainers: entry
-                .package
-                .meta
-                .maintainers
-                .map_or(Default::default(), Flatten::flatten),
+            package_license,
+            package_license_set,
+            package_maintainers,
+            package_maintainers_set,
             package_description: entry.package.meta.description.clone(),
-
             package_description_reverse: entry.package.meta.description.map(Reverse),
             package_longDescription: entry.package.meta.long_description.clone(),
             package_longDescription_reverse: entry.package.meta.long_description.map(Reverse),
