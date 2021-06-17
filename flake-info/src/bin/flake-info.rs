@@ -147,8 +147,6 @@ async fn main() -> Result<()> {
         .map(Result::unwrap_err)
         .collect::<Vec<_>>();
 
-    println!("{}", serde_json::to_string(&successes)?);
-
     if !errors.is_empty() {
         error!("{} errors occured:", errors.len());
         errors.iter().for_each(|e| {
@@ -178,6 +176,8 @@ async fn main() -> Result<()> {
         es.push_exports(&config, &successes)
             .await
             .with_context(|| "Failed to push results to elasticsearch".to_string())?
+    } else {
+        println!("{}", serde_json::to_string(&successes)?);
     }
 
     Ok(())
