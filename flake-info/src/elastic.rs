@@ -1,6 +1,6 @@
 pub use elasticsearch::http::transport::Transport;
 use elasticsearch::{
-    http::response,
+    http::response::{self, Response},
     indices::{IndicesCreateParts, IndicesDeleteParts, IndicesExistsParts},
     BulkOperation, Elasticsearch as Client,
 };
@@ -69,6 +69,22 @@ lazy_static! {
                     "type": "keyword",
                     "fields": {"edge": {"type": "text", "analyzer": "edge"}},
                 },
+                "package_attr_name_query": {
+                    "type": "keyword",
+                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+                },
+                "package_attr_name_query_reverse": {
+                    "type": "keyword",
+                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+                },
+                "package_attr_set": {
+                    "type": "keyword",
+                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+                },
+                "package_attr_set_reverse": {
+                    "type": "keyword",
+                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+                },
                 "package_pname": {
                     "type": "keyword",
                     "fields": {"edge": {"type": "text", "analyzer": "edge"}},
@@ -118,10 +134,28 @@ lazy_static! {
                         "fullName": {"type": "text"},
                         "url": {"type": "text"}},
                 },
+                "package_license_set": {"type": "keyword"},
+                "package_maintainers": {
+                    "type": "nested",
+                    "properties": {
+                        "name": {"type": "text"},
+                        "email": {"type": "text"},
+                        "github": {"type": "text"},
+                    },
+                },
+                "package_maintainers_set": {"type": "keyword"},
                 "package_homepage": {
                     "type": "keyword"
                 },
                 // Options fields
+                "option_name": {
+                    "type": "keyword",
+                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+                },
+                "option_name_reverse": {
+                    "type": "keyword",
+                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+                },
                 "option_name": {
                     "type": "keyword",
                     "fields": {"edge": {"type": "text", "analyzer": "edge"}},
@@ -224,25 +258,30 @@ impl Elasticsearch {
     ) -> Result<(), ElasticsearchError> {
         // let exports: Result<Vec<Value>, serde_json::Error> = exports.iter().map(serde_json::to_value).collect();
         // let exports = exports?;
-        let body = exports
-            .iter()
-            .map(|e| BulkOperation::from(BulkOperation::index(e)))
-            .collect();
+        let bodies = exports.chunks(10_000).map(|chunk| {
+            chunk
+                .iter()
+                .map(|e| BulkOperation::from(BulkOperation::index(e)))
+        });
 
-        let response = self
-            .client
-            .bulk(elasticsearch::BulkParts::Index(config.index))
-            .body(body)
-            .send()
-            .await
-            .map_err(ElasticsearchError::PushError)?;
+        for body in bodies {
+            let response = self
+                .client
+                .bulk(elasticsearch::BulkParts::Index(config.index))
+                .body(body.collect())
+                .send()
+                .await
+                .map_err(ElasticsearchError::PushError)?;
 
-        dbg!(response)
-            .exception()
-            .await
-            .map_err(ElasticsearchError::ClientError)?
-            .map(ElasticsearchError::PushResponseError)
-            .map_or(Ok(()), Err)
+            dbg!(response)
+                .exception()
+                .await
+                .map_err(ElasticsearchError::ClientError)?
+                .map(ElasticsearchError::PushResponseError)
+                .map_or(Ok(()), Err)?;
+        }
+
+        Ok(())
     }
 
     pub async fn ensure_index(&self, config: &Config<'_>) -> Result<(), ElasticsearchError> {
