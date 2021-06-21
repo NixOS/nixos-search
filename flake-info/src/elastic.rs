@@ -1,3 +1,4 @@
+use clap::arg_enum;
 pub use elasticsearch::http::transport::Transport;
 use elasticsearch::{
     http::response::{self, Response},
@@ -237,6 +238,9 @@ pub enum ElasticsearchError {
 
     #[error("Failed to serialize exported data: {0}")]
     SerializationError(#[from] serde_json::Error),
+
+    #[error("An index with the name \"{0}\" already exists and the (default) stategy is abort")]
+    IndexExistsError(String),
 }
 
 impl Elasticsearch {
@@ -288,11 +292,19 @@ impl Elasticsearch {
         let exists = self.check_index(config).await?;
 
         if exists {
-            if config.recreate {
-                self.clear_index(config).await?;
-            } else {
-                warn!("Index \"{}\" exists, not recreating", config.index);
-                return Ok(());
+            match config.exists_strategy {
+                ExistsStrategy::Abort => {
+                    return Err(ElasticsearchError::IndexExistsError(
+                        config.index.to_owned(),
+                    ));
+                }
+                ExistsStrategy::Ignore => {
+                    warn!("Index \"{}\" exists, not recreating", config.index);
+                    return Ok(());
+                }
+                ExistsStrategy::Recreate => {
+                    self.clear_index(config).await?;
+                }
             }
         }
 
@@ -345,9 +357,23 @@ impl Elasticsearch {
     }
 }
 
+#[derive(Debug)]
 pub struct Config<'a> {
     pub index: &'a str,
-    pub recreate: bool,
+    pub exists_strategy: ExistsStrategy,
+}
+
+arg_enum! {
+    /// Different strategies to deal with eisting indices
+    /// Abort: cancel push, return with an error
+    /// Ignore: Reuse existing index, appending new data
+    /// Recreate: Drop the existing index and start with a new one
+    #[derive(Debug, Clone, Copy)]
+    pub enum ExistsStrategy {
+        Abort,
+        Ignore,
+        Recreate,
+    }
 }
 
 #[cfg(test)]
@@ -365,7 +391,7 @@ mod tests {
         let es = Elasticsearch::new("http://localhost:9200").unwrap();
         let config = &Config {
             index: "flakes_index",
-            recreate: false,
+            exists_strategy: ExistsStrategy::Ignore,
         };
         es.ensure_index(config).await?;
         es.clear_index(config).await?;
@@ -381,7 +407,7 @@ mod tests {
         let es = Elasticsearch::new("http://localhost:9200").unwrap();
         let config = &Config {
             index: "flakes_index",
-            recreate: true,
+            exists_strategy: ExistsStrategy::Recreate,
         };
 
         es.ensure_index(config).await?;
@@ -407,11 +433,35 @@ mod tests {
         let es = Elasticsearch::new("http://localhost:9200").unwrap();
         let config = &Config {
             index: "flakes_index",
-            recreate: true,
+            exists_strategy: ExistsStrategy::Recreate,
         };
 
         es.ensure_index(config).await?;
         es.push_exports(config, &exports).await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_abort_if_index_exists() -> Result<(), Box<dyn std::error::Error>> {
+        let es = Elasticsearch::new("http://localhost:9200").unwrap();
+        let config = &Config {
+            index: "flakes_index",
+            exists_strategy: ExistsStrategy::Abort,
+        };
+
+        es.ensure_index(&Config {
+            exists_strategy: ExistsStrategy::Ignore,
+            ..*config
+        })
+        .await?;
+
+        assert!(matches!(
+            es.ensure_index(config).await,
+            Err(ElasticsearchError::IndexExistsError(_)),
+        ));
+
+        es.clear_index(config).await?;
 
         Ok(())
     }
