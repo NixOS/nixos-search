@@ -17,6 +17,8 @@ pub struct Flake {
     #[serde(rename(serialize = "flake_name"), skip_deserializing)]
     pub name: String,
 
+    pub revision: String,
+
     #[serde(
         skip_deserializing,
         rename(serialize = "flake_source"),
@@ -65,7 +67,8 @@ mod tests {
                     repo: "neuropil".into()
                 },
                 name: "".into(),
-                source: None
+                source: None,
+                revision: "9e2f634ffa45da3f5feb158a12ee32e1673bfe35".into()
             }
         );
 
