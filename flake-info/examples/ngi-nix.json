@@ -1,0 +1,27 @@
+[
+    {
+        "type": "github",
+        "owner": "ngi-nix",
+        "repo": "offen"
+    },
+    {
+        "type": "github",
+        "owner": "ngi-nix",
+        "repo": "pixelfed"
+    },
+    {
+        "type": "github",
+        "owner": "ngi-nix",
+        "repo": "lightmeter"
+    },
+    {
+        "type": "github",
+        "owner": "ngi-nix",
+        "repo": "scion"
+    },
+    {
+        "type": "github",
+        "owner": "ngi-nix",
+        "repo": "openpgp-ca"
+    }
+]
