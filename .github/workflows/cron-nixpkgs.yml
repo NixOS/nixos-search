@@ -20,8 +20,10 @@ jobs:
           - 20.09
 
     env:
-      AWS_DEFAULT_REGION: us-east-1
-      AWS_S3_URL: s3://nix-releases/nixpkgs
+      RUST_LOG: debug
+      FI_ES_EXISTS_STRATEGY: abort
+      FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL }}
+      FI_ES_VERSION: 21
 
     steps:
 
@@ -43,35 +45,6 @@ jobs:
         nix-channel --add https://nixos.org/channels/nixpkgs-unstable
         nix-channel --update
 
-    - name: Installing awscli
-      run: |
-        nix-env -iA nixpkgs.awscli2
-
-    - name: Check for latest evaluation in ${{ matrix.channel }} channel
-      run: |
-        if [ "${{ matrix.channel }}" = "unstable" ]; then
-          RELEASE=$(aws s3 ls --no-sign-request "$AWS_S3_URL/" | grep '/$' | cut -d' ' -f29 | sort | tail -1 | sed 's|/||')
-        else
-          RELEASE=$(aws s3 ls --no-sign-request "$AWS_S3_URL/" | grep 'nixpkgs-${{ matrix.channel }}pre' | grep '/$' | cut -d' ' -f29 | sort | tail -1 | sed 's|/||')
-        fi
-        aws s3 cp --no-sign-request "$AWS_S3_URL/$RELEASE/src-url" ./
-        EVAL_ID=$(cat src-url | cut -c30-)
-        echo "EVAL_ID=${EVAL_ID}" >> $GITHUB_ENV
-
-    - name: Download latest builds for ${{ matrix.channel }} channel (if needed)
-      if: steps.eval-cache.outputs.cache-hit != 'true'
-      run: |
-        mkdir -p ./eval-cache
-        cp ./src-url ./eval-cache/
-        curl -H "Content-Type: application/json" "$(cat ./eval-cache/src-url)/builds" -o ./eval-cache/builds.json
-
-    - name: Cache ${{ matrix.channel }} channel builds
-      id: eval-cache
-      uses: actions/cache@v2
-      with:
-        path: ./eval-cache
-        key: eval-cache-${{ env.EVAL_ID }}
-
     - name: Installing nixFlakes (and jq)
       run: |
         nix-env -iA nixpkgs.nixFlakes nixpkgs.jq
@@ -82,12 +55,15 @@ jobs:
 
     - name: Building import_scripts
       run: |
-        nix build ./#packages.x86_64-linux.import_scripts
+        nix build ./#packages.x86_64-linux.flake_info
 
     - name: Import ${{ matrix.channel }} channel
       run: |
-        cp ./eval-cache/builds.json ./eval-${{ env.EVAL_ID }}.json
-        ./result/bin/import-channel --es-url ${{ secrets.ELASTICSEARCH_URL }} --channel ${{ matrix.channel }} -vvv
+        flake-info --push --json nixpkgs nixos-${{ matrix.channel }} 1>nixpkgs-${{ matrix.channel }}.json
+
+        # todo cache ES json?
+
+
       if: github.repository == 'NixOS/nixos-search'
 
     - name: Warmup ${{ matrix.channel }} channel
