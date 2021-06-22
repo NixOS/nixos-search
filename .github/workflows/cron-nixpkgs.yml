@@ -1,4 +1,4 @@
-name: "Hourly import channel to Elasticsearch"
+name: "Hourly import of nixpkgs to Elasticsearch"
 
 on:
 
