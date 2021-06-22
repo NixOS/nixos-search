@@ -1,4 +1,4 @@
-name: "Nixpkgs: Hourly import to Elasticsearch"
+name: "Hourly import channel to Elasticsearch"
 
 on:
 
@@ -7,7 +7,7 @@ on:
 
 jobs:
 
-  import-channel:
+  hourly-import-channel:
 
     runs-on: ubuntu-latest
 
@@ -23,6 +23,7 @@ jobs:
       RUST_LOG: debug
       FI_ES_EXISTS_STRATEGY: abort
       FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL }}
+      FI_ES_VERSION: 21
 
     steps:
 
@@ -33,12 +34,6 @@ jobs:
 
     - name: Installing Nix
       uses: cachix/install-nix-action@v13
-      with:
-        install_url: https://nixos-nix-install-tests.cachix.org/serve/i6laym9jw3wg9mw6ncyrk6gjx4l34vvx/install
-        install_options: '--tarball-url-prefix https://nixos-nix-install-tests.cachix.org/serve'
-        extra_nix_config: |
-          experimental-features = nix-command flakes
-          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
     - uses: cachix/cachix-action@v10
       with:
@@ -50,9 +45,13 @@ jobs:
         nix-channel --add https://nixos.org/channels/nixpkgs-unstable
         nix-channel --update
 
-    - name: Installing jq
+    - name: Installing nixFlakes (and jq)
       run: |
         nix-env -iA nixpkgs.nixFlakes nixpkgs.jq
+        echo 'experimental-features = nix-command flakes' | sudo tee -a /etc/nix/nix.conf
+        nix --version
+        cat /etc/nix/nix.conf
+        echo "$HOME/.nix-profile/bin" >> $GITHUB_PATH
 
     - name: Building import_scripts
       run: |
@@ -60,12 +59,16 @@ jobs:
 
     - name: Import ${{ matrix.channel }} channel
       run: |
-        ./result/bin/flake-info --push --elastic-schema-version=$(cat ./VERSION) nixpkgs ${{ matrix.channel }}
+        flake-info --push --json nixpkgs nixos-${{ matrix.channel }} 1>nixpkgs-${{ matrix.channel }}.json
+
+        # todo cache ES json?
+
+
       if: github.repository == 'NixOS/nixos-search'
 
     - name: Warmup ${{ matrix.channel }} channel
       run: |
-        curl ${{ secrets.ELASTICSEARCH_URL }}/latest-$(cat VERSION)-nixpkgs-${{ matrix.channel }}/_search | jq '.took'
-        curl ${{ secrets.ELASTICSEARCH_URL }}/latest-$(cat VERSION)-nixpkgs-${{ matrix.channel }}/_search | jq '.took'
-        curl ${{ secrets.ELASTICSEARCH_URL }}/latest-$(cat VERSION)-nixpkgs-${{ matrix.channel }}/_search | jq '.took'
+        curl ${{ secrets.ELASTICSEARCH_URL }}/latest-$(cat VERSION)-${{ matrix.channel }}/_search | jq '.took'
+        curl ${{ secrets.ELASTICSEARCH_URL }}/latest-$(cat VERSION)-${{ matrix.channel }}/_search | jq '.took'
+        curl ${{ secrets.ELASTICSEARCH_URL }}/latest-$(cat VERSION)-${{ matrix.channel }}/_search | jq '.took'
       if: github.repository == 'NixOS/nixos-search'
