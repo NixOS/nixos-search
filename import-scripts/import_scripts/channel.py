@@ -36,7 +36,13 @@ CHANNELS = {
     "21.05": "nixos/21.05/nixos-21.05.",
     "20.09": "nixos/20.09/nixos-20.09.",
 }
-ALLOWED_PLATFORMS = ["x86_64-linux", "aarch64-linux", "x86_64-darwin", "i686-linux"]
+ALLOWED_PLATFORMS = [
+    "x86_64-linux",
+    "aarch64-linux",
+    "x86_64-darwin",
+    "aarch64-darwin",
+    "i686-linux",
+]
 ANALYSIS = {
     "normalizer": {
         "lowercase": {"type": "custom", "char_filter": [], "filter": ["lowercase"]}
