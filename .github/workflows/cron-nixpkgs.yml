@@ -23,7 +23,7 @@ jobs:
       RUST_LOG: debug
       FI_ES_EXISTS_STRATEGY: abort
       FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL }}
-      FI_ES_VERSION: 21
+      FI_ES_VERSION: $(cat VERSION)
 
     steps:
 
@@ -68,7 +68,7 @@ jobs:
 
     - name: Warmup ${{ matrix.channel }} channel
       run: |
-        curl ${{ secrets.ELASTICSEARCH_URL }}/latest-$(cat VERSION)-${{ matrix.channel }}/_search | jq '.took'
-        curl ${{ secrets.ELASTICSEARCH_URL }}/latest-$(cat VERSION)-${{ matrix.channel }}/_search | jq '.took'
-        curl ${{ secrets.ELASTICSEARCH_URL }}/latest-$(cat VERSION)-${{ matrix.channel }}/_search | jq '.took'
+        curl ${{ secrets.ELASTICSEARCH_URL }}/$(cat VERSION)-nixos-${{ matrix.channel }}-latest/_search | jq '.took'
+        curl ${{ secrets.ELASTICSEARCH_URL }}/$(cat VERSION)-nixos-${{ matrix.channel }}-latest/_search | jq '.took'
+        curl ${{ secrets.ELASTICSEARCH_URL }}/$(cat VERSION)-nixos-${{ matrix.channel }}-latest/_search | jq '.took'
       if: github.repository == 'NixOS/nixos-search'
