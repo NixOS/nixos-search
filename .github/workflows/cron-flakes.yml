@@ -1,0 +1,72 @@
+name: "Hourly import of nixpkgs to Elasticsearch"
+
+on:
+
+  schedule:
+  - cron: '0 * * * *'
+
+jobs:
+
+  hourly-import-channel:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: true
+      matrix:
+        group:
+          - ngi-nix
+
+    env:
+      RUST_LOG: debug
+      FI_ES_EXISTS_STRATEGY: abort
+      FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL }}
+      FI_ES_VERSION: $(cat VERSION)
+
+    steps:
+
+    - name: Checking out the repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Installing Nix
+      uses: cachix/install-nix-action@v13
+
+    - uses: cachix/cachix-action@v10
+      with:
+        name: nixos-search
+        signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
+
+    - name: Install unstable channel
+      run: |
+        nix-channel --add https://nixos.org/channels/nixpkgs-unstable
+        nix-channel --update
+
+    - name: Installing nixFlakes (and jq)
+      run: |
+        nix-env -iA nixpkgs.nixFlakes nixpkgs.jq
+        echo 'experimental-features = nix-command flakes' | sudo tee -a /etc/nix/nix.conf
+        nix --version
+        cat /etc/nix/nix.conf
+        echo "$HOME/.nix-profile/bin" >> $GITHUB_PATH
+
+    - name: Building import_scripts
+      run: |
+        nix build ./#packages.x86_64-linux.flake_info
+
+    - name: Import ${{ matrix.group }} group
+      run: |
+        flake-info --push --json group ./flakes/${{ matrix.group }} 1>nixpkgs-${{ matrix.group }}.json
+
+        # todo cache ES json?
+
+
+      if: github.repository == 'NixOS/nixos-search'
+
+    - name: Warmup ${{ matrix.group }} channel
+      run: |
+        curl ${{ secrets.ELASTICSEARCH_URL }}/$(cat VERSION)-${{ matrix.group }}/_search | jq '.took'
+        curl ${{ secrets.ELASTICSEARCH_URL }}/$(cat VERSION)-${{ matrix.group }}/_search | jq '.took'
+        curl ${{ secrets.ELASTICSEARCH_URL }}/$(cat VERSION)-${{ matrix.group }}/_search | jq '.took'
+      if: github.repository == 'NixOS/nixos-search'
