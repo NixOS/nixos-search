@@ -57,7 +57,7 @@ jobs:
 
     - name: Import ${{ matrix.group }} group
       run: |
-        flake-info --push --json group ./flakes/${{ matrix.group }}.json 1>${{ matrix.group }}.json
+        flake-info --push --json group ./flakes/${{ matrix.group }}.json ${{ matrix.group }} 1>${{ matrix.group }}.json
 
         # todo cache ES json?
 
