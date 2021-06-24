@@ -84,6 +84,7 @@ type alias Model a b =
     , sort : Sort
     , showSort : Bool
     , showNixOSDetails : Bool
+    , searchType : Route.SearchType
     }
 
 
@@ -177,6 +178,7 @@ init args maybeModel =
                 |> Maybe.withDefault Relevance
       , showSort = False
       , showNixOSDetails = False
+      , searchType = Maybe.withDefault Route.PackageSearch args.s_type
       }
         |> ensureLoading
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
@@ -362,6 +364,7 @@ createUrl toRoute model =
             , size = Just model.size
             , buckets = model.buckets
             , sort = Just <| toSortId model.sort
+            , s_type = Just model.searchType
             }
 
 

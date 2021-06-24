@@ -1,6 +1,7 @@
 module Route exposing
     ( Route(..)
     , SearchArgs
+    , SearchType(..)
     , SearchRoute
     , fromUrl
     , href
@@ -9,6 +10,7 @@ module Route exposing
     )
 
 import Browser.Navigation
+import Dict
 import Html
 import Html.Attributes
 import Route.SearchQuery exposing (SearchQuery)
@@ -32,7 +34,43 @@ type alias SearchArgs =
 
     -- TODO: embed sort type
     , sort : Maybe String
+    , s_type : Maybe SearchType
     }
+
+
+type SearchType
+    = OptionSearch
+    | PackageSearch
+    | FlakeSearch
+
+
+searchTypeFromString : String -> Maybe SearchType
+searchTypeFromString string =
+    case string of
+        "options" ->
+            Just OptionSearch
+
+        "packages" ->
+            Just PackageSearch
+
+        "flakes" ->
+            Just FlakeSearch
+
+        _ ->
+            Nothing
+
+
+searchTypeToString : SearchType -> String
+searchTypeToString stype =
+    case stype of
+        OptionSearch ->
+            "options"
+
+        PackageSearch ->
+            "packages"
+
+        FlakeSearch ->
+            "flakes"
 
 
 type alias SearchRoute =
@@ -56,6 +94,7 @@ searchQueryParser url =
             <?> Url.Parser.Query.int "size"
             <?> Url.Parser.Query.string "buckets"
             <?> Url.Parser.Query.string "sort"
+            <?> Url.Parser.Query.map (Maybe.andThen searchTypeFromString) (Url.Parser.Query.string "type")
 
 
 searchArgsToUrl : SearchArgs -> ( List QueryParameter, Maybe ( String, Route.SearchQuery.SearchQuery ) )
@@ -67,6 +106,7 @@ searchArgsToUrl args =
         , Maybe.map (Url.Builder.int "size") args.size
         , Maybe.map (Url.Builder.string "buckets") args.buckets
         , Maybe.map (Url.Builder.string "sort") args.sort
+        , Maybe.map (Url.Builder.string "type") <| Maybe.map searchTypeToString args.s_type
         ]
     , Maybe.map (Tuple.pair "query") args.query
     )

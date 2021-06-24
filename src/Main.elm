@@ -383,7 +383,7 @@ viewNavigation route =
                     f searchArgs
 
                 _ ->
-                    f <| Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+                    f <| Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
     in
     li [] [ a [ href "https://nixos.org" ] [ text "Back to nixos.org" ] ]
         :: List.map

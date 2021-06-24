@@ -13,8 +13,6 @@ import Search
 
 
 -- MODEL
-
-
 type alias Model =
     Search.Model ResultItemSource ResultAggregations
 
