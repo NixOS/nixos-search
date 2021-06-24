@@ -289,6 +289,10 @@ update msg model =
             Page.Options.update model.navKey subMsg subModel
                 |> updateWith Options OptionsMsg model
 
+        ( FlakesMsg subMsg, Flakes subModel ) ->
+            Page.Flakes.update model.navKey subMsg subModel
+                |> updateWith Flakes FlakesMsg model
+
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page.
             ( model, Cmd.none )
@@ -373,6 +377,9 @@ viewNavigation route =
                     f searchArgs
 
                 Route.Options searchArgs ->
+                    f searchArgs
+
+                Route.Flakes searchArgs ->
                     f searchArgs
 
                 _ ->

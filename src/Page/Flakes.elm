@@ -69,7 +69,7 @@ update navKey msg model =
             let
                 ( newModel, newCmd ) =
                     Search.update
-                        Route.Options
+                        Route.Flakes
                         navKey
                         subMsg
                         model
@@ -83,7 +83,7 @@ update navKey msg model =
 
 view : Model -> Html Msg
 view model =
-    Search.view { toRoute = Route.Options, categoryName = "options" }
+    Search.view { toRoute = Route.Flakes, categoryName = "options" }
         [ text "Search more than "
         , strong [] [ text "10 000 options" ]
         ]
