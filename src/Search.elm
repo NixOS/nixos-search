@@ -21,7 +21,7 @@ module Search exposing
     , showMoreButton
     , trapClick
     , update
-    , view
+    , view, viewResult, ResultHits, flakes, flakeFromId, defaultFlakeId
     )
 
 import Base64
@@ -178,7 +178,7 @@ init args maybeModel =
                 |> Maybe.withDefault Relevance
       , showSort = False
       , showNixOSDetails = False
-      , searchType = Maybe.withDefault Route.PackageSearch args.s_type
+      , searchType = Maybe.withDefault Route.PackageSearch args.type_
       }
         |> ensureLoading
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
@@ -196,7 +196,7 @@ ensureLoading :
     Model a b
     -> Model a b
 ensureLoading model =
-    if model.query /= Nothing && model.query /= Just "" && List.member model.channel channels then
+    if model.query /= Nothing && model.query /= Just "" && (List.member model.channel channels || List.member model.channel flakeIds)then
         { model | result = RemoteData.Loading }
 
     else
@@ -220,6 +220,7 @@ type Msg a b
     | ToggleSort
     | BucketsChange String
     | ChannelChange String
+    | FlakeChange String
     | QueryInput String
     | QueryInputSubmit
     | QueryResponse (RemoteData.WebData (SearchResult a b))
@@ -287,6 +288,16 @@ update toRoute navKey msg model =
         ChannelChange channel ->
             { model
                 | channel = channel
+                , show = Nothing
+                , buckets = Nothing
+                , from = 0
+            }
+                |> ensureLoading
+                |> pushUrl toRoute navKey
+
+        FlakeChange flake ->
+            { model
+                | channel = flake
                 , show = Nothing
                 , buckets = Nothing
                 , from = 0
@@ -364,7 +375,7 @@ createUrl toRoute model =
             , size = Just model.size
             , buckets = model.buckets
             , sort = Just <| toSortId model.sort
-            , s_type = Just model.searchType
+            , type_ = Just model.searchType
             }
 
 
@@ -433,6 +444,65 @@ channels =
     [ "20.09"
     , "21.05"
     , "unstable"
+    ]
+
+
+type alias Flake =
+    { id : String
+    , isNixpkgs : Bool
+    , title : String
+    , source : String
+    }
+
+
+defaultFlakeId : String
+defaultFlakeId =
+    "nixos-21.05"
+
+
+flakeFromId : String -> Maybe Flake
+flakeFromId flake_id =
+    let
+        find : String -> List Flake -> Maybe Flake
+        find id_ list =
+            case list of
+                flake :: rest ->
+                    if flake.id == id_ then
+                        Just flake
+
+                    else
+                        find id_ rest
+
+                [] ->
+                    Nothing
+    in
+    find flake_id flakes
+
+flakeIds : List String
+flakeIds = List.map .id flakes
+
+flakes : List Flake
+flakes =
+    [ { id = "latest-nixos-20.09-latest"
+      , isNixpkgs = True
+      , title = "Nixpkgs 20.09"
+      , source = ""
+      }
+    , { id = "latest-nixos-21.05"
+      , isNixpkgs = True
+      , title = "Nixpkgs 21.05"
+      , source = ""
+      }
+    , { id = "latest-nixos-unstable"
+      , isNixpkgs = True
+      , title = "Nixpkgs Unstable"
+      , source = ""
+      }
+    , { id = "ngi-nix"
+      , isNixpkgs = False
+      , title = "Public Flakes"
+      , source = ""
+      }
     ]
 
 
