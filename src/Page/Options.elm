@@ -1,11 +1,17 @@
 module Page.Options exposing
     ( Model
-    , Msg
+    , Msg(..)
+    , ResultAggregations
+    , ResultItemSource
+    , decodeResultAggregations
     , decodeResultItemSource
     , init
     , makeRequest
+    , makeRequestBody
     , update
     , view
+    , viewBuckets
+    , viewSuccess
     )
 
 import Browser.Navigation
@@ -34,9 +40,12 @@ import Html.Events
         )
 import Html.Parser
 import Html.Parser.Util
+import Http exposing (Body)
 import Json.Decode
-import Route
+import List exposing (sort)
+import Route exposing (SearchType)
 import Search
+import Url.Parser exposing (query)
 
 
 
@@ -271,7 +280,7 @@ makeRequest :
     -> Maybe String
     -> Search.Sort
     -> Cmd Msg
-makeRequest options channel query from size _ sort =
+makeRequest options _ channel query from size _ sort =
     Search.makeRequest
         (Search.makeRequestBody
             (String.trim query)
@@ -296,6 +305,25 @@ makeRequest options channel query from size _ sort =
         Search.QueryResponse
         (Just "query-options")
         |> Cmd.map SearchMsg
+
+
+makeRequestBody : String -> Int -> Int -> Search.Sort -> Body
+makeRequestBody query from size sort =
+    Search.makeRequestBody
+        (String.trim query)
+        from
+        size
+        sort
+        "option"
+        "option_name"
+        []
+        []
+        []
+        "option_name"
+        [ ( "option_name", 6.0 )
+        , ( "option_name_query", 3.0 )
+        , ( "option_description", 1.0 )
+        ]
 
 
 
