@@ -26,13 +26,15 @@ import Html.Attributes
         , src
         , type_
         )
+import Page.Flakes
 import Page.Home
 import Page.Options
 import Page.Packages
-import Page.Flakes
 import Route
 import Search
 import Url
+import Route exposing (SearchType(..))
+import Page.Flakes exposing (Model(..))
 
 
 
@@ -127,6 +129,7 @@ attemptQuery (( model, _ ) as pair) =
                         , Cmd.map msg <|
                             makeRequest
                                 model.elasticsearch
+                                searchModel.searchType
                                 searchModel.channel
                                 (Maybe.withDefault "" searchModel.query)
                                 searchModel.from
@@ -140,17 +143,34 @@ attemptQuery (( model, _ ) as pair) =
     case model.page of
         Packages searchModel ->
             if Search.shouldLoad searchModel then
-                submitQuery PackagesMsg Page.Packages.makeRequest searchModel
+                submitQuery PackagesMsg Page.Packages.makeRequest  { searchModel | searchType = PackageSearch }
 
             else
                 noEffects pair
 
         Options searchModel ->
             if Search.shouldLoad searchModel then
-                submitQuery OptionsMsg Page.Options.makeRequest searchModel
+                submitQuery OptionsMsg Page.Options.makeRequest { searchModel | searchType = OptionSearch }
 
             else
                 noEffects pair
+
+        Flakes (OptionModel searchModel) ->
+            if Search.shouldLoad searchModel then
+                submitQuery FlakesMsg Page.Flakes.makeRequest searchModel
+
+            else
+                noEffects pair
+
+        Flakes (PackagesModel searchModel) ->
+            if Search.shouldLoad searchModel then
+                let _ = Debug.log "main" "submit flake message"
+                in submitQuery FlakesMsg Page.Flakes.makeRequest searchModel
+
+            else
+              let _ = Debug.log "main" "should not load flakes" in
+                noEffects pair
+
 
         _ ->
             pair
@@ -334,7 +354,7 @@ view model =
                             [ a [ class "brand", href "https://nixos.org" ]
                                 [ img [ src "https://nixos.org/logo/nix-wiki.png", class "logo" ] []
                                 ]
-                            , div [ ]
+                            , div []
                                 [ ul [ class "nav pull-left" ]
                                     (viewNavigation model.route)
                                 ]
@@ -421,6 +441,8 @@ viewPage model =
 
         Flakes flakesModel ->
             Html.map (\m -> FlakesMsg m) <| Page.Flakes.view flakesModel
+
+
 
 -- SUBSCRIPTIONS
 
