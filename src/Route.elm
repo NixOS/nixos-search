@@ -34,7 +34,7 @@ type alias SearchArgs =
 
     -- TODO: embed sort type
     , sort : Maybe String
-    , s_type : Maybe SearchType
+    , type_ : Maybe SearchType
     }
 
 
@@ -106,7 +106,7 @@ searchArgsToUrl args =
         , Maybe.map (Url.Builder.int "size") args.size
         , Maybe.map (Url.Builder.string "buckets") args.buckets
         , Maybe.map (Url.Builder.string "sort") args.sort
-        , Maybe.map (Url.Builder.string "type") <| Maybe.map searchTypeToString args.s_type
+        , Maybe.map (Url.Builder.string "type") <| Maybe.map searchTypeToString args.type_
         ]
     , Maybe.map (Tuple.pair "query") args.query
     )
