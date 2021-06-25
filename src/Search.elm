@@ -4,6 +4,7 @@ module Search exposing
     , Model
     , Msg(..)
     , Options
+    , ResultHits
     , ResultItem
     , SearchResult
     , Sort(..)
@@ -11,7 +12,10 @@ module Search exposing
     , channels
     , decodeAggregation
     , decodeResult
+    , defaultFlakeId
     , elementId
+    , flakeFromId
+    , flakes
     , fromSortId
     , init
     , makeRequest
@@ -21,7 +25,8 @@ module Search exposing
     , showMoreButton
     , trapClick
     , update
-    , view, viewResult, ResultHits, flakes, flakeFromId, defaultFlakeId
+    , view
+    , viewResult
     )
 
 import Base64
@@ -196,7 +201,7 @@ ensureLoading :
     Model a b
     -> Model a b
 ensureLoading model =
-    if model.query /= Nothing && model.query /= Just "" && (List.member model.channel channels || List.member model.channel flakeIds)then
+    if model.query /= Nothing && model.query /= Just "" && (List.member model.channel channels || List.member model.channel flakeIds) then
         { model | result = RemoteData.Loading }
 
     else
@@ -417,6 +422,7 @@ channelDetails channel =
         Release_21_05 ->
             ChannelDetails "21.05" "21.05" "nixos/release-21.05" "nixpkgs-21.05"
 
+
 channelFromId : String -> Maybe Channel
 channelFromId channel_id =
     case channel_id of
@@ -478,8 +484,11 @@ flakeFromId flake_id =
     in
     find flake_id flakes
 
+
 flakeIds : List String
-flakeIds = List.map .id flakes
+flakeIds =
+    List.map .id flakes
+
 
 flakes : List Flake
 flakes =
