@@ -148,6 +148,9 @@ init searchArgs model =
     let
         ( newModel, newCmd ) =
             Search.init searchArgs model
+
+        -- _ =
+        --     Debug.log "New package model" newModel
     in
     ( newModel
     , Cmd.map SearchMsg newCmd

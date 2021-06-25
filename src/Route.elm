@@ -41,7 +41,7 @@ type alias SearchArgs =
 type SearchType
     = OptionSearch
     | PackageSearch
-    | FlakeSearch
+    -- | FlakeSearch
 
 
 searchTypeFromString : String -> Maybe SearchType
@@ -53,8 +53,8 @@ searchTypeFromString string =
         "packages" ->
             Just PackageSearch
 
-        "flakes" ->
-            Just FlakeSearch
+        -- "flakes" ->
+        --     Just FlakeSearch
 
         _ ->
             Nothing
@@ -69,8 +69,8 @@ searchTypeToString stype =
         PackageSearch ->
             "packages"
 
-        FlakeSearch ->
-            "flakes"
+        -- FlakeSearch ->
+        --     "flakes"
 
 
 type alias SearchRoute =

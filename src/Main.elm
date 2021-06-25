@@ -164,15 +164,20 @@ attemptQuery (( model, _ ) as pair) =
 
         Flakes (PackagesModel searchModel) ->
             if Search.shouldLoad searchModel then
-                let _ = Debug.log "main" "submit flake message"
-                in submitQuery FlakesMsg Page.Flakes.makeRequest searchModel
+                -- let
+                --     _ = Debug.log "main" "submit flake message"
+                -- in
+                 submitQuery FlakesMsg Page.Flakes.makeRequest searchModel
 
             else
-              let _ = Debug.log "main" "should not load flakes" in
+            --   let _ = Debug.log "main" "should not load flakes" in
                 noEffects pair
 
 
         _ ->
+            -- let
+            --  _ = Debug.log "pair" <| Debug.toString pair
+            -- in
             pair
 
 
@@ -259,6 +264,7 @@ changeRouteTo currentModel url =
 
                 Route.Flakes searchArgs ->
                     let
+                        -- _ = Debug.log "changeRouteTo" "flakes"
                         modelPage =
                             case model.page of
                                 Flakes x ->
@@ -275,6 +281,8 @@ changeRouteTo currentModel url =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    -- let _ = Debug.log "main" "update"
+    -- in
     case ( msg, model.page ) of
         ( ClickedLink urlRequest, _ ) ->
             case urlRequest of

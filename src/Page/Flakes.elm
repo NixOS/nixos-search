@@ -27,8 +27,8 @@ type Model
 init : Route.SearchArgs -> Maybe Model -> ( Model, Cmd Msg )
 init searchArgs model =
     let
-        _ =
-            Debug.log "Flakes" "init"
+        -- _ =
+        --     Debug.log "Flakes" "init"
 
         --  init with respective module or with packages by default
         mapEitherModel m =
@@ -47,14 +47,14 @@ init searchArgs model =
                 OptionSearch ->
                     Tuple.mapBoth OptionModel (Cmd.map OptionsMsg) <| Page.Options.init searchArgs Nothing
 
-                FlakeSearch ->
-                    Debug.todo "branch 'FlakeSearch' not implemented"
+                -- FlakeSearch ->
+                --     Debug.todo "branch 'FlakeSearch' not implemented"
 
         ( newModel, newCmd ) =
             Maybe.withDefault default <| Maybe.map mapEitherModel model
 
-        _ =
-            Debug.log "mapped Model" <| Maybe.map mapEitherModel model
+        -- _ =
+        --     Debug.log "mapped Model" <| Maybe.map mapEitherModel model
     in
     ( newModel
     , newCmd
@@ -76,17 +76,17 @@ update :
     -> Model
     -> ( Model, Cmd Msg )
 update navKey msg model =
-    let
-        _ =
-            Debug.log "Flake update" ( msg, model )
-    in
+    -- let
+    --     _ =
+    --         Debug.log "Flake update" ( msg, model )
+    -- in
     case ( msg, model ) of
         ( OptionsMsg msg_, OptionModel model_ ) ->
             case msg_ of
                 Page.Options.SearchMsg subMsg ->
                     let
-                        _ =
-                            Debug.log "update - options"
+                        -- _ =
+                        --     Debug.log "update - options"
 
                         ( newModel, newCmd ) =
                             Search.update
@@ -101,8 +101,8 @@ update navKey msg model =
             case msg_ of
                 Page.Packages.SearchMsg subMsg ->
                     let
-                        _ =
-                            Debug.log "Flakes" "update - packages"
+                        -- _ =
+                        --     Debug.log "Flakes" "update - packages"
 
                         ( newModel, newCmd ) =
                             Search.update
@@ -130,8 +130,8 @@ view model =
                 , strong [] [ text "10 000 options" ]
                 ]
 
-        _ =
-            Debug.log "flakes view renders" model
+        -- _ =
+        --     Debug.log "flakes view renders" model
 
         body =
             case model of
@@ -186,8 +186,8 @@ makeRequest options searchType channel query from size maybeBuckets sort =
                         |> Cmd.map Page.Options.SearchMsg
                         |> Cmd.map OptionsMsg
 
-                FlakeSearch ->
-                    Debug.todo "branch 'FlakeSearch' not implemented"
+                -- FlakeSearch ->
+                --     Debug.todo "branch 'FlakeSearch' not implemented"
     in
     cmd
 
@@ -201,5 +201,5 @@ makeRequestBody searchType query from size maybeBuckets sort =
         PackageSearch ->
             Page.Packages.makeRequestBody query from size maybeBuckets sort
 
-        FlakeSearch ->
-            Debug.todo "branch 'FlakeSearch' not implemented"
+        -- FlakeSearch ->
+        --     Debug.todo "branch 'FlakeSearch' not implemented"

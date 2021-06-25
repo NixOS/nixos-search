@@ -273,6 +273,7 @@ viewResultItem channel _ show item =
 
 makeRequest :
     Search.Options
+    -> SearchType
     -> String
     -> String
     -> Int

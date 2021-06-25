@@ -325,6 +325,10 @@ update toRoute navKey msg model =
                 |> pushUrl toRoute navKey
 
         QueryResponse result ->
+            -- let
+                -- _ =
+                --     Debug.log "got query result" result
+            -- in
             ( { model
                 | result = result
               }
@@ -497,7 +501,7 @@ flakes =
       , title = "Nixpkgs 20.09"
       , source = ""
       }
-    , { id = "latest-nixos-21.05"
+    , { id = "nixos-21.05-latest"
       , isNixpkgs = True
       , title = "Nixpkgs 21.05"
       , source = ""
