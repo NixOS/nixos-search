@@ -196,6 +196,12 @@ pageMatch m1 m2 =
         ( Options _, Options _ ) ->
             True
 
+        ( Flakes (OptionModel _), Flakes (OptionModel _))  ->
+            True
+        
+        ( Flakes (PackagesModel _), Flakes (PackagesModel _)) ->
+            True
+
         _ ->
             False
 
