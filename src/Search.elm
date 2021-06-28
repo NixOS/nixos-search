@@ -142,10 +142,10 @@ type Sort
 
 
 init :
-    Maybe Route.SearchArgs
+    Route.SearchArgs
     -> Maybe (Model a b)
     -> ( Model a b, Cmd (Msg a b) )
-init maybeArgs maybeModel =
+init args maybeModel =
     let
         emptyRoute : Route.SearchArgs
         emptyRoute =
@@ -160,9 +160,6 @@ init maybeArgs maybeModel =
             , sort = Nothing
             , type_ = Nothing
             }
-
-        args =
-            Maybe.withDefault emptyRoute maybeArgs
 
         getField getFn default =
             maybeModel
