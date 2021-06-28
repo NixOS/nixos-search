@@ -1,12 +1,14 @@
 module Route exposing
     ( Route(..)
     , SearchArgs
-    , SearchType(..)
     , SearchRoute
+    , SearchType(..)
+    , allTypes
     , fromUrl
     , href
     , replaceUrl
     , routeToString
+    , searchTypeToString
     )
 
 import Browser.Navigation
@@ -42,6 +44,11 @@ type SearchType
     = OptionSearch
     | PackageSearch
     -- | FlakeSearch
+
+
+allTypes : List SearchType
+allTypes =
+    [ OptionSearch, PackageSearch ]
 
 
 searchTypeFromString : String -> Maybe SearchType

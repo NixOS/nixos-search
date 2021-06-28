@@ -4,16 +4,17 @@ import Html exposing (Html, button, div, form, h4, input, p, text, th)
 import Html.Attributes exposing (attribute, autofocus, class, classList, id, placeholder, selected, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Json.Encode exposing (bool)
+import Route exposing (SearchType, allTypes, searchTypeToString)
 import Search exposing (Msg(..), channelDetailsFromId, channels, flakeFromId, flakes)
 
 
 viewSearchInput :
     (Msg a b -> c)
-    -> String
+    -> SearchType
     -> String
     -> Maybe String
     -> Html c
-viewSearchInput outMsg categoryName selectedFlake searchQuery =
+viewSearchInput outMsg category selectedFlake searchQuery =
     form
         [ onSubmit (outMsg QueryInputSubmit)
         , class "search-input"
@@ -24,7 +25,7 @@ viewSearchInput outMsg categoryName selectedFlake searchQuery =
                     [ type_ "text"
                     , id "search-query-input"
                     , autofocus True
-                    , placeholder <| "Search for " ++ categoryName
+                    , placeholder <| "Search for " ++ searchTypeToString category
                     , onInput (outMsg << QueryInput)
                     , value <| Maybe.withDefault "" searchQuery
                     ]
@@ -33,12 +34,12 @@ viewSearchInput outMsg categoryName selectedFlake searchQuery =
             , button [ class "btn", type_ "submit" ]
                 [ text "Search" ]
             ]
-        , div [] (viewFlakes outMsg selectedFlake)
+        , div [] (viewFlakes outMsg selectedFlake category)
         ]
 
 
-viewFlakes : (Msg a b -> msg) -> String -> List (Html msg)
-viewFlakes outMsg selectedFlake =
+viewFlakes : (Msg a b -> msg) -> String -> SearchType -> List (Html msg)
+viewFlakes outMsg selectedFlake selectedCategory =
     List.append
         [ div []
             [ h4 [] [ text "Channel: " ]
@@ -59,6 +60,27 @@ viewFlakes outMsg selectedFlake =
                             [ text flake.title ]
                     )
                     flakes
+                )
+            ]
+        , div []
+            [ h4 [] [ text "Subject: " ]
+            , div
+                [ class "btn-group"
+                , attribute "data-toggle" "buttons-radio"
+                ]
+                (List.map
+                    (\category ->
+                        button
+                            [ type_ "button"
+                            , classList
+                                [ ( "btn", True )
+                                , ( "active", category == selectedCategory )
+                                ]
+                            , onClick <| outMsg (SubjectChange category)
+                            ]
+                            [ text <| searchTypeToString category ]
+                    )
+                    allTypes
                 )
             ]
         ]

@@ -72,7 +72,7 @@ import Http
 import Json.Decode
 import Json.Encode
 import RemoteData
-import Route
+import Route exposing (SearchArgs, SearchType)
 import Route.SearchQuery
 import Set
 import Task
@@ -142,11 +142,28 @@ type Sort
 
 
 init :
-    Route.SearchArgs
+    Maybe Route.SearchArgs
     -> Maybe (Model a b)
     -> ( Model a b, Cmd (Msg a b) )
-init args maybeModel =
+init maybeArgs maybeModel =
     let
+        emptyRoute : Route.SearchArgs
+        emptyRoute =
+            { query = Nothing
+            , channel = Nothing
+            , show = Nothing
+            , from = Nothing
+            , size = Nothing
+            , buckets = Nothing
+
+            -- TODO= Nothing type
+            , sort = Nothing
+            , type_ = Nothing
+            }
+
+        args =
+            Maybe.withDefault emptyRoute maybeArgs
+
         getField getFn default =
             maybeModel
                 |> Maybe.map getFn
@@ -226,6 +243,7 @@ type Msg a b
     | BucketsChange String
     | ChannelChange String
     | FlakeChange String
+    | SubjectChange SearchType
     | QueryInput String
     | QueryInputSubmit
     | QueryResponse (RemoteData.WebData (SearchResult a b))
@@ -310,6 +328,16 @@ update toRoute navKey msg model =
                 |> ensureLoading
                 |> pushUrl toRoute navKey
 
+        SubjectChange subject ->
+            { model
+                | searchType = subject
+                , show = Nothing
+                , buckets = Nothing
+                , from = 0
+            }
+                |> ensureLoading
+                |> pushUrl toRoute navKey
+
         QueryInput query ->
             ( { model | query = Just query }
             , Cmd.none
@@ -326,8 +354,8 @@ update toRoute navKey msg model =
 
         QueryResponse result ->
             -- let
-                -- _ =
-                --     Debug.log "got query result" result
+            -- _ =
+            --     Debug.log "got query result" result
             -- in
             ( { model
                 | result = result

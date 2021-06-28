@@ -56,6 +56,6 @@ view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg =
             )
         )
         [ h1 [] title
-        , viewSearchInput outMsg categoryName model.channel model.query
+        , viewSearchInput outMsg model.searchType model.channel model.query
         , viewResult outMsg toRoute categoryName model viewSuccess viewBuckets
         ]

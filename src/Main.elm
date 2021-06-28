@@ -26,15 +26,13 @@ import Html.Attributes
         , src
         , type_
         )
-import Page.Flakes
+import Page.Flakes exposing (Model(..))
 import Page.Home
 import Page.Options
 import Page.Packages
-import Route
+import Route exposing (SearchType(..))
 import Search
 import Url
-import Route exposing (SearchType(..))
-import Page.Flakes exposing (Model(..))
 
 
 
@@ -143,7 +141,7 @@ attemptQuery (( model, _ ) as pair) =
     case model.page of
         Packages searchModel ->
             if Search.shouldLoad searchModel then
-                submitQuery PackagesMsg Page.Packages.makeRequest  { searchModel | searchType = PackageSearch }
+                submitQuery PackagesMsg Page.Packages.makeRequest { searchModel | searchType = PackageSearch }
 
             else
                 noEffects pair
@@ -167,12 +165,11 @@ attemptQuery (( model, _ ) as pair) =
                 -- let
                 --     _ = Debug.log "main" "submit flake message"
                 -- in
-                 submitQuery FlakesMsg Page.Flakes.makeRequest searchModel
+                submitQuery FlakesMsg Page.Flakes.makeRequest searchModel
 
             else
-            --   let _ = Debug.log "main" "should not load flakes" in
+                --   let _ = Debug.log "main" "should not load flakes" in
                 noEffects pair
-
 
         _ ->
             -- let
@@ -196,10 +193,10 @@ pageMatch m1 m2 =
         ( Options _, Options _ ) ->
             True
 
-        ( Flakes (OptionModel _), Flakes (OptionModel _))  ->
+        ( Flakes (OptionModel _), Flakes (OptionModel _) ) ->
             True
-        
-        ( Flakes (PackagesModel _), Flakes (PackagesModel _)) ->
+
+        ( Flakes (PackagesModel _), Flakes (PackagesModel _) ) ->
             True
 
         _ ->
