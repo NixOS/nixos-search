@@ -161,6 +161,8 @@ init args maybeModel =
             , type_ = Nothing
             }
 
+        -- args =
+        --     Maybe.withDefault emptyRoute maybeArgs
         getField getFn default =
             maybeModel
                 |> Maybe.map getFn
@@ -701,8 +703,9 @@ view :
          -> List (Html c)
         )
     -> (Msg a b -> c)
+    -> List (Html c)
     -> Html c
-view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg =
+view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg searchBuckets =
     let
         resultStatus =
             case model.result of
@@ -730,7 +733,7 @@ view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg =
         )
         [ h1 [] title
         , viewSearchInput outMsg categoryName model.channel model.query
-        , viewResult outMsg toRoute categoryName model viewSuccess viewBuckets
+        , viewResult outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets
         ]
 
 
@@ -751,15 +754,17 @@ viewResult :
          -> SearchResult a b
          -> List (Html c)
         )
+    -> List (Html c)
     -> Html c
-viewResult outMsg toRoute categoryName model viewSuccess viewBuckets =
+viewResult outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets =
     case model.result of
         RemoteData.NotAsked ->
-            div [] [ text "" ]
+            div [] [  ul [class "search-sidebar"] searchBuckets, div [ ] [ ] ]
 
         RemoteData.Loading ->
             div [ class "loader-wrapper" ]
-                [ div [ class "loader" ] [ text "Loading..." ]
+                [ ul [class "search-sidebar"] searchBuckets 
+                , div [ class "loader" ] [ text "Loading..." ]
                 , h2 [] [ text "Searching..." ]
                 ]
 
@@ -773,14 +778,15 @@ viewResult outMsg toRoute categoryName model viewSuccess viewBuckets =
 
             else if List.length buckets > 0 then
                 div [ class "search-results" ]
-                    [ ul [] buckets
+                    [ ul [class "search-sidebar"] <| List.append searchBuckets buckets
                     , div []
                         (viewResults model result viewSuccess toRoute outMsg categoryName)
                     ]
 
             else
                 div [ class "search-results" ]
-                    [ div []
+                    [   ul [class "search-sidebar"] searchBuckets 
+                        ,div []
                         (viewResults model result viewSuccess toRoute outMsg categoryName)
                     ]
 
@@ -805,7 +811,8 @@ viewResult outMsg toRoute categoryName model viewSuccess viewBuckets =
             in
             div []
                 [ div [ class "alert alert-error" ]
-                    [ h4 [] [ text errorTitle ]
+                    [ul [class "search-sidebar"] searchBuckets
+                    , h4 [] [ text errorTitle ]
                     , text errorMessage
                     ]
                 ]

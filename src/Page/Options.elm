@@ -128,7 +128,7 @@ view model =
         viewSuccess
         viewBuckets
         SearchMsg
-
+        []
 
 viewBuckets :
     Maybe String

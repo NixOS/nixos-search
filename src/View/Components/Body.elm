@@ -45,9 +45,6 @@ view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg =
 
                 RemoteData.Failure _ ->
                     "failure"
-
-        withSearchBuckets : Maybe String -> SearchResult a b -> List (Html c)
-        withSearchBuckets bucketsAsString result = List.append (viewFlakes outMsg model.channel model.searchType) <| viewBuckets bucketsAsString result
     
     in
     div
@@ -62,5 +59,5 @@ view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg =
         )
         [ h1 [] title
         , viewSearchInput outMsg model.searchType model.query
-        , viewResult outMsg toRoute categoryName model viewSuccess withSearchBuckets
+        , viewResult outMsg toRoute categoryName model viewSuccess viewBuckets <| viewFlakes outMsg model.channel model.searchType
         ]

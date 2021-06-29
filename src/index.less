@@ -178,12 +178,10 @@ header .navbar.navbar-static-top {
     }
   }
 
-  & > .search-results {
-    display: flex;
-    flex-direction: row;
+ // Buckets
+    ul.search-sidebar {
+      max-width: fit-content;
 
-    // Buckets
-    & > ul {
       list-style: none;
       margin: 0 1em 0 0;
 
@@ -256,6 +254,11 @@ header .navbar.navbar-static-top {
         }
       }
     }
+
+
+  & > .search-results {
+    display: flex;
+    flex-direction: row;
 
     // Results section
     & > div {
