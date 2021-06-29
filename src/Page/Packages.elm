@@ -6,6 +6,8 @@ module Page.Packages exposing
     , makeRequest
     , update
     , view
+    , viewBuckets
+    , viewSuccess, viewBucket
     )
 
 import Browser.Navigation
@@ -736,9 +738,9 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.required "package_homepage" decodeHomepage
         |> Json.Decode.Pipeline.required "package_system" Json.Decode.string
         |> Json.Decode.Pipeline.required "package_hydra" (Json.Decode.nullable (Json.Decode.list decodeResultPackageHydra))
-        |> Json.Decode.Pipeline.required "flake_name" (Json.Decode.nullable Json.Decode.string)
-        |> Json.Decode.Pipeline.required "flake_description" (Json.Decode.nullable Json.Decode.string)
-        |> Json.Decode.Pipeline.required "flake_resolved" (Json.Decode.nullable decodeResolvedFlake)
+        |> Json.Decode.Pipeline.optional "flake_name" (Json.Decode.map Just Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "flake_description" (Json.Decode.map Just Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "flake_resolved" (Json.Decode.map Just decodeResolvedFlake) Nothing
 
 
 type alias ResolvedFlake =
