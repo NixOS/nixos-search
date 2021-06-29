@@ -1,9 +1,10 @@
 module View.Components.SearchInput exposing (..)
 
-import Html exposing (Html, button, div, form, h4, input, p, text, th)
-import Html.Attributes exposing (attribute, autofocus, class, classList, id, placeholder, selected, type_, value)
+import Html exposing (Html, a, button, div, form, h4, input, li, p, span, text, th, ul)
+import Html.Attributes exposing (attribute, autofocus, class, classList, href, id, placeholder, selected, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Json.Encode exposing (bool)
+import Page.Packages exposing (viewBucket)
 import Route exposing (SearchType, allTypes, searchTypeToString)
 import Search exposing (Msg(..), channelDetailsFromId, channels, flakeFromId, flakes)
 
@@ -11,10 +12,9 @@ import Search exposing (Msg(..), channelDetailsFromId, channels, flakeFromId, fl
 viewSearchInput :
     (Msg a b -> c)
     -> SearchType
-    -> String
     -> Maybe String
     -> Html c
-viewSearchInput outMsg category selectedFlake searchQuery =
+viewSearchInput outMsg category searchQuery =
     form
         [ onSubmit (outMsg QueryInputSubmit)
         , class "search-input"
@@ -34,63 +34,57 @@ viewSearchInput outMsg category selectedFlake searchQuery =
             , button [ class "btn", type_ "submit" ]
                 [ text "Search" ]
             ]
-        , div [] (viewFlakes outMsg selectedFlake category)
         ]
 
 
 viewFlakes : (Msg a b -> msg) -> String -> SearchType -> List (Html msg)
 viewFlakes outMsg selectedFlake selectedCategory =
-    List.append
-        [ div []
-            [ h4 [] [ text "Channel: " ]
-            , div
-                [ class "btn-group"
-                , attribute "data-toggle" "buttons-radio"
-                ]
+    [ li []
+        [ ul []
+            (List.append
+                [ li [ class "header" ] [ text "Group" ] ]
                 (List.map
                     (\flake ->
-                        button
-                            [ type_ "button"
-                            , classList
-                                [ ( "btn", True )
-                                , ( "active", flake.id == selectedFlake )
+                        li []
+                            [ a
+                                [ href "#"
+                                , onClick <| outMsg (FlakeChange flake.id)
+                                , classList
+                                    [ ( "selected"
+                                      , flake.id == selectedFlake
+                                      )
+                                    ]
                                 ]
-                            , onClick <| outMsg (FlakeChange flake.id)
+                                [ span [] [ text flake.title ]
+                                , span [] [] -- css ignores the last element (a badge in other buckets)
+                                ]
                             ]
-                            [ text flake.title ]
                     )
                     flakes
                 )
-            ]
-        , div []
-            [ h4 [] [ text "Subject: " ]
-            , div
-                [ class "btn-group"
-                , attribute "data-toggle" "buttons-radio"
-                ]
+            )
+        , ul []
+            (List.append
+                [ li [ class "header" ] [ text "Group" ] ]
                 (List.map
                     (\category ->
-                        button
-                            [ type_ "button"
-                            , classList
-                                [ ( "btn", True )
-                                , ( "active", category == selectedCategory )
+                        li []
+                            [ a
+                                [ href "#"
+                                , onClick <| outMsg (SubjectChange category)
+                                , classList
+                                    [ ( "selected"
+                                      , category == selectedCategory
+                                      )
+                                    ]
                                 ]
-                            , onClick <| outMsg (SubjectChange category)
+                                [ span [] [ text <| searchTypeToString category ]
+                                , span [] [] -- css ignores the last element (a badge in other buckets)
+                                ]
                             ]
-                            [ text <| searchTypeToString category ]
                     )
                     allTypes
                 )
-            ]
+            )
         ]
-    <|
-        Maybe.withDefault
-            [ p [ class "alert alert-error" ]
-                [ h4 [] [ text "Wrong channel selected!" ]
-                , text <| "Please select one of the channels above!"
-                ]
-            ]
-        <|
-            Maybe.map (\_ -> []) <|
-                flakeFromId selectedFlake
+    ]
