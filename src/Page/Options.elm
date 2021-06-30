@@ -42,10 +42,13 @@ import Html.Parser
 import Html.Parser.Util
 import Http exposing (Body)
 import Json.Decode
+import Json.Decode.Pipeline
 import List exposing (sort)
 import Route exposing (SearchType)
-import Search
+import Search exposing (decodeResolvedFlake)
 import Url.Parser exposing (query)
+import Html exposing (source)
+import Html exposing (span)
 
 
 
@@ -63,6 +66,11 @@ type alias ResultItemSource =
     , default : Maybe String
     , example : Maybe String
     , source : Maybe String
+
+    -- flake
+    , flake : Maybe ( String, String )
+    , flakeDescription : Maybe String
+    , flakeUrl : Maybe String
     }
 
 
@@ -130,6 +138,7 @@ view model =
         SearchMsg
         []
 
+
 viewBuckets :
     Maybe String
     -> Search.SearchResult ResultItemSource ResultAggregations
@@ -177,27 +186,8 @@ viewResultItem channel _ show item =
         asPreCode value =
             div [] [ pre [] [ code [ class "code-block" ] [ text value ] ] ]
 
-        githubUrlPrefix branch =
-            "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/"
+       
 
-        cleanPosition value =
-            if String.startsWith "source/" value then
-                String.dropLeft 7 value
-
-            else
-                value
-
-        asGithubLink value =
-            case Search.channelDetailsFromId channel of
-                Just channelDetails ->
-                    a
-                        [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L")
-                        , target "_blank"
-                        ]
-                        [ text value ]
-
-                Nothing ->
-                    text <| cleanPosition value
 
         withEmpty wrapWith maybe =
             case maybe of
@@ -236,7 +226,7 @@ viewResultItem channel _ show item =
                     , div [] [ text "Example" ]
                     , div [] [ withEmpty (wrapped asPreCode) item.source.example ]
                     , div [] [ text "Declared in" ]
-                    , div [] [ withEmpty asGithubLink item.source.source ]
+                    , div [] <| findSource channel item.source
                     ]
                     |> Just
 
@@ -267,6 +257,52 @@ viewResultItem channel _ show item =
             ]
 
 
+findSource : String -> ResultItemSource -> List (Html a)
+findSource channel source =
+    let
+        githubUrlPrefix branch =
+            "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/"
+        cleanPosition value =
+            if String.startsWith "source/" value then
+                String.dropLeft 7 value
+
+            else
+                value
+        asGithubLink value =
+            case Search.channelDetailsFromId channel of
+                Just channelDetails ->
+                    a
+                        [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L")
+                        , target "_blank"
+                        ]
+                        [ text value ]
+
+                Nothing ->
+                    text <| cleanPosition value
+        
+        
+        
+        sourceFile = Maybe.map asGithubLink source.source
+        
+        flakeOrNixpkgs : Maybe (List (Html a))
+        flakeOrNixpkgs = case (source.flake, source.flakeUrl) of
+            -- its a flake
+            (Just (name, module_), Just flakeUrl_)->  
+                Just <| 
+                List.append
+                (Maybe.withDefault [] <| Maybe.map (\sourceFile_ -> [sourceFile_, span [] [text" in "]]) sourceFile)
+                
+                [ span [] [text "Flake: "]
+                  , a [href flakeUrl_] [text <| name ++ "(Module: " ++ module_ ++ ")" ]
+                ]
+
+            ( Nothing, _ ) -> Maybe.map (\l -> [l]) sourceFile
+
+            _ -> Nothing
+
+
+    in
+        Maybe.withDefault  [span [] [text "Not Found"]] flakeOrNixpkgs
 
 -- API
 
@@ -333,13 +369,18 @@ makeRequestBody query from size sort =
 
 decodeResultItemSource : Json.Decode.Decoder ResultItemSource
 decodeResultItemSource =
-    Json.Decode.map6 ResultItemSource
-        (Json.Decode.field "option_name" Json.Decode.string)
-        (Json.Decode.field "option_description" (Json.Decode.nullable Json.Decode.string))
-        (Json.Decode.field "option_type" (Json.Decode.nullable Json.Decode.string))
-        (Json.Decode.field "option_default" (Json.Decode.nullable Json.Decode.string))
-        (Json.Decode.field "option_example" (Json.Decode.nullable Json.Decode.string))
-        (Json.Decode.field "option_source" (Json.Decode.nullable Json.Decode.string))
+    Json.Decode.succeed ResultItemSource
+        |> Json.Decode.Pipeline.required "option_name" Json.Decode.string
+        |> Json.Decode.Pipeline.optional "option_description" (Json.Decode.map Just Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "option_type" (Json.Decode.map Just Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "option_default" (Json.Decode.map Just Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "option_example" (Json.Decode.map Just Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "option_source" (Json.Decode.map Just Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "option_flake"
+            (Json.Decode.map Just <| Json.Decode.map2 Tuple.pair (Json.Decode.index 0 Json.Decode.string) (Json.Decode.index 1 Json.Decode.string))
+            Nothing
+        |> Json.Decode.Pipeline.optional "flake_description" (Json.Decode.map Just Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "flake_resolved" (Json.Decode.map Just decodeResolvedFlake) Nothing
 
 
 decodeResultAggregations : Json.Decode.Decoder ResultAggregations
