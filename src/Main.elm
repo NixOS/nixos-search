@@ -421,20 +421,21 @@ viewNavigation route =
     li [] [ a [ href "https://nixos.org" ] [ text "Back to nixos.org" ] ]
         :: List.map
             (viewNavigationItem route)
-            [ ( toRoute Route.Packages, "Packages" )
-            , ( toRoute Route.Options, "Options" )
-            --, ( toRoute Route.Flakes, "Flakes (Experimental)" )
+            [ ( toRoute Route.Packages, text "Packages" )
+            , ( toRoute Route.Options, text "Options" )
+            , ( toRoute Route.Flakes, span [] [ text "Flakes", sup [] [span [class "label label-info"][small [] [text "Experimental"]]]] )
+            
             ]
 
 
 viewNavigationItem :
     Route.Route
-    -> ( Route.Route, String )
+    -> ( Route.Route, Html Msg )
     -> Html Msg
 viewNavigationItem currentRoute ( route, title ) =
     li
         [ classList [ ( "active", currentRoute == route ) ] ]
-        [ a [ Route.href route ] [ text title ] ]
+        [ a [ Route.href route ] [ title ] ]
 
 
 viewPage : Model -> Html Msg
