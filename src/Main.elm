@@ -33,6 +33,8 @@ import Page.Packages
 import Route exposing (SearchType(..))
 import Search
 import Url
+import Search exposing (defaultFlakeId)
+import Search exposing (channels)
 
 
 
@@ -155,7 +157,7 @@ attemptQuery (( model, _ ) as pair) =
 
         Flakes (OptionModel searchModel) ->
             if Search.shouldLoad searchModel then
-                submitQuery FlakesMsg Page.Flakes.makeRequest searchModel
+                submitQuery FlakesMsg Page.Flakes.makeRequest {searchModel | channel = defaultFlakeId }
 
             else
                 noEffects pair
@@ -165,7 +167,7 @@ attemptQuery (( model, _ ) as pair) =
                 -- let
                 --     _ = Debug.log "main" "submit flake message"
                 -- in
-                submitQuery FlakesMsg Page.Flakes.makeRequest searchModel
+                submitQuery FlakesMsg Page.Flakes.makeRequest {searchModel | channel = defaultFlakeId}
 
             else
                 --   let _ = Debug.log "main" "should not load flakes" in

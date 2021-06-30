@@ -41,31 +41,6 @@ viewFlakes : (Msg a b -> msg) -> String -> SearchType -> List (Html msg)
 viewFlakes outMsg selectedFlake selectedCategory =
     [ li []
         [ ul []
-            (List.append
-                [ li [ class "header" ] [ text "Group" ] ]
-                (List.map
-                    (\flake ->
-                        li []
-                            [ a
-                                [ href "#"
-                                , onClick <| outMsg (FlakeChange flake.id)
-                                , classList
-                                    [ ( "selected"
-                                      , flake.id == selectedFlake
-                                      )
-                                    ]
-                                ]
-                                [ span [] [ text flake.title ]
-                                , span [] [] -- css ignores the last element (a badge in other buckets)
-                                ]
-                            ]
-                    )
-                    flakes
-                )
-            )
-        , ul []
-            (List.append
-                [ li [ class "header" ] [ text "Group" ] ]
                 (List.map
                     (\category ->
                         li []
