@@ -35,6 +35,8 @@ import Search
 import Url
 import Search exposing (defaultFlakeId)
 import Search exposing (channels)
+import Html exposing (sup)
+import Html exposing (small)
 
 
 
