@@ -4,14 +4,19 @@ module Search exposing
     , Model
     , Msg(..)
     , Options
+    , ResultHits
     , ResultItem
     , SearchResult
     , Sort(..)
     , channelDetailsFromId
     , channels
     , decodeAggregation
+    , decodeResolvedFlake
     , decodeResult
+    , defaultFlakeId
     , elementId
+    , flakeFromId
+    , flakes
     , fromSortId
     , init
     , makeRequest
@@ -22,6 +27,7 @@ module Search exposing
     , trapClick
     , update
     , view
+    , viewResult
     )
 
 import Base64
@@ -65,9 +71,10 @@ import Html.Events
         )
 import Http
 import Json.Decode
+import Json.Decode.Pipeline
 import Json.Encode
 import RemoteData
-import Route
+import Route exposing (SearchArgs, SearchType)
 import Route.SearchQuery
 import Set
 import Task
@@ -75,6 +82,7 @@ import Task
 
 type alias Model a b =
     { channel : String
+    , flake : String
     , query : Maybe String
     , result : RemoteData.WebData (SearchResult a b)
     , show : Maybe String
@@ -84,6 +92,7 @@ type alias Model a b =
     , sort : Sort
     , showSort : Bool
     , showNixOSDetails : Bool
+    , searchType : Route.SearchType
     }
 
 
@@ -135,12 +144,75 @@ type Sort
     | AlphabeticallyDesc
 
 
+type alias ResolvedFlake =
+    { type_ : String, owner : Maybe String, repo : Maybe String, url : Maybe String }
+
+
+decodeResolvedFlake : Json.Decode.Decoder String
+decodeResolvedFlake =
+    let
+        resolved =
+            Json.Decode.succeed ResolvedFlake
+                |> Json.Decode.Pipeline.required "type" Json.Decode.string
+                |> Json.Decode.Pipeline.optional "owner" (Json.Decode.map Just Json.Decode.string) Nothing
+                |> Json.Decode.Pipeline.optional "repo" (Json.Decode.map Just Json.Decode.string) Nothing
+                |> Json.Decode.Pipeline.optional "url" (Json.Decode.map Just Json.Decode.string) Nothing
+    in
+    Json.Decode.map
+        (\resolved_ ->
+            let
+                repoPath =
+                    case ( resolved_.owner, resolved_.repo ) of
+                        ( Just owner, Just repo ) ->
+                            Just <| owner ++ "/" ++ repo
+
+                        _ ->
+                            Nothing
+
+                url =
+                    resolved_.url
+
+                result =
+                    case resolved_.type_ of
+                        "github" ->
+                            Maybe.map (\repoPath_ -> "https://github.com/" ++ repoPath_) repoPath
+
+                        "gitlab" ->
+                            Maybe.map (\repoPath_ -> "https://gitlab.com/" ++ repoPath_) repoPath
+
+                        "git" ->
+                            url
+
+                        _ ->
+                            Nothing
+            in
+            Maybe.withDefault "INVALID FLAKE ORIGIN" result
+        )
+        resolved
+
+
 init :
     Route.SearchArgs
     -> Maybe (Model a b)
     -> ( Model a b, Cmd (Msg a b) )
 init args maybeModel =
     let
+        emptyRoute : Route.SearchArgs
+        emptyRoute =
+            { query = Nothing
+            , channel = Nothing
+            , show = Nothing
+            , from = Nothing
+            , size = Nothing
+            , buckets = Nothing
+
+            -- TODO= Nothing type
+            , sort = Nothing
+            , type_ = Nothing
+            }
+
+        -- args =
+        --     Maybe.withDefault emptyRoute maybeArgs
         getField getFn default =
             maybeModel
                 |> Maybe.map getFn
@@ -158,6 +230,7 @@ init args maybeModel =
     ( { channel =
             args.channel
                 |> Maybe.withDefault modelChannel
+      , flake = defaultFlakeId
       , query =
             args.query
                 |> Maybe.andThen Route.SearchQuery.searchQueryToString
@@ -177,6 +250,7 @@ init args maybeModel =
                 |> Maybe.withDefault Relevance
       , showSort = False
       , showNixOSDetails = False
+      , searchType = Maybe.withDefault Route.PackageSearch args.type_
       }
         |> ensureLoading
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
@@ -194,7 +268,7 @@ ensureLoading :
     Model a b
     -> Model a b
 ensureLoading model =
-    if model.query /= Nothing && model.query /= Just "" && List.member model.channel channels then
+    if model.query /= Nothing && model.query /= Just "" && (List.member model.channel channels || List.member model.channel flakeIds) then
         { model | result = RemoteData.Loading }
 
     else
@@ -218,6 +292,8 @@ type Msg a b
     | ToggleSort
     | BucketsChange String
     | ChannelChange String
+    | FlakeChange String
+    | SubjectChange SearchType
     | QueryInput String
     | QueryInputSubmit
     | QueryResponse (RemoteData.WebData (SearchResult a b))
@@ -292,6 +368,26 @@ update toRoute navKey msg model =
                 |> ensureLoading
                 |> pushUrl toRoute navKey
 
+        FlakeChange flake ->
+            { model
+                | channel = flake
+                , show = Nothing
+                , buckets = Nothing
+                , from = 0
+            }
+                |> ensureLoading
+                |> pushUrl toRoute navKey
+
+        SubjectChange subject ->
+            { model
+                | searchType = subject
+                , show = Nothing
+                , buckets = Nothing
+                , from = 0
+            }
+                |> ensureLoading
+                |> pushUrl toRoute navKey
+
         QueryInput query ->
             ( { model | query = Just query }
             , Cmd.none
@@ -307,6 +403,10 @@ update toRoute navKey msg model =
                 |> pushUrl toRoute navKey
 
         QueryResponse result ->
+            -- let
+            -- _ =
+            --     Debug.log "got query result" result
+            -- in
             ( { model
                 | result = result
               }
@@ -362,6 +462,7 @@ createUrl toRoute model =
             , size = Just model.size
             , buckets = model.buckets
             , sort = Just <| toSortId model.sort
+            , type_ = Just model.searchType
             }
 
 
@@ -403,6 +504,7 @@ channelDetails channel =
         Release_21_05 ->
             ChannelDetails "21.05" "21.05" "nixos/release-21.05" "nixos-21.05"
 
+
 channelFromId : String -> Maybe Channel
 channelFromId channel_id =
     case channel_id of
@@ -430,6 +532,68 @@ channels =
     [ "20.09"
     , "21.05"
     , "unstable"
+    ]
+
+
+type alias Flake =
+    { id : String
+    , isNixpkgs : Bool
+    , title : String
+    , source : String
+    }
+
+
+defaultFlakeId : String
+defaultFlakeId =
+    "ngi-nix"
+
+
+flakeFromId : String -> Maybe Flake
+flakeFromId flake_id =
+    let
+        find : String -> List Flake -> Maybe Flake
+        find id_ list =
+            case list of
+                flake :: rest ->
+                    if flake.id == id_ then
+                        Just flake
+
+                    else
+                        find id_ rest
+
+                [] ->
+                    Nothing
+    in
+    find flake_id flakes
+
+
+flakeIds : List String
+flakeIds =
+    List.map .id flakes
+
+
+flakes : List Flake
+flakes =
+    [ { id = "latest-nixos-20.09-latest"
+      , isNixpkgs = True
+      , title = "Nixpkgs 20.09"
+      , source = ""
+      }
+    , { id = "nixos-21.05-latest"
+      , isNixpkgs = True
+      , title = "Nixpkgs 21.05"
+      , source = ""
+      }
+    , { id = "latest-nixos-unstable"
+      , isNixpkgs = True
+      , title = "Nixpkgs Unstable"
+      , source = ""
+      }
+    , { id = "ngi-nix"
+      , isNixpkgs = False
+      , title = "Public Flakes"
+      , source = ""
+      }
     ]
 
 
@@ -587,8 +751,9 @@ view :
          -> List (Html c)
         )
     -> (Msg a b -> c)
+    -> List (Html c)
     -> Html c
-view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg =
+view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg searchBuckets =
     let
         resultStatus =
             case model.result of
@@ -616,7 +781,7 @@ view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg =
         )
         [ h1 [] title
         , viewSearchInput outMsg categoryName model.channel model.query
-        , viewResult outMsg toRoute categoryName model viewSuccess viewBuckets
+        , viewResult outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets
         ]
 
 
@@ -637,15 +802,17 @@ viewResult :
          -> SearchResult a b
          -> List (Html c)
         )
+    -> List (Html c)
     -> Html c
-viewResult outMsg toRoute categoryName model viewSuccess viewBuckets =
+viewResult outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets =
     case model.result of
         RemoteData.NotAsked ->
-            div [] [ text "" ]
+            div [] [ ul [ class "search-sidebar" ] searchBuckets, div [] [] ]
 
         RemoteData.Loading ->
             div [ class "loader-wrapper" ]
-                [ div [ class "loader" ] [ text "Loading..." ]
+                [ ul [ class "search-sidebar" ] searchBuckets
+                , div [ class "loader" ] [ text "Loading..." ]
                 , h2 [] [ text "Searching..." ]
                 ]
 
@@ -655,18 +822,22 @@ viewResult outMsg toRoute categoryName model viewSuccess viewBuckets =
                     viewBuckets model.buckets result
             in
             if result.hits.total.value == 0 && List.length buckets == 0 then
-                viewNoResults categoryName
+                div [ class "search-results" ]
+                    [ ul [ class "search-sidebar" ] searchBuckets
+                    , viewNoResults categoryName
+                    ]
 
             else if List.length buckets > 0 then
                 div [ class "search-results" ]
-                    [ ul [] buckets
+                    [ ul [ class "search-sidebar" ] <| List.append searchBuckets buckets
                     , div []
                         (viewResults model result viewSuccess toRoute outMsg categoryName)
                     ]
 
             else
                 div [ class "search-results" ]
-                    [ div []
+                    [ ul [ class "search-sidebar" ] searchBuckets
+                    , div []
                         (viewResults model result viewSuccess toRoute outMsg categoryName)
                     ]
 
@@ -691,7 +862,8 @@ viewResult outMsg toRoute categoryName model viewSuccess viewBuckets =
             in
             div []
                 [ div [ class "alert alert-error" ]
-                    [ h4 [] [ text errorTitle ]
+                    [ ul [ class "search-sidebar" ] searchBuckets
+                    , h4 [] [ text errorTitle ]
                     , text errorMessage
                     ]
                 ]

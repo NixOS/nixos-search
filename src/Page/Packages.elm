@@ -1,11 +1,17 @@
 module Page.Packages exposing
     ( Model
-    , Msg
+    , Msg(..)
+    , ResultAggregations
+    , ResultItemSource
+    , decodeResultAggregations
     , decodeResultItemSource
     , init
     , makeRequest
+    , makeRequestBody
     , update
     , view
+    , viewBuckets
+    , viewSuccess, viewBucket
     )
 
 import Browser.Navigation
@@ -31,15 +37,18 @@ import Html.Attributes
         , href
         , id
         , target
+        , type_
         )
 import Html.Events exposing (onClick)
-import Json.Decode
+import Http exposing (Body)
+import Json.Decode exposing (Decoder)
 import Json.Decode.Pipeline
 import Json.Encode
 import Regex
-import Route
+import Route exposing (SearchType)
 import Search
 import Utils
+import Search exposing (decodeResolvedFlake)
 
 
 
@@ -63,6 +72,9 @@ type alias ResultItemSource =
     , homepage : List String
     , system : String
     , hydra : Maybe (List ResultPackageHydra)
+    , flakeName : Maybe String
+    , flakeDescription : Maybe String
+    , flakeUrl : Maybe String
     }
 
 
@@ -147,6 +159,9 @@ init searchArgs model =
     let
         ( newModel, newCmd ) =
             Search.init searchArgs model
+
+        -- _ =
+        --     Debug.log "New package model" newModel
     in
     ( newModel
     , Cmd.map SearchMsg newCmd
@@ -194,6 +209,7 @@ view model =
         viewSuccess
         viewBuckets
         SearchMsg
+        []
 
 
 viewBuckets :
@@ -333,23 +349,7 @@ viewResultItem channel showNixOSDetails show item =
 
         shortPackageDetails =
             ul []
-                ((item.source.position
-                    |> Maybe.map
-                        (\position ->
-                            case Search.channelDetailsFromId channel of
-                                Nothing ->
-                                    []
-
-                                Just channelDetails ->
-                                    [ li [ trapClick ]
-                                        [ createShortDetailsItem
-                                            "Source"
-                                            (createGithubUrl channelDetails.branch position)
-                                        ]
-                                    ]
-                        )
-                    |> Maybe.withDefault []
-                 )
+                (renderSource item channel trapClick createShortDetailsItem createGithubUrl
                     |> List.append
                         (item.source.homepage
                             |> List.head
@@ -407,7 +407,7 @@ viewResultItem channel showNixOSDetails show item =
                             Nothing ->
                                 "#"
                     ]
-                    [ text <| Maybe.withDefault "" maintainer.name ++ " <" ++ Maybe.withDefault "" maintainer.email ++ ">" ]
+                    [ text <| Maybe.withDefault "" maintainer.name ++ (Maybe.withDefault "" <| Maybe.map (\email -> " <" ++ email ++ ">") maintainer.email) ]
                 ]
 
         showPlatform platform =
@@ -560,12 +560,49 @@ viewResultItem channel showNixOSDetails show item =
         )
 
 
+renderSource : Search.ResultItem ResultItemSource -> String -> Html.Attribute Msg -> (String -> String -> Html Msg) -> (String -> String -> String) -> List (Html Msg)
+renderSource item channel trapClick createShortDetailsItem createGithubUrl =
+    let
+        postion =
+            item.source.position
+                |> Maybe.map
+                    (\position ->
+                        case Search.channelDetailsFromId channel of
+                            Nothing ->
+                                []
+
+                            Just channelDetails ->
+                                [ li [ trapClick ]
+                                    [ createShortDetailsItem
+                                        "Source"
+                                        (createGithubUrl channelDetails.branch position)
+                                    ]
+                                ]
+                    )
+
+        flakeDef =
+            Maybe.map2
+                (\name resolved ->
+                    [ li [ trapClick ]
+                        [ createShortDetailsItem
+                            ("Flake: " ++ name)
+                            resolved
+                        ]
+                    ]
+                )
+                item.source.flakeName
+                item.source.flakeUrl
+    in
+    Maybe.withDefault (Maybe.withDefault [] flakeDef) postion
+
+
 
 -- API
 
 
 makeRequest :
     Search.Options
+    -> SearchType
     -> String
     -> String
     -> Int
@@ -573,7 +610,20 @@ makeRequest :
     -> Maybe String
     -> Search.Sort
     -> Cmd Msg
-makeRequest options channel query from size maybeBuckets sort =
+makeRequest options _ channel query from size maybeBuckets sort =
+    Search.makeRequest
+        (makeRequestBody query from size maybeBuckets sort)
+        ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
+        decodeResultItemSource
+        decodeResultAggregations
+        options
+        Search.QueryResponse
+        (Just "query-packages")
+        |> Cmd.map SearchMsg
+
+
+makeRequestBody : String -> Int -> Int -> Maybe String -> Search.Sort -> Body
+makeRequestBody query from size maybeBuckets sort =
     let
         currentBuckets =
             initBuckets maybeBuckets
@@ -624,36 +674,27 @@ makeRequest options channel query from size maybeBuckets sort =
               )
             ]
     in
-    Search.makeRequest
-        (Search.makeRequestBody
-            (String.trim query)
-            from
-            size
-            sort
-            "package"
-            "package_attr_name"
-            [ "package_pversion" ]
-            [ "package_attr_set"
-            , "package_license_set"
-            , "package_maintainers_set"
-            , "package_platforms"
-            ]
-            filterByBuckets
-            "package_attr_name"
-            [ ( "package_attr_name", 9.0 )
-            , ( "package_pname", 6.0 )
-            , ( "package_attr_name_query", 4.0 )
-            , ( "package_description", 1.3 )
-            , ( "package_longDescription", 1.0 )
-            ]
-        )
-        ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
-        decodeResultItemSource
-        decodeResultAggregations
-        options
-        Search.QueryResponse
-        (Just "query-packages")
-        |> Cmd.map SearchMsg
+    Search.makeRequestBody
+        (String.trim query)
+        from
+        size
+        sort
+        "package"
+        "package_attr_name"
+        [ "package_pversion" ]
+        [ "package_attr_set"
+        , "package_license_set"
+        , "package_maintainers_set"
+        , "package_platforms"
+        ]
+        filterByBuckets
+        "package_attr_name"
+        [ ( "package_attr_name", 9.0 )
+        , ( "package_pname", 6.0 )
+        , ( "package_attr_name_query", 4.0 )
+        , ( "package_description", 1.3 )
+        , ( "package_longDescription", 1.0 )
+        ]
 
 
 
@@ -694,6 +735,9 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.required "package_homepage" decodeHomepage
         |> Json.Decode.Pipeline.required "package_system" Json.Decode.string
         |> Json.Decode.Pipeline.required "package_hydra" (Json.Decode.nullable (Json.Decode.list decodeResultPackageHydra))
+        |> Json.Decode.Pipeline.optional "flake_name" (Json.Decode.map Just Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "flake_description" (Json.Decode.map Just Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "flake_resolved" (Json.Decode.map Just decodeResolvedFlake) Nothing
 
 
 decodeHomepage : Json.Decode.Decoder (List String)
@@ -720,7 +764,13 @@ decodeResultPackageLicense =
 decodeResultPackageMaintainer : Json.Decode.Decoder ResultPackageMaintainer
 decodeResultPackageMaintainer =
     Json.Decode.map3 ResultPackageMaintainer
-        (Json.Decode.field "name" (Json.Decode.nullable Json.Decode.string))
+        (Json.Decode.oneOf
+            [ Json.Decode.field "name" (Json.Decode.map Just Json.Decode.string)
+            , Json.Decode.field "email" (Json.Decode.map Just Json.Decode.string)
+            , Json.Decode.field "github" (Json.Decode.map Just Json.Decode.string)
+            , Json.Decode.succeed Nothing
+            ]
+        )
         (Json.Decode.field "email" (Json.Decode.nullable Json.Decode.string))
         (Json.Decode.field "github" (Json.Decode.nullable Json.Decode.string))
 
