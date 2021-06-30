@@ -542,7 +542,7 @@ type alias Flake =
 
 defaultFlakeId : String
 defaultFlakeId =
-    "nixos-21.05"
+    "ngi-nix"
 
 
 flakeFromId : String -> Maybe Flake
