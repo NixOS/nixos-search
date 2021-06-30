@@ -807,11 +807,11 @@ viewResult :
 viewResult outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets =
     case model.result of
         RemoteData.NotAsked ->
-            div [] [  ul [class "search-sidebar"] searchBuckets, div [ ] [ ] ]
+            div [] [ ul [ class "search-sidebar" ] searchBuckets, div [] [] ]
 
         RemoteData.Loading ->
             div [ class "loader-wrapper" ]
-                [ ul [class "search-sidebar"] searchBuckets 
+                [ ul [ class "search-sidebar" ] searchBuckets
                 , div [ class "loader" ] [ text "Loading..." ]
                 , h2 [] [ text "Searching..." ]
                 ]
@@ -822,19 +822,22 @@ viewResult outMsg toRoute categoryName model viewSuccess viewBuckets searchBucke
                     viewBuckets model.buckets result
             in
             if result.hits.total.value == 0 && List.length buckets == 0 then
-                viewNoResults categoryName
+                div [ class "search-results" ]
+                    [ ul [ class "search-sidebar" ] searchBuckets
+                    , viewNoResults categoryName
+                    ]
 
             else if List.length buckets > 0 then
                 div [ class "search-results" ]
-                    [ ul [class "search-sidebar"] <| List.append searchBuckets buckets
+                    [ ul [ class "search-sidebar" ] <| List.append searchBuckets buckets
                     , div []
                         (viewResults model result viewSuccess toRoute outMsg categoryName)
                     ]
 
             else
                 div [ class "search-results" ]
-                    [   ul [class "search-sidebar"] searchBuckets 
-                        ,div []
+                    [ ul [ class "search-sidebar" ] searchBuckets
+                    , div []
                         (viewResults model result viewSuccess toRoute outMsg categoryName)
                     ]
 
@@ -859,7 +862,7 @@ viewResult outMsg toRoute categoryName model viewSuccess viewBuckets searchBucke
             in
             div []
                 [ div [ class "alert alert-error" ]
-                    [ul [class "search-sidebar"] searchBuckets
+                    [ ul [ class "search-sidebar" ] searchBuckets
                     , h4 [] [ text errorTitle ]
                     , text errorMessage
                     ]
