@@ -46,6 +46,7 @@ import Route
 import Search
 import Utils
 import Search exposing (channelDetailsFromId)
+import Search exposing (decodeResolvedFlake)
 
 
 
