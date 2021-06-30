@@ -7,6 +7,7 @@ import Json.Encode exposing (bool)
 import Page.Packages exposing (viewBucket)
 import Route exposing (SearchType, allTypes, searchTypeToString)
 import Search exposing (Msg(..), channelDetailsFromId, channels, flakeFromId, flakes)
+import Route exposing (searchTypeToTitle)
 
 
 viewSearchInput :
@@ -53,13 +54,12 @@ viewFlakes outMsg selectedFlake selectedCategory =
                                       )
                                     ]
                                 ]
-                                [ span [] [ text <| searchTypeToString category ]
+                                [ span [] [ text <| searchTypeToTitle category ]
                                 , span [] [] -- css ignores the last element (a badge in other buckets)
                                 ]
                             ]
                     )
                     allTypes
                 )
-            )
         ]
     ]

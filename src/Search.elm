@@ -71,6 +71,7 @@ import Html.Events
         )
 import Http
 import Json.Decode
+import Json.Decode.Pipeline
 import Json.Encode
 import RemoteData
 import Route exposing (SearchArgs, SearchType)
@@ -81,6 +82,7 @@ import Task
 
 type alias Model a b =
     { channel : String
+    , flake : String
     , query : Maybe String
     , result : RemoteData.WebData (SearchResult a b)
     , show : Maybe String
@@ -228,6 +230,7 @@ init args maybeModel =
     ( { channel =
             args.channel
                 |> Maybe.withDefault modelChannel
+      , flake = defaultFlakeId
       , query =
             args.query
                 |> Maybe.andThen Route.SearchQuery.searchQueryToString

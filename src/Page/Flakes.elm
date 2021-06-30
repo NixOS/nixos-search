@@ -52,9 +52,6 @@ init searchArgs model =
                 OptionSearch ->
                     Tuple.mapBoth OptionModel (Cmd.map OptionsMsg) <| Page.Options.init searchArgs Nothing
 
-                -- FlakeSearch ->
-                --     Debug.todo "branch 'FlakeSearch' not implemented"
-
         ( newModel, newCmd ) =
             Maybe.withDefault default <| Maybe.map mapEitherModel model
 

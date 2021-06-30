@@ -8,7 +8,7 @@ module Route exposing
     , href
     , replaceUrl
     , routeToString
-    , searchTypeToString
+    , searchTypeToString, searchTypeToTitle
     )
 
 import Browser.Navigation
@@ -48,7 +48,7 @@ type SearchType
 
 allTypes : List SearchType
 allTypes =
-    [ OptionSearch, PackageSearch ]
+    [ PackageSearch, OptionSearch ]
 
 
 searchTypeFromString : String -> Maybe SearchType
@@ -79,6 +79,17 @@ searchTypeToString stype =
         -- FlakeSearch ->
         --     "flakes"
 
+searchTypeToTitle : SearchType -> String
+searchTypeToTitle stype =
+    case stype of
+        OptionSearch ->
+            "Options"
+
+        PackageSearch ->
+            "Packages"
+
+        -- FlakeSearch ->
+        --     "flakes"
 
 type alias SearchRoute =
     SearchArgs -> Route
