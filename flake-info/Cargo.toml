@@ -20,7 +20,7 @@ tempfile = "3"
 lazy_static = "1.4"
 fancy-regex = "0.6"
 
-elasticsearch = "7.12.0-alpha.1"
+elasticsearch = {git = "https://github.com/elastic/elasticsearch-rs", features = ["rustls-tls"]}
 tokio = { version = "*", features = ["full"] }
 
 [lib]
