@@ -1,5 +1,6 @@
 name: "Build & Deploy to Netlify"
 on:
+  pull_request:
   push:
     branches:
       - main
@@ -50,7 +51,7 @@ jobs:
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
       with:
         production-branch: 'main'
-        production-deploy: true
+        production-deploy: ${{ github.event_name == "push" }}
         publish-dir: './dist'
         github-token: ${{ secrets.GITHUB_TOKEN }}
         deploy-message: 'Deploy from GitHub Actions'
