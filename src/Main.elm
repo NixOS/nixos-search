@@ -383,7 +383,7 @@ viewNavigation route =
             (viewNavigationItem route)
             [ ( toRoute Route.Packages, "Packages" )
             , ( toRoute Route.Options, "Options" )
-            , ( toRoute Route.Flakes, "Flakes (Experimental)" )
+            --, ( toRoute Route.Flakes, "Flakes (Experimental)" )
             ]
 
 
