@@ -1,4 +1,4 @@
-name: "Hourly import of nixpkgs to Elasticsearch"
+name: "Flakes: Hourly import to Elasticsearch"
 
 on:
 
