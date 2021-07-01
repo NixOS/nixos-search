@@ -58,11 +58,7 @@ jobs:
 
     - name: Import ${{ matrix.group }} group
       run: |
-        ./result/bin/flake-info --push --json group ./flakes/${{ matrix.group }}.json ${{ matrix.group }} 1>${{ matrix.group }}.json
-
-        # todo cache ES json?
-
-
+        ./result/bin/flake-info --push --elastic-schema-version=$(cat ./VERSION) group ./flakes/${{ matrix.group }}.json
       if: github.repository == 'NixOS/nixos-search'
 
     - name: Warmup ${{ matrix.group }} channel
