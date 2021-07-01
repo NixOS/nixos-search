@@ -8,7 +8,7 @@ on:
 
 jobs:
 
-  hourly-import-channel:
+  import-batch-01:
 
     runs-on: ubuntu-latest
 
