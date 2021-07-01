@@ -1,0 +1,48 @@
+[
+  {
+    "flake_description": "Extracting information from flakes",
+    "flake_resolved": {
+      "type": "git",
+      "url": "file:///Volumes/projects/Uni/courses/kth/DD2476-Search-Engines-and-Information-Retrieval-Systems/project?dir=flake-info"
+    },
+    "flake_name": "",
+    "flake_source": {
+      "type": "git",
+      "url": "./."
+    },
+    "package_attr_name": "flake-info",
+    "package_pname": "flake-info",
+    "package_pversion": "",
+    "package_platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "i686-linux",
+      "aarch64-linux"
+    ],
+    "package_outputs": [
+      "out"
+    ],
+    "package_license": {}
+  },
+  {
+    "flake_description": "Extracting information from flakes",
+    "flake_resolved": {
+      "type": "git",
+      "url": "file:///Volumes/projects/Uni/courses/kth/DD2476-Search-Engines-and-Information-Retrieval-Systems/project?dir=flake-info"
+    },
+    "flake_name": "",
+    "flake_source": {
+      "type": "git",
+      "url": "./."
+    },
+    "app_bin": "/nix/store/4akx0is6fgh9ci2ak5sbskwzykr0xj85-flake-info/bin/flake-info",
+    "app_attr_name": "flake-info",
+    "app_platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "i686-linux",
+      "aarch64-linux"
+    ],
+    "app_type": "app"
+  }
+]

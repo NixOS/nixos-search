@@ -29,6 +29,7 @@ import Html.Attributes
 import Page.Home
 import Page.Options
 import Page.Packages
+import Page.Flakes
 import Route
 import Search
 import Url
@@ -59,6 +60,7 @@ type Page
     | Home Page.Home.Model
     | Packages Page.Packages.Model
     | Options Page.Options.Model
+    | Flakes Page.Flakes.Model
 
 
 init :
@@ -93,6 +95,7 @@ type Msg
     | HomeMsg Page.Home.Msg
     | PackagesMsg Page.Packages.Msg
     | OptionsMsg Page.Options.Msg
+    | FlakesMsg Page.Flakes.Msg
 
 
 updateWith :
@@ -234,6 +237,21 @@ changeRouteTo currentModel url =
                         |> avoidReinit
                         |> attemptQuery
 
+                Route.Flakes searchArgs ->
+                    let
+                        modelPage =
+                            case model.page of
+                                Flakes x ->
+                                    Just x
+
+                                _ ->
+                                    Nothing
+                    in
+                    Page.Flakes.init searchArgs modelPage
+                        |> updateWith Flakes FlakesMsg model
+                        |> avoidReinit
+                        |> attemptQuery
+
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -295,6 +313,9 @@ view model =
 
                 Options _ ->
                     "NixOS Search - Options"
+
+                Flakes _ ->
+                    "NixOS Search - Flakes (Experimental)"
 
                 _ ->
                     "NixOS Search"
@@ -362,6 +383,7 @@ viewNavigation route =
             (viewNavigationItem route)
             [ ( toRoute Route.Packages, "Packages" )
             , ( toRoute Route.Options, "Options" )
+            --, ( toRoute Route.Flakes, "Flakes (Experimental)" )
             ]
 
 
@@ -390,7 +412,8 @@ viewPage model =
         Options optionsModel ->
             Html.map (\m -> OptionsMsg m) <| Page.Options.view optionsModel
 
-
+        Flakes flakesModel ->
+            Html.map (\m -> FlakesMsg m) <| Page.Flakes.view flakesModel
 
 -- SUBSCRIPTIONS
 

@@ -1,0 +1,4 @@
+github:serokell/deploy-rs
+github:W95Psp/LiterateFStar
+github:ngi-nix/openpgp-ca
+./.

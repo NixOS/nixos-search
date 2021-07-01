@@ -403,7 +403,6 @@ channelDetails channel =
         Release_21_05 ->
             ChannelDetails "21.05" "21.05" "nixos/release-21.05" "nixos-21.05"
 
-
 channelFromId : String -> Maybe Channel
 channelFromId channel_id =
     case channel_id of

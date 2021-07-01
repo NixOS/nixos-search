@@ -1,0 +1,13 @@
+[
+    {
+        "type": "git",
+        "url": "github:fluffynukeit/adaspark"
+    },
+    {
+        "type": "github",
+        "owner": "ngi-nix",
+        "repo": "offen",
+        "git_ref": "4052febf151d60aa4352fa1960cf3ae088f600aa",
+        "description": "Hier könnte Ihre Werbung stehen"
+    }
+]
