@@ -24,7 +24,6 @@ jobs:
       RUST_LOG: debug
       FI_ES_EXISTS_STRATEGY: abort
       FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL }}
-      FI_ES_VERSION: $(cat VERSION)
 
     steps:
 
@@ -59,9 +58,8 @@ jobs:
         nix build ./#packages.x86_64-linux.flake_info
 
     - name: Import ${{ matrix.channel }} channel
-      # TODO: cache ES json?
       run: |
-        ./result/bin/flake-info --push --json nixpkgs nixos-${{ matrix.channel }} 1>nixpkgs-${{ matrix.channel }}.json
+        ./result/bin/flake-info --push --elastic-schema-version=$(cat ./VERSION) nixpkgs nixos-${{ matrix.channel }}
       if: github.repository == 'NixOS/nixos-search'
 
     - name: Warmup ${{ matrix.channel }} channel
