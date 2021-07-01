@@ -59,12 +59,9 @@ jobs:
         nix build ./#packages.x86_64-linux.flake_info
 
     - name: Import ${{ matrix.channel }} channel
+      # TODO: cache ES json?
       run: |
-        flake-info --push --json nixpkgs nixos-${{ matrix.channel }} 1>nixpkgs-${{ matrix.channel }}.json
-
-        # todo cache ES json?
-
-
+        ./result/bin/flake-info --push --json nixpkgs nixos-${{ matrix.channel }} 1>nixpkgs-${{ matrix.channel }}.json
       if: github.repository == 'NixOS/nixos-search'
 
     - name: Warmup ${{ matrix.channel }} channel
