@@ -172,7 +172,7 @@ async fn main() -> Result<()> {
 enum FlakeInfoError {
     #[error("Getting flake info caused an error: {0}")]
     Flake(anyhow::Error),
-    #[error("Getting nixpkga info caused an error: {0}")]
+    #[error("Getting nixpkgs info caused an error: {0}")]
     Nixpkgs(anyhow::Error),
     #[error("Getting group info caused one or more errors: {0:?}")]
     Group(Vec<anyhow::Error>),
