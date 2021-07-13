@@ -30,6 +30,7 @@ mkPoetryApplication {
   postInstall = ''
     wrapProgram $out/bin/import-channel \
       --set INDEX_SCHEMA_VERSION "${version}" \
+      --set NIXPKGS_PANDOC_FILTERS_PATH "${pkgs.path + "/doc/build-aux/pandoc-filters"}" \
       --prefix PATH : "${pkgs.nixStable}/bin"
     wrapProgram $out/bin/channel-diff \
       --set INDEX_SCHEMA_VERSION "${version}" \
