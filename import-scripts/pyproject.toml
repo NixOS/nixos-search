@@ -33,5 +33,5 @@ setuptools = "^47.3.1"
 boto3-stubs = "^1.14.6"
 
 [build-system]
-requires = ["poetry>=0.12"]
-build-backend = "poetry.masonry.api"
+requires = ["poetry_core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
