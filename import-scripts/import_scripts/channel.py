@@ -30,6 +30,7 @@ click_log.basic_config(logger)
 S3_BUCKET = "nix-releases"
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 INDEX_SCHEMA_VERSION = os.environ.get("INDEX_SCHEMA_VERSION", 0)
+NIXPKGS_PANDOC_FILTERS_PATH = os.environ.get("NIXPKGS_PANDOC_FILTERS_PATH", None)
 DIFF_OUTPUT = ["json", "stats"]
 CHANNELS = {
     "unstable": "nixos/unstable/nixos-21.11pre",
@@ -523,6 +524,15 @@ def get_options_raw(evaluation):
 def get_options(evaluation):
     options = get_options_raw(evaluation)
 
+    lua_filters = (
+        [
+            f"--lua-filter={NIXPKGS_PANDOC_FILTERS_PATH}/docbook-reader/citerefentry-to-rst-role.lua",
+            f"--lua-filter={NIXPKGS_PANDOC_FILTERS_PATH}/link-unix-man-references.lua",
+        ]
+        if NIXPKGS_PANDOC_FILTERS_PATH is not None
+        else []
+    )
+
     def gen():
         for name, option in options:
             if "default" in option:
@@ -548,6 +558,7 @@ def get_options(evaluation):
                 if len(list(root.find("para"))) > 0:
                     description = pypandoc.convert_text(
                         xml_description, "html", format="docbook",
+                        extra_args=lua_filters,
                     )
 
             option_name_query = parse_query(name)
