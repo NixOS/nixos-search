@@ -20,7 +20,7 @@ jobs:
 
     env:
       RUST_LOG: debug
-      FI_ES_EXISTS_STRATEGY: abort
+      FI_ES_EXISTS_STRATEGY: recreate
       FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL }}
       FI_ES_VERSION: $(cat VERSION)
 
@@ -58,7 +58,7 @@ jobs:
 
     - name: Import ${{ matrix.group }} group
       run: |
-        ./result/bin/flake-info --push --elastic-schema-version=$(cat ./VERSION) group ./flakes/${{ matrix.group }}.json
+        ./result/bin/flake-info --push --elastic-schema-version=$(cat ./VERSION) group ./flakes/${{ matrix.group }}.json {{ matrix.group }} 
       if: github.repository == 'NixOS/nixos-search'
 
     - name: Warmup ${{ matrix.group }} channel
