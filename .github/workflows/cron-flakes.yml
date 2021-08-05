@@ -22,7 +22,6 @@ jobs:
       RUST_LOG: debug
       FI_ES_EXISTS_STRATEGY: recreate
       FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL }}
-      FI_ES_VERSION: $(cat VERSION)
 
     steps:
 
