@@ -66,7 +66,7 @@ jobs:
 
     - name: Import ${{ matrix.group }} group
       run: |
-        ./result/bin/flake-info --push --elastic-schema-version=$(cat ./VERSION) group ./flakes/${{ matrix.group }}.json {{ matrix.group }} 
+        ./result/bin/flake-info --push --elastic-schema-version=$(cat ./VERSION) group ./flakes/${{ matrix.group }}.json ${{ matrix.group }} 
       if: github.repository == 'NixOS/nixos-search'
 
     - name: Warmup ${{ matrix.group }} channel
