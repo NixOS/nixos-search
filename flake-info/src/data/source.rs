@@ -1,6 +1,9 @@
-use std::{fs::{self, File}, path::Path};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use std::{
+    fs::{self, File},
+    path::Path,
+};
 
 pub type Hash = String;
 pub type FlakeRef = String;
@@ -59,8 +62,10 @@ impl Source {
                     .map_or("".to_string(), |f| format!("?ref={}", f))
             ),
             Source::Git { url } => url.to_string(),
-            Source::Nixpkgs { channel } => format!("https://github.com/NixOS/nixpkgs/archive/refs/heads/{}.tar.gz", channel),
-
+            Source::Nixpkgs { channel } => format!(
+                "https://github.com/NixOS/nixpkgs/archive/refs/heads/{}.tar.gz",
+                channel
+            ),
         }
     }
 
@@ -69,5 +74,4 @@ impl Source {
 
         Ok(serde_json::from_reader(file)?)
     }
-
 }

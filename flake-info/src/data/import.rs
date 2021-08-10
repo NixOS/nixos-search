@@ -76,10 +76,7 @@ pub struct Package {
 /// Name and Package definition are combined using this struct
 #[derive(Debug, Clone)]
 pub enum NixpkgsEntry {
-    Derivation {
-        attribute: String,
-        package: Package,
-    },
+    Derivation { attribute: String, package: Package },
     Option(NixOption),
 }
 
@@ -105,7 +102,6 @@ pub struct Maintainer {
     pub github: Option<String>,
     pub email: Option<String>,
 }
-
 
 /// The type of derivation (placed in packages.<system> or apps.<system>)
 /// Used to command the extraction script

@@ -79,7 +79,7 @@ struct ElasticOpts {
     #[structopt(
         long = "push",
         help = "Push to Elasticsearch (Configure using FI_ES_* environment variables)",
-        requires("elastic-schema-version"),
+        requires("elastic-schema-version")
     )]
     enable: bool,
 
@@ -244,19 +244,16 @@ fn run_command(
     }
 }
 
-async fn push_to_elastic(
-    elastic: &ElasticOpts,
-    successes: &[Export],
-    ident: String,
-) -> Result<()> {
+async fn push_to_elastic(elastic: &ElasticOpts, successes: &[Export], ident: String) -> Result<()> {
     let index = elastic
         .elastic_index_name
-        .as_ref().or_else(|| {
+        .as_ref()
+        .or_else(|| {
             warn!("Using provided index identifier: {}", ident);
             Some(&ident)
         })
-        .map(|ident| format!("{}-{}", elastic.elastic_schema_version.unwrap(), ident)).unwrap();
-
+        .map(|ident| format!("{}-{}", elastic.elastic_schema_version.unwrap(), ident))
+        .unwrap();
 
     info!("Pushing to elastic");
     let es = elastic::Elasticsearch::new(elastic.elastic_url.as_str())?;

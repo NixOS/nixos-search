@@ -4,18 +4,17 @@ use serde::{Deserialize, Serialize};
 #[serde(untagged)]
 pub enum System {
     Plain(String),
-    Detailed {
-        cpu: Cpu,
-        kernel: Kernel,
-    }
+    Detailed { cpu: Cpu, kernel: Kernel },
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]pub struct Cpu {
-    family: String
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Cpu {
+    family: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]pub struct Kernel {
-    name: String
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Kernel {
+    name: String,
 }
 
 impl ToString for System {
@@ -36,5 +35,4 @@ pub struct InstancePlatform {
 #[cfg(test)]
 mod tests {
     use super::*;
-
 }

@@ -7,7 +7,11 @@ use crate::data::Flake;
 
 /// Uses `nix` to fetch the provided flake and read general information
 /// about it using `nix flake info`
-pub fn get_flake_info<T: AsRef<str> + Display>(flake_ref: T, temp_store: bool, extra: &[String]) -> Result<Flake> {
+pub fn get_flake_info<T: AsRef<str> + Display>(
+    flake_ref: T,
+    temp_store: bool,
+    extra: &[String],
+) -> Result<Flake> {
     let args = ["flake", "info", "--json", "--no-write-lock-file"].iter();
     let mut command = Command::with_args("nix", args);
     let command = command.add_arg(flake_ref.as_ref());
