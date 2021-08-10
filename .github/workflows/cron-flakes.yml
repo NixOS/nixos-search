@@ -8,7 +8,7 @@ on:
 
 jobs:
 
-  import-in-baches:
+  import-in-batches:
 
     runs-on: ubuntu-latest
 
