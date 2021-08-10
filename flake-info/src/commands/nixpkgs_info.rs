@@ -67,14 +67,21 @@ pub fn get_nixpkgs_options<T: AsRef<str> + Display>(nixpkgs_channel: T) -> Resul
     ]);
 
     let parsed: Result<Vec<NixpkgsEntry>> = command
+
+    let parsed= command
         .run()
         .with_context(|| {
             format!(
                 "Failed to gather information about nixpkgs {}",
                 nixpkgs_channel.as_ref()
             )
-        })
-        .and_then(|o| {
+        });
+    
+    if let Err(ref e) = parsed {
+        error!("Command error: {}", e);
+    }
+
+    parsed.and_then(|o| {
             debug!("stderr: {}", o.stderr_string_lossy());
             let attr_set: Vec<NixOption> =
                 serde_json::de::from_str(&o.stdout_string_lossy())?;
@@ -82,7 +89,7 @@ pub fn get_nixpkgs_options<T: AsRef<str> + Display>(nixpkgs_channel: T) -> Resul
                 .into_iter()
                 .map(NixpkgsEntry::Option)
                 .collect())
-        });
+        })
 
-    parsed
+    
 }
