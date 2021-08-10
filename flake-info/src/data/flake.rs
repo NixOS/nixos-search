@@ -58,8 +58,9 @@ mod tests {
         assert_eq!(
             serde_json::de::from_str::<Flake>(nix_info_out).unwrap(),
             Flake {
-                description: Some("neuropil is a secure messaging library for IoT, robotics and more."
-                    .into()),
+                description: Some(
+                    "neuropil is a secure messaging library for IoT, robotics and more.".into()
+                ),
                 path: "/nix/store/z4fp2fc9hca40nnvxi0116pfbrla5zgl-source".into(),
                 resolved: Repo::Gitlab {
                     owner: "pi-lar".into(),
