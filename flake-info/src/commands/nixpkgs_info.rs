@@ -66,30 +66,26 @@ pub fn get_nixpkgs_options<T: AsRef<str> + Display>(nixpkgs_channel: T) -> Resul
        "nixos-options"
     ]);
 
-    let parsed: Result<Vec<NixpkgsEntry>> = command
+    // Nix might fail to evaluate some options that reference insecure packages
+    let mut env = HashMap::new();
+    env.insert("NIXPKGS_ALLOW_INSECURE".into(), "1".into());
 
-    let parsed= command
-        .run()
-        .with_context(|| {
-            format!(
-                "Failed to gather information about nixpkgs {}",
-                nixpkgs_channel.as_ref()
-            )
-        });
-    
+    command.env = env;
+
+    let parsed = command.run().with_context(|| {
+        format!(
+            "Failed to gather information about nixpkgs {}",
+            nixpkgs_channel.as_ref()
+        )
+    });
+
     if let Err(ref e) = parsed {
         error!("Command error: {}", e);
     }
 
     parsed.and_then(|o| {
-            debug!("stderr: {}", o.stderr_string_lossy());
-            let attr_set: Vec<NixOption> =
-                serde_json::de::from_str(&o.stdout_string_lossy())?;
-            Ok(attr_set
-                .into_iter()
-                .map(NixpkgsEntry::Option)
-                .collect())
-        })
-
-    
+        debug!("stderr: {}", o.stderr_string_lossy());
+        let attr_set: Vec<NixOption> = serde_json::de::from_str(&o.stdout_string_lossy())?;
+        Ok(attr_set.into_iter().map(NixpkgsEntry::Option).collect())
+    })
 }
