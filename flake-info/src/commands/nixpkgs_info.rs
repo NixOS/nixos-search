@@ -3,7 +3,7 @@ use std::io::Write;
 use std::{collections::HashMap, fmt::Display, fs::File};
 
 use command_run::Command;
-use log::debug;
+use log::{debug, error};
 
 use crate::data::import::{NixOption, NixpkgsEntry, Package};
 
