@@ -7,7 +7,10 @@ use super::Source;
 /// Holds general infoamtion about a flake
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Flake {
-    #[serde(rename(serialize = "flake_description"), skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename(serialize = "flake_description"),
+        skip_serializing_if = "Option::is_none"
+    )]
     pub description: Option<String>,
     #[serde(rename(serialize = "flake_path"), skip_serializing)]
     pub path: PathBuf,
@@ -59,8 +62,9 @@ mod tests {
         assert_eq!(
             serde_json::de::from_str::<Flake>(nix_info_out).unwrap(),
             Flake {
-                description: Some("neuropil is a secure messaging library for IoT, robotics and more."
-                    .into()),
+                description: Some(
+                    "neuropil is a secure messaging library for IoT, robotics and more.".into()
+                ),
                 path: "/nix/store/z4fp2fc9hca40nnvxi0116pfbrla5zgl-source".into(),
                 resolved: Repo::Gitlab {
                     owner: "pi-lar".into(),

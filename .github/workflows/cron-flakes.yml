@@ -8,7 +8,7 @@ on:
 
 jobs:
 
-  import-in-baches:
+  import-in-batches:
 
     runs-on: ubuntu-latest
 
@@ -16,13 +16,12 @@ jobs:
       fail-fast: true
       matrix:
         group:
-          - 01
+          - "01"
 
     env:
       RUST_LOG: debug
-      FI_ES_EXISTS_STRATEGY: abort
+      FI_ES_EXISTS_STRATEGY: recreate
       FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL }}
-      FI_ES_VERSION: $(cat VERSION)
 
     steps:
 
@@ -33,6 +32,18 @@ jobs:
 
     - name: Installing Nix
       uses: cachix/install-nix-action@v13
+      with:
+        install_url: https://nixos-nix-install-tests.cachix.org/serve/i6laym9jw3wg9mw6ncyrk6gjx4l34vvx/install
+        install_options: '--tarball-url-prefix https://nixos-nix-install-tests.cachix.org/serve'
+        extra_nix_config: |
+          experimental-features = nix-command flakes
+          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+   
+    - name: Verify nix installation
+      run: |    
+        nix --version
+        cat /etc/nix/nix.conf
+        echo "$HOME/.nix-profile/bin" >> $GITHUB_PATH
 
     - uses: cachix/cachix-action@v10
       with:
@@ -44,13 +55,9 @@ jobs:
         nix-channel --add https://nixos.org/channels/nixpkgs-unstable
         nix-channel --update
 
-    - name: Installing nixFlakes (and jq)
+    - name: Installing jq
       run: |
-        nix-env -iA nixpkgs.nixFlakes nixpkgs.jq
-        echo 'experimental-features = nix-command flakes' | sudo tee -a /etc/nix/nix.conf
-        nix --version
-        cat /etc/nix/nix.conf
-        echo "$HOME/.nix-profile/bin" >> $GITHUB_PATH
+        nix-env -iA nixpkgs.jq
 
     - name: Building import_scripts
       run: |
@@ -58,7 +65,7 @@ jobs:
 
     - name: Import ${{ matrix.group }} group
       run: |
-        ./result/bin/flake-info --push --elastic-schema-version=$(cat ./VERSION) group ./flakes/${{ matrix.group }}.json
+        ./result/bin/flake-info --push --elastic-schema-version="$(cat ./VERSION)" group "./flakes/${{ matrix.group }}.json" "${{ matrix.group }}" 
       if: github.repository == 'NixOS/nixos-search'
 
     - name: Warmup ${{ matrix.group }} channel

@@ -1,3 +1,4 @@
+use crate::data::import::{FlakeEntry, Kind};
 use anyhow::{Context, Result};
 use command_run::{Command, LogTo};
 use log::debug;
@@ -5,7 +6,6 @@ use std::fmt::Display;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
-use crate::data::import::{FlakeEntry, Kind};
 
 const SCRIPT: &str = include_str!("flake_info.nix");
 const ARGS: [&str; 3] = ["eval", "--json", "--no-write-lock-file"];
@@ -16,7 +16,7 @@ pub fn get_derivation_info<T: AsRef<str> + Display>(
     flake_ref: T,
     kind: Kind,
     temp_store: bool,
-    extra: &[String]
+    extra: &[String],
 ) -> Result<Vec<FlakeEntry>> {
     let script_dir = tempfile::tempdir()?;
     let script_path = script_dir.path().join("extract.nix");
@@ -29,7 +29,8 @@ pub fn get_derivation_info<T: AsRef<str> + Display>(
     if temp_store {
         let temp_store_path = PathBuf::from("/tmp/flake-info-store");
         if !temp_store_path.exists() {
-            std::fs::create_dir_all(&temp_store_path).with_context(|| "Couldn't create temporary store path")?;
+            std::fs::create_dir_all(&temp_store_path)
+                .with_context(|| "Couldn't create temporary store path")?;
         }
         command.add_arg_pair("--store", temp_store_path.canonicalize()?);
     }
@@ -43,7 +44,8 @@ pub fn get_derivation_info<T: AsRef<str> + Display>(
         .with_context(|| format!("Failed to gather information about {}", flake_ref))
         .and_then(|o| {
             debug!("stderr: {}", o.stderr_string_lossy());
-            serde_json::de::from_str(&o.stdout_string_lossy()).with_context(|| format!("Failed to analyze flake {}", flake_ref))
+            serde_json::de::from_str(&o.stdout_string_lossy())
+                .with_context(|| format!("Failed to analyze flake {}", flake_ref))
         });
     parsed
 }
