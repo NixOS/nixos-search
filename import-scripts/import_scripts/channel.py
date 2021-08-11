@@ -552,6 +552,9 @@ def get_options(evaluation):
 
             option_name_query = parse_query(name)
 
+            declarations = option.get("declarations", [])
+            option_source = declarations[0] if declarations else None
+
             yield dict(
                 type="option",
                 option_name=name,
@@ -563,7 +566,7 @@ def get_options(evaluation):
                 option_type=option.get("type"),
                 option_default=default,
                 option_example=example,
-                option_source=option.get("declarations", [None])[0],
+                option_source=option_source,
             )
 
     return len(options), gen
