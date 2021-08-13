@@ -308,8 +308,8 @@ async fn push_to_elastic(
             );
             let alias = format!(
                 "latest-{}-{}-{}",
-                kind,
                 elastic.elastic_schema_version.unwrap(),
+                kind,
                 &name
             );
 
