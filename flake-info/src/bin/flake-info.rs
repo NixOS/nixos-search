@@ -133,6 +133,13 @@ struct ElasticOpts {
         env = "FI_ES_VERSION"
     )]
     elastic_schema_version: Option<usize>,
+
+    #[structopt(
+        long,
+        help = "Whether to disable `latest` alias creation",
+        env = "FI_ES_VERSION"
+    )]
+    no_alias: bool,
 }
 
 #[tokio::main]
@@ -187,7 +194,7 @@ async fn run_command(
     command: Command,
     kind: Kind,
     extra: &[String],
-) -> Result<(Vec<Export>, String), FlakeInfoError> {
+) -> Result<(Vec<Export>, (String, String, String)), FlakeInfoError> {
     match command {
         Command::Flake {
             flake,
@@ -201,7 +208,7 @@ async fn run_command(
             let info = flake_info::get_flake_info(source.to_flake_ref(), temp_store, extra)
                 .map_err(FlakeInfoError::Flake)?;
 
-            let ident = format!("{}-{}", info.name, info.revision);
+            let ident = ("flake".to_owned(), info.name, info.revision);
 
             Ok((exports, ident))
         }
@@ -209,7 +216,11 @@ async fn run_command(
             let nixpkgs = Source::nixpkgs(channel)
                 .await
                 .map_err(FlakeInfoError::Nixpkgs)?;
-            let ident = format!("{}-{}", nixpkgs.channel, nixpkgs.git_ref);
+            let ident = (
+                "nixpkgs".to_owned(),
+                nixpkgs.channel.clone(),
+                nixpkgs.git_ref.clone(),
+            );
             let exports = flake_info::process_nixpkgs(&Source::Nixpkgs(nixpkgs), &kind)
                 .map_err(FlakeInfoError::Nixpkgs)?;
 
@@ -264,20 +275,47 @@ async fn run_command(
                 }
                 format!("{:08x}", sha.finalize())
             };
-            Ok((exports, format!("group-{}-{}", name, hash)))
+
+            let ident = ("group".to_owned(), name, hash);
+
+            Ok((exports, ident))
         }
     }
 }
 
-async fn push_to_elastic(elastic: &ElasticOpts, successes: &[Export], ident: String) -> Result<()> {
-    let index = elastic
+async fn push_to_elastic(
+    elastic: &ElasticOpts,
+    successes: &[Export],
+    ident: (String, String, String),
+) -> Result<()> {
+    let (index, alias) = elastic
         .elastic_index_name
-        .as_ref()
-        .or_else(|| {
-            warn!("Using provided index identifier: {}", ident);
-            Some(&ident)
+        .to_owned()
+        .map(|ident| {
+            (
+                format!("{}-{}", elastic.elastic_schema_version.unwrap(), ident),
+                None,
+            )
         })
-        .map(|ident| format!("{}-{}", elastic.elastic_schema_version.unwrap(), ident))
+        .or_else(|| {
+            let (kind, name, hash) = ident;
+            let ident = format!(
+                "{}-{}-{}-{}",
+                kind,
+                elastic.elastic_schema_version.unwrap(),
+                &name,
+                hash
+            );
+            let alias = format!(
+                "latest-{}-{}-{}",
+                kind,
+                elastic.elastic_schema_version.unwrap(),
+                &name
+            );
+
+            warn!("Using automatic index identifier: {}", ident);
+            Some((ident, Some(alias)))
+        })
         .unwrap();
 
     info!("Pushing to elastic");
@@ -293,6 +331,16 @@ async fn push_to_elastic(elastic: &ElasticOpts, successes: &[Export], ident: Str
     es.push_exports(&config, successes)
         .await
         .with_context(|| "Failed to push results to elasticsearch".to_string())?;
+
+    if let Some(alias) = alias {
+        if !elastic.no_alias {
+            es.write_alias(&config, &index, &alias)
+                .await
+                .with_context(|| "Failed to create alias".to_string())?;
+        } else {
+            warn!("Creating alias disabled")
+        }
+    }
 
     Ok(())
 }
