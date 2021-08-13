@@ -256,7 +256,7 @@ viewBuckets bucketsAsString result =
 
 
 filterPlatformsBucket : List {a | key : String} -> List {a | key : String}
-filterPlatformsBucket = List.filter (\a -> List.member (Debug.log "key" a.key) platforms)
+filterPlatformsBucket = List.filter (\a -> List.member a.key platforms)
 
 viewBucket :
     String
