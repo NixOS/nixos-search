@@ -61,7 +61,7 @@ jobs:
 
     - name: Import ${{ matrix.channel }} channel
       run: |
-        ./result/bin/flake-info --push --elastic-schema-version=$(cat ./VERSION) nixpkgs nixos-${{ matrix.channel }}
+        ./result/bin/flake-info --push --elastic-schema-version=$(cat ./VERSION) nixpkgs ${{ matrix.channel }}
       if: github.repository == 'NixOS/nixos-search'
 
     - name: Warmup ${{ matrix.channel }} channel
