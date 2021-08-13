@@ -2,7 +2,7 @@ use clap::arg_enum;
 pub use elasticsearch::http::transport::Transport;
 use elasticsearch::{
     http::response::{self, Response},
-    indices::{IndicesCreateParts, IndicesDeleteParts, IndicesExistsParts},
+    indices::{IndicesCreateParts, IndicesDeleteParts, IndicesExistsParts, IndicesPutAliasParts},
     BulkOperation, Elasticsearch as Client,
 };
 use lazy_static::lazy_static;
@@ -347,6 +347,28 @@ impl Elasticsearch {
             .client
             .indices()
             .delete(IndicesDeleteParts::Index(&[config.index]))
+            .send()
+            .await
+            .map_err(ElasticsearchError::InitIndexError)?;
+
+        dbg!(response)
+            .exception()
+            .await
+            .map_err(ElasticsearchError::ClientError)?
+            .map(ElasticsearchError::PushResponseError)
+            .map_or(Ok(()), Err)
+    }
+
+    pub async fn write_alias(
+        &self,
+        config: &Config<'_>,
+        index: &str,
+        alias: &str,
+    ) -> Result<(), ElasticsearchError> {
+        let response = self
+            .client
+            .indices()
+            .put_alias(IndicesPutAliasParts::IndexName(&[index], alias))
             .send()
             .await
             .map_err(ElasticsearchError::InitIndexError)?;
