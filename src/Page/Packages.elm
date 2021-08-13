@@ -40,6 +40,7 @@ import Regex
 import Route
 import Search
 import Utils
+import Search exposing (channelDetailsFromId)
 
 
 
@@ -153,6 +154,15 @@ init searchArgs model =
     )
 
 
+platforms: List String
+platforms =          
+            [ "x86_64-linux"
+            , "aarch64-linux"
+            , "i686-linux"
+            , "x86_64-darwin"
+            , "aarch64-darwin"
+            ]
+
 
 -- UPDATE
 
@@ -240,10 +250,13 @@ viewBuckets bucketsAsString result =
             selectedBucket.maintainers
         |> viewBucket
             "Platforms"
-            (result.aggregations.package_platforms.buckets |> sortBuckets)
+            (result.aggregations.package_platforms.buckets |> sortBuckets |> filterPlatformsBucket)
             (createBucketsMsg .platforms (\s v -> { s | platforms = v }))
             selectedBucket.platforms
 
+
+filterPlatformsBucket : List {a | key : String} -> List {a | key : String}
+filterPlatformsBucket = List.filter (\a -> List.member (Debug.log "key" a.key) platforms)
 
 viewBucket :
     String
@@ -689,11 +702,21 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.required "package_longDescription" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_license" (Json.Decode.list decodeResultPackageLicense)
         |> Json.Decode.Pipeline.required "package_maintainers" (Json.Decode.list decodeResultPackageMaintainer)
-        |> Json.Decode.Pipeline.required "package_platforms" (Json.Decode.list Json.Decode.string)
+        |> Json.Decode.Pipeline.required "package_platforms" (Json.Decode.map filterPlatforms (Json.Decode.list Json.Decode.string))
         |> Json.Decode.Pipeline.required "package_position" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_homepage" decodeHomepage
         |> Json.Decode.Pipeline.required "package_system" Json.Decode.string
         |> Json.Decode.Pipeline.required "package_hydra" (Json.Decode.nullable (Json.Decode.list decodeResultPackageHydra))
+
+
+filterPlatforms : List String -> List String
+filterPlatforms =
+    let
+        flip : (a -> b -> c) -> b -> a -> c
+        flip function argB argA =
+            function argA argB
+    in
+    List.filter (flip List.member platforms)
 
 
 decodeHomepage : Json.Decode.Decoder (List String)
