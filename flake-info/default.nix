@@ -6,7 +6,7 @@
 rustPlatform.buildRustPackage rec {
     name = "flake-info";
     src = ./.;
-    cargoSha256 = "sha256-mrk5kHU/BGuij9ZrscgZolKDfWzFWfb9Ws4STl2VHpk=";
+    cargoSha256 = "sha256-qooAjbvdAcfBj5gm8kYbq1m8CZAcpz0KHROBV58lC+Q=";
     nativeBuildInputs = [ pkg-config ];
     buildInputs = [ openssl openssl.dev ] ++ lib.optional pkgs.stdenv.isDarwin [libiconv darwin.apple_sdk.frameworks.Security];
     checkFlags = [
