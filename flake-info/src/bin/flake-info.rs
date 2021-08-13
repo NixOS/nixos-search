@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use commands::run_gc;
 use flake_info::data::import::{Kind, NixOption};
 use flake_info::data::{self, Export, Nixpkgs, Source};
-use flake_info::elastic::ExistsStrategy;
+use flake_info::elastic::{ElasticsearchError, ExistsStrategy};
 use flake_info::{commands, elastic};
 use log::{debug, error, info, warn};
 use sha2::Digest;
@@ -325,9 +325,17 @@ async fn push_to_elastic(
         exists_strategy: elastic.elastic_exists,
     };
 
-    es.ensure_index(&config)
-        .await
-        .with_context(|| format!("Failed to ensure elastic seach index {} exists", index))?;
+    // catch error variant if abort strategy was triggered
+    let ensure = es.ensure_index(&config).await;
+    if let Err(ElasticsearchError::IndexExistsError(_)) = ensure {
+        // abort on abort
+        return Ok(());
+    } else {
+        // throw error if present
+        ensure?;
+    }
+
+
     es.push_exports(&config, successes)
         .await
         .with_context(|| "Failed to push results to elasticsearch".to_string())?;
