@@ -1,12 +1,14 @@
 use anyhow::{Context, Result};
 use commands::run_gc;
-use flake_info::data::import::Kind;
-use flake_info::data::{self, Export, Source};
+use flake_info::data::import::{Kind, NixOption};
+use flake_info::data::{self, Export, Nixpkgs, Source};
 use flake_info::elastic::ExistsStrategy;
 use flake_info::{commands, elastic};
 use log::{debug, error, info, warn};
+use sha2::Digest;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::ptr::hash;
 use structopt::{clap::ArgGroup, StructOpt};
 use thiserror::Error;
 
@@ -139,7 +141,7 @@ async fn main() -> Result<()> {
 
     let args = Args::from_args();
 
-    let command_result = run_command(args.command, args.kind, &args.extra);
+    let command_result = run_command(args.command, args.kind, &args.extra).await;
 
     if let Err(error) = command_result {
         match error {
@@ -181,7 +183,7 @@ enum FlakeInfoError {
     IO(anyhow::Error),
 }
 
-fn run_command(
+async fn run_command(
     command: Command,
     kind: Kind,
     extra: &[String],
@@ -199,13 +201,16 @@ fn run_command(
             let info = flake_info::get_flake_info(source.to_flake_ref(), temp_store, extra)
                 .map_err(FlakeInfoError::Flake)?;
 
-            let ident = format!("{}-{}", info.name, "latest");
+            let ident = format!("{}-{}", info.name, info.revision);
 
             Ok((exports, ident))
         }
         Command::Nixpkgs { channel } => {
-            let ident = format!("{}-latest", channel);
-            let exports = flake_info::process_nixpkgs(&Source::Nixpkgs { channel }, &kind)
+            let nixpkgs = Source::nixpkgs(channel)
+                .await
+                .map_err(FlakeInfoError::Nixpkgs)?;
+            let ident = format!("{}-{}", nixpkgs.channel, nixpkgs.git_ref);
+            let exports = flake_info::process_nixpkgs(&Source::Nixpkgs(nixpkgs), &kind)
                 .map_err(FlakeInfoError::Nixpkgs)?;
 
             Ok((exports, ident))
@@ -217,19 +222,31 @@ fn run_command(
             name,
         } => {
             let sources = Source::read_sources_file(&targets).map_err(FlakeInfoError::IO)?;
-            let (exports, errors) = sources
+            let (exports_and_hashes, errors) = sources
                 .iter()
                 .map(|source| match source {
-                    nixpkgs @ Source::Nixpkgs { .. } => flake_info::process_nixpkgs(nixpkgs, &kind),
-                    _ => flake_info::process_flake(source, &kind, temp_store, &extra),
+                    Source::Nixpkgs(nixpkgs) => flake_info::process_nixpkgs(source, &kind)
+                        .map(|result| (result, nixpkgs.git_ref.to_owned())),
+                    _ => flake_info::process_flake(source, &kind, temp_store, &extra).and_then(
+                        |result| {
+                            flake_info::get_flake_info(source.to_flake_ref(), temp_store, extra)
+                                .map(|info| (result, info.revision))
+                        },
+                    ),
                 })
                 .partition::<Vec<_>, _>(Result::is_ok);
 
-            let exports = exports
+            let (exports, hashes) = exports_and_hashes
                 .into_iter()
-                .map(Result::unwrap)
-                .flatten()
-                .collect::<Vec<_>>();
+                .map(|result| result.unwrap())
+                .fold(
+                    (Vec::new(), Vec::new()),
+                    |(mut exports, mut hashes), (export, hash)| {
+                        exports.extend(export);
+                        hashes.push(hash);
+                        (exports, hashes)
+                    },
+                );
 
             let errors = errors
                 .into_iter()
@@ -239,7 +256,15 @@ fn run_command(
             if !errors.is_empty() {
                 return Err(FlakeInfoError::Group(errors));
             }
-            Ok((exports, name))
+
+            let hash = {
+                let mut sha = sha2::Sha256::new();
+                for hash in hashes {
+                    sha.update(hash);
+                }
+                format!("{:08x}", sha.finalize())
+            };
+            Ok((exports, format!("group-{}-{}", name, hash)))
         }
     }
 }

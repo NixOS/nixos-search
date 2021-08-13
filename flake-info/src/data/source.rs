@@ -28,9 +28,7 @@ pub enum Source {
     Git {
         url: String,
     },
-    Nixpkgs {
-        channel: String,
-    },
+    Nixpkgs(Nixpkgs),
 }
 
 impl Source {
@@ -62,9 +60,9 @@ impl Source {
                     .map_or("".to_string(), |f| format!("?ref={}", f))
             ),
             Source::Git { url } => url.to_string(),
-            Source::Nixpkgs { channel } => format!(
-                "https://github.com/NixOS/nixpkgs/archive/refs/heads/{}.tar.gz",
-                channel
+            Source::Nixpkgs(Nixpkgs { git_ref, .. }) => format!(
+                "https://api.github.com/repos/NixOS/nixpkgs/tarball/{}",
+                git_ref
             ),
         }
     }
@@ -74,4 +72,40 @@ impl Source {
 
         Ok(serde_json::from_reader(file)?)
     }
+
+    pub async fn nixpkgs(channel: String) -> Result<Nixpkgs> {
+        #[derive(Deserialize, Debug)]
+        struct ApiResult {
+            commit: Commit,
+        }
+
+        #[derive(Deserialize, Debug)]
+        struct Commit {
+            sha: String,
+        }
+
+        let git_ref = reqwest::Client::builder()
+            .user_agent("curl") // thank you github
+            .build()?
+            .get(format!(
+                "https://api.github.com/repos/nixos/nixpkgs/branches/{}",
+                channel
+            ))
+            .send()
+            .await?
+            .json::<ApiResult>()
+            .await?
+            .commit
+            .sha;
+
+        let nixpkgs = Nixpkgs { channel, git_ref };
+
+        Ok(nixpkgs)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Nixpkgs {
+    pub channel: String,
+    pub git_ref: String,
 }

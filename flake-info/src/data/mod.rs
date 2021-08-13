@@ -7,4 +7,4 @@ mod utility;
 
 pub use export::Export;
 pub use flake::{Flake, Repo};
-pub use source::{FlakeRef, Hash, Source};
+pub use source::{FlakeRef, Hash, Nixpkgs, Source};
