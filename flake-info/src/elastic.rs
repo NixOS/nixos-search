@@ -297,15 +297,17 @@ impl Elasticsearch {
         if exists {
             match config.exists_strategy {
                 ExistsStrategy::Abort => {
+                    warn!("Index \"{}\" already exists, strategy is: Abort push", config.index);
                     return Err(ElasticsearchError::IndexExistsError(
                         config.index.to_owned(),
                     ));
                 }
                 ExistsStrategy::Ignore => {
-                    warn!("Index \"{}\" exists, not recreating", config.index);
+                    warn!("Index \"{}\" already exists, strategy is: Ignore, proceed push", config.index);
                     return Ok(());
                 }
                 ExistsStrategy::Recreate => {
+                    warn!("Index \"{}\" already exists, strategy is: Recreate index", config.index);
                     self.clear_index(config).await?;
                 }
             }
