@@ -802,6 +802,16 @@ filterPlatforms =
     List.filter (flip List.member platforms)
 
 
+filterPlatforms : List String -> List String
+filterPlatforms =
+    let
+        flip : (a -> b -> c) -> b -> a -> c
+        flip function argB argA =
+            function argA argB
+    in
+    List.filter (flip List.member platforms)
+
+
 decodeHomepage : Json.Decode.Decoder (List String)
 decodeHomepage =
     Json.Decode.oneOf
