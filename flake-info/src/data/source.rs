@@ -88,7 +88,7 @@ impl Source {
             .user_agent("curl") // thank you github
             .build()?
             .get(format!(
-                "https://api.github.com/repos/nixos/nixpkgs/branches/{}",
+                "https://api.github.com/repos/nixos/nixpkgs/branches/nixos-{}",
                 channel
             ))
             .send()
