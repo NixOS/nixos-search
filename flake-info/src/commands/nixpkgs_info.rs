@@ -73,6 +73,8 @@ pub fn get_nixpkgs_options<T: AsRef<str> + Display>(
     // Nix might fail to evaluate some options that reference insecure packages
     let mut env = HashMap::new();
     env.insert("NIXPKGS_ALLOW_INSECURE".into(), "1".into());
+    env.insert("NIXPKGS_ALLOW_UNFREE".into(), "1".into());
+
 
     command.env = env;
 
