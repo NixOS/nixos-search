@@ -1,12 +1,10 @@
+use std::{borrow::Borrow, collections::HashMap};
+
 use clap::arg_enum;
 pub use elasticsearch::http::transport::Transport;
-use elasticsearch::{
-    http::response::{self, Response},
-    indices::{IndicesCreateParts, IndicesDeleteParts, IndicesExistsParts, IndicesPutAliasParts},
-    BulkOperation, Elasticsearch as Client,
-};
+use elasticsearch::{BulkOperation, Elasticsearch as Client, http::response::{self, Response}, indices::{IndicesCreateParts, IndicesDeleteAliasParts, IndicesDeleteParts, IndicesExistsParts, IndicesGetAliasParts, IndicesPutAliasParts, IndicesUpdateAliasesParts}};
 use lazy_static::lazy_static;
-use log::warn;
+use log::{info, warn};
 use serde_json::{json, Value};
 use thiserror::Error;
 
@@ -294,17 +292,26 @@ impl Elasticsearch {
         if exists {
             match config.exists_strategy {
                 ExistsStrategy::Abort => {
-                    warn!("Index \"{}\" already exists, strategy is: Abort push", config.index);
+                    warn!(
+                        "Index \"{}\" already exists, strategy is: Abort push",
+                        config.index
+                    );
                     return Err(ElasticsearchError::IndexExistsError(
                         config.index.to_owned(),
                     ));
                 }
                 ExistsStrategy::Ignore => {
-                    warn!("Index \"{}\" already exists, strategy is: Ignore, proceed push", config.index);
+                    warn!(
+                        "Index \"{}\" already exists, strategy is: Ignore, proceed push",
+                        config.index
+                    );
                     return Ok(());
                 }
                 ExistsStrategy::Recreate => {
-                    warn!("Index \"{}\" already exists, strategy is: Recreate index", config.index);
+                    warn!(
+                        "Index \"{}\" already exists, strategy is: Recreate index",
+                        config.index
+                    );
                     self.clear_index(config).await?;
                 }
             }
@@ -364,6 +371,22 @@ impl Elasticsearch {
         index: &str,
         alias: &str,
     ) -> Result<(), ElasticsearchError> {
+        // delete old alias
+        info!("Try deletig old alias");
+        let response = self.client.indices().get_alias(IndicesGetAliasParts::Name(&[alias])).send().await
+        .map_err(ElasticsearchError::InitIndexError)?;
+        let indices = response.json::<HashMap<String,Value>>().await.map_err(ElasticsearchError::InitIndexError)?.keys().cloned().collect::<Vec<String>>();
+        
+        self
+            .client
+            .indices()
+            .delete_alias(IndicesDeleteAliasParts::IndexName(&indices.iter().map(AsRef::as_ref).collect::<Vec<_>>(), &[alias]))
+            .send()
+            .await
+            .map_err(ElasticsearchError::InitIndexError)?;
+
+        // put new alias
+        info!("Putting new alias");
         let response = self
             .client
             .indices()
