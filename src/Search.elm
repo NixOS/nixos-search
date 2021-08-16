@@ -456,6 +456,9 @@ toAggregations bucketsFields =
                                 [ ( "field"
                                   , Json.Encode.string field
                                   )
+                                  ( "size"
+                                  , Json.Encode.int 20
+                                  )
                                 ]
                           )
                         ]
