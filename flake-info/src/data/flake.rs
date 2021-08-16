@@ -22,6 +22,7 @@ pub struct Flake {
     #[serde(
         skip_deserializing,
         rename(serialize = "flake_source"),
+        skip_serializing_if = "Option::is_none"
     )]
     pub source: Option<Source>,
 }
