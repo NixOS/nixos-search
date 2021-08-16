@@ -1135,7 +1135,10 @@ makeRequest :
     -> (RemoteData.WebData (SearchResult a b) -> Msg a b)
     -> Maybe String
     -> Cmd (Msg a b)
-makeRequest body index decodeResultItemSource decodeResultAggregations options responseMsg tracker =
+makeRequest body channel decodeResultItemSource decodeResultAggregations options responseMsg tracker =
+    let branch = Maybe.map (\details -> details.branch) (channelDetailsFromId channel) |> Maybe.withDefault ""
+        index = "latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ branch
+    in
     Http.riskyRequest
         { method = "POST"
         , headers =

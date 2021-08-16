@@ -289,7 +289,7 @@ makeRequest options channel query from size _ sort =
             , ( "option_description", 1.0 )
             ]
         )
-        ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
+        channel
         decodeResultItemSource
         decodeResultAggregations
         options

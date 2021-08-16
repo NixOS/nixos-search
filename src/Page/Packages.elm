@@ -587,9 +587,7 @@ makeRequest :
     -> Search.Sort
     -> Cmd Msg
 makeRequest options channel query from size maybeBuckets sort =
-    let
-        branch = Maybe.map (\details -> details.branch) (channelDetailsFromId channel) |> Maybe.withDefault ""
-         
+    let         
         currentBuckets =
             initBuckets maybeBuckets
 
@@ -662,7 +660,7 @@ makeRequest options channel query from size maybeBuckets sort =
             , ( "package_longDescription", 1.0 )
             ]
         )
-        ("latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ branch)
+        channel
         decodeResultItemSource
         decodeResultAggregations
         options
