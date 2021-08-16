@@ -21,7 +21,7 @@ pub fn get_nixpkgs_info<T: AsRef<str> + Display>(nixpkgs_channel: T) -> Result<V
         "-f",
         "<nixpkgs>",
         "-I",
-        nixpkgs_channel.as_ref(),
+        format!("nixpkgs={}", nixpkgs_channel.as_ref()).as_str(),
         "--arg",
         "config",
         format!("import {}", script_path.to_str().unwrap()).as_str(),
@@ -74,7 +74,6 @@ pub fn get_nixpkgs_options<T: AsRef<str> + Display>(
     let mut env = HashMap::new();
     env.insert("NIXPKGS_ALLOW_INSECURE".into(), "1".into());
     env.insert("NIXPKGS_ALLOW_UNFREE".into(), "1".into());
-
 
     command.env = env;
 
