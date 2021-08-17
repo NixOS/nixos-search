@@ -16,7 +16,7 @@ jobs:
       fail-fast: true
       matrix:
         group:
-          - ngi-nix
+          - "01"
 
     env:
       RUST_LOG: debug
