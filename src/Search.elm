@@ -395,14 +395,13 @@ channelDetails : Channel -> ChannelDetails
 channelDetails channel =
     case channel of
         Unstable ->
-            ChannelDetails "unstable" "unstable" "nixos/trunk-combined" "nixos-unstable"
+            ChannelDetails "unstable" "unstable" "nixos/trunk-combined" "nixpkgs-unstable"
 
         Release_20_09 ->
-            ChannelDetails "20.09" "20.09" "nixos/release-20.09" "nixos-20.09"
+            ChannelDetails "20.09" "20.09" "nixos/release-20.09" "nixpkgs-20.09"
 
         Release_21_05 ->
-            ChannelDetails "21.05" "21.05" "nixos/release-21.05" "nixos-21.05"
-
+            ChannelDetails "21.05" "21.05" "nixos/release-21.05" "nixpkgs-21.05"
 
 channelFromId : String -> Maybe Channel
 channelFromId channel_id =
@@ -457,6 +456,9 @@ toAggregations bucketsFields =
                                 [ ( "field"
                                   , Json.Encode.string field
                                   )
+                                , ( "size"
+                                  , Json.Encode.int 20
+                                  )
                                 ]
                           )
                         ]
@@ -477,7 +479,7 @@ toAggregations bucketsFields =
               )
             ]
     in
-    ( "aggregations"
+    ( "aggs"
     , Json.Encode.object <|
         List.append fields allFields
     )
@@ -1136,7 +1138,10 @@ makeRequest :
     -> (RemoteData.WebData (SearchResult a b) -> Msg a b)
     -> Maybe String
     -> Cmd (Msg a b)
-makeRequest body index decodeResultItemSource decodeResultAggregations options responseMsg tracker =
+makeRequest body channel decodeResultItemSource decodeResultAggregations options responseMsg tracker =
+    let branch = Maybe.map (\details -> details.branch) (channelDetailsFromId channel) |> Maybe.withDefault ""
+        index = "latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ branch
+    in
     Http.riskyRequest
         { method = "POST"
         , headers =

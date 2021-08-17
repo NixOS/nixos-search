@@ -1,0 +1,346 @@
+[
+  {
+    "flake_description": "Compilers and tools for SPARK2014 Ada development",
+    "flake_resolved": {
+      "type": "github",
+      "owner": "fluffynukeit",
+      "repo": "adaspark"
+    },
+    "flake_name": "adaspark",
+    "flake_source": {
+      "type": "git",
+      "url": "github:fluffynukeit/adaspark"
+    },
+    "package_attr_name": "adaspark",
+    "package_pname": "adaspark",
+    "package_pversion": "",
+    "package_platforms": [
+      "x86_64-linux"
+    ],
+    "package_outputs": [
+      "out"
+    ],
+    "package_license": {}
+  },
+  {
+    "flake_description": "Compilers and tools for SPARK2014 Ada development",
+    "flake_resolved": {
+      "type": "github",
+      "owner": "fluffynukeit",
+      "repo": "adaspark"
+    },
+    "flake_name": "adaspark",
+    "flake_source": {
+      "type": "git",
+      "url": "github:fluffynukeit/adaspark"
+    },
+    "package_attr_name": "asis",
+    "package_pname": "ASIS",
+    "package_pversion": "gcc-10.1.0",
+    "package_platforms": [
+      "x86_64-linux"
+    ],
+    "package_outputs": [
+      "out"
+    ],
+    "package_license": {}
+  },
+  {
+    "flake_description": "Compilers and tools for SPARK2014 Ada development",
+    "flake_resolved": {
+      "type": "github",
+      "owner": "fluffynukeit",
+      "repo": "adaspark"
+    },
+    "flake_name": "adaspark",
+    "flake_source": {
+      "type": "git",
+      "url": "github:fluffynukeit/adaspark"
+    },
+    "package_attr_name": "aunit",
+    "package_pname": "AUnit",
+    "package_pversion": "20.2",
+    "package_platforms": [
+      "x86_64-linux"
+    ],
+    "package_outputs": [
+      "out"
+    ],
+    "package_license": {}
+  },
+  {
+    "flake_description": "Compilers and tools for SPARK2014 Ada development",
+    "flake_resolved": {
+      "type": "github",
+      "owner": "fluffynukeit",
+      "repo": "adaspark"
+    },
+    "flake_name": "adaspark",
+    "flake_source": {
+      "type": "git",
+      "url": "github:fluffynukeit/adaspark"
+    },
+    "package_attr_name": "gnat",
+    "package_pname": "gnat-10.2.0",
+    "package_pversion": "10.2.0",
+    "package_platforms": [
+      "x86_64-linux"
+    ],
+    "package_outputs": [
+      "out",
+      "man",
+      "info"
+    ],
+    "package_description": "GNU Compiler Collection, version 10.2.0 (wrapper script)",
+    "package_license": {
+      "license_long": "GNU General Public License v3.0 or later",
+      "license": "gpl3Plus",
+      "license_url": "https://spdx.org/licenses/GPL-3.0-or-later.html"
+    }
+  },
+  {
+    "flake_description": "Compilers and tools for SPARK2014 Ada development",
+    "flake_resolved": {
+      "type": "github",
+      "owner": "fluffynukeit",
+      "repo": "adaspark"
+    },
+    "flake_name": "adaspark",
+    "flake_source": {
+      "type": "git",
+      "url": "github:fluffynukeit/adaspark"
+    },
+    "package_attr_name": "gnat_util",
+    "package_pname": "gnat_util",
+    "package_pversion": "10.1.0",
+    "package_platforms": [
+      "x86_64-linux"
+    ],
+    "package_outputs": [
+      "out"
+    ],
+    "package_license": {}
+  },
+  {
+    "flake_description": "Compilers and tools for SPARK2014 Ada development",
+    "flake_resolved": {
+      "type": "github",
+      "owner": "fluffynukeit",
+      "repo": "adaspark"
+    },
+    "flake_name": "adaspark",
+    "flake_source": {
+      "type": "git",
+      "url": "github:fluffynukeit/adaspark"
+    },
+    "package_attr_name": "gnatcoll-core",
+    "package_pname": "gnatcoll-core",
+    "package_pversion": "20.2",
+    "package_platforms": [
+      "x86_64-linux"
+    ],
+    "package_outputs": [
+      "out"
+    ],
+    "package_license": {}
+  },
+  {
+    "flake_description": "Compilers and tools for SPARK2014 Ada development",
+    "flake_resolved": {
+      "type": "github",
+      "owner": "fluffynukeit",
+      "repo": "adaspark"
+    },
+    "flake_name": "adaspark",
+    "flake_source": {
+      "type": "git",
+      "url": "github:fluffynukeit/adaspark"
+    },
+    "package_attr_name": "gpr",
+    "package_pname": "gprbuild",
+    "package_pversion": "20.2",
+    "package_platforms": [
+      "x86_64-linux"
+    ],
+    "package_outputs": [
+      "out"
+    ],
+    "package_license": {}
+  },
+  {
+    "flake_description": "Compilers and tools for SPARK2014 Ada development",
+    "flake_resolved": {
+      "type": "github",
+      "owner": "fluffynukeit",
+      "repo": "adaspark"
+    },
+    "flake_name": "adaspark",
+    "flake_source": {
+      "type": "git",
+      "url": "github:fluffynukeit/adaspark"
+    },
+    "package_attr_name": "spark",
+    "package_pname": "SPARK2014",
+    "package_pversion": "20.2",
+    "package_platforms": [
+      "x86_64-linux"
+    ],
+    "package_outputs": [
+      "out"
+    ],
+    "package_license": {}
+  },
+  {
+    "flake_description": "Compilers and tools for SPARK2014 Ada development",
+    "flake_resolved": {
+      "type": "github",
+      "owner": "fluffynukeit",
+      "repo": "adaspark"
+    },
+    "flake_name": "adaspark",
+    "flake_source": {
+      "type": "git",
+      "url": "github:fluffynukeit/adaspark"
+    },
+    "package_attr_name": "xmlada",
+    "package_pname": "xmlada",
+    "package_pversion": "20.2",
+    "package_platforms": [
+      "x86_64-linux"
+    ],
+    "package_outputs": [
+      "out"
+    ],
+    "package_license": {}
+  },
+  {
+    "flake_description": "Offen, a fair web analytics tool",
+    "flake_resolved": {
+      "type": "github",
+      "owner": "ngi-nix",
+      "repo": "offen"
+    },
+    "flake_name": "offen",
+    "flake_source": {
+      "type": "github",
+      "owner": "ngi-nix",
+      "repo": "offen",
+      "description": "Hier könnte Ihre Werbung stehen",
+      "git_ref": "4052febf151d60aa4352fa1960cf3ae088f600aa"
+    },
+    "package_attr_name": "license_finder",
+    "package_pname": "license_finder",
+    "package_pversion": "",
+    "package_platforms": [
+      "x86_64-linux"
+    ],
+    "package_outputs": [
+      "out"
+    ],
+    "package_license": {}
+  },
+  {
+    "flake_description": "Offen, a fair web analytics tool",
+    "flake_resolved": {
+      "type": "github",
+      "owner": "ngi-nix",
+      "repo": "offen"
+    },
+    "flake_name": "offen",
+    "flake_source": {
+      "type": "github",
+      "owner": "ngi-nix",
+      "repo": "offen",
+      "description": "Hier könnte Ihre Werbung stehen",
+      "git_ref": "4052febf151d60aa4352fa1960cf3ae088f600aa"
+    },
+    "package_attr_name": "offen",
+    "package_pname": "offen-20210115",
+    "package_pversion": "20210115",
+    "package_platforms": [
+      "x86_64-linux"
+    ],
+    "package_outputs": [
+      "out"
+    ],
+    "package_license": {}
+  },
+  {
+    "flake_description": "Offen, a fair web analytics tool",
+    "flake_resolved": {
+      "type": "github",
+      "owner": "ngi-nix",
+      "repo": "offen"
+    },
+    "flake_name": "offen",
+    "flake_source": {
+      "type": "github",
+      "owner": "ngi-nix",
+      "repo": "offen",
+      "description": "Hier könnte Ihre Werbung stehen",
+      "git_ref": "4052febf151d60aa4352fa1960cf3ae088f600aa"
+    },
+    "package_attr_name": "offen-auditorium",
+    "package_pname": "offen-auditorium",
+    "package_pversion": "20210115",
+    "package_platforms": [
+      "x86_64-linux"
+    ],
+    "package_outputs": [
+      "out"
+    ],
+    "package_license": {}
+  },
+  {
+    "flake_description": "Offen, a fair web analytics tool",
+    "flake_resolved": {
+      "type": "github",
+      "owner": "ngi-nix",
+      "repo": "offen"
+    },
+    "flake_name": "offen",
+    "flake_source": {
+      "type": "github",
+      "owner": "ngi-nix",
+      "repo": "offen",
+      "description": "Hier könnte Ihre Werbung stehen",
+      "git_ref": "4052febf151d60aa4352fa1960cf3ae088f600aa"
+    },
+    "package_attr_name": "offen-script",
+    "package_pname": "offen-script",
+    "package_pversion": "20210115",
+    "package_platforms": [
+      "x86_64-linux"
+    ],
+    "package_outputs": [
+      "out"
+    ],
+    "package_license": {}
+  },
+  {
+    "flake_description": "Offen, a fair web analytics tool",
+    "flake_resolved": {
+      "type": "github",
+      "owner": "ngi-nix",
+      "repo": "offen"
+    },
+    "flake_name": "offen",
+    "flake_source": {
+      "type": "github",
+      "owner": "ngi-nix",
+      "repo": "offen",
+      "description": "Hier könnte Ihre Werbung stehen",
+      "git_ref": "4052febf151d60aa4352fa1960cf3ae088f600aa"
+    },
+    "package_attr_name": "offen-vault",
+    "package_pname": "offen-vault",
+    "package_pversion": "20210115",
+    "package_platforms": [
+      "x86_64-linux"
+    ],
+    "package_outputs": [
+      "out"
+    ],
+    "package_license": {}
+  }
+]

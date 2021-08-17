@@ -1,37 +1,9 @@
-module Page.Options exposing
-    ( Model
-    , Msg
-    , decodeResultItemSource
-    , init
-    , makeRequest
-    , update
-    , view
-    )
+module Page.Flakes exposing (Model, Msg, init, update, view)
 
 import Browser.Navigation
-import Html
-    exposing
-        ( Html
-        , a
-        , code
-        , div
-        , li
-        , pre
-        , strong
-        , text
-        , ul
-        )
-import Html.Attributes
-    exposing
-        ( class
-        , classList
-        , href
-        , target
-        )
-import Html.Events
-    exposing
-        ( onClick
-        )
+import Html exposing (Html, a, code, div, li, pre, strong, text, ul)
+import Html.Attributes exposing (class, classList, href, target)
+import Html.Events exposing (onClick)
 import Html.Parser
 import Html.Parser.Util
 import Json.Decode
