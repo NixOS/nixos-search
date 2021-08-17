@@ -158,14 +158,14 @@ makeRequest :
     -> Maybe String
     -> Search.Sort
     -> Cmd Msg
-makeRequest options searchType channel query from size maybeBuckets sort =
+makeRequest options searchType index_id query from size maybeBuckets sort =
     let
         cmd =
             case searchType of
                 PackageSearch ->
                     Search.makeRequest
                         (makeRequestBody searchType query from size maybeBuckets sort)
-                        ("group-" ++ channel)
+                        index_id
                         Page.Packages.decodeResultItemSource
                         Page.Packages.decodeResultAggregations
                         options
@@ -177,7 +177,7 @@ makeRequest options searchType channel query from size maybeBuckets sort =
                 OptionSearch ->
                     Search.makeRequest
                         (makeRequestBody searchType query from size maybeBuckets sort)
-                        ("group-" ++ channel)
+                        index_id
                         Page.Options.decodeResultItemSource
                         Page.Options.decodeResultAggregations
                         options
