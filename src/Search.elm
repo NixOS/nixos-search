@@ -395,13 +395,13 @@ channelDetails : Channel -> ChannelDetails
 channelDetails channel =
     case channel of
         Unstable ->
-            ChannelDetails "unstable" "unstable" "nixos/trunk-combined" "nixpkgs-unstable"
+            ChannelDetails "unstable" "unstable" "nixos/trunk-combined" "nixos-unstable"
 
         Release_20_09 ->
-            ChannelDetails "20.09" "20.09" "nixos/release-20.09" "nixpkgs-20.09"
+            ChannelDetails "20.09" "20.09" "nixos/release-20.09" "nixos-20.09"
 
         Release_21_05 ->
-            ChannelDetails "21.05" "21.05" "nixos/release-21.05" "nixpkgs-21.05"
+            ChannelDetails "21.05" "21.05" "nixos/release-21.05" "nixos-21.05"
 
 channelFromId : String -> Maybe Channel
 channelFromId channel_id =
