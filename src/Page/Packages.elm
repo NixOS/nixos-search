@@ -619,8 +619,21 @@ makeRequest :
     -> Maybe String
     -> Search.Sort
     -> Cmd Msg
-makeRequest options channel query from size maybeBuckets sort =
-    let         
+makeRequest options _ channel query from size maybeBuckets sort =
+    Search.makeRequest
+        (makeRequestBody query from size maybeBuckets sort)
+        channel
+        decodeResultItemSource
+        decodeResultAggregations
+        options
+        Search.QueryResponse
+        (Just "query-packages")
+        |> Cmd.map SearchMsg
+
+
+makeRequestBody : String -> Int -> Int -> Maybe String -> Search.Sort -> Body
+makeRequestBody query from size maybeBuckets sort =
+    let
         currentBuckets =
             initBuckets maybeBuckets
 
