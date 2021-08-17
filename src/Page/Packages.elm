@@ -1,9 +1,11 @@
 module Page.Packages exposing
     ( Model
-    , Msg
+    , Msg(..)
     , decodeResultItemSource
+    , decodeResultAggregations
     , init
     , makeRequest
+    , makeRequestBody
     , update
     , view
     , viewBuckets
@@ -47,6 +49,7 @@ import Search
 import Utils
 import Search exposing (channelDetailsFromId)
 import Search exposing (decodeResolvedFlake)
+import Route exposing (SearchType)
 
 
 
@@ -612,6 +615,7 @@ renderSource item channel trapClick createShortDetailsItem createGithubUrl =
 
 makeRequest :
     Search.Options
+    -> SearchType
     -> String
     -> String
     -> Int
@@ -683,7 +687,6 @@ makeRequestBody query from size maybeBuckets sort =
               )
             ]
     in
-    Search.makeRequest
         (Search.makeRequestBody
             (String.trim query)
             from
@@ -706,13 +709,6 @@ makeRequestBody query from size maybeBuckets sort =
             , ( "package_longDescription", 1.0 )
             ]
         )
-        channel
-        decodeResultItemSource
-        decodeResultAggregations
-        options
-        Search.QueryResponse
-        (Just "query-packages")
-        |> Cmd.map SearchMsg
 
 
 
@@ -803,16 +799,6 @@ decodeResolvedFlake =
             Maybe.withDefault "INVALID FLAKE ORIGIN" result
         )
         resolved
-
-
-filterPlatforms : List String -> List String
-filterPlatforms =
-    let
-        flip : (a -> b -> c) -> b -> a -> c
-        flip function argB argA =
-            function argA argB
-    in
-    List.filter (flip List.member platforms)
 
 
 filterPlatforms : List String -> List String

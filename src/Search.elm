@@ -545,7 +545,7 @@ type alias Flake =
 
 defaultFlakeId : String
 defaultFlakeId =
-    "ngi-nix"
+    "flakes"
 
 
 flakeFromId : String -> Maybe Flake
@@ -589,7 +589,7 @@ flakes =
       , title = "Nixpkgs Unstable"
       , source = ""
       }
-    , { id = "ngi-nix"
+    , { id = "flakes"
       , isNixpkgs = False
       , title = "Public Flakes"
       , source = ""
@@ -1311,7 +1311,7 @@ makeRequest :
     -> Maybe String
     -> Cmd (Msg a b)
 makeRequest body channel decodeResultItemSource decodeResultAggregations options responseMsg tracker =
-    let branch = Maybe.map (\details -> details.branch) (channelDetailsFromId channel) |> Maybe.withDefault ""
+    let branch = Maybe.map (\details -> details.branch) (channelDetailsFromId channel) |> Maybe.withDefault channel
         index = "latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ branch
     in
     Http.riskyRequest

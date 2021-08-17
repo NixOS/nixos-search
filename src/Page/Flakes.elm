@@ -13,6 +13,7 @@ import Page.Packages exposing (Msg(..))
 import Route exposing (Route(..), SearchArgs, SearchType(..))
 import Search
 import View.Components
+import Page.Options exposing (Msg(..))
 
 
 
@@ -164,7 +165,7 @@ makeRequest options searchType channel query from size maybeBuckets sort =
                 PackageSearch ->
                     Search.makeRequest
                         (makeRequestBody searchType query from size maybeBuckets sort)
-                        (String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
+                        ("group-" ++ channel)
                         Page.Packages.decodeResultItemSource
                         Page.Packages.decodeResultAggregations
                         options
@@ -176,7 +177,7 @@ makeRequest options searchType channel query from size maybeBuckets sort =
                 OptionSearch ->
                     Search.makeRequest
                         (makeRequestBody searchType query from size maybeBuckets sort)
-                        (String.fromInt options.mappingSchemaVersion ++ "-" ++ channel)
+                        ("group-" ++ channel)
                         Page.Options.decodeResultItemSource
                         Page.Options.decodeResultAggregations
                         options

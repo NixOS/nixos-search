@@ -319,22 +319,7 @@ makeRequest :
     -> Cmd Msg
 makeRequest options _ channel query from size _ sort =
     Search.makeRequest
-        (Search.makeRequestBody
-            (String.trim query)
-            from
-            size
-            sort
-            "option"
-            "option_name"
-            []
-            []
-            []
-            "option_name"
-            [ ( "option_name", 6.0 )
-            , ( "option_name_query", 3.0 )
-            , ( "option_description", 1.0 )
-            ]
-        )
+        (makeRequestBody query from size sort)
         channel
         decodeResultItemSource
         decodeResultAggregations
