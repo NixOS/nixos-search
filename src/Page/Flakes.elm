@@ -125,21 +125,18 @@ update navKey msg model =
 view : Model -> Html Msg
 view model =
     let
-        mkBody =
-            View.Components.body { toRoute = Route.Flakes, categoryName = "options" }
-                [ text "Search more than "
-                , strong [] [ text "10 000 options" ]
+        mkBody categoryName =
+            View.Components.body { toRoute = Route.Flakes, categoryName = categoryName }
+                [ text "Search packages and options of "
+                , strong [] [ text "public flakes" ]
                 ]
-
-        -- _ =
-        --     Debug.log "flakes view renders" model
         body =
             case model of
                 OptionModel model_ ->
-                    Html.map OptionsMsg <| mkBody model_ Page.Options.viewSuccess Page.Options.viewBuckets Page.Options.SearchMsg
+                    Html.map OptionsMsg <| mkBody "Options" model_ Page.Options.viewSuccess Page.Options.viewBuckets Page.Options.SearchMsg
 
                 PackagesModel model_ ->
-                    Html.map PackagesMsg <| mkBody model_ Page.Packages.viewSuccess Page.Packages.viewBuckets Page.Packages.SearchMsg
+                    Html.map PackagesMsg <| mkBody "Packages" model_ Page.Packages.viewSuccess Page.Packages.viewBuckets Page.Packages.SearchMsg
     in
     body
 
