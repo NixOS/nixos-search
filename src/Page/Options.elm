@@ -49,6 +49,7 @@ import Search exposing (decodeResolvedFlake)
 import Url.Parser exposing (query)
 import Html exposing (source)
 import Html exposing (span)
+import Search exposing (Details)
 
 
 
@@ -149,21 +150,21 @@ viewBuckets _ _ =
 
 viewSuccess :
     String
-    -> Bool
+    -> Details
     -> Maybe String
     -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
-viewSuccess channel showNixOSDetails show hits =
+viewSuccess channel showInstallDetails show hits =
     ul []
         (List.map
-            (viewResultItem channel showNixOSDetails show)
+            (viewResultItem channel showInstallDetails show)
             hits
         )
 
 
 viewResultItem :
     String
-    -> Bool
+    -> Details
     -> Maybe String
     -> Search.ResultItem ResultItemSource
     -> Html Msg

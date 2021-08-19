@@ -27,7 +27,7 @@ module Search exposing
     , trapClick
     , update
     , view
-    , viewResult
+    , viewResult, Details(..)
     )
 
 import Base64
@@ -78,6 +78,7 @@ import Route exposing (SearchArgs, SearchType)
 import Route.SearchQuery
 import Set
 import Task
+import Browser.Events exposing (Visibility(..))
 
 
 type alias Model a b =
@@ -91,7 +92,7 @@ type alias Model a b =
     , buckets : Maybe String
     , sort : Sort
     , showSort : Bool
-    , showNixOSDetails : Bool
+    , showInstallDetails : Details
     , searchType : Route.SearchType
     }
 
@@ -249,7 +250,7 @@ init args maybeModel =
                 |> fromSortId
                 |> Maybe.withDefault Relevance
       , showSort = False
-      , showNixOSDetails = False
+      , showInstallDetails = Unset
       , searchType = Maybe.withDefault Route.PackageSearch args.type_
       }
         |> ensureLoading
@@ -299,9 +300,13 @@ type Msg a b
     | QueryResponse (RemoteData.WebData (SearchResult a b))
     | ShowDetails String
     | ChangePage Int
-    | ShowNixOSDetails Bool
+    | ShowInstallDetails Details
 
-
+type Details 
+    = FromNixpkgs
+    | FromNixOS
+    | FromFlake
+    | Unset
 scrollToEntry :
     Maybe String
     -> Cmd (Msg a b)
@@ -429,8 +434,8 @@ update toRoute navKey msg model =
                 |> ensureLoading
                 |> pushUrl toRoute navKey
 
-        ShowNixOSDetails show ->
-            { model | showNixOSDetails = show }
+        ShowInstallDetails details ->
+            { model | showInstallDetails = details }
                 |> pushUrl toRoute navKey
 
 
@@ -743,7 +748,7 @@ view :
     -> Model a b
     ->
         (String
-         -> Bool
+         -> Details
          -> Maybe String
          -> List (ResultItem a)
          -> Html c
@@ -795,7 +800,7 @@ viewResult :
     -> Model a b
     ->
         (String
-         -> Bool
+         -> Details
          -> Maybe String
          -> List (ResultItem a)
          -> Html c
@@ -965,7 +970,7 @@ viewResults :
     -> SearchResult a b
     ->
         (String
-         -> Bool
+         -> Details
          -> Maybe String
          -> List (ResultItem a)
          -> Html c
@@ -1017,7 +1022,7 @@ viewResults model result viewSuccess toRoute outMsg categoryName =
                 )
             )
         ]
-    , viewSuccess model.channel model.showNixOSDetails model.show result.hits.hits
+    , viewSuccess model.channel model.showInstallDetails model.show result.hits.hits
     , Html.map outMsg <| viewPager model result.hits.total.value
     ]
 

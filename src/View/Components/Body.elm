@@ -8,6 +8,8 @@ import Route
 import Search exposing (Model, Msg(..), ResultItem, SearchResult, viewResult)
 import View.Components.SearchInput exposing (viewSearchInput)
 import View.Components.SearchInput exposing (viewFlakes)
+import Html exposing (details)
+import Search exposing (Details)
 
 
 view :
@@ -18,7 +20,7 @@ view :
     -> Model a b
     ->
         (String
-         -> Bool
+         -> Details
          -> Maybe String
          -> List (ResultItem a)
          -> Html c

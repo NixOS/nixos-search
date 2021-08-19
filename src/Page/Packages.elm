@@ -3,14 +3,18 @@ module Page.Packages exposing
     , Msg(..)
     , decodeResultAggregations
     , decodeResultItemSource
+    , encodeBuckets
     , init
+    , initBuckets
     , makeRequest
     , makeRequestBody
     , update
     , view
-    , viewSuccess, encodeBuckets, initBuckets, viewBuckets
+    , viewBuckets
+    , viewSuccess
     )
 
+import Browser.Events exposing (Visibility(..))
 import Browser.Navigation
 import Html
     exposing
@@ -42,11 +46,11 @@ import Json.Decode exposing (Decoder)
 import Json.Decode.Pipeline
 import Json.Encode
 import Regex
-import Route exposing (SearchType)
-import Search exposing (channelDetailsFromId, decodeResolvedFlake)
+import Route exposing (Route(..), SearchType)
+import Search exposing (Details, channelDetailsFromId, decodeResolvedFlake)
 import Utils
-import View.Components.SearchInput exposing (closeButton)
-import View.Components.SearchInput exposing (viewBucket)
+import View.Components.SearchInput exposing (closeButton, viewBucket)
+import Search exposing (Details(..))
 
 
 
@@ -72,7 +76,7 @@ type alias ResultItemSource =
     , hydra : Maybe (List ResultPackageHydra)
     , flakeName : Maybe String
     , flakeDescription : Maybe String
-    , flakeUrl : Maybe String
+    , flakeUrl : Maybe (String, String)
     }
 
 
@@ -269,31 +273,32 @@ viewBuckets bucketsAsString result =
             selectedBucket.platforms
 
 
-filterPlatformsBucket : List {a | key : String} -> List {a | key : String}
-filterPlatformsBucket = List.filter (\a -> List.member a.key platforms)
+filterPlatformsBucket : List { a | key : String } -> List { a | key : String }
+filterPlatformsBucket =
+    List.filter (\a -> List.member a.key platforms)
 
 
 viewSuccess :
     String
-    -> Bool
+    -> Details
     -> Maybe String
     -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
-viewSuccess channel showNixOSDetails show hits =
+viewSuccess channel showInstallDetails show hits =
     ul []
         (List.map
-            (viewResultItem channel showNixOSDetails show)
+            (viewResultItem channel showInstallDetails show)
             hits
         )
 
 
 viewResultItem :
     String
-    -> Bool
+    -> Details
     -> Maybe String
     -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItem channel showNixOSDetails show item =
+viewResultItem channel showInstallDetails show item =
     let
         cleanPosition =
             Regex.fromString "^[0-9a-f]+\\.tar\\.gz\\/"
@@ -435,62 +440,104 @@ viewResultItem channel showNixOSDetails show item =
                                     , em [] [ text item.source.attr_name ]
                                     , text "?"
                                     ]
-                                , ul [ class "nav nav-tabs" ]
-                                    [ li
-                                        [ classList
-                                            [ ( "active", showNixOSDetails )
-                                            , ( "pull-right", True )
+                                , ul [ class "nav nav-tabs" ] <|
+                                    Maybe.withDefault
+                                        [ li
+                                            [ classList
+                                                [ ( "active", List.member showInstallDetails [Search.Unset, Search.FromNixOS, Search.FromFlake])
+                                                , ( "pull-right", True )
+                                                ]
+                                            ]
+                                            [ a
+                                                [ href "#"
+                                                , Search.onClickStop <|
+                                                    SearchMsg <|
+                                                        Search.ShowInstallDetails Search.FromNixOS
+                                                ]
+                                                [ text "On NixOS" ]
+                                            ]
+                                        , li
+                                            [ classList
+                                                [ ( "active", showInstallDetails == Search.FromNixpkgs )
+                                                , ( "pull-right", True )
+                                                ]
+                                            ]
+                                            [ a
+                                                [ href "#"
+                                                , Search.onClickStop <|
+                                                    SearchMsg <|
+                                                        Search.ShowInstallDetails Search.FromNixpkgs
+                                                ]
+                                                [ text "On non-NixOS" ]
                                             ]
                                         ]
-                                        [ a
-                                            [ href "#"
-                                            , Search.onClickStop <|
-                                                SearchMsg <|
-                                                    Search.ShowNixOSDetails True
-                                            ]
-                                            [ text "On NixOS" ]
-                                        ]
-                                    , li
-                                        [ classList
-                                            [ ( "active", not showNixOSDetails )
-                                            , ( "pull-right", True )
-                                            ]
-                                        ]
-                                        [ a
-                                            [ href "#"
-                                            , Search.onClickStop <|
-                                                SearchMsg <|
-                                                    Search.ShowNixOSDetails False
-                                            ]
-                                            [ text "On non-NixOS" ]
-                                        ]
-                                    ]
+                                    <|
+                                        Maybe.map
+                                            (\_ ->
+                                                [ li
+                                                    [ classList
+                                                        [ ( "active", True )
+                                                        , ( "pull-right", True )
+                                                        ]
+                                                    ]
+                                                    [ a
+                                                        [ href "#"
+                                                        , Search.onClickStop <|
+                                                            SearchMsg <|
+                                                                Search.ShowInstallDetails Search.FromFlake
+                                                        ]
+                                                        [ text "Install from flake" ]
+                                                    ]
+                                                ]
+                                            )
+                                            item.source.flakeUrl
                                 , div
                                     [ class "tab-content" ]
-                                    [ div
-                                        [ classList
-                                            [ ( "active", not showNixOSDetails )
+                                  <|
+                                    Maybe.withDefault
+                                        [ div
+                                            [ classList
+                                                [ ( "active", showInstallDetails == Search.FromNixpkgs )
+                                                ]
+                                            , class "tab-pane"
+                                            , id "package-details-nixpkgs"
                                             ]
-                                        , class "tab-pane"
-                                        , id "package-details-nixpkgs"
-                                        ]
-                                        [ pre [ class "code-block" ]
-                                            [ text "nix-env -iA nixpkgs."
-                                            , strong [] [ text item.source.attr_name ]
+                                            [ pre [ class "code-block" ]
+                                                [ text "nix-env -iA nixpkgs."
+                                                , strong [] [ text item.source.attr_name ]
+                                                ]
+                                            ]
+                                        , div
+                                            [ classList
+                                                [ ( "tab-pane", True )
+                                                , ( "active", showInstallDetails == Search.FromNixOS )
+                                                ]
+                                            ]
+                                            [ pre [ class "code-block" ]
+                                                [ text <| "nix-env -iA nixos."
+                                                , strong [] [ text item.source.attr_name ]
+                                                ]
                                             ]
                                         ]
-                                    , div
-                                        [ classList
-                                            [ ( "tab-pane", True )
-                                            , ( "active", showNixOSDetails )
-                                            ]
-                                        ]
-                                        [ pre [ class "code-block" ]
-                                            [ text <| "nix-env -iA nixos."
-                                            , strong [] [ text item.source.attr_name ]
-                                            ]
-                                        ]
-                                    ]
+                                    <|
+                                        Maybe.map
+                                            (\url ->
+                                                [ div
+                                                    [ classList
+                                                        [ ( "tab-pane", True )
+                                                        , ( "active", True )
+                                                        ]
+                                                    ]
+                                                    [ pre [ class "code-block" ]
+                                                        [ text "nix build "
+                                                        , strong [] [ text url ]
+                                                        , text "#"
+                                                        , em [] [ text item.source.attr_name ]
+                                                        ]
+                                                    ]
+                                                ]
+                                            )
+                                           <| Maybe.map Tuple.first item.source.flakeUrl
                                 ]
                             ]
                     )
@@ -560,7 +607,7 @@ renderSource item channel trapClick createShortDetailsItem createGithubUrl =
                     ]
                 )
                 item.source.flakeName
-                item.source.flakeUrl
+                <| Maybe.map Tuple.second item.source.flakeUrl
     in
     Maybe.withDefault (Maybe.withDefault [] flakeDef) postion
 
@@ -713,7 +760,7 @@ type alias ResolvedFlake =
     { type_ : String, owner : Maybe String, repo : Maybe String, url : Maybe String }
 
 
-decodeResolvedFlake : Json.Decode.Decoder String
+decodeResolvedFlake : Json.Decode.Decoder (String, String)
 decodeResolvedFlake =
     let
         resolved =
@@ -740,18 +787,18 @@ decodeResolvedFlake =
                 result =
                     case resolved_.type_ of
                         "github" ->
-                            Maybe.map (\repoPath_ -> "https://github.com/" ++ repoPath_) repoPath
+                            Maybe.map (\repoPath_ -> ("github:" ++ repoPath_, "https://github.com/" ++ repoPath_)) repoPath
 
                         "gitlab" ->
-                            Maybe.map (\repoPath_ -> "https://gitlab.com/" ++ repoPath_) repoPath
+                            Maybe.map (\repoPath_ -> ("gitlab:" ++ repoPath_, "https://gitlab.com/" ++ repoPath_)) repoPath
 
                         "git" ->
-                            url
+                           Maybe.map (\url_ -> (url_, url_)) url
 
                         _ ->
                             Nothing
             in
-            Maybe.withDefault "INVALID FLAKE ORIGIN" result
+            Maybe.withDefault ("INVALID FLAKE ORIGIN", "INVALID FLAKE ORIGIN") result
         )
         resolved
 
