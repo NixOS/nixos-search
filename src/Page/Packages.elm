@@ -1,15 +1,14 @@
 module Page.Packages exposing
     ( Model
     , Msg(..)
-    , decodeResultItemSource
     , decodeResultAggregations
+    , decodeResultItemSource
     , init
     , makeRequest
     , makeRequestBody
     , update
     , view
-    , viewBuckets
-    , viewSuccess, viewBucket
+    , viewSuccess, encodeBuckets, initBuckets, viewBuckets
     )
 
 import Browser.Navigation
@@ -40,16 +39,14 @@ import Html.Attributes
 import Html.Events exposing (onClick)
 import Http exposing (Body)
 import Json.Decode exposing (Decoder)
-import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
 import Regex
-import Route
-import Search
-import Utils
-import Search exposing (channelDetailsFromId)
-import Search exposing (decodeResolvedFlake)
 import Route exposing (SearchType)
+import Search exposing (channelDetailsFromId, decodeResolvedFlake)
+import Utils
+import View.Components.SearchInput exposing (closeButton)
+import View.Components.SearchInput exposing (viewBucket)
 
 
 
@@ -169,14 +166,15 @@ init searchArgs model =
     )
 
 
-platforms: List String
-platforms =          
-            [ "x86_64-linux"
-            , "aarch64-linux"
-            , "i686-linux"
-            , "x86_64-darwin"
-            , "aarch64-darwin"
-            ]
+platforms : List String
+platforms =
+    [ "x86_64-linux"
+    , "aarch64-linux"
+    , "i686-linux"
+    , "x86_64-darwin"
+    , "aarch64-darwin"
+    ]
+
 
 
 -- UPDATE
@@ -273,48 +271,6 @@ viewBuckets bucketsAsString result =
 
 filterPlatformsBucket : List {a | key : String} -> List {a | key : String}
 filterPlatformsBucket = List.filter (\a -> List.member a.key platforms)
-
-viewBucket :
-    String
-    -> List Search.AggregationsBucketItem
-    -> (String -> Msg)
-    -> List String
-    -> List (Html Msg)
-    -> List (Html Msg)
-viewBucket title buckets searchMsgFor selectedBucket sets =
-    List.append
-        sets
-        (if List.isEmpty buckets then
-            []
-
-         else
-            [ li []
-                [ ul []
-                    (List.append
-                        [ li [ class "header" ] [ text title ] ]
-                        (List.map
-                            (\bucket ->
-                                li []
-                                    [ a
-                                        [ href "#"
-                                        , onClick <| searchMsgFor bucket.key
-                                        , classList
-                                            [ ( "selected"
-                                              , List.member bucket.key selectedBucket
-                                              )
-                                            ]
-                                        ]
-                                        [ span [] [ text bucket.key ]
-                                        , span [] [ span [ class "badge" ] [ text <| String.fromInt bucket.doc_count ] ]
-                                        ]
-                                    ]
-                            )
-                            buckets
-                        )
-                    )
-                ]
-            ]
-        )
 
 
 viewSuccess :
@@ -687,28 +643,27 @@ makeRequestBody query from size maybeBuckets sort =
               )
             ]
     in
-        (Search.makeRequestBody
-            (String.trim query)
-            from
-            size
-            sort
-            "package"
-            "package_attr_name"
-            [ "package_pversion" ]
-            [ "package_attr_set"
-            , "package_license_set"
-            , "package_maintainers_set"
-            , "package_platforms"
-            ]
-            filterByBuckets
-            "package_attr_name"
-            [ ( "package_attr_name", 9.0 )
-            , ( "package_pname", 6.0 )
-            , ( "package_attr_name_query", 4.0 )
-            , ( "package_description", 1.3 )
-            , ( "package_longDescription", 1.0 )
-            ]
-        )
+    Search.makeRequestBody
+        (String.trim query)
+        from
+        size
+        sort
+        "package"
+        "package_attr_name"
+        [ "package_pversion" ]
+        [ "package_attr_set"
+        , "package_license_set"
+        , "package_maintainers_set"
+        , "package_platforms"
+        ]
+        filterByBuckets
+        "package_attr_name"
+        [ ( "package_attr_name", 9.0 )
+        , ( "package_pname", 6.0 )
+        , ( "package_attr_name_query", 4.0 )
+        , ( "package_description", 1.3 )
+        , ( "package_longDescription", 1.0 )
+        ]
 
 
 

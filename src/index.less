@@ -183,7 +183,7 @@ header .navbar.navbar-static-top {
 
  // Buckets
     ul.search-sidebar {
-      max-width: fit-content;
+      width: 25em;
 
       list-style: none;
       margin: 0 1em 0 0;
@@ -209,7 +209,7 @@ header .navbar.navbar-static-top {
 
             & > a {
               display: grid;
-              grid-template-columns: auto auto;
+              grid-template-columns: auto max-content;
               color: #333;
               padding: 0.5em 0.5em 0.5em 1em;
               text-decoration: none;
@@ -233,24 +233,19 @@ header .navbar.navbar-static-top {
                 color: #FFF;
                 border-radius: 4px;
                 position: relative;
-
-                &:after {
-                  content: "\2715";
-                  font-size: 1.7em;
-                  color: #fff;
-                  position: absolute;
-                  top: 4px;
-                  right: 4px;
-                  background: #0081c2;
-                  bottom: 4px;
-                  width: 1em;
-                  padding: 2px;
-                }
-
-                & > span:last-child {
+                  & > span:last-child {
                   display: none;
 
-                }
+                  }
+              }
+
+              & .close {
+                opacity: 1;
+                text-shadow: none;
+                color: inherit;
+                font-size: inherit;
+                padding-left: .5em;
+                padding-right: .5em;
               }
             }
           }

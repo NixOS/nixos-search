@@ -3,12 +3,8 @@ module View.Components.SearchInput exposing (..)
 import Html exposing (Html, a, button, div, form, h4, input, li, p, span, text, th, ul)
 import Html.Attributes exposing (attribute, autofocus, class, classList, href, id, placeholder, selected, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
-import Json.Encode exposing (bool)
-import Page.Packages exposing (viewBucket)
-import Route exposing (SearchType, allTypes, searchTypeToString)
-import Search exposing (Msg(..), channelDetailsFromId, channels, flakeFromId, flakes)
-import Route exposing (searchTypeToTitle)
-
+import Route exposing (SearchType, allTypes, searchTypeToString, searchTypeToTitle)
+import Search exposing (Msg(..))
 
 viewSearchInput :
     (Msg a b -> c)
@@ -42,24 +38,76 @@ viewFlakes : (Msg a b -> msg) -> String -> SearchType -> List (Html msg)
 viewFlakes outMsg selectedFlake selectedCategory =
     [ li []
         [ ul []
-                (List.map
-                    (\category ->
-                        li []
-                            [ a
-                                [ href "#"
-                                , onClick <| outMsg (SubjectChange category)
-                                , classList
-                                    [ ( "selected"
-                                      , category == selectedCategory
-                                      )
-                                    ]
-                                ]
-                                [ span [] [ text <| searchTypeToTitle category ]
-                                , span [] [] -- css ignores the last element (a badge in other buckets)
+            (List.map
+                (\category ->
+                    li []
+                        [ a
+                            [ href "#"
+                            , onClick <| outMsg (SubjectChange category)
+                            , classList
+                                [ ( "selected"
+                                  , category == selectedCategory
+                                  )
                                 ]
                             ]
-                    )
-                    allTypes
+                            [ span [] [ text <| searchTypeToTitle category ]
+                            , closeButton
+                            ]
+                        ]
                 )
+                allTypes
+            )
         ]
     ]
+
+
+closeButton : Html a
+closeButton =
+    button [ class "close" ] [ text "✕" ]
+
+
+viewBucket :
+    String
+    -> List Search.AggregationsBucketItem
+    -> (String -> a)
+    -> List String
+    -> List (Html a)
+    -> List (Html a)
+viewBucket title buckets searchMsgFor selectedBucket sets =
+    List.append
+        sets
+        (if List.isEmpty buckets then
+            []
+
+         else
+            [ li []
+                [ ul []
+                    (List.append
+                        [ li [ class "header" ] [ text title ] ]
+                        (List.map
+                            (\bucket ->
+                                li []
+                                    [ a
+                                        [ href "#"
+                                        , onClick <| searchMsgFor bucket.key
+                                        , classList
+                                            [ ( "selected"
+                                              , List.member bucket.key selectedBucket
+                                              )
+                                            ]
+                                        ]
+                                        [ span [] [ text bucket.key ]
+                                        , if List.member bucket.key selectedBucket then
+                                            closeButton
+
+                                          else
+                                            span [] [ span [ class "badge" ] [ text <| String.fromInt bucket.doc_count ] ]
+                                        ]
+                                    ]
+                            )
+                            buckets
+                        )
+                    )
+                ]
+            ]
+        )
