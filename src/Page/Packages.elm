@@ -510,7 +510,7 @@ viewResultItem channel showInstallDetails show item =
                                         , div
                                             [ classList
                                                 [ ( "tab-pane", True )
-                                                , ( "active", showInstallDetails == Search.FromNixOS )
+                                                , ( "active", List.member showInstallDetails [Search.Unset, Search.FromNixOS, Search.FromFlake] )
                                                 ]
                                             ]
                                             [ pre [ class "code-block" ]
