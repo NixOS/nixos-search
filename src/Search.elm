@@ -815,7 +815,7 @@ viewResult :
 viewResult outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets =
     case model.result of
         RemoteData.NotAsked ->
-            div [] [ ul [ class "search-sidebar" ] searchBuckets, div [] [] ]
+            div [] [  ]
 
         RemoteData.Loading ->
             div [ class "loader-wrapper" ]

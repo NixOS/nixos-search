@@ -12,6 +12,10 @@ viewSearchInput :
     -> Maybe String
     -> Html c
 viewSearchInput outMsg category searchQuery =
+    let
+        searchHint = Maybe.withDefault "Packages and Options" <| Maybe.map (\_ -> searchTypeToString category) searchQuery
+    in
+    
     form
         [ onSubmit (outMsg QueryInputSubmit)
         , class "search-input"
@@ -22,7 +26,7 @@ viewSearchInput outMsg category searchQuery =
                     [ type_ "text"
                     , id "search-query-input"
                     , autofocus True
-                    , placeholder <| "Search for " ++ searchTypeToString category
+                    , placeholder <| "Search for " ++ searchHint
                     , onInput (outMsg << QueryInput)
                     , value <| Maybe.withDefault "" searchQuery
                     ]
