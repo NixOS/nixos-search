@@ -426,7 +426,7 @@ viewResultItem channel showNixOSDetails show item =
                         [ href <|
                             case maintainer.email of
                                 Just email ->
-                                    "mailto://" ++ email
+                                    "mailto:" ++ email
 
                                 Nothing ->
                                   "#"
