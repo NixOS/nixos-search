@@ -423,6 +423,18 @@ viewResultItem channel showNixOSDetails show item =
                     [ text <| Maybe.withDefault "" maintainer.name ++ " <" ++ Maybe.withDefault "" maintainer.email ++ ">" ]
                 ]
 
+        mailtoAllMaintainers maintainers =
+            let
+                maintainerMails = List.filterMap (\m -> m.email) maintainers
+            in
+            li []
+                [ a
+                    [ href <|
+                        ("mailto:" ++ String.join "," maintainerMails)
+                    ]
+                    [ text "Mail to all maintainers" ]
+                ]
+
         showPlatform platform =
             case Search.channelDetailsFromId channel of
                 Just channelDetails ->
@@ -448,7 +460,11 @@ viewResultItem channel showNixOSDetails show item =
                             [ p [] [ text "This package has no maintainers." ] ]
 
                          else
-                            [ ul [] (List.map showMaintainer item.source.maintainers) ]
+                            [ ul []
+                                (List.singleton (mailtoAllMaintainers item.source.maintainers)
+                                    |> List.append (List.map showMaintainer item.source.maintainers)
+                                )
+                            ]
                         )
                     )
                 , div []
