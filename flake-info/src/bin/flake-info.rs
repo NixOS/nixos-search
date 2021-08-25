@@ -57,7 +57,7 @@ enum Command {
         channel: String,
     },
     Group {
-        #[structopt(help = "Points to a JSON file containing info targets")]
+        #[structopt(help = "Points to a TOML or JSON file containing info targets. If file does not end in 'toml' json is assumed")]
         targets: PathBuf,
 
         name: String,
