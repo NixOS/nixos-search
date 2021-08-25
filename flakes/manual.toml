@@ -1,0 +1,29 @@
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "offen"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "pixelfed"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "lightmeter"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "openpgp-ca"
+
+[[sources]]
+type = "gitlab"
+owner = "pi-lar"
+repo = "neuropil"
+
+[[sources]]
+type = "github"
+owner = "tweag"
+repo = "nickel"

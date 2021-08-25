@@ -73,14 +73,17 @@ let
     cleanUpOption = module: opt:
       let
         applyOnAttr = n: f: lib.optionalAttrs (lib.hasAttr n opt) { ${n} = f opt.${n}; };
-        # mkDeclaration = decl: rec {
-        #   path = stripModulePathPrefixes decl;
-        #   url = mkModuleUrl path;
-        #   channelPath = "${channelName}/${path}";
-        # };
+        mkDeclaration = decl:
+          let
+            discard = lib.concatStringsSep "/" (lib.take 4 (lib.splitString "/" decl));
+            path = if lib.hasPrefix builtins.storeDir decl then lib.removePrefix discard decl else decl;
+          in
+            path;
+
         # Replace functions by the string <function>
         substFunction = x:
-          if builtins.isAttrs x then
+          if x ? _type && x._type == "literalExample" then x.text
+          else if builtins.isAttrs x then
             lib.mapAttrs (name: substFunction) x
           else if builtins.isList x then
             map substFunction x
@@ -89,19 +92,19 @@ let
           else
             x;
       in
-       opt
+        opt
         // applyOnAttr "example" substFunction
         // applyOnAttr "default" substFunction
         // applyOnAttr "type" substFunction
+        // applyOnAttr "declarations" (map mkDeclaration)
         // lib.optionalAttrs (!isNixOS) { flake = [ flake module ]; };
-    # // applyOnAttr "declarations" (map mkDeclaration)
 
 
     options = lib.mapAttrs (
       attr: module: let
         list = lib.optionAttrSetToDocList (declarations module);
       in
-        map (cleanUpOption attr) (lib.filter (x: !x.internal) list )
+        map (cleanUpOption attr) (lib.filter (x: !x.internal) list)
     ) modules;
   in
     lib.flatten (builtins.attrValues options);
