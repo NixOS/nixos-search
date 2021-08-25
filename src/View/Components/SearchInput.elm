@@ -6,6 +6,7 @@ import Html.Events exposing (onClick, onInput, onSubmit)
 import Route exposing (SearchType, allTypes, searchTypeToString, searchTypeToTitle)
 import Search exposing (Msg(..))
 
+
 viewSearchInput :
     (Msg a b -> c)
     -> SearchType
@@ -13,9 +14,9 @@ viewSearchInput :
     -> Html c
 viewSearchInput outMsg category searchQuery =
     let
-        searchHint = Maybe.withDefault "Packages and Options" <| Maybe.map (\_ -> searchTypeToString category) searchQuery
+        searchHint =
+            Maybe.withDefault "Packages and Options" <| Maybe.map (\_ -> searchTypeToString category) searchQuery
     in
-    
     form
         [ onSubmit (outMsg QueryInputSubmit)
         , class "search-input"
@@ -67,7 +68,7 @@ viewFlakes outMsg selectedFlake selectedCategory =
 
 closeButton : Html a
 closeButton =
-    button [ class "close" ] [ text "✕" ]
+    span [] []
 
 
 viewBucket :

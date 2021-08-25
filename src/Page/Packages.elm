@@ -45,12 +45,12 @@ import Http exposing (Body)
 import Json.Decode exposing (Decoder)
 import Json.Decode.Pipeline
 import Json.Encode
+import Maybe
 import Regex
 import Route exposing (Route(..), SearchType)
-import Search exposing (Details, channelDetailsFromId, decodeResolvedFlake)
+import Search exposing (Details(..), channelDetailsFromId, decodeResolvedFlake)
 import Utils
 import View.Components.SearchInput exposing (closeButton, viewBucket)
-import Search exposing (Details(..))
 
 
 
@@ -76,7 +76,7 @@ type alias ResultItemSource =
     , hydra : Maybe (List ResultPackageHydra)
     , flakeName : Maybe String
     , flakeDescription : Maybe String
-    , flakeUrl : Maybe (String, String)
+    , flakeUrl : Maybe ( String, String )
     }
 
 
@@ -444,7 +444,7 @@ viewResultItem channel showInstallDetails show item =
                                     Maybe.withDefault
                                         [ li
                                             [ classList
-                                                [ ( "active", List.member showInstallDetails [Search.Unset, Search.FromNixOS, Search.FromFlake])
+                                                [ ( "active", List.member showInstallDetails [ Search.Unset, Search.FromNixOS, Search.FromFlake ] )
                                                 , ( "pull-right", True )
                                                 ]
                                             ]
@@ -510,7 +510,7 @@ viewResultItem channel showInstallDetails show item =
                                         , div
                                             [ classList
                                                 [ ( "tab-pane", True )
-                                                , ( "active", List.member showInstallDetails [Search.Unset, Search.FromNixOS, Search.FromFlake] )
+                                                , ( "active", List.member showInstallDetails [ Search.Unset, Search.FromNixOS, Search.FromFlake ] )
                                                 ]
                                             ]
                                             [ pre [ class "code-block" ]
@@ -537,7 +537,8 @@ viewResultItem channel showInstallDetails show item =
                                                     ]
                                                 ]
                                             )
-                                           <| Maybe.map Tuple.first item.source.flakeUrl
+                                        <|
+                                            Maybe.map Tuple.first item.source.flakeUrl
                                 ]
                             ]
                     )
@@ -554,6 +555,17 @@ viewResultItem channel showInstallDetails show item =
 
         isOpen =
             Just item.source.attr_name == show
+
+        flakeItem =
+            Maybe.map Tuple.second item.source.flakeUrl
+                |> Maybe.map2
+                    (\name resolved ->
+                        [ li [ trapClick ]
+                            [ createShortDetailsItem name resolved ]
+                        ]
+                    )
+                    item.source.flakeName
+                |> Maybe.withDefault []
     in
     li
         [ class "package"
@@ -563,12 +575,18 @@ viewResultItem channel showInstallDetails show item =
         ([]
             |> List.append longerPackageDetails
             |> List.append
-                [ Html.a
-                    [ class "search-result-button"
-                    , onClick toggle
-                    , href ""
-                    ]
-                    [ text item.source.attr_name ]
+                [ ul [ class "search-result-button" ]
+                    (List.append
+                        flakeItem
+                        [ li []
+                            [ a
+                                [ onClick toggle
+                                , href ""
+                                ]
+                                [ text item.source.attr_name ]
+                            ]
+                        ]
+                    )
                 , div [] [ text <| Maybe.withDefault "" item.source.description ]
                 , shortPackageDetails
                 , Search.showMoreButton toggle isOpen
@@ -607,7 +625,8 @@ renderSource item channel trapClick createShortDetailsItem createGithubUrl =
                     ]
                 )
                 item.source.flakeName
-                <| Maybe.map Tuple.second item.source.flakeUrl
+            <|
+                Maybe.map Tuple.second item.source.flakeUrl
     in
     Maybe.withDefault (Maybe.withDefault [] flakeDef) postion
 
@@ -760,7 +779,7 @@ type alias ResolvedFlake =
     { type_ : String, owner : Maybe String, repo : Maybe String, url : Maybe String }
 
 
-decodeResolvedFlake : Json.Decode.Decoder (String, String)
+decodeResolvedFlake : Json.Decode.Decoder ( String, String )
 decodeResolvedFlake =
     let
         resolved =
@@ -787,18 +806,18 @@ decodeResolvedFlake =
                 result =
                     case resolved_.type_ of
                         "github" ->
-                            Maybe.map (\repoPath_ -> ("github:" ++ repoPath_, "https://github.com/" ++ repoPath_)) repoPath
+                            Maybe.map (\repoPath_ -> ( "github:" ++ repoPath_, "https://github.com/" ++ repoPath_ )) repoPath
 
                         "gitlab" ->
-                            Maybe.map (\repoPath_ -> ("gitlab:" ++ repoPath_, "https://gitlab.com/" ++ repoPath_)) repoPath
+                            Maybe.map (\repoPath_ -> ( "gitlab:" ++ repoPath_, "https://gitlab.com/" ++ repoPath_ )) repoPath
 
                         "git" ->
-                           Maybe.map (\url_ -> (url_, url_)) url
+                            Maybe.map (\url_ -> ( url_, url_ )) url
 
                         _ ->
                             Nothing
             in
-            Maybe.withDefault ("INVALID FLAKE ORIGIN", "INVALID FLAKE ORIGIN") result
+            Maybe.withDefault ( "INVALID FLAKE ORIGIN", "INVALID FLAKE ORIGIN" ) result
         )
         resolved
 

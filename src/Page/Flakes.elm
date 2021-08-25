@@ -8,12 +8,11 @@ import Html.Parser
 import Html.Parser.Util
 import Http exposing (Body)
 import Json.Decode exposing (Decoder)
-import Page.Options
+import Page.Options exposing (Msg(..))
 import Page.Packages exposing (Msg(..))
 import Route exposing (Route(..), SearchArgs, SearchType(..))
 import Search
 import View.Components
-import Page.Options exposing (Msg(..))
 
 
 
@@ -128,8 +127,13 @@ view model =
         mkBody categoryName =
             View.Components.body { toRoute = Route.Flakes, categoryName = categoryName }
                 [ text "Search packages and options of "
-                , strong [] [ text "public flakes" ]
+                , strong []
+                    [ a
+                        [ href "https://github.com/NixOS/nixos-search/blob/main/flakes/manual.toml" ]
+                        [ text "public flakes" ]
+                    ]
                 ]
+
         body =
             case model of
                 OptionModel model_ ->

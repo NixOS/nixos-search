@@ -23,6 +23,8 @@ import Html
         , div
         , li
         , pre
+        , source
+        , span
         , strong
         , text
         , ul
@@ -45,11 +47,8 @@ import Json.Decode
 import Json.Decode.Pipeline
 import List exposing (sort)
 import Route exposing (SearchType)
-import Search exposing (decodeResolvedFlake)
+import Search exposing (Details, decodeResolvedFlake)
 import Url.Parser exposing (query)
-import Html exposing (source)
-import Html exposing (span)
-import Search exposing (Details)
 
 
 
@@ -70,6 +69,7 @@ type alias ResultItemSource =
 
     -- flake
     , flake : Maybe ( String, String )
+    , flakeName : Maybe String
     , flakeDescription : Maybe String
     , flakeUrl : Maybe String
     }
@@ -187,9 +187,6 @@ viewResultItem channel _ show item =
         asPreCode value =
             div [] [ pre [] [ code [ class "code-block" ] [ text value ] ] ]
 
-       
-
-
         withEmpty wrapWith maybe =
             case maybe of
                 Nothing ->
@@ -239,36 +236,17 @@ viewResultItem channel _ show item =
 
         isOpen =
             Just item.source.name == show
-    in
-    li
-        [ class "option"
-        , classList [ ( "opened", isOpen ) ]
-        , Search.elementId item.source.name
-        ]
-    <|
-        List.filterMap identity
-            [ Just <|
-                Html.a
-                    [ class "search-result-button"
-                    , onClick toggle
-                    , href ""
-                    ]
-                    [ text item.source.name ]
-            , showDetails
-            ]
 
-
-findSource : String -> ResultItemSource -> List (Html a)
-findSource channel source =
-    let
         githubUrlPrefix branch =
             "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/"
+
         cleanPosition value =
             if String.startsWith "source/" value then
                 String.dropLeft 7 value
 
             else
                 value
+
         asGithubLink value =
             case Search.channelDetailsFromId channel of
                 Just channelDetails ->
@@ -280,30 +258,96 @@ findSource channel source =
 
                 Nothing ->
                     text <| cleanPosition value
-        
-        
-        
-        sourceFile = Maybe.map asGithubLink source.source
-        
-        flakeOrNixpkgs : Maybe (List (Html a))
-        flakeOrNixpkgs = case (source.flake, source.flakeUrl) of
-            -- its a flake
-            (Just (name, module_), Just flakeUrl_)->  
-                Just <| 
-                List.append
-                (Maybe.withDefault [] <| Maybe.map (\sourceFile_ -> [sourceFile_, span [] [text" in "]]) sourceFile)
-                
-                [ span [] [text "Flake: "]
-                  , a [href flakeUrl_] [text <| name ++ "(Module: " ++ module_ ++ ")" ]
-                ]
 
-            ( Nothing, _ ) -> Maybe.map (\l -> [l]) sourceFile
+        sourceFile =
+            Maybe.map asGithubLink item.source.source
 
-            _ -> Nothing
+        flakeOrNixpkgs =
+            case ( item.source.flakeName, item.source.flake, item.source.flakeUrl ) of
+                -- its a flake
+                ( Just name, Just ( _, module_ ), Just flakeUrl_ ) ->
+                    Just
+                        [ li []
+                            [ a [ href flakeUrl_ ] [ text name ]
+                            ]
+                        ]
 
-
+                _ ->
+                    Nothing
     in
-        Maybe.withDefault  [span [] [text "Not Found"]] flakeOrNixpkgs
+    li
+        [ class "option"
+        , classList [ ( "opened", isOpen ) ]
+        , Search.elementId item.source.name
+        ]
+    <|
+        List.filterMap identity
+            [ Just <|
+                ul [ class "search-result-button" ]
+                    (List.append
+                        (flakeOrNixpkgs |> Maybe.withDefault [])
+                        [ li []
+                            [ a
+                                [ onClick toggle
+                                , href ""
+                                ]
+                                [ text item.source.name ]
+                            ]
+                        ]
+                    )
+            , showDetails
+            ]
+
+
+findSource : String -> ResultItemSource -> List (Html a)
+findSource channel source =
+    let
+        githubUrlPrefix branch =
+            "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/"
+
+        cleanPosition value =
+            if String.startsWith "source/" value then
+                String.dropLeft 7 value
+
+            else
+                value
+
+        asGithubLink value =
+            case Search.channelDetailsFromId channel of
+                Just channelDetails ->
+                    a
+                        [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L")
+                        , target "_blank"
+                        ]
+                        [ text value ]
+
+                Nothing ->
+                    text <| cleanPosition value
+
+        sourceFile =
+            Maybe.map asGithubLink source.source
+
+        flakeOrNixpkgs : Maybe (List (Html a))
+        flakeOrNixpkgs =
+            case ( source.flake, source.flakeUrl ) of
+                -- its a flake
+                ( Just ( name, module_ ), Just flakeUrl_ ) ->
+                    Just <|
+                        List.append
+                            (Maybe.withDefault [] <| Maybe.map (\sourceFile_ -> [ sourceFile_, span [] [ text " in " ] ]) sourceFile)
+                            [ span [] [ text "Flake: " ]
+                            , a [ href flakeUrl_ ] [ text <| name ++ "(Module: " ++ module_ ++ ")" ]
+                            ]
+
+                ( Nothing, _ ) ->
+                    Maybe.map (\l -> [ l ]) sourceFile
+
+                _ ->
+                    Nothing
+    in
+    Maybe.withDefault [ span [] [ text "Not Found" ] ] flakeOrNixpkgs
+
+
 
 -- API
 
@@ -365,6 +409,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "option_flake"
             (Json.Decode.map Just <| Json.Decode.map2 Tuple.pair (Json.Decode.index 0 Json.Decode.string) (Json.Decode.index 1 Json.Decode.string))
             Nothing
+        |> Json.Decode.Pipeline.optional "flake_name" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_description" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_resolved" (Json.Decode.map Just decodeResolvedFlake) Nothing
 
