@@ -183,7 +183,7 @@ header .navbar.navbar-static-top {
     & > li {
       display: inline-block;
 
-      &:nth-child(1):after {
+      &:first-child:not(:last-child):after {
         content: "→";
         margin: 0 0.2em;
       }
