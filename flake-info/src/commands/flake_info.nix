@@ -75,7 +75,7 @@ let
         applyOnAttr = n: f: lib.optionalAttrs (lib.hasAttr n opt) { ${n} = f opt.${n}; };
         mkDeclaration = decl:
           let
-            discard = lib.concatStringsSep "/" (lib.take 4 (lib.splitString "/" decl));
+            discard = lib.concatStringsSep "/" (lib.take 4 (lib.splitString "/" decl)) + "/";
             path = if lib.hasPrefix builtins.storeDir decl then lib.removePrefix discard decl else decl;
           in
             path;
