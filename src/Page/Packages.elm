@@ -372,16 +372,28 @@ viewResultItem channel showInstallDetails show item =
 
         showMaintainer maintainer =
             li []
-                [ a
-                    [ href <|
-                        case maintainer.github of
-                            Just github ->
-                                "https://github.com/" ++ github
+                [ div []
+                    [ a
+                        [ href <|
+                            case maintainer.github of
+                                Just github ->
+                                    "https://github.com/" ++ github
 
-                            Nothing ->
-                                "#"
+                                Nothing ->
+                                    "#"
+                        ]
+                        [ text <| Maybe.withDefault "" maintainer.name ++ " <" ++ Maybe.withDefault "" maintainer.email ++ ">" ]
+                    , a
+                        [ href <|
+                            case maintainer.email of
+                                Just email ->
+                                    "mailto:" ++ email
+
+                                Nothing ->
+                                  "#"
+                        ]
+                        [ text "(mail)" ]
                     ]
-                    [ text <| Maybe.withDefault "" maintainer.name ++ (Maybe.withDefault "" <| Maybe.map (\email -> " <" ++ email ++ ">") maintainer.email) ]
                 ]
 
         showPlatform platform =
