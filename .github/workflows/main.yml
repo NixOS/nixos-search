@@ -1,4 +1,4 @@
-name: "Build & Deploy to Netlify"
+name: "Frontend: Build & Deploy to Netlify"
 on:
   pull_request:
   push:
@@ -33,10 +33,6 @@ jobs:
         nix --version
         cat /etc/nix/nix.conf
         echo "$HOME/.nix-profile/bin" >> $GITHUB_PATH
-
-    - name: Building import_scripts
-      run: |
-        nix build ./#packages.x86_64-linux.import_scripts
 
     - name: Building search.nixos.org
       run: |

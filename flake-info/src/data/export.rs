@@ -217,6 +217,14 @@ impl From<import::NixpkgsEntry> for Derivation {
                     .map(|m| m.name.to_owned().unwrap())
                     .collect();
 
+                let position: Option<String> = package.meta.position.map(|p| {
+                    if p.starts_with("/nix/store") {
+                        p.split("/").skip(4).collect::<Vec<&str>>().join("/")
+                    } else {
+                        p
+                    }
+                });
+
                 Derivation::Package {
                     package_attr_name: attribute.clone(),
                     package_attr_name_reverse: Reverse(attribute.clone()),
@@ -247,7 +255,7 @@ impl From<import::NixpkgsEntry> for Derivation {
                         .meta
                         .homepage
                         .map_or(Default::default(), OneOrMany::into_list),
-                    package_position: package.meta.position,
+                    package_position: position,
                 }
             }
             import::NixpkgsEntry::Option(option) => option.into(),

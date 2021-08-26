@@ -2,7 +2,9 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, File},
+    io::Read,
     path::Path,
+    ffi::OsStr,
 };
 
 pub type Hash = String;
@@ -30,6 +32,12 @@ pub enum Source {
     },
     Nixpkgs(Nixpkgs),
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct TomlDocument {
+    sources: Vec<Source>
+}
+
 
 impl Source {
     pub fn to_flake_ref(&self) -> FlakeRef {
@@ -68,9 +76,19 @@ impl Source {
     }
 
     pub fn read_sources_file(path: &Path) -> Result<Vec<Source>> {
-        let file = File::open(path).with_context(|| "Failed to open input file")?;
 
-        Ok(serde_json::from_reader(file)?)
+        let mut file = File::open(path).with_context(|| "Failed to open input file")?;
+       
+        let mut buf = String::new();
+        file.read_to_string(&mut buf)?;
+        
+        if path.extension() == Some(OsStr::new("toml")) {
+            let document: TomlDocument = toml::from_str(&buf)?;
+            Ok(document.sources)
+        }
+        else {
+            Ok(serde_json::from_str(&buf)?)
+        }
     }
 
     pub async fn nixpkgs(channel: String) -> Result<Nixpkgs> {

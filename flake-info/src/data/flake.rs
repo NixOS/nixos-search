@@ -7,10 +7,7 @@ use super::Source;
 /// Holds general infoamtion about a flake
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Flake {
-    #[serde(
-        rename(serialize = "flake_description"),
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename(serialize = "flake_description"))]
     pub description: Option<String>,
     #[serde(rename(serialize = "flake_path"), skip_serializing)]
     pub path: PathBuf,

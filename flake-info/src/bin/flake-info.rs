@@ -57,7 +57,7 @@ enum Command {
         channel: String,
     },
     Group {
-        #[structopt(help = "Points to a JSON file containing info targets")]
+        #[structopt(help = "Points to a TOML or JSON file containing info targets. If file does not end in 'toml' json is assumed")]
         targets: PathBuf,
 
         name: String,
@@ -217,7 +217,7 @@ async fn run_command(
                 .await
                 .map_err(FlakeInfoError::Nixpkgs)?;
             let ident = (
-                "nixpkgs".to_owned(),
+                "nixos".to_owned(),
                 nixpkgs.channel.clone(),
                 nixpkgs.git_ref.clone(),
             );
@@ -334,7 +334,6 @@ async fn push_to_elastic(
         // throw error if present
         ensure?;
     }
-
 
     es.push_exports(&config, successes)
         .await

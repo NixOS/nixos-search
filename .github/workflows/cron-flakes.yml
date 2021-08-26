@@ -1,28 +1,25 @@
-name: "Nixpkgs: Hourly import to Elasticsearch"
+name: "Flakes: Hourly import to Elasticsearch"
 
 on:
 
   schedule:
   - cron: '0 * * * *'
-  pull_request:
 
 jobs:
 
-  import-channel:
+  hourly-import-channel:
 
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: true
       matrix:
-        channel:
-          - unstable
-          - 21.05
-          - 20.09
+        group:
+          - "manual"
 
     env:
       RUST_LOG: debug
-      FI_ES_EXISTS_STRATEGY: abort
+      FI_ES_EXISTS_STRATEGY: recreate
       FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL }}
 
     steps:
@@ -59,14 +56,14 @@ jobs:
       run: |
         nix build ./#packages.x86_64-linux.flake_info
 
-    - name: Import ${{ matrix.channel }} channel
+    - name: Import ${{ matrix.group }} group
       run: |
-        ./result/bin/flake-info --push --elastic-schema-version=$(cat ./VERSION) nixpkgs ${{ matrix.channel }}
+        ./result/bin/flake-info --push --elastic-schema-version=$(cat ./VERSION) group ./flakes/${{ matrix.group }}.toml ${{ matrix.group }}
       if: github.repository == 'NixOS/nixos-search'
 
-    - name: Warmup ${{ matrix.channel }} channel
+    - name: Warmup ${{ matrix.group }} channel
       run: |
-        curl ${{ secrets.ELASTICSEARCH_URL }}/latest-$(cat VERSION)-nixpkgs-${{ matrix.channel }}/_search | jq '.took'
-        curl ${{ secrets.ELASTICSEARCH_URL }}/latest-$(cat VERSION)-nixpkgs-${{ matrix.channel }}/_search | jq '.took'
-        curl ${{ secrets.ELASTICSEARCH_URL }}/latest-$(cat VERSION)-nixpkgs-${{ matrix.channel }}/_search | jq '.took'
+        curl ${{ secrets.ELASTICSEARCH_URL }}/$(cat VERSION)-${{ matrix.group }}/_search | jq '.took'
+        curl ${{ secrets.ELASTICSEARCH_URL }}/$(cat VERSION)-${{ matrix.group }}/_search | jq '.took'
+        curl ${{ secrets.ELASTICSEARCH_URL }}/$(cat VERSION)-${{ matrix.group }}/_search | jq '.took'
       if: github.repository == 'NixOS/nixos-search'

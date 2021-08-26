@@ -34,6 +34,9 @@ lazy_static! {
                         "repo": {
                             "type": "keyword"
                         },
+                        "url" : {
+                            "type": "keyword"
+                        }
                     }
                 },
                 "flake_source": {

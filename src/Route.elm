@@ -2,13 +2,17 @@ module Route exposing
     ( Route(..)
     , SearchArgs
     , SearchRoute
+    , SearchType(..)
+    , allTypes
     , fromUrl
     , href
     , replaceUrl
     , routeToString
+    , searchTypeToString, searchTypeToTitle
     )
 
 import Browser.Navigation
+import Dict
 import Html
 import Html.Attributes
 import Route.SearchQuery exposing (SearchQuery)
@@ -32,8 +36,60 @@ type alias SearchArgs =
 
     -- TODO: embed sort type
     , sort : Maybe String
+    , type_ : Maybe SearchType
     }
 
+
+type SearchType
+    = OptionSearch
+    | PackageSearch
+    -- | FlakeSearch
+
+
+allTypes : List SearchType
+allTypes =
+    [ PackageSearch, OptionSearch ]
+
+
+searchTypeFromString : String -> Maybe SearchType
+searchTypeFromString string =
+    case string of
+        "options" ->
+            Just OptionSearch
+
+        "packages" ->
+            Just PackageSearch
+
+        -- "flakes" ->
+        --     Just FlakeSearch
+
+        _ ->
+            Nothing
+
+
+searchTypeToString : SearchType -> String
+searchTypeToString stype =
+    case stype of
+        OptionSearch ->
+            "options"
+
+        PackageSearch ->
+            "packages"
+
+        -- FlakeSearch ->
+        --     "flakes"
+
+searchTypeToTitle : SearchType -> String
+searchTypeToTitle stype =
+    case stype of
+        OptionSearch ->
+            "Options"
+
+        PackageSearch ->
+            "Packages"
+
+        -- FlakeSearch ->
+        --     "flakes"
 
 type alias SearchRoute =
     SearchArgs -> Route
@@ -56,6 +112,7 @@ searchQueryParser url =
             <?> Url.Parser.Query.int "size"
             <?> Url.Parser.Query.string "buckets"
             <?> Url.Parser.Query.string "sort"
+            <?> Url.Parser.Query.map (Maybe.andThen searchTypeFromString) (Url.Parser.Query.string "type")
 
 
 searchArgsToUrl : SearchArgs -> ( List QueryParameter, Maybe ( String, Route.SearchQuery.SearchQuery ) )
@@ -67,6 +124,7 @@ searchArgsToUrl args =
         , Maybe.map (Url.Builder.int "size") args.size
         , Maybe.map (Url.Builder.string "buckets") args.buckets
         , Maybe.map (Url.Builder.string "sort") args.sort
+        , Maybe.map (Url.Builder.string "type") <| Maybe.map searchTypeToString args.type_
         ]
     , Maybe.map (Tuple.pair "query") args.query
     )
