@@ -208,7 +208,7 @@ async fn run_command(
             let info = flake_info::get_flake_info(source.to_flake_ref(), temp_store, extra)
                 .map_err(FlakeInfoError::Flake)?;
 
-            let ident = ("flake".to_owned(), info.name, info.revision);
+            let ident = ("flake".to_owned(), info.name, info.revision.unwrap_or("latest".into()));
 
             Ok((exports, ident))
         }
@@ -241,7 +241,7 @@ async fn run_command(
                     _ => flake_info::process_flake(source, &kind, temp_store, &extra).and_then(
                         |result| {
                             flake_info::get_flake_info(source.to_flake_ref(), temp_store, extra)
-                                .map(|info| (result, info.revision))
+                                .map(|info| (result, info.revision.unwrap_or("latest".into())))
                         },
                     ),
                 })

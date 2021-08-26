@@ -4,6 +4,7 @@
 use std::path::PathBuf;
 
 use crate::data::import::NixOption;
+use pandoc::{InputFormat, InputKind, OutputFormat, OutputKind, PandocOption, PandocOutput};
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -11,6 +12,13 @@ use super::{
     system::System,
     utility::{AttributeQuery, Flatten, OneOrMany, Reverse},
 };
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref FILTERS_PATH: PathBuf = std::env::var("NIXPKGS_PANDOC_FILTERS_PATH")
+        .unwrap_or("".into())
+        .into();
+}
 
 type Flake = super::Flake;
 
@@ -275,6 +283,37 @@ impl From<import::NixOption> for Derivation {
             flake,
         }: import::NixOption,
     ) -> Self {
+        let citeref_filter = {
+            let mut p = FILTERS_PATH.clone();
+            p.push("docbook-reader/citerefentry-to-rst-role.lua");
+            p
+        };
+        let man_filter = {
+            let mut p = FILTERS_PATH.clone();
+            p.push("link-unix-man-references.lua");
+            p
+        };
+
+        let description = if let Some(description) = description {
+            let mut pandoc = pandoc::new();
+            
+            pandoc.set_input(InputKind::Pipe(description));
+            pandoc.set_input_format(InputFormat::DocBook, Vec::new());
+            pandoc.set_output(OutputKind::Pipe);
+            pandoc.set_output_format(OutputFormat::Html, Vec::new());
+            pandoc.add_options(&[
+                // PandocOption::Filter(citeref_filter),
+                // PandocOption::Filter(man_filter),
+            ]);
+            let result = pandoc.execute().unwrap();
+            match result {
+                PandocOutput::ToBuffer(description) => Some(description),
+                _ => unreachable!(),
+            }
+        } else {
+            description
+        };
+
         Derivation::Option {
             option_source: declarations.get(0).map(Clone::clone),
             option_name: name.clone(),

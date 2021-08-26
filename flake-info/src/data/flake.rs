@@ -17,7 +17,7 @@ pub struct Flake {
     #[serde(rename(serialize = "flake_name"), skip_deserializing)]
     pub name: String,
 
-    pub revision: String,
+    pub revision: Option<String>,
 
     #[serde(
         skip_deserializing,
@@ -69,7 +69,7 @@ mod tests {
                 },
                 name: "".into(),
                 source: None,
-                revision: "9e2f634ffa45da3f5feb158a12ee32e1673bfe35".into()
+                revision: Some("9e2f634ffa45da3f5feb158a12ee32e1673bfe35".into())
             }
         );
 
