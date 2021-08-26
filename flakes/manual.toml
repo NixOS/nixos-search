@@ -27,3 +27,8 @@ repo = "neuropil"
 type = "github"
 owner = "tweag"
 repo = "nickel"
+
+[[sources]]
+type = "github"
+owner = "pinpox"
+repo = "nixos"
