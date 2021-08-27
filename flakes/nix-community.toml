@@ -1,0 +1,135 @@
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "nix-eval-jobs"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "rnix-lsp"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "fenix"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "poetry2nix"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "nixpkgs-wayland"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "nix-direnv"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "naersk"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "napalm"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "nixpkgs-fmt"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "nur-packages-template"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "hardware-mnt-reform"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "nixos-generators"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "nixpkgs.lib"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "rnix-hashes"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "flake-gemini"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "nixpkgs-fmt"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "neovim-nightly-overlay"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "neovim-nightly-overlay"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "redoxpkgs"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "impermanence"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "flake-nimble"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "NUR"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "todomvc-nix"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "home-manager"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "emacs-overlay"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "rnix-lsp"
+
+[[sources]]
+repo_type = "github"
+owner = "nix-community"
+repo = "rnix-parser"
+
