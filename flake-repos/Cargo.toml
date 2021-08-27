@@ -11,3 +11,4 @@ octocrab = "0.9"
 serde = "1.0.129"
 tokio = { version = "1.10.1", features = ["full"] }
 toml = "0.5"
+structopt = "0.3.22"
