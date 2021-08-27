@@ -14,8 +14,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        group:
-          - "manual"
+        group: [ "ngi-nix" "nixos" "nix-community" "tweag" ]
 
     env:
       RUST_LOG: debug
