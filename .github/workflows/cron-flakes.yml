@@ -1,26 +1,23 @@
+---
 name: "Flakes: Hourly import to Elasticsearch"
-
-on:
-
+"on":
   schedule:
-  - cron: '0 * * * *'
-
+    - cron: 0 * * * *
 jobs:
-
   hourly-import-channel:
-
     runs-on: ubuntu-latest
-
     strategy:
       fail-fast: true
       matrix:
-        group: [ "ngi-nix" "nixos" "nix-community" "tweag" ]
-
+        group:
+          - nix-community
+          - tweag
+          - nixos
+          - ngi-nix
     env:
       RUST_LOG: debug
       FI_ES_EXISTS_STRATEGY: recreate
-      FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL }}
-
+      FI_ES_URL: "${{ secrets.ELASTICSEARCH_URL }}"
     steps:
 
     - name: Checking out the repository
