@@ -22,5 +22,5 @@ jobs:
           extra_nix_config: "experimental-features = nix-command flakes"
       - name: Install unstable channel
         run: "nix-channel --add https://nixos.org/channels/nixpkgs-unstable\nnix-channel --update"
-      - name: Building import_scripts
+      - name: Building flake_repos
         run: "nix build ./#packages.x86_64-linux.flake_repos"
