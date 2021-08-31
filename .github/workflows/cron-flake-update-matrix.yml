@@ -1,9 +1,6 @@
 ---
 name: "Flakes: Hourly update of ./cron-flakes.yml"
-"on":
-  workflow_dispatch:
-  schedule:
-    - cron: 0 * * * *
+on: workflow_dispatch
 jobs:
   hourley-update-cron-flakes-yml:
     runs-on: ubuntu-latest
