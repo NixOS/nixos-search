@@ -1,8 +1,8 @@
 ---
-name: "Flakes: Hourly update of ./cron-flakes.yml"
+name: "Flakes: Hourly update of cron-flakes.yml"
 on: workflow_dispatch
 jobs:
-  hourley-update-cron-flakes-yml:
+  update-group-matrix:
     runs-on: ubuntu-latest
     env:
       RUST_LOG: debug
@@ -17,7 +17,7 @@ jobs:
           install_url: "https://nixos-nix-install-tests.cachix.org/serve/i6laym9jw3wg9mw6ncyrk6gjx4l34vvx/install"
           install_options: "--tarball-url-prefix https://nixos-nix-install-tests.cachix.org/serve"
           extra_nix_config: "experimental-features = nix-command flakes"
-      - name: Install unstable channel
+      - name: Add unstable channel
         run: "nix-channel --add https://nixos.org/channels/nixpkgs-unstable\nnix-channel --update"
-      - name: Building flake_repos
+      - name: Build flake_repos
         run: "nix build ./#packages.x86_64-linux.flake_repos"
