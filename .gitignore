@@ -20,3 +20,5 @@ package-lock.json
 repl-temp-*
 result
 src-url
+.direnv
+.envrc
