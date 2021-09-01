@@ -1,4 +1,7 @@
-use octocrab::Octocrab;
+use reqwest::{
+    header::{HeaderMap, AUTHORIZATION, LINK},
+    Url,
+};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, File},
@@ -15,9 +18,8 @@ use toml;
     about = "Given an input toml, create an output toml of flakes."
 )]
 struct Opt {
-    #[structopt(parse(from_os_str))]
-    input_toml_file: PathBuf,
-
+    //#[structopt(parse(from_os_str))]
+    //input_toml_file: PathBuf,
     #[structopt(parse(from_os_str))]
     output_path: PathBuf,
 
@@ -28,20 +30,32 @@ struct Opt {
 #[derive(Serialize, Deserialize)]
 struct Source {
     repo_type: String,
-    owner: String,
-    repo: String,
+    owner: serde_json::Value,
+    repo: serde_json::Value,
 }
 
-async fn get_repos(repo_name: &str, octocrab: &Octocrab, args: &Opt) -> octocrab::Result<()> {
-    let mut current_page = octocrab
-        .search()
-        .code(format!("user:{} filename:flake.nix path:/", &repo_name).as_str())
-        .sort("stars")
-        .order("asc")
-        .page(1u32)
-        .per_page(100)
-        .send()
-        .await?;
+async fn get_repos(
+    repo_name: &str,
+    query: &Url,
+    headers: &HeaderMap,
+    args: &Opt,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let client = reqwest::Client::builder()
+        .user_agent("nixos-search")
+        .default_headers(headers.clone())
+        .build()?;
+
+    let mut page: u32 = 1;
+
+    let mut another_page = true;
+
+    let mut url = query
+        .clone()
+        .query_pairs_mut()
+        .append_pair("page", &page.to_string())
+        .finish()
+        .to_string();
+    let mut response = client.get(url).send().await?;
 
     let out_file_path: PathBuf = args.output_path.join(format!("{}.toml", repo_name));
 
@@ -54,29 +68,38 @@ async fn get_repos(repo_name: &str, octocrab: &Octocrab, args: &Opt) -> octocrab
     );
 
     loop {
-        let mut prs = current_page.take_items();
-        println!("Number of items: {}", prs.len());
+        let result = response.json::<serde_json::Value>().await?;
+        let repos = result["items"].as_array().unwrap();
 
-        for pr in prs.drain(..) {
+        repos.into_iter().for_each(|repo| {
             let s = Source {
                 repo_type: "github".to_string(),
-                owner: pr.repository.owner.login,
-                repo: pr.repository.name,
+                owner: repo["repository"]["owner"]["login"].clone(),
+                repo: repo["repository"]["name"].clone(),
             };
             if let Ok(s) = toml::to_string(&s) {
                 file.write_fmt(format_args!("[[sources]]\n{}\n", s))
                     .expect(format!("Error in writing to \"{}.toml\"", repo_name).as_str());
             };
-        }
+        });
 
-        if let Ok(Some(new_page)) = octocrab.get_page(&current_page.next).await {
-            current_page = new_page;
-        } else {
+        page += 1;
+        url = query
+            .clone()
+            .query_pairs_mut()
+            .append_pair("page", &page.to_string())
+            .finish()
+            .to_string();
+        response = client.get(url).send().await?;
+        if another_page == false {
             break;
+        }
+        if let None = response.headers().get(LINK).unwrap().to_str()?.find("next") {
+            another_page = false;
         }
 
         println!("time to sleep");
-        sleep(Duration::from_secs(60)).await;
+        sleep(Duration::from_secs(5)).await;
     }
 
     Ok(())
@@ -97,22 +120,26 @@ fn update_github_actions_file(
 }
 
 #[tokio::main]
-async fn main() -> octocrab::Result<()> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Opt::from_args();
 
     let repos = vec!["ngi-nix", "nixos", "nix-community", "tweag"];
+
+    let query: reqwest::Url = Url::parse("https://api.github.com/search/code?q=user:ngi-nix+filename:flake.nix+path:/&sort=stars&order=asc&per_page=100")?;
 
     let env_github_token = match std::env::var("GITHUB_TOKEN") {
         Ok(env_github_token) => env_github_token,
         Err(e) => panic!("Could not find GITHUB_TOKEN in the environment.\n{:?}", e),
     };
 
-    let octocrab = octocrab::Octocrab::builder()
-        .personal_token(env_github_token)
-        .build()?;
+    let mut hmap = HeaderMap::new();
+    hmap.append(
+        AUTHORIZATION,
+        format!("token {}", env_github_token).parse().unwrap(),
+    );
 
     for repo in repos {
-        get_repos(repo, &octocrab, &args).await?;
+        get_repos(repo, &query, &hmap, &args).await?;
     }
 
     // Get all the "organisation" names to be added to the github action.
