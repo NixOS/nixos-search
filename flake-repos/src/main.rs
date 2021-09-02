@@ -18,8 +18,9 @@ use toml;
     about = "Given an input toml, create an output toml of flakes."
 )]
 struct Opt {
-    //#[structopt(parse(from_os_str))]
-    //input_toml_file: PathBuf,
+    #[structopt(parse(from_os_str))]
+    input_toml_file: PathBuf,
+
     #[structopt(parse(from_os_str))]
     output_path: PathBuf,
 
@@ -29,13 +30,13 @@ struct Opt {
 
 #[derive(Serialize, Deserialize)]
 struct Source {
-    repo_type: String,
+    repo_type: toml::Value,
     owner: serde_json::Value,
     repo: serde_json::Value,
 }
 
 async fn get_repos(
-    repo_name: &str,
+    flake_repo: &toml::Value,
     query: &Url,
     headers: &HeaderMap,
     args: &Opt,
@@ -57,7 +58,9 @@ async fn get_repos(
         .to_string();
     let mut response = client.get(url).send().await?;
 
-    let out_file_path: PathBuf = args.output_path.join(format!("{}.toml", repo_name));
+    let out_file_path: PathBuf = args
+        .output_path
+        .join(format!("{}.toml", flake_repo["name"].as_str().unwrap()));
 
     let mut file = File::create(&out_file_path).expect(
         format!(
@@ -73,13 +76,14 @@ async fn get_repos(
 
         repos.into_iter().for_each(|repo| {
             let s = Source {
-                repo_type: "github".to_string(),
+                repo_type: flake_repo["type"].clone(),
                 owner: repo["repository"]["owner"]["login"].clone(),
                 repo: repo["repository"]["name"].clone(),
             };
             if let Ok(s) = toml::to_string(&s) {
-                file.write_fmt(format_args!("[[sources]]\n{}\n", s))
-                    .expect(format!("Error in writing to \"{}.toml\"", repo_name).as_str());
+                file.write_fmt(format_args!("[[sources]]\n{}\n", s)).expect(
+                    format!("Error in writing to \"{}.toml\"", flake_repo["name"]).as_str(),
+                );
             };
         });
 
@@ -123,23 +127,26 @@ fn update_github_actions_file(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Opt::from_args();
 
-    let repos = vec!["ngi-nix", "nixos", "nix-community", "tweag"];
+    let input_file = fs::read_to_string(&args.input_toml_file)?;
 
-    let query: reqwest::Url = Url::parse("https://api.github.com/search/code?q=user:ngi-nix+filename:flake.nix+path:/&sort=stars&order=asc&per_page=100")?;
+    let flake_repos: toml::Value = toml::from_str(&input_file.as_str())?;
+
+    let mut query: reqwest::Url;
 
     let env_github_token = match std::env::var("GITHUB_TOKEN") {
         Ok(env_github_token) => env_github_token,
         Err(e) => panic!("Could not find GITHUB_TOKEN in the environment.\n{:?}", e),
     };
 
-    let mut hmap = HeaderMap::new();
-    hmap.append(
+    let mut headers = HeaderMap::new();
+    headers.append(
         AUTHORIZATION,
         format!("token {}", env_github_token).parse().unwrap(),
     );
 
-    for repo in repos {
-        get_repos(repo, &query, &hmap, &args).await?;
+    for repo in flake_repos["sources"].as_array().unwrap() {
+        query = Url::parse(format!("https://api.github.com/search/code?q=user:{}+filename:flake.nix+path:/&sort=stars&order=asc&per_page=100", repo["name"]).as_str())?;
+        get_repos(&repo, &query, &headers, &args).await?;
     }
 
     // Get all the "organisation" names to be added to the github action.
