@@ -28,11 +28,29 @@ struct Opt {
     yaml_file_path: PathBuf,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Eq)]
 struct Source {
-    repo_type: toml::Value,
-    owner: serde_json::Value,
-    repo: serde_json::Value,
+    repo_type: String,
+    owner: String,
+    repo: String,
+}
+
+impl Ord for Source {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.repo.to_string().cmp(&other.repo.to_string())
+    }
+}
+
+impl PartialOrd for Source {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for Source {
+    fn eq(&self, other: &Self) -> bool {
+        self.repo == other.repo
+    }
 }
 
 async fn get_repos(
@@ -73,18 +91,27 @@ async fn get_repos(
     loop {
         let result = response.json::<serde_json::Value>().await?;
         let repos = result["items"].as_array().unwrap();
+        let mut sources: Vec<Source> = Vec::with_capacity(repos.len());
 
         repos.into_iter().for_each(|repo| {
             let s = Source {
-                repo_type: flake_repo["type"].clone(),
-                owner: repo["repository"]["owner"]["login"].clone(),
-                repo: repo["repository"]["name"].clone(),
+                repo_type: flake_repo["type"].to_string(),
+                owner: repo["repository"]["owner"]["login"].to_string(),
+                repo: repo["repository"]["name"].to_string(),
             };
-            if let Ok(s) = toml::to_string(&s) {
-                file.write_fmt(format_args!("[[sources]]\n{}\n", s)).expect(
-                    format!("Error in writing to \"{}.toml\"", flake_repo["name"]).as_str(),
-                );
-            };
+            sources.push(s);
+        });
+        sources.sort_unstable();
+        sources.dedup();
+        sources.into_iter().for_each(|s| {
+            file.write_all(
+                format!(
+                    "[[sources]]\nrepo_type = {}\nowner = {}\nrepo = {}\n\n",
+                    s.repo_type, s.owner, s.repo
+                )
+                .as_bytes(),
+            )
+            .expect(format!("Error in writing to \"{}.toml\"", flake_repo["name"]).as_str());
         });
 
         page += 1;
