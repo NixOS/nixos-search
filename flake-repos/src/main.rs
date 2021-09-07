@@ -53,6 +53,21 @@ impl PartialEq for Source {
     }
 }
 
+fn create_github_sources(
+    flake_repo: &toml::Value,
+    repos: &Vec<serde_json::Value>,
+    sources: &mut Vec<Source>,
+) {
+    repos.into_iter().for_each(|repo| {
+        let s = Source {
+            repo_type: flake_repo["type"].to_string(),
+            owner: repo["repository"]["owner"]["login"].to_string(),
+            repo: repo["repository"]["name"].to_string(),
+        };
+        sources.push(s);
+    });
+}
+
 async fn get_repos(
     flake_repo: &toml::Value,
     query: &Url,
@@ -93,14 +108,11 @@ async fn get_repos(
         let repos = result["items"].as_array().unwrap();
         let mut sources: Vec<Source> = Vec::with_capacity(repos.len());
 
-        repos.into_iter().for_each(|repo| {
-            let s = Source {
-                repo_type: flake_repo["type"].to_string(),
-                owner: repo["repository"]["owner"]["login"].to_string(),
-                repo: repo["repository"]["name"].to_string(),
-            };
-            sources.push(s);
-        });
+        match query.domain() {
+            Some("api.github.com") => create_github_sources(&flake_repo, &repos, &mut sources),
+            _ => break,
+        }
+
         sources.sort_unstable();
         sources.dedup();
         sources.into_iter().for_each(|s| {
