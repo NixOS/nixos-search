@@ -54,22 +54,22 @@ impl PartialEq for Source {
 }
 
 fn create_github_sources(
-    flake_repo: &toml::Value,
-    repos: &Vec<serde_json::Value>,
+    parent_repo: &toml::Value,
+    child_repos: &Vec<serde_json::Value>,
     sources: &mut Vec<Source>,
 ) {
-    repos.into_iter().for_each(|repo| {
+    child_repos.into_iter().for_each(|child_repo| {
         let s = Source {
-            repo_type: flake_repo["type"].to_string(),
-            owner: repo["repository"]["owner"]["login"].to_string(),
-            repo: repo["repository"]["name"].to_string(),
+            repo_type: parent_repo["type"].to_string(),
+            owner: child_repo["repository"]["owner"]["login"].to_string(),
+            repo: child_repo["repository"]["name"].to_string(),
         };
         sources.push(s);
     });
 }
 
 async fn get_repos(
-    flake_repo: &toml::Value,
+    parent_repo: &toml::Value,
     query: &Url,
     headers: &HeaderMap,
     args: &Opt,
@@ -93,7 +93,7 @@ async fn get_repos(
 
     let out_file_path: PathBuf = args
         .output_path
-        .join(format!("{}.toml", flake_repo["name"].as_str().unwrap()));
+        .join(format!("{}.toml", parent_repo["name"].as_str().unwrap()));
 
     let mut file = File::create(&out_file_path).expect(
         format!(
@@ -105,11 +105,11 @@ async fn get_repos(
 
     loop {
         let result = response.json::<serde_json::Value>().await?;
-        let repos = result["items"].as_array().unwrap();
-        let mut sources: Vec<Source> = Vec::with_capacity(repos.len());
+        let child_repos = result["items"].as_array().unwrap();
+        let mut sources: Vec<Source> = Vec::with_capacity(child_repos.len());
 
         match query.domain() {
-            Some("api.github.com") => create_github_sources(&flake_repo, &repos, &mut sources),
+            Some("api.github.com") => create_github_sources(&parent_repo, &child_repos, &mut sources),
             _ => break,
         }
 
@@ -123,7 +123,7 @@ async fn get_repos(
                 )
                 .as_bytes(),
             )
-            .expect(format!("Error in writing to \"{}.toml\"", flake_repo["name"]).as_str());
+            .expect(format!("Error in writing to \"{}.toml\"", parent_repo["name"]).as_str());
         });
 
         page += 1;
@@ -168,7 +168,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let input_file = fs::read_to_string(&args.input_toml_file)?;
 
-    let flake_repos: toml::Value = toml::from_str(&input_file.as_str())?;
+    let parent_repos: toml::Value = toml::from_str(&input_file.as_str())?;
 
     let mut query: reqwest::Url;
 
@@ -183,9 +183,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         format!("token {}", env_github_token).parse().unwrap(),
     );
 
-    for repo in flake_repos["sources"].as_array().unwrap() {
-        query = Url::parse(format!("https://api.github.com/search/code?q=user:{}+filename:flake.nix+path:/&sort=stars&order=asc&per_page=100", repo["name"]).as_str())?;
-        get_repos(&repo, &query, &headers, &args).await?;
+    for parent_repo in parent_repos["sources"].as_array().unwrap() {
+        query = Url::parse(format!("https://api.github.com/search/code?q=user:{}+filename:flake.nix+path:/&sort=stars&order=asc&per_page=100", parent_repo["name"]).as_str())?;
+        get_repos(&parent_repo, &query, &headers, &args).await?;
     }
 
     // Get all the "organisation" names to be added to the github action.
