@@ -302,9 +302,10 @@ impl From<import::NixOption> for Derivation {
             pandoc.set_output(OutputKind::Pipe);
             pandoc.set_output_format(OutputFormat::Html, Vec::new());
             pandoc.add_options(&[
-                // PandocOption::Filter(citeref_filter),
-                // PandocOption::Filter(man_filter),
+                PandocOption::LuaFilter(citeref_filter),
+                PandocOption::LuaFilter(man_filter),
             ]);
+
             let result = pandoc.execute().unwrap();
             match result {
                 PandocOutput::ToBuffer(description) => Some(description),
