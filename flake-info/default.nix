@@ -23,6 +23,8 @@ rustPlatform.buildRustPackage {
   ];
 
   postInstall = ''
-    wrapProgram $out/bin/flake-info --prefix PATH : ${pandoc}/bin
+    wrapProgram $out/bin/flake-info \
+      --set NIXPKGS_PANDOC_FILTERS_PATH "${pkgs.path + "/doc/build-aux/pandoc-filters"}" \
+      --prefix PATH : ${pandoc}/bin
   '';
 }
