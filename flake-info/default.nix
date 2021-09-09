@@ -10,7 +10,7 @@ rustPlatform.buildRustPackage {
     };
   };
   nativeBuildInputs = [ pkg-config ];
-  buildInputs = [ pandoc openssl openssl.dev ] ++ lib.optional pkgs.stdenv.isDarwin [ libiconv darwin.apple_sdk.frameworks.Security ];
+  buildInputs = [ openssl openssl.dev ] ++ lib.optional pkgs.stdenv.isDarwin [ libiconv darwin.apple_sdk.frameworks.Security ];
   
   checkInputs = [ pandoc ];
   
@@ -20,4 +20,8 @@ rustPlatform.buildRustPackage {
     "--skip elastic::tests"
     "--skip nix_gc::tests"
   ];
+
+  postInstall = ''
+    wrapProgram $out/bin/flake-info --prefix PATH : ${pandoc}/bin
+  '';
 }
