@@ -26,6 +26,7 @@
       devShell = system:
         nixpkgs.legacyPackages.${system}.mkShell {
           inputsFrom = builtins.attrValues (packages system);
+          NIXPKGS_PANDOC_FILTERS_PATH = "${nixpkgs + "/doc/build-aux/pandoc-filters"}";
         };
     in
       {
