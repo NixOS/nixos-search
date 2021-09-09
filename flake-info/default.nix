@@ -6,6 +6,7 @@ rustPlatform.buildRustPackage {
     lockFile = ./Cargo.lock;
     outputHashes = {
       "elasticsearch-8.0.0-alpha.1" = "sha256-gjmk3Q3LTAvLhzQ+k1knSp1HBwtqNiubjXNnLy/cS5M=";
+      "pandoc-0.8.6" = "sha256-NsHDzqWjQ17cznjOSpXOdUOhJjAO28Z6QZ6Mn6afVVs=";
     };
   };
   nativeBuildInputs = [ pkg-config ];
