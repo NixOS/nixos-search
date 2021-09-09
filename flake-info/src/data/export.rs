@@ -296,8 +296,16 @@ impl From<import::NixOption> for Derivation {
 
         let description = if let Some(description) = description {
             let mut pandoc = pandoc::new();
-            
-            pandoc.set_input(InputKind::Pipe(description));
+            let description_xml = format!(
+                "
+                <xml xmlns:xlink=\"http://www.w3.org/1999/xlink\">
+                <para>{}</para>
+                </xml>
+                ", description
+            );
+
+
+            pandoc.set_input(InputKind::Pipe(description_xml));
             pandoc.set_input_format(InputFormat::DocBook, Vec::new());
             pandoc.set_output(OutputKind::Pipe);
             pandoc.set_output_format(OutputFormat::Html, Vec::new());
