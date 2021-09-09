@@ -10,7 +10,8 @@ rustPlatform.buildRustPackage {
     };
   };
   nativeBuildInputs = [ pkg-config ];
-  buildInputs = [ openssl openssl.dev ] ++ lib.optional pkgs.stdenv.isDarwin [ libiconv darwin.apple_sdk.frameworks.Security ];
+  buildInputs = [ openssl openssl.dev makeWrapper ] 
+              ++ lib.optional pkgs.stdenv.isDarwin [ libiconv darwin.apple_sdk.frameworks.Security ];
   
   checkInputs = [ pandoc ];
   
