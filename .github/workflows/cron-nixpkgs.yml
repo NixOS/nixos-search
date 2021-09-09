@@ -39,7 +39,6 @@ jobs:
         extra_nix_config: |
           experimental-features = nix-command flakes
           access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-
     - uses: cachix/cachix-action@v10
       with:
         name: nixos-search
@@ -49,15 +48,12 @@ jobs:
       run: |
         nix-channel --add https://nixos.org/channels/nixpkgs-unstable
         nix-channel --update
-
     - name: Installing jq
       run: |
         nix-env -iA nixpkgs.nixFlakes nixpkgs.jq
-
     - name: Building import_scripts
       run: |
         nix build ./#packages.x86_64-linux.flake_info
-
     - name: Import ${{ matrix.channel }} channel
       run: |
         ./result/bin/flake-info --push --elastic-schema-version=$(cat ./VERSION) nixpkgs ${{ matrix.channel }}

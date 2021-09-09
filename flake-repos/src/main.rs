@@ -4,6 +4,8 @@ use reqwest::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
+    borrow::Cow,
+    ffi::OsString,
     fs::{self, File},
     io::Write,
     path::PathBuf,
@@ -109,7 +111,9 @@ async fn get_repos(
         let mut sources: Vec<Source> = Vec::with_capacity(child_repos.len());
 
         match query.domain() {
-            Some("api.github.com") => create_github_sources(&parent_repo, &child_repos, &mut sources),
+            Some("api.github.com") => {
+                create_github_sources(&parent_repo, &child_repos, &mut sources)
+            }
             _ => break,
         }
 
@@ -118,7 +122,7 @@ async fn get_repos(
         sources.into_iter().for_each(|s| {
             file.write_all(
                 format!(
-                    "[[sources]]\nrepo_type = {}\nowner = {}\nrepo = {}\n\n",
+                    "[[sources]]\ntype = {}\nowner = {}\nrepo = {}\n\n",
                     s.repo_type, s.owner, s.repo
                 )
                 .as_bytes(),
@@ -150,7 +154,7 @@ async fn get_repos(
 
 fn update_github_actions_file(
     yaml_file: &PathBuf,
-    org_names: &Vec<String>,
+    org_names: Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let github_actions_file: String = fs::read_to_string(&yaml_file)?;
     let mut map: serde_yaml::Value = serde_yaml::from_str(&github_actions_file)?;
@@ -168,7 +172,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let input_file = fs::read_to_string(&args.input_toml_file)?;
 
-    let parent_repos: toml::Value = toml::from_str(&input_file.as_str())?;
+    let parent_repos = input_file.parse::<toml::Value>().unwrap();
 
     let mut query: reqwest::Url;
 
@@ -198,14 +202,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .path()
                 .file_stem()
                 .unwrap()
-                .to_str()
-                .unwrap()
-                .to_string()
-                .clone()
+                .to_string_lossy()
+                .into_owned()
         })
         .collect();
 
-    update_github_actions_file(&args.yaml_file_path, &org_names)
+    update_github_actions_file(&args.yaml_file_path, org_names)
         .expect("Could not update github actions file");
 
     Ok(())

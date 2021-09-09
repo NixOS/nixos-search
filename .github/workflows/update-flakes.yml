@@ -5,11 +5,13 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RUST_LOG: debug
+      GITHUB_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}
     steps:
       - name: Check out the repository
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
+          token: ${{ secrets.WORKFLOW_TOKEN }}
       - name: Install Nix
         uses: cachix/install-nix-action@v13
         with:
@@ -20,3 +22,7 @@ jobs:
         run: "nix-channel --add https://nixos.org/channels/nixpkgs-unstable\nnix-channel --update"
       - name: Build flake_repos
         run: "nix build ./#packages.x86_64-linux.flake_repos"
+      - name: Update cron-flakes.yml
+        run: "./result/bin/flake-repos ./flake-repos/repos.toml ./flakes/ ./.github/workflows/cron-flakes.yml"
+      - name: Push to main
+        run: "git config user.name nixos-search\ngit add .\ngit commit -m \"Update repos\"\ngit push"

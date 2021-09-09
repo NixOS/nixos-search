@@ -1,0 +1,11 @@
+[[sources]]
+type = "github"
+name = "nixos"
+
+[[sources]]
+type = "github"
+name = "nix-community"
+
+[[sources]]
+type = "github"
+name = "ngi-nix"

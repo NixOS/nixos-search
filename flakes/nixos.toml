@@ -1,32 +1,7 @@
 [[sources]]
 repo_type = "github"
 owner = "NixOS"
-repo = "patchelf"
-
-[[sources]]
-repo_type = "github"
-owner = "NixOS"
-repo = "nixos-search"
-
-[[sources]]
-repo_type = "github"
-owner = "NixOS"
 repo = "hydra"
-
-[[sources]]
-repo_type = "github"
-owner = "NixOS"
-repo = "nixos-hardware"
-
-[[sources]]
-repo_type = "github"
-owner = "NixOS"
-repo = "templates"
-
-[[sources]]
-repo_type = "github"
-owner = "NixOS"
-repo = "nixpkgs"
 
 [[sources]]
 repo_type = "github"
@@ -36,22 +11,17 @@ repo = "nix"
 [[sources]]
 repo_type = "github"
 owner = "NixOS"
-repo = "nixops"
-
-[[sources]]
-repo_type = "github"
-owner = "NixOS"
 repo = "nix-mode"
 
 [[sources]]
 repo_type = "github"
 owner = "NixOS"
-repo = "nixos-summer"
+repo = "nixops"
 
 [[sources]]
 repo_type = "github"
 owner = "NixOS"
-repo = "nixos-homepage"
+repo = "nixos-channel-scripts"
 
 [[sources]]
 repo_type = "github"
@@ -61,7 +31,12 @@ repo = "nixos-common-styles"
 [[sources]]
 repo_type = "github"
 owner = "NixOS"
-repo = "nixos-status"
+repo = "nixos-hardware"
+
+[[sources]]
+repo_type = "github"
+owner = "NixOS"
+repo = "nixos-homepage"
 
 [[sources]]
 repo_type = "github"
@@ -71,10 +46,35 @@ repo = "nixos-planet"
 [[sources]]
 repo_type = "github"
 owner = "NixOS"
+repo = "nixos-search"
+
+[[sources]]
+repo_type = "github"
+owner = "NixOS"
+repo = "nixos-status"
+
+[[sources]]
+repo_type = "github"
+owner = "NixOS"
+repo = "nixos-summer"
+
+[[sources]]
+repo_type = "github"
+owner = "NixOS"
+repo = "nixpkgs"
+
+[[sources]]
+repo_type = "github"
+owner = "NixOS"
 repo = "nixpkgs-channels"
 
 [[sources]]
 repo_type = "github"
 owner = "NixOS"
-repo = "nixos-channel-scripts"
+repo = "patchelf"
+
+[[sources]]
+repo_type = "github"
+owner = "NixOS"
+repo = "templates"
 

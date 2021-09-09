@@ -1,8 +1,6 @@
 ---
 name: "Flakes: Hourly import to Elasticsearch"
-"on":
-  schedule:
-    - cron: 0 * * * *
+"on": workflow_dispatch
 jobs:
   hourly-import-channel:
     runs-on: ubuntu-latest
@@ -10,10 +8,10 @@ jobs:
       fail-fast: true
       matrix:
         group:
-          - nix-community
-          - tweag
-          - nixos
           - ngi-nix
+          - nixos
+          - tweag
+          - nix-community
     env:
       RUST_LOG: debug
       FI_ES_EXISTS_STRATEGY: recreate

@@ -1,7 +1,7 @@
 [[sources]]
 repo_type = "github"
 owner = "tweag"
-repo = "nickel"
+repo = "gomod2nix"
 
 [[sources]]
 repo_type = "github"
@@ -11,7 +11,7 @@ repo = "jupyterWith"
 [[sources]]
 repo_type = "github"
 owner = "tweag"
-repo = "okapi"
+repo = "nickel"
 
 [[sources]]
 repo_type = "github"
@@ -26,5 +26,5 @@ repo = "ocaml-uri-bazel"
 [[sources]]
 repo_type = "github"
 owner = "tweag"
-repo = "gomod2nix"
+repo = "okapi"
 
