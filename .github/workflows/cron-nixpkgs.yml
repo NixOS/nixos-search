@@ -4,6 +4,7 @@ on:
 
   schedule:
   - cron: '0 * * * *'
+  pull_request:
 
 jobs:
 
