@@ -550,7 +550,7 @@ type alias Flake =
 
 defaultFlakeId : String
 defaultFlakeId =
-    "group-01"
+    "group-manual"
 
 
 flakeFromId : String -> Maybe Flake

@@ -32,3 +32,7 @@ repo = "nickel"
 type = "github"
 owner = "pinpox"
 repo = "nixos"
+
+[[sources]]
+owner = "Mic92"
+repo = "sops-nix"
