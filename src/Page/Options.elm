@@ -212,7 +212,11 @@ viewResultItem channel _ show item =
                     [ div [] [ text "Name" ]
                     , div [] [ wrapped asPreCode item.source.name ]
                     , div [] [ text "Description" ]
-                    , div [] [ text <| Maybe.withDefault "" item.source.description]
+                    , div [] <|
+                        (item.source.description
+                            |> Maybe.map showHtml
+                            |> Maybe.withDefault []
+                        )
                     , div [] [ text "Default value" ]
                     , div [] [ withEmpty (wrapped asPreCode) item.source.default ]
                     , div [] [ text "Type" ]
