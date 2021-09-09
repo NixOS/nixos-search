@@ -11,9 +11,9 @@ rustPlatform.buildRustPackage {
   };
   nativeBuildInputs = [ pkg-config ];
   buildInputs = [ pandoc openssl openssl.dev ] ++ lib.optional pkgs.stdenv.isDarwin [ libiconv darwin.apple_sdk.frameworks.Security ];
-  checkInputs = [ pandoc ];
   checkFlags = [
     "--skip elastic::tests"
     "--skip nix_gc::tests"
+    "--skip data::export::tests::test_option"
   ];
 }
