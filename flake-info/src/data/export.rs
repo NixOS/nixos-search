@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     import,
+    prettyprint::print_value,
     system::System,
     utility::{AttributeQuery, Flatten, OneOrMany, Reverse},
 };
@@ -329,18 +330,8 @@ impl From<import::NixOption> for Derivation {
             option_name_reverse: Reverse(name.clone()),
             option_description: description.clone(),
             option_description_reverse: description.map(Reverse),
-            option_default: default.map(|v| {
-                v.as_str().map_or_else(
-                    || serde_json::to_string_pretty(&v).unwrap(),
-                    |s| s.to_owned(),
-                )
-            }),
-            option_example: example.map(|v| {
-                v.as_str().map_or_else(
-                    || serde_json::to_string_pretty(&v).unwrap(),
-                    |s| s.to_owned(),
-                )
-            }),
+            option_default: default.map(print_value),
+            option_example: example.map(print_value),
             option_flake: flake,
             option_type,
             option_name_query: AttributeQuery::new(&name),
