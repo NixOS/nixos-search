@@ -4,8 +4,6 @@ use reqwest::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    borrow::Cow,
-    ffi::OsString,
     fs::{self, File},
     io::Write,
     path::PathBuf,

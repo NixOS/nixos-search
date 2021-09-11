@@ -9,9 +9,8 @@ jobs:
       matrix:
         group:
           - ngi-nix
-          - nixos
-          - tweag
           - nix-community
+          - nixos
     env:
       RUST_LOG: debug
       FI_ES_EXISTS_STRATEGY: recreate
