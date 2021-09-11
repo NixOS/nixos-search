@@ -7,22 +7,39 @@ jobs:
       RUST_LOG: debug
       GITHUB_TOKEN: ${{ secrets.WORKFLOW_TOKEN }}
     steps:
+
       - name: Check out the repository
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
           token: ${{ secrets.WORKFLOW_TOKEN }}
+
       - name: Install Nix
         uses: cachix/install-nix-action@v13
         with:
           install_url: "https://nixos-nix-install-tests.cachix.org/serve/i6laym9jw3wg9mw6ncyrk6gjx4l34vvx/install"
           install_options: "--tarball-url-prefix https://nixos-nix-install-tests.cachix.org/serve"
           extra_nix_config: "experimental-features = nix-command flakes"
+
+      - uses: cachix/cachix-action@v10
+        with:
+          name: nixos-search
+          signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
+
       - name: Add unstable channel
-        run: "nix-channel --add https://nixos.org/channels/nixpkgs-unstable\nnix-channel --update"
+        run: |
+          nix-channel --add https://nixos.org/channels/nixpkgs-unstable
+          nix-channel --update
+
       - name: Build flake_repos
         run: "nix build ./#packages.x86_64-linux.flake_repos"
+
       - name: Update cron-flakes.yml
         run: "./result/bin/flake-repos ./flake-repos/repos.toml ./flakes/ ./.github/workflows/cron-flakes.yml"
-      - name: Push to main
-        run: "git config user.name nixos-search\ngit add .\ngit commit -m \"Update repos\"\ngit push"
+
+      - name: Push changes to main
+        run: |
+          git config user.name nixos-search
+          git add .
+          git commit -m "Update flakes directory and cron-flames.yml"
+          git push
