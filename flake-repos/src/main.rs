@@ -9,7 +9,6 @@ use std::{
     path::PathBuf,
 };
 use structopt::StructOpt;
-use tokio::time::{sleep, Duration};
 use toml;
 
 #[derive(StructOpt)]
@@ -89,6 +88,7 @@ async fn get_repos(
         .append_pair("page", &page.to_string())
         .finish()
         .to_string();
+
     let mut response = client.get(url).send().await?;
 
     let out_file_path: PathBuf = args
@@ -142,9 +142,6 @@ async fn get_repos(
         if let None = response.headers().get(LINK).unwrap().to_str()?.find("next") {
             another_page = false;
         }
-
-        println!("time to sleep");
-        sleep(Duration::from_secs(5)).await;
     }
 
     Ok(())
@@ -158,6 +155,7 @@ fn update_github_actions_file(
     let mut map: serde_yaml::Value = serde_yaml::from_str(&github_actions_file)?;
 
     map["jobs"]["hourly-import-channel"]["strategy"]["matrix"]["group"] = org_names[..].into();
+
 
     fs::write(yaml_file, serde_yaml::to_string(&map).unwrap())?;
 
