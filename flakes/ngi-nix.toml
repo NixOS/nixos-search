@@ -171,6 +171,11 @@ repo = "mes"
 [[sources]]
 type = "github"
 owner = "ngi-nix"
+repo = "ngi_website_content"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
 repo = "nginx-auth-a2aclr"
 
 [[sources]]

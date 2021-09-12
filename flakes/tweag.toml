@@ -1,0 +1,30 @@
+[[sources]]
+type = "github"
+owner = "tweag"
+repo = "gomod2nix"
+
+[[sources]]
+type = "github"
+owner = "tweag"
+repo = "jupyterWith"
+
+[[sources]]
+type = "github"
+owner = "tweag"
+repo = "nickel"
+
+[[sources]]
+type = "github"
+owner = "tweag"
+repo = "nix-installer-generator"
+
+[[sources]]
+type = "github"
+owner = "tweag"
+repo = "ocaml-uri-bazel"
+
+[[sources]]
+type = "github"
+owner = "tweag"
+repo = "okapi"
+
