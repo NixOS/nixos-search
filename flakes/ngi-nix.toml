@@ -1,0 +1,415 @@
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "DiffPrivacyInference"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "IRMAseal"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "OSX-KVM"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "alliance"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "anastasis"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "arpa2"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "bitmask-vpn"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "channeler"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "chipflasher"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "coriolis"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "deltabot"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "dhcpcanon"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "elRepo.io"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "flakes-templates"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "forgefed"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "goatcounter"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "hydra-test"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "imsi-psedo"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "imsi-pseudo"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "inventaire"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "ipfs-search"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "irmago-server"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "jitsi"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "katzenpost"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "liberate"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "liboqs"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "libspng"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "lightmeter"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "lumosql"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "magic_rb-goatcounter"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "magic_rb-vg"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "mangaki"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "mcfi"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "mes"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "ngi_website_content"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "nginx-auth-a2aclr"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "nixos-modules-flake-template"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "noiseExplorer"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "nyxt"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "ocamlPackages"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "offen"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "opaque-sphinx"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "openpgp-ca"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "p2pcollab"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "packeteer"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "pcb-rnd"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "pixelfed"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "pmbootstrap"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "poliscoops-flake"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "project-template"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "rebuilderd"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "reowolf"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "reprotest"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "ricochet"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "rust-threadpool"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "sbws-flake"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "scion"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "scion-path-discovery"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "searchanddisplace"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "searx"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "sonar"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "team2-jitsi-ops"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "thunderbird-extensions"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "tika"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "tika-extractor"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "trackingthetrackers-api"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "trackingthetrackers-apk-api"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "trackingthetrackers-classifier"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "trackingthetrackers-etl"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "trackingthetrackers-extracted-features"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "trackingthetrackers-scripts"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "trydiffoscope"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "universal-resolver"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "valaatech_kernal"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "vervis"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "vg"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "vita"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "vulnerablecode-flake"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "weblate"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "webshell"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "wireguard-rs"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "xemu"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "yunohost"
+

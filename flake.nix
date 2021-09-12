@@ -1,9 +1,7 @@
 {
   description = "Code behind search.nixos.org";
 
-  inputs = {
-    nixpkgs = { url = "nixpkgs/nixos-unstable"; };
-  };
+  inputs = { nixpkgs = { url = "nixpkgs/nixos-unstable"; }; };
 
   outputs = { self, nixpkgs }:
     let
@@ -15,22 +13,20 @@
             inherit system;
             overlays = [ ];
           };
-        in
-          import path { inherit pkgs; };
-      packages = system:
-        {
-          flake_info = mkPackage ./flake-info system;
-          frontend = mkPackage ./. system;
-        };
+        in import path { inherit pkgs; };
+      packages = system: {
+        flake_info = mkPackage ./flake-info system;
+        flake_repos = mkPackage ./flake-repos system;
+        frontend = mkPackage ./. system;
+      };
 
       devShell = system:
         nixpkgs.legacyPackages.${system}.mkShell {
           inputsFrom = builtins.attrValues (packages system);
         };
-    in
-      {
-        defaultPackage = forAllSystems (mkPackage ./.);
-        packages = forAllSystems packages;
-        devShell = forAllSystems devShell;
-      };
+    in {
+      defaultPackage = forAllSystems (mkPackage ./.);
+      packages = forAllSystems packages;
+      devShell = forAllSystems devShell;
+    };
 }

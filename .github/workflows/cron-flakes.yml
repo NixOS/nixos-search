@@ -1,69 +1,47 @@
+---
 name: "Flakes: Hourly import to Elasticsearch"
-
-on:
-
+"on":
   schedule:
-  - cron: '0 * * * *'
-
+    - cron: 0 * * * *
 jobs:
-
   hourly-import-channel:
-
     runs-on: ubuntu-latest
-
     strategy:
       fail-fast: true
       matrix:
         group:
-          - "manual"
-
+          - ngi-nix
+          - tweag
+          - nix-community
+          - nixos
     env:
       RUST_LOG: debug
       FI_ES_EXISTS_STRATEGY: recreate
-      FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL }}
-
+      FI_ES_URL: "${{ secrets.ELASTICSEARCH_URL }}"
     steps:
-
-    - name: Checking out the repository
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-
-    - name: Installing Nix
-      uses: cachix/install-nix-action@v14
-      with:
-        install_url: https://nixos-nix-install-tests.cachix.org/serve/i6laym9jw3wg9mw6ncyrk6gjx4l34vvx/install
-        install_options: '--tarball-url-prefix https://nixos-nix-install-tests.cachix.org/serve'
-        extra_nix_config: |
-          experimental-features = nix-command flakes
-          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
-
-    - uses: cachix/cachix-action@v10
-      with:
-        name: nixos-search
-        signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
-
-    - name: Install unstable channel
-      run: |
-        nix-channel --add https://nixos.org/channels/nixpkgs-unstable
-        nix-channel --update
-
-    - name: Installing jq
-      run: |
-        nix-env -iA nixpkgs.nixFlakes nixpkgs.jq
-
-    - name: Building import_scripts
-      run: |
-        nix build ./#packages.x86_64-linux.flake_info
-
-    - name: Import ${{ matrix.group }} group
-      run: |
-        ./result/bin/flake-info --push --elastic-schema-version=$(cat ./VERSION) group ./flakes/${{ matrix.group }}.toml ${{ matrix.group }}
-      if: github.repository == 'NixOS/nixos-search'
-
-    - name: Warmup ${{ matrix.group }} channel
-      run: |
-        curl ${{ secrets.ELASTICSEARCH_URL }}/$(cat VERSION)-${{ matrix.group }}/_search | jq '.took'
-        curl ${{ secrets.ELASTICSEARCH_URL }}/$(cat VERSION)-${{ matrix.group }}/_search | jq '.took'
-        curl ${{ secrets.ELASTICSEARCH_URL }}/$(cat VERSION)-${{ matrix.group }}/_search | jq '.took'
-      if: github.repository == 'NixOS/nixos-search'
+      - name: Checking out the repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Installing Nix
+        uses: cachix/install-nix-action@v14
+        with:
+          install_url: "https://nixos-nix-install-tests.cachix.org/serve/i6laym9jw3wg9mw6ncyrk6gjx4l34vvx/install"
+          install_options: "--tarball-url-prefix https://nixos-nix-install-tests.cachix.org/serve"
+          extra_nix_config: "experimental-features = nix-command flakes\naccess-tokens = github.com=${{ secrets.GITHUB_TOKEN }}\n"
+      - uses: cachix/cachix-action@v10
+        with:
+          name: nixos-search
+          signingKey: "${{ secrets.CACHIX_SIGNING_KEY }}"
+      - name: Install unstable channel
+        run: "nix-channel --add https://nixos.org/channels/nixpkgs-unstable\nnix-channel --update\n"
+      - name: Installing jq
+        run: "nix-env -iA nixpkgs.nixFlakes nixpkgs.jq\n"
+      - name: Building import_scripts
+        run: "nix build ./#packages.x86_64-linux.flake_info\n"
+      - name: "Import ${{ matrix.group }} group"
+        run: "./result/bin/flake-info --push --elastic-schema-version=$(cat ./VERSION) group ./flakes/${{ matrix.group }}.toml ${{ matrix.group }}\n"
+        if: "github.repository == 'NixOS/nixos-search'"
+      - name: "Warmup ${{ matrix.group }} channel"
+        run: "curl ${{ secrets.ELASTICSEARCH_URL }}/$(cat VERSION)-${{ matrix.group }}/_search | jq '.took'\ncurl ${{ secrets.ELASTICSEARCH_URL }}/$(cat VERSION)-${{ matrix.group }}/_search | jq '.took'\ncurl ${{ secrets.ELASTICSEARCH_URL }}/$(cat VERSION)-${{ matrix.group }}/_search | jq '.took'\n"
+        if: "github.repository == 'NixOS/nixos-search'"

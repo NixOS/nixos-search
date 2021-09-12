@@ -1,0 +1,120 @@
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "NUR"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "emacs-overlay"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "fenix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "flake-gemini"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "flake-nimble"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "hardware-mnt-reform"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "home-manager"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "impermanence"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "naersk"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "napalm"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "neovim-nightly-overlay"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-direnv"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-eval-jobs"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixos-generators"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixpkgs-fmt"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixpkgs-wayland"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixpkgs.lib"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nur-packages-template"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "poetry2nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "redoxpkgs"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "rnix-hashes"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "rnix-lsp"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "rnix-parser"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "todomvc-nix"
+

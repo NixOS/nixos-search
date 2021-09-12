@@ -1,0 +1,80 @@
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "hydra"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "nix"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "nix-mode"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "nixops"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "nixos-channel-scripts"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "nixos-common-styles"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "nixos-hardware"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "nixos-homepage"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "nixos-planet"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "nixos-search"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "nixos-status"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "nixos-summer"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "nixpkgs"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "nixpkgs-channels"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "patchelf"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "templates"
+
