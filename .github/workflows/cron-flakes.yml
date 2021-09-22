@@ -2,6 +2,7 @@ name: "Flakes: Hourly import to Elasticsearch"
 
 on:
 
+  pull_request:
   schedule:
   - cron: '0 * * * *'
 
