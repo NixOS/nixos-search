@@ -32,3 +32,8 @@ repo = "nickel"
 type = "github"
 owner = "pinpox"
 repo = "nixos"
+
+[[sources]]
+type = "github"
+owner = "PaddiM8"
+repo = "kalker"
