@@ -2,6 +2,7 @@ use std::fmt::{self, write, Display};
 use std::marker::PhantomData;
 use std::{path::PathBuf, str::FromStr};
 
+use clap::arg_enum;
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
@@ -103,51 +104,26 @@ pub struct Maintainer {
     pub email: Option<String>,
 }
 
-/// The type of derivation (placed in packages.<system> or apps.<system>)
-/// Used to command the extraction script
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub enum Kind {
-    App,
-    Package,
-    Option,
-    All,
+arg_enum! {
+    /// The type of derivation (placed in packages.<system> or apps.<system>)
+    /// Used to command the extraction script
+    #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+    pub enum Kind {
+        App,
+        Package,
+        Option,
+        All,
+    }
 }
 
 impl AsRef<str> for Kind {
     fn as_ref(&self) -> &str {
         match self {
-            Kind::App => "app",
+            Kind::App => "apps",
             Kind::Package => "packages",
             Kind::Option => "options",
             Kind::All => "all",
         }
-    }
-}
-
-impl Display for Kind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.as_ref())
-    }
-}
-
-#[derive(Debug, Error)]
-pub enum ParseKindError {
-    #[error("Failed to parse kind: {0}")]
-    UnknownKind(String),
-}
-
-impl FromStr for Kind {
-    type Err = ParseKindError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let kind = match s {
-            "app" => Kind::App,
-            "packages" => Kind::Package,
-            "options" => Kind::Option,
-            "all" => Kind::All,
-            _ => return Err(ParseKindError::UnknownKind(s.into())),
-        };
-        Ok(kind)
     }
 }
 
