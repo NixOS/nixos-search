@@ -29,7 +29,7 @@ fn print_value_indent(value: Value, indent: Indent) -> String {
             if lines.len() > 1 {
                 let lines = lines.join(&format!("\n{}", indent.next()));
                 return format!(
-r#"{indent}''
+                    r#"''
 {next_indent}{lines}
 {indent}''"#,
                     indent = indent,
@@ -51,7 +51,7 @@ r#"{indent}''
                 .join(&format!("\n{}", indent.next()));
 
             return format!(
-"{indent}[
+                "[
 {next_indent}{items}
 {indent}]",
                 indent = indent,
@@ -70,7 +70,7 @@ r#"{indent}''
                 .join(&format!(";\n{}", indent.next()));
 
             return format!(
-"{indent}{{
+                "{{
 {next_indent}{items};
 {indent}}}",
                 indent = indent,
@@ -159,7 +159,39 @@ r#"[
         );
     }
 
-   
+    #[test]
+    fn test_nested() {
+        let json = json!(
+        [
+          "HDMI-0",
+          {
+            "output": "DVI-0",
+            "primary": true
+          },
+          {
+            "monitorConfig": "Option \"Rotate\" \"left\"",
+            "output": "DVI-1"
+          },
+          [ "hello", "word" ]
+        ]);
 
-
+        assert_eq!(
+            print_value(json),
+            r#"[
+  "HDMI-0"
+  {
+    output = "DVI-0";
+    primary = true;
+  }
+  {
+    monitorConfig = "Option \"Rotate\" \"left\"";
+    output = "DVI-1";
+  }
+  [
+    "hello"
+    "word"
+  ]
+]"#
+        );
+    }
 }
