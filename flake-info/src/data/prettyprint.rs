@@ -96,13 +96,13 @@ mod tests {
     #[test]
     fn test_multi_line_string() {
         let json = json!(
-r#"   Hello
+            r#"   Hello
 World
 !!!"#
         );
         assert_eq!(
             print_value(json),
-r#"''
+            r#"''
      Hello
   World
   !!!
@@ -133,7 +133,7 @@ r#"''
         let json = json!([1, "hello", true, null]);
         assert_eq!(
             print_value(json),
-r#"[
+            r#"[
   1
   "hello"
   true
@@ -153,7 +153,7 @@ r#"[
         let json = json!({"hello": "world"});
         assert_eq!(
             print_value(json),
-"{
+            "{
   hello = \"world\";
 }"
         );
