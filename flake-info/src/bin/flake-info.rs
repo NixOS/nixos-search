@@ -57,7 +57,9 @@ enum Command {
         channel: String,
     },
     Group {
-        #[structopt(help = "Points to a TOML or JSON file containing info targets. If file does not end in 'toml' json is assumed")]
+        #[structopt(
+            help = "Points to a TOML or JSON file containing info targets. If file does not end in 'toml' json is assumed"
+        )]
         targets: PathBuf,
 
         name: String,
@@ -208,7 +210,11 @@ async fn run_command(
             let info = flake_info::get_flake_info(source.to_flake_ref(), temp_store, extra)
                 .map_err(FlakeInfoError::Flake)?;
 
-            let ident = ("flake".to_owned(), info.name, info.revision.unwrap_or("latest".into()));
+            let ident = (
+                "flake".to_owned(),
+                info.name,
+                info.revision.unwrap_or("latest".into()),
+            );
 
             Ok((exports, ident))
         }

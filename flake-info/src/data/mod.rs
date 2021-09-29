@@ -1,10 +1,10 @@
 mod export;
 mod flake;
 pub mod import;
+mod prettyprint;
 mod source;
 mod system;
 mod utility;
-mod prettyprint;
 
 pub use export::Export;
 pub use flake::{Flake, Repo};

@@ -2,7 +2,14 @@ use std::{borrow::Borrow, collections::HashMap};
 
 use clap::arg_enum;
 pub use elasticsearch::http::transport::Transport;
-use elasticsearch::{BulkOperation, Elasticsearch as Client, http::response::{self, Response}, indices::{IndicesCreateParts, IndicesDeleteAliasParts, IndicesDeleteParts, IndicesExistsParts, IndicesGetAliasParts, IndicesPutAliasParts, IndicesUpdateAliasesParts}};
+use elasticsearch::{
+    http::response::{self, Response},
+    indices::{
+        IndicesCreateParts, IndicesDeleteAliasParts, IndicesDeleteParts, IndicesExistsParts,
+        IndicesGetAliasParts, IndicesPutAliasParts, IndicesUpdateAliasesParts,
+    },
+    BulkOperation, Elasticsearch as Client,
+};
 use lazy_static::lazy_static;
 use log::{info, warn};
 use serde_json::{json, Value};
@@ -376,14 +383,27 @@ impl Elasticsearch {
     ) -> Result<(), ElasticsearchError> {
         // delete old alias
         info!("Try deletig old alias");
-        let response = self.client.indices().get_alias(IndicesGetAliasParts::Name(&[alias])).send().await
-        .map_err(ElasticsearchError::InitIndexError)?;
-        let indices = response.json::<HashMap<String,Value>>().await.map_err(ElasticsearchError::InitIndexError)?.keys().cloned().collect::<Vec<String>>();
-        
-        self
+        let response = self
             .client
             .indices()
-            .delete_alias(IndicesDeleteAliasParts::IndexName(&indices.iter().map(AsRef::as_ref).collect::<Vec<_>>(), &[alias]))
+            .get_alias(IndicesGetAliasParts::Name(&[alias]))
+            .send()
+            .await
+            .map_err(ElasticsearchError::InitIndexError)?;
+        let indices = response
+            .json::<HashMap<String, Value>>()
+            .await
+            .map_err(ElasticsearchError::InitIndexError)?
+            .keys()
+            .cloned()
+            .collect::<Vec<String>>();
+
+        self.client
+            .indices()
+            .delete_alias(IndicesDeleteAliasParts::IndexName(
+                &indices.iter().map(AsRef::as_ref).collect::<Vec<_>>(),
+                &[alias],
+            ))
             .send()
             .await
             .map_err(ElasticsearchError::InitIndexError)?;

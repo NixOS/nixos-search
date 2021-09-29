@@ -302,9 +302,9 @@ impl From<import::NixOption> for Derivation {
                 <xml xmlns:xlink=\"http://www.w3.org/1999/xlink\">
                 <para>{}</para>
                 </xml>
-                ", description
+                ",
+                description
             );
-
 
             pandoc.set_input(InputKind::Pipe(description_xml));
             pandoc.set_input_format(InputFormat::DocBook, Vec::new());
