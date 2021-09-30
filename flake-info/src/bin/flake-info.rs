@@ -265,7 +265,14 @@ async fn run_command(
                 .collect::<Vec<_>>();
 
             if !errors.is_empty() {
-                return Err(FlakeInfoError::Group(errors));
+
+                if exports.is_empty() {
+                    return Err(FlakeInfoError::Group(errors));
+                }
+                warn!("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=");
+                warn!("Some group members could not be evaluated: {}", FlakeInfoError::Group(errors));
+                warn!("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=");
+
             }
 
             let hash = {
