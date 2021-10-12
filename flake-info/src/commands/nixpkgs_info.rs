@@ -64,6 +64,8 @@ pub fn get_nixpkgs_options<T: AsRef<str> + Display>(
         "--json",
         "-f",
         script_path.to_str().unwrap(),
+        "-I",
+        format!("nixpkgs={}", nixpkgs_channel.as_ref()).as_str(),
         "--arg",
         "flake",
         nixpkgs_channel.as_ref(),
