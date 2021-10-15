@@ -82,7 +82,8 @@ let
 
         # Replace functions by the string <function>
         substFunction = x:
-          if x ? _type && x._type == "literalExample" then x.text
+          if x ? _type && (x._type == "literalExample" || x._type == "literalExpression" || x._type == "literalDocBook") then
+            x.text
           else if builtins.isAttrs x then
             lib.mapAttrs (name: substFunction) x
           else if builtins.isList x then
