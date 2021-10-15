@@ -53,3 +53,4 @@ jobs:
         enable-commit-status: true
         overwrites-pull-request-comment: false
       if: github.repository == 'NixOS/nixos-search'
+
