@@ -27,29 +27,11 @@ struct Opt {
     yaml_file_path: PathBuf,
 }
 
-#[derive(Serialize, Deserialize, Eq)]
+#[derive(Serialize, Deserialize, Ord, PartialEq, PartialOrd, Eq)]
 struct Source {
     repo_type: String,
     owner: String,
     repo: String,
-}
-
-impl Ord for Source {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.repo.to_string().cmp(&other.repo.to_string())
-    }
-}
-
-impl PartialOrd for Source {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl PartialEq for Source {
-    fn eq(&self, other: &Self) -> bool {
-        self.repo == other.repo
-    }
 }
 
 fn create_github_sources(
