@@ -883,11 +883,11 @@ viewNoResults :
 viewNoResults categoryName =
     div [ class "search-no-results" ]
         [ h2 [] [ text <| "No " ++ categoryName ++ " found!" ]
-        , text "How to "
-        , Html.a [ href "https://nixos.org/manual/nixpkgs/stable/#chap-quick-start" ] [ text "add" ]
+        , text "You might want to "
+        , Html.a [ href "https://nixos.org/manual/nixpkgs/stable/#chap-quick-start" ] [ text "add a package" ]
         , text " or "
-        , a [ href "https://github.com/NixOS/nixpkgs/issues/new?assignees=&labels=0.kind%3A+packaging+request&template=packaging_request.md&title=" ] [ text "request" ]
-        , text " package to nixpkgs?"
+        , a [ href "https://github.com/NixOS/nixpkgs/issues/new?assignees=&labels=0.kind%3A+packaging+request&template=packaging_request.md&title=" ] [ text "make a packaging request" ]
+        , text "."
         ]
 
 
