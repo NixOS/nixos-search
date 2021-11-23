@@ -13,7 +13,7 @@
         let
           pkgs = import nixpkgs {
             inherit system;
-            overlays = [ ];
+            overlays = [];
           };
         in
           import path { inherit pkgs; };
@@ -28,10 +28,20 @@
           inputsFrom = builtins.attrValues (packages system);
           NIXPKGS_PANDOC_FILTERS_PATH = "${nixpkgs + "/doc/build-aux/pandoc-filters"}";
         };
+
+      apps = system:
+        {
+          flake-info = {
+            type = "app";
+            program = "${(packages system).flake_info}/bin/flake-info";
+          };
+        };
     in
       {
         defaultPackage = forAllSystems (mkPackage ./.);
         packages = forAllSystems packages;
         devShell = forAllSystems devShell;
+        apps = forAllSystems apps;
+        defaultApp = forAllSystems (system: (apps system).flake-info);
       };
 }
