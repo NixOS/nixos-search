@@ -25,7 +25,9 @@ struct Args {
     #[structopt(
         short,
         long,
-        help = "Kind of data to extract (packages|options|apps|all)",
+        help = "Kind of data to extract",
+        possible_values = &data::import::Kind::variants(),
+        case_insensitive = true,
         default_value
     )]
     kind: data::import::Kind,
