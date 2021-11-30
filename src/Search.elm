@@ -477,8 +477,8 @@ createUrl toRoute model =
 
 type Channel
     = Unstable
-    | Release_20_09
     | Release_21_05
+    | Release_21_11
 
 
 {-| TODO: we should consider using more dynamic approach here
@@ -494,7 +494,7 @@ type alias ChannelDetails =
 
 defaultChannel : String
 defaultChannel =
-    "21.05"
+    "21.11"
 
 
 channelDetails : Channel -> ChannelDetails
@@ -503,11 +503,11 @@ channelDetails channel =
         Unstable ->
             ChannelDetails "unstable" "unstable" "nixos/trunk-combined" "nixos-unstable"
 
-        Release_20_09 ->
-            ChannelDetails "20.09" "20.09" "nixos/release-20.09" "nixos-20.09"
-
         Release_21_05 ->
             ChannelDetails "21.05" "21.05" "nixos/release-21.05" "nixos-21.05"
+
+        Release_21_11 ->
+            ChannelDetails "21.11" "21.11" "nixos/release-21.11" "nixos-21.11"
 
 
 channelFromId : String -> Maybe Channel
@@ -516,11 +516,11 @@ channelFromId channel_id =
         "unstable" ->
             Just Unstable
 
-        "20.09" ->
-            Just Release_20_09
-
         "21.05" ->
             Just Release_21_05
+
+        "21.11" ->
+            Just Release_21_11
 
         _ ->
             Nothing
@@ -534,8 +534,8 @@ channelDetailsFromId channel_id =
 
 channels : List String
 channels =
-    [ "20.09"
-    , "21.05"
+    [ "21.05"
+    , "21.11"
     , "unstable"
     ]
 
@@ -579,14 +579,14 @@ flakeIds =
 
 flakes : List Flake
 flakes =
-    [ { id = "latest-nixos-20.09-latest"
+    [ { id = "latest-nixos-21.11-latest"
       , isNixpkgs = True
-      , title = "Nixpkgs 20.09"
+      , title = "Nixpkgs 21.11"
       , source = ""
       }
-    , { id = "nixos-21.05-latest"
+    , { id = "nixos-21.09-latest"
       , isNixpkgs = True
-      , title = "Nixpkgs 21.05"
+      , title = "Nixpkgs 21.09"
       , source = ""
       }
     , { id = "latest-nixos-unstable"
