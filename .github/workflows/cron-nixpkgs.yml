@@ -16,6 +16,7 @@ jobs:
       matrix:
         channel:
           - unstable
+          - 21.11
           - 21.05
           - 20.09
 
