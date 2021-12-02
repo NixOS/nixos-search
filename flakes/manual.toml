@@ -76,3 +76,8 @@ url = "git+https://git.sr.ht/~kerstin/sway-timetracker?ref=main"
 type = "github"
 owner = "PolyMC"
 repo = "PolyMC"
+
+[[sources]]
+type = "gitlab"
+owner = "simple-nixos-mailserver"
+repo = "nixos-mailserver"
