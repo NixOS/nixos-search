@@ -68,5 +68,5 @@ Possible types are `github`, `gitlab`, and `git` (which is the fallback for any 
 To test whether your flake is compatible with nix flake-info you can try running `flake-info` against it
 
 ```
-$ nix run github:nixos/nixos-search#apps.flake-info -- flake <your flake handle>
+$ nix run github:nixos/nixos-search#flake-info -- flake <your flake handle>
 ```
