@@ -19,7 +19,7 @@
           import path { inherit pkgs; };
       packages = system:
         {
-          flake_info = mkPackage ./flake-info system;
+          flake-info = mkPackage ./flake-info system;
           frontend = mkPackage ./. system;
         };
 
@@ -33,7 +33,7 @@
         {
           flake-info = {
             type = "app";
-            program = "${(packages system).flake_info}/bin/flake-info";
+            program = "${(packages system).flake-info}/bin/flake-info";
           };
         };
     in
