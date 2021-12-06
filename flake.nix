@@ -29,7 +29,7 @@
         nixpkgs.legacyPackages.${system}.mkShell {
           inputsFrom = builtins.attrValues packages_inst;
           shellHook = ''
-            export NIXPKGS_PANDOC_FILTERS_PATH="${packages_inst.flake_info.NIXPKGS_PANDOC_FILTERS_PATH}";
+            export NIXPKGS_PANDOC_FILTERS_PATH="${packages_inst.flake-info.NIXPKGS_PANDOC_FILTERS_PATH}";
           '';
         };
     in
