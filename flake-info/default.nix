@@ -1,5 +1,5 @@
 { pkgs ? import <nixpkgs> { } }: with pkgs;
-rustPlatform.buildRustPackage {
+rustPlatform.buildRustPackage rec {
   name = "flake-info";
   src = ./.;
   cargoLock = {
@@ -24,7 +24,7 @@ rustPlatform.buildRustPackage {
 
   postInstall = ''
     wrapProgram $out/bin/flake-info \
-      --set NIXPKGS_PANDOC_FILTERS_PATH "${pkgs.path + "/doc/build-aux/pandoc-filters"}" \
+      --set NIXPKGS_PANDOC_FILTERS_PATH "${NIXPKGS_PANDOC_FILTERS_PATH}" \
       --prefix PATH : ${pandoc}/bin
   '';
 }

@@ -24,9 +24,13 @@
         };
 
       devShell = system:
+        let packages_inst = (packages system);
+        in
         nixpkgs.legacyPackages.${system}.mkShell {
-          inputsFrom = builtins.attrValues (packages system);
-          NIXPKGS_PANDOC_FILTERS_PATH = "${nixpkgs + "/doc/build-aux/pandoc-filters"}";
+          inputsFrom = builtins.attrValues packages_inst;
+          shellHook = ''
+            export NIXPKGS_PANDOC_FILTERS_PATH="${packages_inst.flake_info.NIXPKGS_PANDOC_FILTERS_PATH}";
+          '';
         };
     in
       {
