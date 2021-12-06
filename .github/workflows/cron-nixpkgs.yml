@@ -57,7 +57,7 @@ jobs:
 
     - name: Building import_scripts
       run: |
-        nix build ./#packages.x86_64-linux.flake_info
+        nix build ./#packages.x86_64-linux.flake-info
 
     - name: Import ${{ matrix.channel }} channel
       run: |
