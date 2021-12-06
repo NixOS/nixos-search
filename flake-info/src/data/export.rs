@@ -4,7 +4,8 @@
 use std::path::PathBuf;
 
 use crate::data::import::NixOption;
-use pandoc::{InputFormat, InputKind, OutputFormat, OutputKind, PandocOption, PandocOutput};
+use log::error;
+use pandoc::{InputFormat, InputKind, OutputFormat, OutputKind, PandocOption, PandocOutput, PandocError};
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -315,7 +316,8 @@ impl From<import::NixOption> for Derivation {
                 PandocOption::LuaFilter(man_filter),
             ]);
 
-            let result = pandoc.execute().unwrap();
+            let result = pandoc.execute().expect(&format!("Pandoc could not parse documentation of '{}'", name));
+
             match result {
                 PandocOutput::ToBuffer(description) => Some(description),
                 _ => unreachable!(),
