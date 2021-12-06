@@ -316,11 +316,7 @@ impl From<import::NixOption> for Derivation {
                 PandocOption::LuaFilter(man_filter),
             ]);
 
-            let result = pandoc.execute().or_else::<PandocError, _>(|err| {
-                error!("Pandoc couldnt parse documentation of '{}'", name);
-                error!("{}", err);
-                Ok(PandocOutput::ToBuffer(String::new()))
-            }).unwrap();
+            let result = pandoc.execute().expect(format!("Pandoc could not parse documentation of '{}'", name));
 
             match result {
                 PandocOutput::ToBuffer(description) => Some(description),
