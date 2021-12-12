@@ -37,3 +37,8 @@ repo = "nixos"
 type = "github"
 owner = "PaddiM8"
 repo = "kalker"
+
+[[source]]
+type = "github"
+owner = "pta2002"
+repo = "nixvim"
