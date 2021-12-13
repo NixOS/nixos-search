@@ -19,6 +19,11 @@ owner = "ngi-nix"
 repo = "openpgp-ca"
 
 [[sources]]
+type = "github"
+owner = "fort-nix"
+repo = "nix-bitcoin"
+
+[[sources]]
 type = "gitlab"
 owner = "pi-lar"
 repo = "neuropil"
