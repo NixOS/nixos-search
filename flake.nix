@@ -13,10 +13,10 @@
         let
           pkgs = import nixpkgs {
             inherit system;
-            overlays = [];
+            overlays = [ ];
           };
         in
-          import path { inherit pkgs; };
+        import path { inherit pkgs; };
       packages = system:
         {
           flake-info = mkPackage ./flake-info system;
@@ -36,9 +36,9 @@
           '';
         };
     in
-      {
-        defaultPackage = forAllSystems (mkPackage ./.);
-        packages = forAllSystems packages;
-        devShell = forAllSystems devShell;
-      };
+    {
+      defaultPackage = forAllSystems (mkPackage ./.);
+      packages = forAllSystems packages;
+      devShell = forAllSystems devShell;
+    };
 }
