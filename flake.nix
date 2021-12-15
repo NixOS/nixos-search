@@ -24,11 +24,14 @@
         };
 
       devShell = system:
-        let packages_inst = (packages system);
+        let
+          packages_inst = (packages system);
+          pkgs = nixpkgs.legacyPackages.${system};
         in
-        nixpkgs.legacyPackages.${system}.mkShell {
+        pkgs.mkShell {
           inputsFrom = builtins.attrValues packages_inst;
           shellHook = ''
+            export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
             export NIXPKGS_PANDOC_FILTERS_PATH="${packages_inst.flake-info.NIXPKGS_PANDOC_FILTERS_PATH}";
           '';
         };
