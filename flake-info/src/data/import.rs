@@ -105,7 +105,7 @@ pub enum Maintainer {
         github: Option<String>,
         email: Option<String>,
     },
-    Simple(String)
+    Simple(String),
 }
 
 arg_enum! {

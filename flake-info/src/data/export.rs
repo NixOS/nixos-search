@@ -5,7 +5,9 @@ use std::path::PathBuf;
 
 use crate::data::import::NixOption;
 use log::error;
-use pandoc::{InputFormat, InputKind, OutputFormat, OutputKind, PandocOption, PandocOutput, PandocError};
+use pandoc::{
+    InputFormat, InputKind, OutputFormat, OutputKind, PandocError, PandocOption, PandocOutput,
+};
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -319,7 +321,10 @@ impl From<import::NixOption> for Derivation {
                 PandocOption::LuaFilter(man_filter),
             ]);
 
-            let result = pandoc.execute().expect(&format!("Pandoc could not parse documentation of '{}'", name));
+            let result = pandoc.execute().expect(&format!(
+                "Pandoc could not parse documentation of '{}'",
+                name
+            ));
 
             match result {
                 PandocOutput::ToBuffer(description) => Some(description),
@@ -355,8 +360,14 @@ pub struct Maintainer {
 impl From<import::Maintainer> for Maintainer {
     fn from(import: import::Maintainer) -> Self {
         match import {
-            import::Maintainer::Full { name, github, email } => Maintainer {
-                name, github, email
+            import::Maintainer::Full {
+                name,
+                github,
+                email,
+            } => Maintainer {
+                name,
+                github,
+                email,
             },
             import::Maintainer::Simple(name) => Maintainer {
                 name: Some(name),
