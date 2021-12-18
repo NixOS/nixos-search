@@ -5,7 +5,9 @@ use std::path::PathBuf;
 
 use crate::data::import::NixOption;
 use log::error;
-use pandoc::{InputFormat, InputKind, OutputFormat, OutputKind, PandocOption, PandocOutput, PandocError};
+use pandoc::{
+    InputFormat, InputKind, OutputFormat, OutputKind, PandocError, PandocOption, PandocOutput,
+};
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -216,10 +218,13 @@ impl From<import::NixpkgsEntry> for Derivation {
                     .map(|l: &License| l.fullName.to_owned())
                     .collect();
 
-                let package_maintainers = package
+                let package_maintainers: Vec<Maintainer> = package
                     .meta
                     .maintainers
-                    .map_or(Default::default(), Flatten::flatten);
+                    .map_or(Default::default(), Flatten::flatten)
+                    .into_iter()
+                    .map(Into::into)
+                    .collect();
 
                 let package_maintainers_set = package_maintainers
                     .iter()
@@ -316,7 +321,10 @@ impl From<import::NixOption> for Derivation {
                 PandocOption::LuaFilter(man_filter),
             ]);
 
-            let result = pandoc.execute().expect(&format!("Pandoc could not parse documentation of '{}'", name));
+            let result = pandoc.execute().expect(&format!(
+                "Pandoc could not parse documentation of '{}'",
+                name
+            ));
 
             match result {
                 PandocOutput::ToBuffer(description) => Some(description),
@@ -342,7 +350,33 @@ impl From<import::NixOption> for Derivation {
     }
 }
 
-type Maintainer = import::Maintainer;
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Maintainer {
+    name: Option<String>,
+    github: Option<String>,
+    email: Option<String>,
+}
+
+impl From<import::Maintainer> for Maintainer {
+    fn from(import: import::Maintainer) -> Self {
+        match import {
+            import::Maintainer::Full {
+                name,
+                github,
+                email,
+            } => Maintainer {
+                name,
+                github,
+                email,
+            },
+            import::Maintainer::Simple(name) => Maintainer {
+                name: Some(name),
+                github: None,
+                email: None,
+            },
+        }
+    }
+}
 
 impl From<super::Flake> for Maintainer {
     fn from(flake: super::Flake) -> Self {

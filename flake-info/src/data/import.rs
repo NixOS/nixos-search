@@ -98,10 +98,14 @@ pub struct Meta {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Maintainer {
-    pub name: Option<String>,
-    pub github: Option<String>,
-    pub email: Option<String>,
+#[serde(untagged)]
+pub enum Maintainer {
+    Full {
+        name: Option<String>,
+        github: Option<String>,
+        email: Option<String>,
+    },
+    Simple(String),
 }
 
 arg_enum! {
@@ -267,7 +271,8 @@ mod tests {
                     "github": "AndersonTorres",
                     "githubId": 5954806,
                     "name": "Anderson Torres"
-                  }
+                  },
+                  "Fred Flintstone"
                 ],
                 "name": "0verkill-unstable-2011-01-13",
                 "outputsToInstall": [
