@@ -1,13 +1,11 @@
 /// This module defines the unified putput format as expected by the elastic search
 /// Additionally, we implement converseions from the two possible input formats, i.e.
 /// Flakes, or Nixpkgs.
-use std::path::PathBuf;
+use std::{convert::TryInto, path::PathBuf};
 
+use super::pandoc::PandocExt;
 use crate::data::import::NixOption;
 use log::error;
-use pandoc::{
-    InputFormat, InputKind, OutputFormat, OutputKind, PandocError, PandocOption, PandocOutput,
-};
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -290,49 +288,24 @@ impl From<import::NixOption> for Derivation {
             flake,
         }: import::NixOption,
     ) -> Self {
-        let citeref_filter = {
-            let mut p = FILTERS_PATH.clone();
-            p.push("docbook-reader/citerefentry-to-rst-role.lua");
-            p
-        };
-        let man_filter = {
-            let mut p = FILTERS_PATH.clone();
-            p.push("link-unix-man-references.lua");
-            p
-        };
-
-        let description = if let Some(description) = description {
-            let mut pandoc = pandoc::new();
-            let description_xml = format!(
-                "
-                <xml xmlns:xlink=\"http://www.w3.org/1999/xlink\">
-                <para>{}</para>
-                </xml>
-                ",
-                description
-            );
-
-            pandoc.set_input(InputKind::Pipe(description_xml));
-            pandoc.set_input_format(InputFormat::DocBook, Vec::new());
-            pandoc.set_output(OutputKind::Pipe);
-            pandoc.set_output_format(OutputFormat::Html, Vec::new());
-            pandoc.add_options(&[
-                PandocOption::LuaFilter(citeref_filter),
-                PandocOption::LuaFilter(man_filter),
-            ]);
-
-            let result = pandoc.execute().expect(&format!(
-                "Pandoc could not parse documentation of '{}'",
-                name
-            ));
-
-            match result {
-                PandocOutput::ToBuffer(description) => Some(description),
-                _ => unreachable!(),
-            }
-        } else {
-            description
-        };
+        let description = description
+            .as_ref()
+            .map(PandocExt::render)
+            .transpose()
+            .expect(&format!("Could not render descript of `{}`", name));
+        let option_default = default
+            .map(TryInto::try_into)
+            .transpose()
+            .expect(&format!("Could not render option_default of `{}`", name));
+        let option_example = example
+            .map(TryInto::try_into)
+            .transpose()
+            .expect(&format!("Could not render option_example of `{}`", name));
+        let option_type = option_type
+            .as_ref()
+            .map(serde_json::to_string)
+            .transpose()
+            .expect(&format!("Could not render option_type of `{}`", name));
 
         Derivation::Option {
             option_source: declarations.get(0).map(Clone::clone),
@@ -340,8 +313,8 @@ impl From<import::NixOption> for Derivation {
             option_name_reverse: Reverse(name.clone()),
             option_description: description.clone(),
             option_description_reverse: description.map(Reverse),
-            option_default: default.map(print_value),
-            option_example: example.map(print_value),
+            option_default,
+            option_example,
             option_flake: flake,
             option_type,
             option_name_query: AttributeQuery::new(&name),
