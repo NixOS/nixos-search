@@ -3,10 +3,11 @@
 /// Flakes, or Nixpkgs.
 use std::{convert::TryInto, path::PathBuf};
 
-use super::pandoc::PandocExt;
+use super::{pandoc::PandocExt, import::DocValue};
 use crate::data::import::NixOption;
 use log::error;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use super::{
     import,
@@ -103,11 +104,11 @@ pub enum Derivation {
         option_description: Option<String>,
         option_description_reverse: Option<Reverse<String>>,
 
-        option_type: Option<String>,
+        option_type: Option<DocValue>,
 
-        option_default: Option<String>,
+        option_default: Option<DocValue>,
 
-        option_example: Option<String>,
+        option_example: Option<DocValue>,
 
         option_flake: Option<(String, String)>,
     },
@@ -293,19 +294,18 @@ impl From<import::NixOption> for Derivation {
             .map(PandocExt::render)
             .transpose()
             .expect(&format!("Could not render descript of `{}`", name));
-        let option_default = default
-            .map(TryInto::try_into)
-            .transpose()
-            .expect(&format!("Could not render option_default of `{}`", name));
-        let option_example = example
-            .map(TryInto::try_into)
-            .transpose()
-            .expect(&format!("Could not render option_example of `{}`", name));
-        let option_type = option_type
-            .as_ref()
-            .map(serde_json::to_string)
-            .transpose()
-            .expect(&format!("Could not render option_type of `{}`", name));
+        let option_default = default;
+            // .map(TryInto::try_into)
+            // .transpose()
+            // .expect(&format!("Could not render option_default of `{}`", name));
+        let option_example = example;
+            // .map(TryInto::try_into)
+            // .transpose()
+            // .expect(&format!("Could not render option_example of `{}`", name));
+        let option_type = option_type;
+            // .map(TryInto::try_into)
+            // .transpose()
+            // .expect(&format!("Could not render option_type of `{}`", name));
 
         Derivation::Option {
             option_source: declarations.get(0).map(Clone::clone),
@@ -408,15 +408,18 @@ mod tests {
         let option: NixOption = serde_json::from_str(r#"
         {
             "declarations":["/nix/store/s1q1238ahiks5a4g6j6qhhfb3rlmamvz-source/nixos/modules/system/boot/luksroot.nix"],
-            "default":"",
+            "default":{"__type": "set", "__value": { "one" : {"__type": "value", "__value": 1}, "two" : {"__type": "value", "__value": "two"} } },
             "description":"Commands that should be run right after we have mounted our LUKS device.\n",
-            "example":"oneline\ntwoline\nthreeline\n",
+            "example":{"__type": "value", "__value" : "oneline\ntwoline\nthreeline\n"},
             "internal":false,
             "loc":["boot","initrd","luks","devices","<name>","postOpenCommands"],
             "name":"boot.initrd.luks.devices.<name>.postOpenCommands",
-            "readOnly":false,"type":
-            "strings concatenated with \"\\n\"","visible":true
+            "readOnly":false,
+            "type": {"__type": "literalExpression", "__value": "[ config.boot.kernelPackages.nvidia_x11 ]"},
+            "visible":true
         }"#).unwrap();
+
+        
 
         let option: Derivation = option.into();
 

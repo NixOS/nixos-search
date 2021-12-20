@@ -72,7 +72,7 @@ let
 
     cleanUpOption = module: opt:
       let
-        applyOnAttr = n: f: lib.optionalAttrs (lib.hasAttr n opt) { ${n} = f opt.${n}; };
+        applyOnAttr = n: f: lib.optionalAttrs (builtins.hasAttr n opt) { ${n} = f opt.${n}; };
         mkDeclaration = decl:
           let
             discard = lib.concatStringsSep "/" (lib.take 4 (lib.splitString "/" decl)) + "/";
@@ -82,20 +82,22 @@ let
 
         # Replace functions by the string <function>
         substFunction = x:
-          if x ? _type && (x._type == "literalExample" || x._type == "literalExpression" || x._type == "literalDocBook") then
-            x.text
+          if x ? _type && ( x._type == "literalExample" || x._type == "literalExpression" || x._type == "literalDocBook") && builtins.isString x.text then
+            { __type = x._type; __value =  x.text; }
+          else if x ? type && x.type == "derivation" then 
+            { __type="derivation"; __value = x; }
           else if builtins.isAttrs x then
-            lib.mapAttrs (name: substFunction) x
+            {__type = "set"; __value = lib.mapAttrs (_:substFunction )  x; }
           else if builtins.isList x then
-            map substFunction x
+            { __type = "list"; __value = map substFunction x; }
           else if lib.isFunction x then
-            "<function>"
+            { __type = "function"; }
           else
-            x;
+            { __type = "value" ; __value = x; };
       in
         opt
-        // applyOnAttr "example" substFunction
         // applyOnAttr "default" substFunction
+        // applyOnAttr "example" substFunction # (_: { __type = "function"; })
         // applyOnAttr "type" substFunction
         // applyOnAttr "declarations" (map mkDeclaration)
         // lib.optionalAttrs (!isNixOS) { flake = [ flake module ]; };
