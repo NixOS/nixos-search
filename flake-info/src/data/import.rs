@@ -5,6 +5,7 @@ use std::marker::PhantomData;
 use std::{path::PathBuf, str::FromStr};
 
 use clap::arg_enum;
+use log::warn;
 use pandoc::PandocError;
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -93,9 +94,7 @@ impl TryInto<Value> for DocValue {
     fn try_into(self) -> Result<Value, PandocError> {
         let value = match self {
             DocValue::LiteralDocBook(doc) => doc.render().map(Into::into)?,
-            DocValue::Derivation(value) | DocValue::NixValue(value) => {
-                value
-            },
+            DocValue::Derivation(value) | DocValue::NixValue(value) => value,
             DocValue::Function => "<function>".into(),
             DocValue::Set(set) => {
                 let mut map = serde_json::map::Map::new();
@@ -106,15 +105,16 @@ impl TryInto<Value> for DocValue {
                 }
                 print_value(map.into()).into()
             }
-            DocValue::List(list) => {let list = list
-                .into_iter()
-                .map(TryInto::try_into)
-                .collect::<Result<Vec<Value>, _>>()?
-                .into();
-                 print_value(list).into()
-                },
+            DocValue::List(list) => {
+                let list = list
+                    .into_iter()
+                    .map(TryInto::try_into)
+                    .collect::<Result<Vec<Value>, _>>()?
+                    .into();
+                print_value(list).into()
+            }
             DocValue::LiteralExample(expr) | DocValue::LiteralExpression(expr) => {
-               Value::String(expr)
+                Value::String(expr)
             }
         };
         Ok(value)
@@ -124,21 +124,23 @@ impl TryInto<Value> for DocValue {
 impl Serialize for DocValue {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: Serializer {
-        
+        S: Serializer,
+    {
         match self {
-            DocValue::LiteralExample(s) |
-            DocValue::LiteralExpression(s) => serializer.serialize_str(s),
-            DocValue::LiteralDocBook(doc) => serializer.serialize_str(&doc.render().unwrap_or("Could not render doc book content".to_string())),
-            DocValue::Derivation(v) |
-            DocValue::NixValue(v) =>  serializer.serialize_some(v),
-            DocValue::Function |
-            DocValue::List(_) |
-            DocValue::Set(_) => serializer.serialize_some(&TryInto::<Value>::try_into(self.clone()).unwrap()),
+            DocValue::LiteralExample(s) | DocValue::LiteralExpression(s) => {
+                serializer.serialize_str(&s)
+            }
+            DocValue::LiteralDocBook(doc) => {
+                serializer.serialize_str(&doc.render().unwrap_or_else(|error| {
+                    warn!("Could not render doc book content: {}", error);
+                    doc.to_string()
+                }))
+            }
+            DocValue::Derivation(v) | DocValue::NixValue(v) => serializer.serialize_some(v),
+            DocValue::Function | DocValue::List(_) | DocValue::Set(_) => {
+                serializer.serialize_some(&TryInto::<Value>::try_into(self.clone()).unwrap())
+            }
         }
-
-
-
     }
 }
 
@@ -417,7 +419,7 @@ mod tests {
 
         let _: NixOption = serde_json::from_str(json).unwrap();
 
-         let json = r#"{
+        let json = r#"{
                 "declarations": [],
                 "name": "option",
                 "default": {"__type": "value", "__value": 66
@@ -426,7 +428,7 @@ mod tests {
 
         let _: NixOption = serde_json::from_str(json).unwrap();
 
-         let json = r#"{
+        let json = r#"{
                 "declarations": [],
                 "name": "option",
                 "default": {"__type": "value", "__value": [ "list", null, 8]
@@ -450,7 +452,7 @@ mod tests {
           },
           "description": {
             "__type": "value",
-            "__value": "Alice Q. User"
+            "__value": 7
           },
           "extraGroups": {
             "__type": "list",

@@ -19,7 +19,6 @@ pub trait PandocExt {
 impl<T: AsRef<str>> PandocExt for T {
     fn render(&self) -> Result<String, PandocError> {
         if !self.as_ref().contains("</") {
-            debug!("Thered does not appear to be a closing element, skipping pandoc call");
             return Ok(self.as_ref().to_owned());
         }
         
