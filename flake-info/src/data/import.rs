@@ -128,7 +128,11 @@ impl Serialize for DocValue {
     {
         match self {
             DocValue::LiteralExample(s) | DocValue::LiteralExpression(s) => {
-                serializer.serialize_str(&s)
+                let v: Result<Value, _> = serde_json::from_str(&s);
+                if let Ok(v ) = v {
+                    return serializer.serialize_some(&v);
+                }
+                serializer.serialize_none()
             }
             DocValue::LiteralDocBook(doc) => {
                 serializer.serialize_str(&doc.render().unwrap_or_else(|error| {
@@ -136,7 +140,7 @@ impl Serialize for DocValue {
                     doc.to_string()
                 }))
             }
-            DocValue::Derivation(v) | DocValue::NixValue(v) => serializer.serialize_some(v),
+            DocValue::Derivation(v) | DocValue::NixValue(v) => serializer.serialize_str(&v.to_string()),
             DocValue::Function | DocValue::List(_) | DocValue::Set(_) => {
                 serializer.serialize_some(&TryInto::<Value>::try_into(self.clone()).unwrap())
             }
