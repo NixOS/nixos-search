@@ -1,6 +1,12 @@
 use std::fmt::Display;
 
+use fancy_regex::Regex;
+use lazy_static::lazy_static;
 use serde_json::Value;
+
+lazy_static! {
+    static ref IDENT_REGEX: Regex = Regex::new("^[a-zA-Z_][a-zA-Z0-9_'-]*$").unwrap();
+}
 
 struct Indent(usize);
 impl Indent {
@@ -65,7 +71,13 @@ fn print_value_indent(value: Value, indent: Indent) -> String {
             }
             let items = o
                 .into_iter()
-                .map(|(k, v)| format!("{} = {}", k, print_value_indent(v, indent.next())))
+                .map(|(k, v)| {
+                    format!(
+                        "{} = {}",
+                        print_key(k),
+                        print_value_indent(v, indent.next())
+                    )
+                })
                 .collect::<Vec<_>>()
                 .join(&format!(";\n{}", indent.next()));
 
@@ -81,6 +93,13 @@ fn print_value_indent(value: Value, indent: Indent) -> String {
     }
 }
 
+fn print_key(key: String) -> String {
+    if IDENT_REGEX.is_match(&key).unwrap() {
+        key
+    } else {
+        format!("{:?}", key)
+    }
+}
 #[cfg(test)]
 mod tests {
     use serde_json::json;
@@ -172,7 +191,10 @@ World
             "monitorConfig": "Option \"Rotate\" \"left\"",
             "output": "DVI-1"
           },
-          [ "hello", "word" ]
+          [ "hello", "word" ],
+          {
+              "with a space": true,
+          }
         ]);
 
         assert_eq!(
@@ -191,6 +213,9 @@ World
     "hello"
     "word"
   ]
+  {
+    "with a space" = true;
+  }
 ]"#
         );
     }
