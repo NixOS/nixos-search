@@ -82,18 +82,14 @@ let
 
         # Replace functions by the string <function>
         substFunction = x:
-          if x ? _type && ( x._type == "literalExample" || x._type == "literalExpression" || x._type == "literalDocBook") && builtins.isString x.text then
-            { __type = x._type; __value =  x.text; }
-          else if x ? type && x.type == "derivation" then 
-            { __type="derivation"; __value = x; }
-          else if builtins.isAttrs x then
-            {__type = "set"; __value = lib.mapAttrs (_:substFunction )  x; }
+          if builtins.isAttrs x then
+             lib.mapAttrs (_:substFunction )  x
           else if builtins.isList x then
-            { __type = "list"; __value = map substFunction x; }
+            map substFunction x
           else if lib.isFunction x then
-            { __type = "function"; }
+            "function"
           else
-            { __type = "value" ; __value = x; };
+             x;
       in
         opt
         // applyOnAttr "default" substFunction

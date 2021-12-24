@@ -68,57 +68,21 @@ pub struct NixOption {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(tag = "__type", content = "__value")]
+#[serde(untagged)]
 pub enum DocValue {
-    #[serde(rename = "literalExample")]
-    LiteralExample(String),
-    #[serde(rename = "literalExpression")]
-    LiteralExpression(String),
-    #[serde(rename = "literalDocBook")]
-    LiteralDocBook(String),
-    #[serde(rename = "derivation")]
-    Derivation(Value),
-    #[serde(rename = "set")]
-    Set(BTreeMap<String, DocValue>),
-    #[serde(rename = "list")]
-    List(Vec<DocValue>),
-    #[serde(rename = "function")]
-    Function,
-    #[serde(rename = "value")]
-    NixValue(Value),
+    Literal(Literal),
+    Value(Value),
 }
 
-impl TryInto<Value> for DocValue {
-    type Error = PandocError;
-
-    fn try_into(self) -> Result<Value, PandocError> {
-        let value = match self {
-            DocValue::LiteralDocBook(doc) => doc.render().map(Into::into)?,
-            DocValue::Derivation(value) | DocValue::NixValue(value) => value,
-            DocValue::Function => "<function>".into(),
-            DocValue::Set(set) => {
-                let mut map = serde_json::map::Map::new();
-                let values = set.into_iter().map(|(k, v)| v.try_into().map(|v| (k, v)));
-                for result in values {
-                    let (k, v) = result?;
-                    map.insert(k, v);
-                }
-                print_value(map.into()).into()
-            }
-            DocValue::List(list) => {
-                let list = list
-                    .into_iter()
-                    .map(TryInto::try_into)
-                    .collect::<Result<Vec<Value>, _>>()?
-                    .into();
-                print_value(list).into()
-            }
-            DocValue::LiteralExample(expr) | DocValue::LiteralExpression(expr) => {
-                Value::String(expr)
-            }
-        };
-        Ok(value)
-    }
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(tag = "_type", content = "text")]
+pub enum Literal {
+    #[serde(rename = "literalExpression")]
+    LiteralExpression(Value),
+    #[serde(rename = "literalExample")]
+    LiteralExample(Value),
+    #[serde(rename = "literalDocBook")]
+    LiteralDocBook(String),
 }
 
 impl Serialize for DocValue {
@@ -127,23 +91,16 @@ impl Serialize for DocValue {
         S: Serializer,
     {
         match self {
-            DocValue::LiteralExample(s) | DocValue::LiteralExpression(s) => {
-                let v: Result<Value, _> = serde_json::from_str(&s);
-                if let Ok(v ) = v {
-                    return serializer.serialize_some(&v);
-                }
-                serializer.serialize_none()
+            DocValue::Literal(Literal::LiteralExample(s) | Literal::LiteralExpression(s)) => {
+                return serializer.serialize_some(&s);
             }
-            DocValue::LiteralDocBook(doc) => {
-                serializer.serialize_str(&doc.render().unwrap_or_else(|error| {
-                    warn!("Could not render doc book content: {}", error);
-                    doc.to_string()
-                }))
+            DocValue::Literal(Literal::LiteralDocBook(doc_book)) => {
+                return serializer.serialize_str(&doc_book.render().unwrap_or_else(|e| {
+                    warn!("Could not render docbook content: {}", e);
+                    doc_book.to_owned()
+                }));
             }
-            DocValue::Derivation(v) | DocValue::NixValue(v) => serializer.serialize_str(&v.to_string()),
-            DocValue::Function | DocValue::List(_) | DocValue::Set(_) => {
-                serializer.serialize_some(&TryInto::<Value>::try_into(self.clone()).unwrap())
-            }
+            DocValue::Value(v) => serializer.serialize_str(&print_value(v.to_owned())),
         }
     }
 }
@@ -390,111 +347,6 @@ mod tests {
 
     #[test]
     fn test_option_parsing() {
-        let json = r#"{
-                "declarations": [],
-                "name": "option",
-                "default": {"__type": "value", "__value": ""}         
-            }"#;
-
-        let _: NixOption = serde_json::from_str(json).unwrap();
-
-        let json = r#"{
-                "declarations": [],
-                "name": "option",
-                "default": {"__type": "value", "__value": "string"}         
-            }"#;
-
-        let _: NixOption = serde_json::from_str(json).unwrap();
-
-        let json = r#"{
-                "declarations": [],
-                "name": "option",
-                "default": {"__type": "value", "__value": true}         
-            }"#;
-
-        let _: NixOption = serde_json::from_str(json).unwrap();
-
-        let json = r#"{
-                "declarations": [],
-                "name": "option",
-                "default": {"__type": "value", "__value": null
-                }         
-            }"#;
-
-        let _: NixOption = serde_json::from_str(json).unwrap();
-
-        let json = r#"{
-                "declarations": [],
-                "name": "option",
-                "default": {"__type": "value", "__value": 66
-                }         
-            }"#;
-
-        let _: NixOption = serde_json::from_str(json).unwrap();
-
-        let json = r#"{
-                "declarations": [],
-                "name": "option",
-                "default": {"__type": "value", "__value": [ "list", null, 8]
-                }         
-            }"#;
-
-        let _: NixOption = serde_json::from_str(json).unwrap();
-
-        let json = r#"{
-  "declarations": [],
-  "name": "option",
-  "default": {
-    "__type": "set",
-    "__value": {
-      "alice": {
-        "__type": "set",
-        "__value": {
-          "": {
-            "__type": "set",
-            "__value": {}
-          },
-          "description": {
-            "__type": "value",
-            "__value": 7
-          },
-          "extraGroups": {
-            "__type": "list",
-            "__value": [
-              {
-                "__type": "value",
-                "__value": "wheel"
-              }
-            ]
-          },
-          "group": {
-            "__type": "value",
-            "__value": "users"
-          },
-          "home": {
-            "__type": "value",
-            "__value": "/home/alice"
-          },
-          "shell": {
-            "__type": "value",
-            "__value": "/bin/sh"
-          },
-          "uid": {
-            "__type": "value",
-            "__value": 1234
-          },
-          "ccc": {
-            "__type": "set",
-            "__value": {}
-          }
-          
-        }
-      }
-    }
-  }
-}
-"#;
-
-        let _: NixOption = serde_json::from_str(json).unwrap();
+      
     }
 }

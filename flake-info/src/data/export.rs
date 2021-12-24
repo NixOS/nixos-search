@@ -3,7 +3,7 @@
 /// Flakes, or Nixpkgs.
 use std::{convert::TryInto, path::PathBuf};
 
-use super::{pandoc::PandocExt, import::DocValue};
+use super::{import::DocValue, pandoc::PandocExt};
 use crate::data::import::NixOption;
 use log::error;
 use serde::{Deserialize, Serialize};
@@ -295,17 +295,17 @@ impl From<import::NixOption> for Derivation {
             .transpose()
             .expect(&format!("Could not render descript of `{}`", name));
         let option_default = default;
-            // .map(TryInto::try_into)
-            // .transpose()
-            // .expect(&format!("Could not render option_default of `{}`", name));
+        // .map(TryInto::try_into)
+        // .transpose()
+        // .expect(&format!("Could not render option_default of `{}`", name));
         let option_example = example;
-            // .map(TryInto::try_into)
-            // .transpose()
-            // .expect(&format!("Could not render option_example of `{}`", name));
+        // .map(TryInto::try_into)
+        // .transpose()
+        // .expect(&format!("Could not render option_example of `{}`", name));
         let option_type = option_type;
-            // .map(TryInto::try_into)
-            // .transpose()
-            // .expect(&format!("Could not render option_type of `{}`", name));
+        // .map(TryInto::try_into)
+        // .transpose()
+        // .expect(&format!("Could not render option_type of `{}`", name));
 
         Derivation::Option {
             option_source: declarations.get(0).map(Clone::clone),
@@ -408,18 +408,16 @@ mod tests {
         let option: NixOption = serde_json::from_str(r#"
         {
             "declarations":["/nix/store/s1q1238ahiks5a4g6j6qhhfb3rlmamvz-source/nixos/modules/system/boot/luksroot.nix"],
-            "default":{"__type": "set", "__value": { "one" : {"__type": "value", "__value": 1}, "two" : {"__type": "value", "__value": "two"} } },
+            "default": {"one": 1, "two" : { "three": "tree", "four": []}},
             "description":"Commands that should be run right after we have mounted our LUKS device.\n",
-            "example":{"__type": "value", "__value" : "oneline\ntwoline\nthreeline\n"},
+            "example":null,
             "internal":false,
             "loc":["boot","initrd","luks","devices","<name>","postOpenCommands"],
             "name":"boot.initrd.luks.devices.<name>.postOpenCommands",
             "readOnly":false,
-            "type": {"__type": "literalExpression", "__value": "[ config.boot.kernelPackages.nvidia_x11 ]"},
+            "type": {"_type": "literalExpression", "text": "[config.boot.kernelPackages.nvidia_x11]"},
             "visible":true
         }"#).unwrap();
-
-        
 
         let option: Derivation = option.into();
 
