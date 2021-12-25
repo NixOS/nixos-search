@@ -178,7 +178,7 @@ viewResultItem channel _ show item =
                     Nothing
 
                 Err _ ->
-                    Just []
+                    Nothing
 
         default =
             "Not given"
