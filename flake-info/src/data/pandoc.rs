@@ -19,7 +19,7 @@ pub trait PandocExt {
 impl<T: AsRef<str>> PandocExt for T {
     fn render(&self) -> Result<String, PandocError> {
         if !self.as_ref().contains("</") {
-            return Ok(self.as_ref().to_owned());
+            return Ok(format!("<rendered-docbook>{}</rendered-docbook>", self.as_ref()));
         }
         
         let citeref_filter = {
@@ -52,7 +52,7 @@ impl<T: AsRef<str>> PandocExt for T {
         ]);
 
         pandoc.execute().map(|result| match result {
-            PandocOutput::ToBuffer(description) => description,
+            PandocOutput::ToBuffer(description) => format!("<rendered-docbook>{}</rendered-docbook>", description),
             _ => unreachable!(),
         })
     }
