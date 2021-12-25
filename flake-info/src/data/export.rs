@@ -104,7 +104,7 @@ pub enum Derivation {
         option_description: Option<String>,
         option_description_reverse: Option<Reverse<String>>,
 
-        option_type: Option<DocValue>,
+        option_type: Option<String>,
 
         option_default: Option<DocValue>,
 
@@ -415,7 +415,7 @@ mod tests {
             "loc":["boot","initrd","luks","devices","<name>","postOpenCommands"],
             "name":"boot.initrd.luks.devices.<name>.postOpenCommands",
             "readOnly":false,
-            "type": {"_type": "literalExpression", "text": "[config.boot.kernelPackages.nvidia_x11]"},
+            "type": "boolean",
             "visible":true
         }"#).unwrap();
 

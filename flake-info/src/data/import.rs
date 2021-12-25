@@ -59,7 +59,7 @@ pub struct NixOption {
 
     #[serde(rename = "type")]
     /// Nix generated description of the options type
-    pub option_type: Option<DocValue>,
+    pub option_type: Option<String>,
     pub default: Option<DocValue>,
     pub example: Option<DocValue>,
 
