@@ -171,11 +171,12 @@ viewResultItem :
 viewResultItem channel _ show item =
     let
         showHtml value =
-            case Html.Parser.run value of
-                Ok [Html.Parser.Element "rendered-docbook" _ nodes] ->
+            case Html.Parser.run <| String.trim value of
+                Ok [ Html.Parser.Element "rendered-docbook" _ nodes ] ->
                     Just <| Html.Parser.Util.toVirtualDom nodes
                 Ok _ ->
                     Nothing
+
                 Err _ ->
                     Just []
 
@@ -221,15 +222,15 @@ viewResultItem channel _ show item =
                     , div [] [ text "Default value" ]
                     , div [] <|
                         (item.source.default
-                            |> Maybe.map ( \value -> Maybe.withDefault ([asPreCode value]) (showHtml default))
+                            |> Maybe.map (\value -> Maybe.withDefault [ asPreCode value ] (showHtml value))
                             |> Maybe.withDefault [ asPre default ]
                         )
                     , div [] [ text "Type" ]
                     , div [] [ withEmpty asPre item.source.type_ ]
                     , div [] [ text "Example" ]
                     , div [] <|
-                        (item.source.default
-                            |> Maybe.map ( \value -> Maybe.withDefault ([asPreCode value]) (showHtml default))
+                        (item.source.example
+                            |> Maybe.map (\value -> Maybe.withDefault [ asPreCode value ] (showHtml value))
                             |> Maybe.withDefault [ asPre default ]
                         )
                     , div [] [ text "Declared in" ]
