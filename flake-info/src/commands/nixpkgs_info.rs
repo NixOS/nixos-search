@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use serde_json::Deserializer;
 use std::io::Write;
 use std::{collections::HashMap, fmt::Display, fs::File};
 
@@ -38,9 +39,10 @@ pub fn get_nixpkgs_info<T: AsRef<str> + Display>(nixpkgs_channel: T) -> Result<V
             )
         })
         .and_then(|o| {
-            debug!("stderr: {}", o.stderr_string_lossy());
+            let output = &*o.stdout_string_lossy();
+            let de = &mut Deserializer::from_str(output);
             let attr_set: HashMap<String, Package> =
-                serde_json::de::from_str(&o.stdout_string_lossy())?;
+                serde_path_to_error::deserialize(de).with_context(|| "Could not parse packages")?;
             Ok(attr_set
                 .into_iter()
                 .map(|(attribute, package)| NixpkgsEntry::Derivation { attribute, package })
@@ -91,8 +93,10 @@ pub fn get_nixpkgs_options<T: AsRef<str> + Display>(
     }
 
     parsed.and_then(|o| {
-        debug!("stderr: {}", o.stderr_string_lossy());
-        let attr_set: Vec<NixOption> = serde_json::de::from_str(&o.stdout_string_lossy())?;
+        let output = &*o.stdout_string_lossy();
+        let de = &mut Deserializer::from_str(output);
+        let attr_set: Vec<NixOption> =
+            serde_path_to_error::deserialize(de).with_context(|| "Could not parse options")?;
         Ok(attr_set.into_iter().map(NixpkgsEntry::Option).collect())
     })
 }

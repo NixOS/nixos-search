@@ -2,6 +2,7 @@ use crate::data::import::{FlakeEntry, Kind};
 use anyhow::{Context, Result};
 use command_run::{Command, LogTo};
 use log::debug;
+use serde_json::Deserializer;
 use std::fmt::Display;
 use std::fs::File;
 use std::io::Write;
@@ -43,8 +44,9 @@ pub fn get_derivation_info<T: AsRef<str> + Display>(
         .run()
         .with_context(|| format!("Failed to gather information about {}", flake_ref))
         .and_then(|o| {
-            debug!("stderr: {}", o.stderr_string_lossy());
-            serde_json::de::from_str(&o.stdout_string_lossy())
+            let output = &*o.stdout_string_lossy();
+            let de = &mut Deserializer::from_str(output);
+            serde_path_to_error::deserialize(de)
                 .with_context(|| format!("Failed to analyze flake {}", flake_ref))
         });
     parsed
