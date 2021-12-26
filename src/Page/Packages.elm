@@ -390,7 +390,7 @@ viewResultItem channel showInstallDetails show item =
                                     "mailto:" ++ email
 
                                 Nothing ->
-                                  "#"
+                                    "#"
                         ]
                         [ text "(mail)" ]
                     ]
@@ -398,7 +398,8 @@ viewResultItem channel showInstallDetails show item =
 
         mailtoAllMaintainers maintainers =
             let
-                maintainerMails = List.filterMap (\m -> m.email) maintainers
+                maintainerMails =
+                    List.filterMap (\m -> m.email) maintainers
             in
             li []
                 [ a
@@ -584,16 +585,27 @@ viewResultItem channel showInstallDetails show item =
         isOpen =
             Just item.source.attr_name == show
 
-        flakeItem =
-            Maybe.map Tuple.second item.source.flakeUrl
-                |> Maybe.map2
-                    (\name resolved ->
-                        [ li [ trapClick ]
-                            [ createShortDetailsItem name resolved ]
+        flakeOrNixpkgs =
+            case ( item.source.flakeName, item.source.flakeUrl ) of
+                -- its a flake
+                ( Just name, Just ( flakeIdent, flakeUrl ) ) ->
+                     [ a [ href flakeUrl ] [ text flakeIdent ]
+                      , text "#"
+                      , a
+                            [ onClick toggle
+                            , href ""
+                            ]
+                            [ text item.source.attr_name ]
+                      ]
+                    
+
+                _ ->
+                    [ a
+                        [ onClick toggle
+                        , href ""
                         ]
-                    )
-                    item.source.flakeName
-                |> Maybe.withDefault []
+                        [ text item.source.attr_name ]
+                    ]
     in
     li
         [ class "package"
@@ -603,18 +615,7 @@ viewResultItem channel showInstallDetails show item =
         ([]
             |> List.append longerPackageDetails
             |> List.append
-                [ ul [ class "search-result-button" ]
-                    (List.append
-                        flakeItem
-                        [ li []
-                            [ a
-                                [ onClick toggle
-                                , href ""
-                                ]
-                                [ text item.source.attr_name ]
-                            ]
-                        ]
-                    )
+                [ span [] flakeOrNixpkgs
                 , div [] [ text <| Maybe.withDefault "" item.source.description ]
                 , shortPackageDetails
                 , Search.showMoreButton toggle isOpen

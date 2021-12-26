@@ -174,6 +174,7 @@ viewResultItem channel _ show item =
             case Html.Parser.run <| String.trim value of
                 Ok [ Html.Parser.Element "rendered-docbook" _ nodes ] ->
                     Just <| Html.Parser.Util.toVirtualDom nodes
+
                 Ok _ ->
                     Nothing
 
@@ -275,10 +276,12 @@ viewResultItem channel _ show item =
         flakeOrNixpkgs =
             case ( item.source.flakeName, item.source.flake, item.source.flakeUrl ) of
                 -- its a flake
-                ( Just name, Just ( _, module_ ), Just flakeUrl_ ) ->
+                ( Just name, Just ( flake, attr ), Just flakeUrl_ ) ->
                     Just
                         [ li []
-                            [ a [ href flakeUrl_ ] [ text name ]
+                            [ a [ href flakeUrl_ ] [ text flake ]
+                            , text "#"
+                            , text attr
                             ]
                         ]
 
