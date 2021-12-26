@@ -97,7 +97,7 @@ fn print_key(key: String) -> String {
     if IDENT_REGEX.is_match(&key).unwrap() {
         key
     } else {
-        format!("{:?}", key)
+        format!("{:?}", key).replace("$", "\\$")
     }
 }
 #[cfg(test)]
