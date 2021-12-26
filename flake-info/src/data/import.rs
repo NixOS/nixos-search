@@ -346,7 +346,5 @@ mod tests {
     }
 
     #[test]
-    fn test_option_parsing() {
-      
-    }
+    fn test_option_parsing() {}
 }

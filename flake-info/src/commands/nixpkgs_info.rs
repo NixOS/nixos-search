@@ -41,8 +41,8 @@ pub fn get_nixpkgs_info<T: AsRef<str> + Display>(nixpkgs_channel: T) -> Result<V
         .and_then(|o| {
             let output = &*o.stdout_string_lossy();
             let de = &mut Deserializer::from_str(output);
-            let attr_set: HashMap<String, Package> = serde_path_to_error::deserialize(de)
-                .with_context(|| "Could not parse packages")?;
+            let attr_set: HashMap<String, Package> =
+                serde_path_to_error::deserialize(de).with_context(|| "Could not parse packages")?;
             Ok(attr_set
                 .into_iter()
                 .map(|(attribute, package)| NixpkgsEntry::Derivation { attribute, package })
