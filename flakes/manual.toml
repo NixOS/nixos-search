@@ -19,6 +19,11 @@ owner = "ngi-nix"
 repo = "openpgp-ca"
 
 [[sources]]
+type = "github"
+owner = "fort-nix"
+repo = "nix-bitcoin"
+
+[[sources]]
 type = "gitlab"
 owner = "pi-lar"
 repo = "neuropil"
@@ -37,6 +42,11 @@ repo = "nixos"
 type = "github"
 owner = "Mic92"
 repo = "sops-nix"
+
+[[sources]]
+type = "github"
+owner = "PaddiM8"
+repo = "kalker"
 
 [[sources]]
 type = "github"

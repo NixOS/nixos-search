@@ -58,3 +58,15 @@ application.
 - GitHub Action can also be triggered via Pull Request, which if Pull Request
   was created from a non-forked repo's branch, will provide a preview url in a
   comment.
+
+## Adding flakes
+
+To add your own flakes to the search index edit [./flakes/manual.toml](./flakes/manual.toml).
+
+Possible types are `github`, `gitlab`, and `git` (which is the fallback for any kind of git repository but requires to set a revision key manually as of now).
+
+To test whether your flake is compatible with nix flake-info you can try running `flake-info` against it
+
+```
+$ nix run github:nixos/nixos-search#flake-info -- flake <your flake handle>
+```

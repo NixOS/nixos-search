@@ -479,6 +479,7 @@ type Channel
     = Unstable
     | Release_20_09
     | Release_21_05
+    | Release_21_11
 
 
 {-| TODO: we should consider using more dynamic approach here
@@ -494,7 +495,7 @@ type alias ChannelDetails =
 
 defaultChannel : String
 defaultChannel =
-    "21.05"
+    "21.11"
 
 
 channelDetails : Channel -> ChannelDetails
@@ -509,6 +510,9 @@ channelDetails channel =
         Release_21_05 ->
             ChannelDetails "21.05" "21.05" "nixos/release-21.05" "nixos-21.05"
 
+        Release_21_11 ->
+            ChannelDetails "21.11" "21.11" "nixos/release-21.11" "nixos-21.11"
+
 
 channelFromId : String -> Maybe Channel
 channelFromId channel_id =
@@ -521,6 +525,9 @@ channelFromId channel_id =
 
         "21.05" ->
             Just Release_21_05
+
+        "21.11" ->
+            Just Release_21_11
 
         _ ->
             Nothing
@@ -536,6 +543,7 @@ channels : List String
 channels =
     [ "20.09"
     , "21.05"
+    , "21.11"
     , "unstable"
     ]
 
@@ -579,14 +587,19 @@ flakeIds =
 
 flakes : List Flake
 flakes =
-    [ { id = "latest-nixos-20.09-latest"
+    [ { id = "latest-nixos-21.11-latest"
       , isNixpkgs = True
-      , title = "Nixpkgs 20.09"
+      , title = "Nixpkgs 21.11"
       , source = ""
       }
-    , { id = "nixos-21.05-latest"
+    , { id = "latest-nixos-21.05-latest"
       , isNixpkgs = True
       , title = "Nixpkgs 21.05"
+      , source = ""
+      }
+    , { id = "nixos-21.09-latest"
+      , isNixpkgs = True
+      , title = "Nixpkgs 21.09"
       , source = ""
       }
     , { id = "latest-nixos-unstable"
@@ -883,11 +896,11 @@ viewNoResults :
 viewNoResults categoryName =
     div [ class "search-no-results" ]
         [ h2 [] [ text <| "No " ++ categoryName ++ " found!" ]
-        , text "How to "
-        , Html.a [ href "https://nixos.org/manual/nixpkgs/stable/#chap-quick-start" ] [ text "add" ]
+        , text "You might want to "
+        , Html.a [ href "https://nixos.org/manual/nixpkgs/stable/#chap-quick-start" ] [ text "add a package" ]
         , text " or "
-        , a [ href "https://github.com/NixOS/nixpkgs/issues/new?assignees=&labels=0.kind%3A+packaging+request&template=packaging_request.md&title=" ] [ text "request" ]
-        , text " package to nixpkgs?"
+        , a [ href "https://github.com/NixOS/nixpkgs/issues/new?assignees=&labels=0.kind%3A+packaging+request&template=packaging_request.md&title=" ] [ text "make a packaging request" ]
+        , text "."
         ]
 
 

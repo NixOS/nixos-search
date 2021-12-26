@@ -171,12 +171,15 @@ viewResultItem :
 viewResultItem channel _ show item =
     let
         showHtml value =
-            case Html.Parser.run value of
-                Ok nodes ->
-                    Html.Parser.Util.toVirtualDom nodes
+            case Html.Parser.run <| String.trim value of
+                Ok [ Html.Parser.Element "rendered-docbook" _ nodes ] ->
+                    Just <| Html.Parser.Util.toVirtualDom nodes
+
+                Ok _ ->
+                    Nothing
 
                 Err _ ->
-                    []
+                    Nothing
 
         default =
             "Not given"
@@ -214,15 +217,23 @@ viewResultItem channel _ show item =
                     , div [] [ text "Description" ]
                     , div [] <|
                         (item.source.description
-                            |> Maybe.map showHtml
+                            |> Maybe.andThen showHtml
                             |> Maybe.withDefault []
                         )
                     , div [] [ text "Default value" ]
-                    , div [] [ withEmpty (wrapped asPreCode) item.source.default ]
+                    , div [] <|
+                        (item.source.default
+                            |> Maybe.map (\value -> Maybe.withDefault [ asPreCode value ] (showHtml value))
+                            |> Maybe.withDefault [ asPre default ]
+                        )
                     , div [] [ text "Type" ]
                     , div [] [ withEmpty asPre item.source.type_ ]
                     , div [] [ text "Example" ]
-                    , div [] [ withEmpty (wrapped asPreCode) item.source.example ]
+                    , div [] <|
+                        (item.source.example
+                            |> Maybe.map (\value -> Maybe.withDefault [ asPreCode value ] (showHtml value))
+                            |> Maybe.withDefault [ asPre default ]
+                        )
                     , div [] [ text "Declared in" ]
                     , div [] <| findSource channel item.source
                     ]
@@ -265,10 +276,12 @@ viewResultItem channel _ show item =
         flakeOrNixpkgs =
             case ( item.source.flakeName, item.source.flake, item.source.flakeUrl ) of
                 -- its a flake
-                ( Just name, Just ( _, module_ ), Just flakeUrl_ ) ->
+                ( Just name, Just ( flake, attr ), Just flakeUrl_ ) ->
                     Just
                         [ li []
-                            [ a [ href flakeUrl_ ] [ text name ]
+                            [ a [ href flakeUrl_ ] [ text flake ]
+                            , text "#"
+                            , text attr
                             ]
                         ]
 

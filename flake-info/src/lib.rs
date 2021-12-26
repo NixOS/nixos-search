@@ -10,6 +10,7 @@ pub mod data;
 pub mod elastic;
 
 pub use commands::get_flake_info;
+use log::trace;
 
 pub fn process_flake(
     source: &Source,
@@ -20,8 +21,8 @@ pub fn process_flake(
     let mut info = commands::get_flake_info(source.to_flake_ref(), temp_store, extra)?;
     info.source = Some(source.clone());
     let packages = commands::get_derivation_info(source.to_flake_ref(), *kind, temp_store, extra)?;
-    eprintln!("{:#?}", info);
-    eprintln!("{:#?}", packages);
+    trace!("flake info: {:#?}", info);
+    trace!("flake content: {:#?}", packages);
 
     let exports: Vec<Export> = packages
         .into_iter()

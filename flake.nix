@@ -16,21 +16,29 @@
             overlays = [ ];
           };
         in
-          import path { inherit pkgs; };
+        import path { inherit pkgs; };
       packages = system:
         {
-          flake_info = mkPackage ./flake-info system;
+          flake-info = mkPackage ./flake-info system;
           frontend = mkPackage ./. system;
         };
 
       devShell = system:
-        nixpkgs.legacyPackages.${system}.mkShell {
-          inputsFrom = builtins.attrValues (packages system);
+        let
+          packages_inst = (packages system);
+          pkgs = nixpkgs.legacyPackages.${system};
+        in
+        pkgs.mkShell {
+          inputsFrom = builtins.attrValues packages_inst;
+          shellHook = ''
+            export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
+            export NIXPKGS_PANDOC_FILTERS_PATH="${packages_inst.flake-info.NIXPKGS_PANDOC_FILTERS_PATH}";
+          '';
         };
     in
-      {
-        defaultPackage = forAllSystems (mkPackage ./.);
-        packages = forAllSystems packages;
-        devShell = forAllSystems devShell;
-      };
+    {
+      defaultPackage = forAllSystems (mkPackage ./.);
+      packages = forAllSystems packages;
+      devShell = forAllSystems devShell;
+    };
 }

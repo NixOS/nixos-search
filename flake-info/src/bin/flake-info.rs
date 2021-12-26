@@ -25,7 +25,9 @@ struct Args {
     #[structopt(
         short,
         long,
-        help = "Kind of data to extract (packages|options|apps|all)",
+        help = "Kind of data to extract",
+        possible_values = &data::import::Kind::variants(),
+        case_insensitive = true,
         default_value
     )]
     kind: data::import::Kind,
@@ -57,7 +59,9 @@ enum Command {
         channel: String,
     },
     Group {
-        #[structopt(help = "Points to a TOML or JSON file containing info targets. If file does not end in 'toml' json is assumed")]
+        #[structopt(
+            help = "Points to a TOML or JSON file containing info targets. If file does not end in 'toml' json is assumed"
+        )]
         targets: PathBuf,
 
         name: String,
@@ -208,7 +212,11 @@ async fn run_command(
             let info = flake_info::get_flake_info(source.to_flake_ref(), temp_store, extra)
                 .map_err(FlakeInfoError::Flake)?;
 
-            let ident = ("flake".to_owned(), info.name, info.revision);
+            let ident = (
+                "flake".to_owned(),
+                info.name,
+                info.revision.unwrap_or("latest".into()),
+            );
 
             Ok((exports, ident))
         }
@@ -241,7 +249,7 @@ async fn run_command(
                     _ => flake_info::process_flake(source, &kind, temp_store, &extra).and_then(
                         |result| {
                             flake_info::get_flake_info(source.to_flake_ref(), temp_store, extra)
-                                .map(|info| (result, info.revision))
+                                .map(|info| (result, info.revision.unwrap_or("latest".into())))
                         },
                     ),
                 })
@@ -265,7 +273,15 @@ async fn run_command(
                 .collect::<Vec<_>>();
 
             if !errors.is_empty() {
-                return Err(FlakeInfoError::Group(errors));
+                if exports.is_empty() {
+                    return Err(FlakeInfoError::Group(errors));
+                }
+                warn!("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=");
+                warn!(
+                    "Some group members could not be evaluated: {}",
+                    FlakeInfoError::Group(errors)
+                );
+                warn!("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=");
             }
 
             let hash = {
