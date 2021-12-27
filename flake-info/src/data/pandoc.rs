@@ -18,7 +18,7 @@ pub trait PandocExt {
 
 impl<T: AsRef<str>> PandocExt for T {
     fn render(&self) -> Result<String, PandocError> {
-        if !self.as_ref().contains("</") {
+        if !self.as_ref().contains("<") {
             return Ok(format!(
                 "<rendered-docbook>{}</rendered-docbook>",
                 self.as_ref()
