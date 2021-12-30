@@ -1,3 +1,5 @@
+use std::fs::File;
+use std::io::Write;
 use std::path::PathBuf;
 
 use lazy_static::lazy_static;
@@ -5,6 +7,8 @@ use log::debug;
 use pandoc::{
     InputFormat, InputKind, OutputFormat, OutputKind, PandocError, PandocOption, PandocOutput,
 };
+
+const XREF_FILTER: &str = include_str!("fix-xrefs.lua");
 
 lazy_static! {
     static ref FILTERS_PATH: PathBuf = std::env::var("NIXPKGS_PANDOC_FILTERS_PATH")
@@ -35,6 +39,10 @@ impl<T: AsRef<str>> PandocExt for T {
             p.push("link-unix-man-references.lua");
             p
         };
+        let tmpdir = tempfile::tempdir()?;
+        let xref_filter = tmpdir.path().join("fix-xrefs.lua");
+        writeln!(File::create(&xref_filter)?, "{}", XREF_FILTER)?;
+
         let mut pandoc = pandoc::new();
         let wrapper_xml = format!(
             "
@@ -52,6 +60,7 @@ impl<T: AsRef<str>> PandocExt for T {
         pandoc.add_options(&[
             PandocOption::LuaFilter(citeref_filter),
             PandocOption::LuaFilter(man_filter),
+            PandocOption::LuaFilter(xref_filter),
         ]);
 
         pandoc.execute().map(|result| match result {
