@@ -11,6 +11,7 @@ function Link(elem)
     option_name = option_name:gsub('%._%.', '.*.')
 
     elem.target = 'https://search.nixos.org/options?channel=unstable&show=' .. option_name .. '&query=' .. option_name
+    elem.attributes.target = '_blank'
 
     if #elem.content == 1 and elem.content[1].tag == 'Str' and elem.content[1].text == '???' then
       elem.content[1].text = option_name
