@@ -191,17 +191,17 @@ pageMatch m1 m2 =
         ( Home _, Home _ ) ->
             True
 
-        ( Packages _, Packages _ ) ->
-            True
+        ( Packages model_a, Packages model_b ) ->
+            {model_a | show = Nothing } == {model_b | show = Nothing}
 
-        ( Options _, Options _ ) ->
-            True
+        ( Options model_a, Options model_b ) ->
+            {model_a | show = Nothing } == {model_b | show = Nothing}
 
-        ( Flakes (OptionModel _), Flakes (OptionModel _) ) ->
-            True
+        ( Flakes (OptionModel model_a), Flakes (OptionModel model_b) ) ->
+            {model_a | show = Nothing } == {model_b | show = Nothing}
 
-        ( Flakes (PackagesModel _), Flakes (PackagesModel _) ) ->
-            True
+        ( Flakes (PackagesModel model_a), Flakes (PackagesModel model_b) ) ->
+            {model_a | show = Nothing } == {model_b | show = Nothing}
 
         _ ->
             False
