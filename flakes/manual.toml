@@ -20,6 +20,11 @@ repo = "openpgp-ca"
 
 [[sources]]
 type = "github"
+owner = "ngi-nix"
+repo = "weblate"
+
+[[sources]]
+type = "github"
 owner = "fort-nix"
 repo = "nix-bitcoin"
 
