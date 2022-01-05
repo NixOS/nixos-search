@@ -47,3 +47,8 @@ repo = "nixos"
 type = "github"
 owner = "PaddiM8"
 repo = "kalker"
+
+[[sources]]
+type = "github"
+owner = "srid"
+repo = "emanote"
