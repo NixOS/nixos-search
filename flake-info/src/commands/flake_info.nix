@@ -10,20 +10,14 @@ let
   withSystem = fn: lib.mapAttrs (system: drvs: (fn system drvs));
   isValid = d:
     let
-      r = builtins.tryEval (lib.isDerivation d && ! (lib.attrByPath [ "meta" "broken" ] false d) && builtins.seq d.name true && d ? outputs);
+      r = builtins.tryEval (lib.isDerivation d && ! (lib.attrByPath [ "meta" "broken" ] false d) &&
+                            builtins.seq d.name true && d ? outputs);
     in
       r.success && r.value;
-  all = pkgs:
-    let
-      validPkgs = lib.filterAttrs (k: v: isValid v) pkgs;
-    in
-      validPkgs;
-
-
+  validPkgs = lib.filterAttrs (k: v: isValid v);
 
   readPackages = system: drvs: lib.mapAttrsToList (
     attribute_name: drv: (
-      # if isValid drv then
       {
         attribute_name = attribute_name;
         system = system;
@@ -35,10 +29,8 @@ let
       }
       // lib.optionalAttrs (drv ? meta && drv.meta ? description) { inherit (drv.meta) description; }
       // lib.optionalAttrs (drv ? meta && drv.meta ? license) { inherit (drv.meta) license; }
-
-      # else {}
     )
-  ) (all drvs);
+  ) (validPkgs drvs);
   readApps = system: apps: lib.mapAttrsToList (
     attribute_name: app: (
       {
