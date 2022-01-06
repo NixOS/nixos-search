@@ -43,8 +43,7 @@ let
     )
   ) apps;
 
-  readOptions = modules: isNixOS: let
-
+  readOptions = let
     declarations = module: (
       lib.evalModules {
         modules = (if lib.isList module then module else [ module ]) ++ [
@@ -59,7 +58,7 @@ let
       }
     ).options;
 
-    cleanUpOption = module: opt:
+    cleanUpOption = extraAttrs: opt:
       let
         applyOnAttr = n: f: lib.optionalAttrs (builtins.hasAttr n opt) { ${n} = f opt.${n}; };
         mkDeclaration = decl:
@@ -85,17 +84,34 @@ let
         // applyOnAttr "example" substFunction # (_: { __type = "function"; })
         // applyOnAttr "type" substFunction
         // applyOnAttr "declarations" (map mkDeclaration)
-        // lib.optionalAttrs (!isNixOS) { flake = [ flake module ]; };
-
-    options = lib.mapAttrs (
-      attr: module: let
-        list = lib.optionAttrSetToDocList (declarations module);
-      in
-        map (cleanUpOption attr) (lib.filter (x: !x.internal) list)
-    ) modules;
+        // extraAttrs;
   in
-    lib.flatten (builtins.attrValues options);
+    { module, modulePath ? null }: let
+      opts = lib.optionAttrSetToDocList (declarations module);
+      extraAttrs = lib.optionalAttrs (modulePath != null) {
+        flake = modulePath;
+      };
+    in
+      map (cleanUpOption extraAttrs) (lib.filter (x: !x.internal) opts);
 
+  readFlakeOptions = let
+    nixosModulesOpts = builtins.concatLists (lib.mapAttrsToList (moduleName: module:
+      readOptions {
+        inherit module;
+        modulePath = [ flake moduleName ];
+      }
+    ) (resolved.nixosModules or {}));
+
+    nixosModuleOpts = lib.optionals (resolved ? nixosModule) (
+      readOptions {
+        module = resolved.nixosModule;
+        modulePath = [ flake ];
+      }
+    );
+  in
+    # We assume that `nixosModules` includes `nixosModule` when there
+    # are multiple modules
+    if nixosModulesOpts != [] then nixosModulesOpts else nixosModuleOpts;
 
   read = reader: set: lib.flatten (lib.attrValues (withSystem reader set));
 
@@ -126,11 +142,9 @@ rec {
   legacyPackages = lib.attrValues (collectSystems legacyPackages');
   packages = lib.attrValues (collectSystems packages');
   apps = lib.attrValues (collectSystems apps');
-  options = readOptions (resolved.nixosModules or {}) false;
-  nixos-options = readOptions (
-    {
-      "nixos" = import "${builtins.fetchTarball { url = flake; }}/nixos/modules/module-list.nix";
-    }
-  ) true;
+  options = readFlakeOptions;
+  nixos-options = readOptions {
+    module = import "${builtins.fetchTarball { url = flake; }}/nixos/modules/module-list.nix";
+  };
   all = packages ++ apps ++ options;
 }
