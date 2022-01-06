@@ -3,7 +3,7 @@
 /// Flakes, or Nixpkgs.
 use std::{convert::TryInto, path::PathBuf};
 
-use super::{import::DocValue, pandoc::PandocExt};
+use super::{import::{DocValue, ModulePath}, pandoc::PandocExt};
 use crate::data::import::NixOption;
 use log::error;
 use serde::{Deserialize, Serialize};
@@ -110,7 +110,7 @@ pub enum Derivation {
 
         option_example: Option<DocValue>,
 
-        option_flake: Option<(String, String)>,
+        option_flake: Option<ModulePath>,
     },
 }
 
