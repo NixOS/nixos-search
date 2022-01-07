@@ -12,7 +12,9 @@ import Html
         , header
         , img
         , li
+        , small
         , span
+        , sup
         , text
         , ul
         )
@@ -31,10 +33,9 @@ import Page.Home
 import Page.Options
 import Page.Packages
 import Route exposing (SearchType(..))
-import Search
+import Search exposing (Msg(..), defaultFlakeId)
 import Url
 import Search exposing (defaultFlakeId)
-import Search exposing (channels)
 import Html exposing (sup)
 import Html exposing (small)
 import RemoteData exposing (RemoteData(..))
@@ -160,7 +161,7 @@ attemptQuery (( model, _ ) as pair) =
 
         Flakes (OptionModel searchModel) ->
             if Search.shouldLoad searchModel then
-                submitQuery FlakesMsg Page.Flakes.makeRequest {searchModel | channel = defaultFlakeId }
+                submitQuery FlakesMsg Page.Flakes.makeRequest { searchModel | channel = defaultFlakeId }
 
             else
                 noEffects pair
@@ -170,7 +171,7 @@ attemptQuery (( model, _ ) as pair) =
                 -- let
                 --     _ = Debug.log "main" "submit flake message"
                 -- in
-                submitQuery FlakesMsg Page.Flakes.makeRequest {searchModel | channel = defaultFlakeId}
+                submitQuery FlakesMsg Page.Flakes.makeRequest { searchModel | channel = defaultFlakeId }
 
             else
                 --   let _ = Debug.log "main" "should not load flakes" in
@@ -193,11 +194,10 @@ pageMatch m1 m2 =
             True
 
         ( Packages model_a, Packages model_b ) ->
-            {model_a | show = Nothing, result = NotAsked } == {model_b | show = Nothing, result = NotAsked}
-
+            { model_a | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked }
+                == { model_b | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked }
         ( Options model_a, Options model_b ) ->
             {model_a | show = Nothing, result = NotAsked } == {model_b | show = Nothing, result = NotAsked}
-
         ( Flakes (OptionModel model_a), Flakes (OptionModel model_b) ) ->
             {model_a | show = Nothing, result = NotAsked } == {model_b | show = Nothing, result = NotAsked}
 
@@ -426,8 +426,7 @@ viewNavigation route =
             (viewNavigationItem route)
             [ ( toRoute Route.Packages, text "Packages" )
             , ( toRoute Route.Options, text "Options" )
-            , ( toRoute Route.Flakes, span [] [ text "Flakes", sup [] [span [class "label label-info"][small [] [text "Experimental"]]]] )
-            
+            , ( toRoute Route.Flakes, span [] [ text "Flakes", sup [] [ span [ class "label label-info" ] [ small [] [ text "Experimental" ] ] ] ] )
             ]
 
 
