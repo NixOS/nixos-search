@@ -68,7 +68,7 @@ type alias ResultItemSource =
     , source : Maybe String
 
     -- flake
-    , flake : Maybe ( String, String )
+    , flake : Maybe (List String)
     , flakeName : Maybe String
     , flakeDescription : Maybe String
     , flakeUrl : Maybe String
@@ -274,16 +274,19 @@ viewResultItem channel _ show item =
             Maybe.map asGithubLink item.source.source
 
         flakeOrNixpkgs =
-            case ( item.source.flakeName, item.source.flake, item.source.flakeUrl ) of
+            let
+                mkLink flake url =
+                    a [ href url ] [ text flake ]
+            in
+            case ( item.source.flake, item.source.flakeUrl ) of
                 -- its a flake
-                ( Just name, Just ( flake, attr ), Just flakeUrl_ ) ->
+                ( Just (flake :: []), Just url ) ->
                     Just
-                        [ li []
-                            [ a [ href flakeUrl_ ] [ text flake ]
-                            , text "#"
-                            , text attr
-                            ]
+                        [ li [] [ mkLink flake url ]
                         ]
+
+                ( Just (flake :: moduleName :: []), Just url ) ->
+                    Just [ li [] [ mkLink flake url, text "#", text moduleName ] ]
 
                 _ ->
                     Nothing
@@ -344,12 +347,16 @@ findSource channel source =
         flakeOrNixpkgs =
             case ( source.flake, source.flakeUrl ) of
                 -- its a flake
-                ( Just ( name, module_ ), Just flakeUrl_ ) ->
+                ( Just (name :: attrs), Just flakeUrl_ ) ->
+                    let
+                        module_ =
+                            Maybe.withDefault "(default)" <| Maybe.map (\m -> "(Module: " ++ m ++ ")") <| List.head attrs
+                    in
                     Just <|
                         List.append
                             (Maybe.withDefault [] <| Maybe.map (\sourceFile_ -> [ sourceFile_, span [] [ text " in " ] ]) sourceFile)
                             [ span [] [ text "Flake: " ]
-                            , a [ href flakeUrl_ ] [ text <| name ++ "(Module: " ++ module_ ++ ")" ]
+                            , a [ href flakeUrl_ ] [ text <| name ++ module_ ]
                             ]
 
                 ( Nothing, _ ) ->
@@ -420,7 +427,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "option_example" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "option_source" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "option_flake"
-            (Json.Decode.map Just <| Json.Decode.map2 Tuple.pair (Json.Decode.index 0 Json.Decode.string) (Json.Decode.index 1 Json.Decode.string))
+            (Json.Decode.map Just <| Json.Decode.list Json.Decode.string)
             Nothing
         |> Json.Decode.Pipeline.optional "flake_name" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_description" (Json.Decode.map Just Json.Decode.string) Nothing

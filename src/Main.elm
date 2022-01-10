@@ -37,6 +37,7 @@ import Search exposing (defaultFlakeId)
 import Search exposing (channels)
 import Html exposing (sup)
 import Html exposing (small)
+import RemoteData exposing (RemoteData(..))
 
 
 
@@ -191,17 +192,17 @@ pageMatch m1 m2 =
         ( Home _, Home _ ) ->
             True
 
-        ( Packages _, Packages _ ) ->
-            True
+        ( Packages model_a, Packages model_b ) ->
+            {model_a | show = Nothing, result = NotAsked } == {model_b | show = Nothing, result = NotAsked}
 
-        ( Options _, Options _ ) ->
-            True
+        ( Options model_a, Options model_b ) ->
+            {model_a | show = Nothing, result = NotAsked } == {model_b | show = Nothing, result = NotAsked}
 
-        ( Flakes (OptionModel _), Flakes (OptionModel _) ) ->
-            True
+        ( Flakes (OptionModel model_a), Flakes (OptionModel model_b) ) ->
+            {model_a | show = Nothing, result = NotAsked } == {model_b | show = Nothing, result = NotAsked}
 
-        ( Flakes (PackagesModel _), Flakes (PackagesModel _) ) ->
-            True
+        ( Flakes (PackagesModel model_a), Flakes (PackagesModel model_b) ) ->
+            {model_a | show = Nothing, result = NotAsked } == {model_b | show = Nothing, result = NotAsked}
 
         _ ->
             False
