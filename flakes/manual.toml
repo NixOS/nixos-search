@@ -47,3 +47,7 @@ repo = "nixos"
 type = "github"
 owner = "PaddiM8"
 repo = "kalker"
+
+[[sources]]
+type = "git"
+url = "git+https://git.sr.ht/~kerstin/sway-timetracker?ref=main"
