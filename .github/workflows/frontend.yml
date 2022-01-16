@@ -23,7 +23,7 @@ jobs:
 
     - name: Building search.nixos.org
       run: |
-        nix build .#frontend
+        nix -vL build .#frontend
         mkdir ./dist
         cp -RL ./result/* ./dist/
 

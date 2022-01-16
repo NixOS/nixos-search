@@ -45,7 +45,7 @@ jobs:
 
     - name: Building flake-info
       run: |
-        nix build .#flake-info
+        nix -vL build .#flake-info
 
     - name: Import ${{ matrix.channel }} channel
       run: |
