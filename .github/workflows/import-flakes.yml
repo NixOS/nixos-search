@@ -52,6 +52,6 @@ jobs:
     - name: Warmup ${{ matrix.group }} group
       run: |
         for (( i = 0; i < 3; i++ )) do
-          curl -sS ${{ secrets.ELASTICSEARCH_URL }}/$(< VERSION)-${{ matrix.group }}/_search
+          curl -sS ${{ secrets.ELASTICSEARCH_URL }}/latest-$(< VERSION)-group-${{ matrix.group }}/_search
         done
       if: github.repository_owner == 'NixOS'
