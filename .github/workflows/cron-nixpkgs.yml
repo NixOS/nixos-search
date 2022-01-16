@@ -7,7 +7,7 @@ on:
 
 jobs:
 
-  import-channel:
+  import-nixpkgs:
 
     runs-on: ubuntu-latest
 
@@ -34,39 +34,24 @@ jobs:
 
     - name: Installing Nix
       uses: cachix/install-nix-action@v16
-      with:
-        install_url: https://nixos-nix-install-tests.cachix.org/serve/i6laym9jw3wg9mw6ncyrk6gjx4l34vvx/install
-        install_options: '--tarball-url-prefix https://nixos-nix-install-tests.cachix.org/serve'
-        extra_nix_config: |
-          experimental-features = nix-command flakes
-          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
     - uses: cachix/cachix-action@v10
       with:
         name: nixos-search
         signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
 
-    - name: Install unstable channel
+    - name: Building flake-info
       run: |
-        nix-channel --add https://nixos.org/channels/nixpkgs-unstable
-        nix-channel --update
-
-    - name: Installing jq
-      run: |
-        nix-env -iA nixpkgs.nixFlakes nixpkgs.jq
-
-    - name: Building import_scripts
-      run: |
-        nix build ./#packages.x86_64-linux.flake-info
+        nix build .#flake-info
 
     - name: Import ${{ matrix.channel }} channel
       run: |
-        ./result/bin/flake-info --push --elastic-schema-version=$(cat ./VERSION) nixpkgs ${{ matrix.channel }}
-      if: github.repository == 'NixOS/nixos-search'
+        ./result/bin/flake-info --push --elastic-schema-version=$(< VERSION) nixpkgs ${{ matrix.channel }}
+      if: github.repository_owner == 'NixOS'
 
     - name: Warmup ${{ matrix.channel }} channel
       run: |
-        curl ${{ secrets.ELASTICSEARCH_URL }}/latest-$(cat VERSION)-nixpkgs-${{ matrix.channel }}/_search | jq '.took'
-        curl ${{ secrets.ELASTICSEARCH_URL }}/latest-$(cat VERSION)-nixpkgs-${{ matrix.channel }}/_search | jq '.took'
-        curl ${{ secrets.ELASTICSEARCH_URL }}/latest-$(cat VERSION)-nixpkgs-${{ matrix.channel }}/_search | jq '.took'
-      if: github.repository == 'NixOS/nixos-search'
+        for (( i = 0; i < 3; i++ )) do
+          curl -sS ${{ secrets.ELASTICSEARCH_URL }}/latest-$(< VERSION)-nixpkgs-${{ matrix.channel }}/_search
+        done
+      if: github.repository_owner == 'NixOS'
