@@ -382,7 +382,7 @@ impl Elasticsearch {
         alias: &str,
     ) -> Result<(), ElasticsearchError> {
         // delete old alias
-        info!("Try deletig old alias");
+        info!("Try deleting old alias");
         let response = self
             .client
             .indices()
