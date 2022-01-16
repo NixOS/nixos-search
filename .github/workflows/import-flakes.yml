@@ -40,6 +40,10 @@ jobs:
         name: nixos-search
         signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
 
+    - name: Installing jq
+      run: |
+        nix-env -f '<nixpkgs>' -iA jq
+
     - name: Building flake-info
       run: |
         nix -vL build .#flake-info
@@ -52,6 +56,6 @@ jobs:
     - name: Warmup ${{ matrix.group }} group
       run: |
         for (( i = 0; i < 3; i++ )) do
-          curl -sS ${{ secrets.ELASTICSEARCH_URL }}/latest-$(< VERSION)-group-${{ matrix.group }}/_search
+          curl -sS ${{ secrets.ELASTICSEARCH_URL }}/latest-$(< VERSION)-group-${{ matrix.group }}/_search | jq -c '.took // .'
         done
       if: github.repository_owner == 'NixOS'
