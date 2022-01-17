@@ -302,7 +302,7 @@ type Msg a b
     | ChangePage Int
     | ShowInstallDetails Details
 
-type Details 
+type Details
     = FromNixpkgs
     | FromNixOS
     | FromFlake
@@ -477,7 +477,6 @@ createUrl toRoute model =
 
 type Channel
     = Unstable
-    | Release_20_09
     | Release_21_05
     | Release_21_11
 
@@ -504,9 +503,6 @@ channelDetails channel =
         Unstable ->
             ChannelDetails "unstable" "unstable" "nixos/trunk-combined" "nixos-unstable"
 
-        Release_20_09 ->
-            ChannelDetails "20.09" "20.09" "nixos/release-20.09" "nixos-20.09"
-
         Release_21_05 ->
             ChannelDetails "21.05" "21.05" "nixos/release-21.05" "nixos-21.05"
 
@@ -519,9 +515,6 @@ channelFromId channel_id =
     case channel_id of
         "unstable" ->
             Just Unstable
-
-        "20.09" ->
-            Just Release_20_09
 
         "21.05" ->
             Just Release_21_05
@@ -541,8 +534,7 @@ channelDetailsFromId channel_id =
 
 channels : List String
 channels =
-    [ "20.09"
-    , "21.05"
+    [ "21.05"
     , "21.11"
     , "unstable"
     ]
