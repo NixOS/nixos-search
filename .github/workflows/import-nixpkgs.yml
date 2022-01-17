@@ -18,7 +18,6 @@ jobs:
           - unstable
           - 21.11
           - 21.05
-          - 20.09
 
     env:
       RUST_LOG: debug
