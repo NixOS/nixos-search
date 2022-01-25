@@ -124,7 +124,10 @@ impl Serialize for DocValue {
 pub struct Package {
     pub pname: String,
     pub version: String,
+    #[serde(default)]
+    pub outputs: HashMap<String, String>,
     pub system: String,
+    #[serde(default)]
     pub meta: Meta,
 }
 
@@ -138,10 +141,8 @@ pub enum NixpkgsEntry {
 
 /// Most information about packages in nixpkgs is contained in the meta key
 /// This struct represents a subset of that metadata
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct Meta {
-    #[serde(rename = "outputsToInstall")]
-    pub outputs: Option<Vec<String>>,
     pub license: Option<OneOrMany<StringOrStruct<License>>>,
     pub maintainers: Option<Flatten<Maintainer>>,
     pub homepage: Option<OneOrMany<String>>,
