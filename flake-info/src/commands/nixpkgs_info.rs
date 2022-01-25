@@ -8,14 +8,9 @@ use log::{debug, error};
 
 use crate::data::import::{NixOption, NixpkgsEntry, Package};
 
-const NIXPKGS_SCRIPT: &str = include_str!("packages-config.nix");
 const FLAKE_INFO_SCRIPT: &str = include_str!("flake_info.nix");
 
 pub fn get_nixpkgs_info<T: AsRef<str> + Display>(nixpkgs_channel: T) -> Result<Vec<NixpkgsEntry>> {
-    let script_dir = tempfile::tempdir()?;
-    let script_path = script_dir.path().join("packages-config.nix");
-    writeln!(File::create(&script_path)?, "{}", NIXPKGS_SCRIPT)?;
-
     let mut command = Command::new("nix-env");
     let command = command.enable_capture();
     let command = command.add_args(&[
@@ -25,7 +20,7 @@ pub fn get_nixpkgs_info<T: AsRef<str> + Display>(nixpkgs_channel: T) -> Result<V
         format!("nixpkgs={}", nixpkgs_channel.as_ref()).as_str(),
         "--arg",
         "config",
-        format!("import {}", script_path.to_str().unwrap()).as_str(),
+        "import <nixpkgs/pkgs/top-level/packages-config.nix>",
         "-qa",
         "--meta",
         "--json",
