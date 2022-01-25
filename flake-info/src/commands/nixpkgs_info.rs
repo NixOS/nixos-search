@@ -27,6 +27,7 @@ pub fn get_nixpkgs_info<T: AsRef<str> + Display>(nixpkgs_channel: T) -> Result<V
         "config",
         format!("import {}", script_path.to_str().unwrap()).as_str(),
         "-qa",
+        "--meta",
         "--json",
     ]);
 
