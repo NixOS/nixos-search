@@ -5,43 +5,32 @@ let
   nixpkgs = (import <nixpkgs> {});
   lib = nixpkgs.lib;
 
-
-  default = drv: attr: default: if drv ? ${attr} then drv.${attr} else default;
-
   # filter = lib.filterAttrs (key: _ : key == "apps" || key == "packages");
 
   withSystem = fn: lib.mapAttrs (system: drvs: (fn system drvs));
   isValid = d:
     let
-      r = builtins.tryEval (lib.isDerivation d && ! (lib.attrByPath [ "meta" "broken" ] false d) && builtins.seq d.name true && d ? outputs);
+      r = builtins.tryEval (lib.isDerivation d && ! (lib.attrByPath [ "meta" "broken" ] false d) &&
+                            builtins.seq d.name true && d ? outputs);
     in
       r.success && r.value;
-  all = pkgs:
-    let
-      validPkgs = lib.filterAttrs (k: v: isValid v) pkgs;
-    in
-      validPkgs;
-
-
+  validPkgs = lib.filterAttrs (k: v: isValid v);
 
   readPackages = system: drvs: lib.mapAttrsToList (
     attribute_name: drv: (
-      # if isValid drv then
       {
         attribute_name = attribute_name;
         system = system;
         name = drv.name;
         # TODO consider using `builtins.parseDrvName`
-        version = default drv "version" "";
+        version = drv.version or "";
         outputs = drv.outputs;
         # paths = builtins.listToAttrs ( map (output: {name = output; value = drv.${output};}) drv.outputs );
       }
       // lib.optionalAttrs (drv ? meta && drv.meta ? description) { inherit (drv.meta) description; }
       // lib.optionalAttrs (drv ? meta && drv.meta ? license) { inherit (drv.meta) license; }
-
-      # else {}
     )
-  ) (all drvs);
+  ) (validPkgs drvs);
   readApps = system: apps: lib.mapAttrsToList (
     attribute_name: app: (
       {
@@ -54,8 +43,7 @@ let
     )
   ) apps;
 
-  readOptions = modules: isNixOS: let
-
+  readOptions = let
     declarations = module: (
       lib.evalModules {
         modules = (if lib.isList module then module else [ module ]) ++ [
@@ -70,7 +58,7 @@ let
       }
     ).options;
 
-    cleanUpOption = module: opt:
+    cleanUpOption = extraAttrs: opt:
       let
         applyOnAttr = n: f: lib.optionalAttrs (builtins.hasAttr n opt) { ${n} = f opt.${n}; };
         mkDeclaration = decl:
@@ -96,31 +84,47 @@ let
         // applyOnAttr "example" substFunction # (_: { __type = "function"; })
         // applyOnAttr "type" substFunction
         // applyOnAttr "declarations" (map mkDeclaration)
-        // lib.optionalAttrs (!isNixOS) { flake = [ flake module ]; };
-
-
-    options = lib.mapAttrs (
-      attr: module: let
-        list = lib.optionAttrSetToDocList (declarations module);
-      in
-        map (cleanUpOption attr) (lib.filter (x: !x.internal) list)
-    ) modules;
+        // extraAttrs;
   in
-    lib.flatten (builtins.attrValues options);
+    { module, modulePath ? null }: let
+      opts = lib.optionAttrSetToDocList (declarations module);
+      extraAttrs = lib.optionalAttrs (modulePath != null) {
+        flake = modulePath;
+      };
+    in
+      map (cleanUpOption extraAttrs) (lib.filter (x: !x.internal) opts);
 
+  readFlakeOptions = let
+    nixosModulesOpts = builtins.concatLists (lib.mapAttrsToList (moduleName: module:
+      readOptions {
+        inherit module;
+        modulePath = [ flake moduleName ];
+      }
+    ) (resolved.nixosModules or {}));
+
+    nixosModuleOpts = lib.optionals (resolved ? nixosModule) (
+      readOptions {
+        module = resolved.nixosModule;
+        modulePath = [ flake ];
+      }
+    );
+  in
+    # We assume that `nixosModules` includes `nixosModule` when there
+    # are multiple modules
+    if nixosModulesOpts != [] then nixosModulesOpts else nixosModuleOpts;
 
   read = reader: set: lib.flatten (lib.attrValues (withSystem reader set));
 
-  legacyPackages' = read readPackages (default resolved "legacyPackages" {});
-  packages' = read readPackages (default resolved "packages" {});
+  legacyPackages' = read readPackages (resolved.legacyPackages or {});
+  packages' = read readPackages (resolved.packages or {});
 
-  apps' = read readApps (default resolved "apps" {});
+  apps' = read readApps (resolved.apps or {});
 
 
   collectSystems = lib.lists.foldr (
     drv@{ attribute_name, system, ... }: set:
       let
-        present = default set "${attribute_name}" ({ platforms = []; } // drv);
+        present = set."${attribute_name}" or ({ platforms = []; } // drv);
 
         drv' = present // {
           platforms = present.platforms ++ [ system ];
@@ -138,11 +142,9 @@ rec {
   legacyPackages = lib.attrValues (collectSystems legacyPackages');
   packages = lib.attrValues (collectSystems packages');
   apps = lib.attrValues (collectSystems apps');
-  options = readOptions (default resolved "nixosModules" {}) false;
-  nixos-options = readOptions (
-    {
-      "nixos" = import "${builtins.fetchTarball { url = flake; }}/nixos/modules/module-list.nix";
-    }
-  ) true;
+  options = readFlakeOptions;
+  nixos-options = readOptions {
+    module = import "${builtins.fetchTarball { url = flake; }}/nixos/modules/module-list.nix";
+  };
   all = packages ++ apps ++ options;
 }

@@ -21,22 +21,9 @@ jobs:
         name: nixos-search
         signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
 
-    - name: Install unstable channel
-      run: |
-        nix-channel --add https://nixos.org/channels/nixpkgs-unstable
-        nix-channel --update
-
-    - name: Installing NixFlakes
-      run: |
-        nix-env -iA nixpkgs.nixFlakes
-        echo 'experimental-features = nix-command flakes' | sudo tee -a /etc/nix/nix.conf
-        nix --version
-        cat /etc/nix/nix.conf
-        echo "$HOME/.nix-profile/bin" >> $GITHUB_PATH
-
     - name: Building search.nixos.org
       run: |
-        nix build ./#packages.x86_64-linux.frontend
+        nix -vL build .#frontend
         mkdir ./dist
         cp -RL ./result/* ./dist/
 

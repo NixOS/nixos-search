@@ -63,8 +63,18 @@ pub struct NixOption {
     pub default: Option<DocValue>,
     pub example: Option<DocValue>,
 
-    /// If defined in a flake, contains defining flake and module
-    pub flake: Option<(String, String)>,
+    /// If defined in a flake, contains defining flake and optionally a module
+    pub flake: Option<ModulePath>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ModulePath {
+    /// A module taken from <flake>.nixosModule
+    /// JSON representation is a list, therefore use a 1-Tuple as representation
+    DefaultModule((String,)),
+    /// A module taken from <flake>.nixosModules.<name>
+    NamedModule((String, String)),
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -343,6 +353,32 @@ mod tests {
             .into_iter()
             .map(|(attribute, package)| NixpkgsEntry::Derivation { attribute, package })
             .collect();
+    }
+
+    #[test]
+    fn test_flake_option() {
+        let json = r#"
+        {
+            "declarations": [],
+            "name": "test-option",
+            "flake": ["flake", "module"]
+        }
+        "#;
+
+        serde_json::from_str::<NixOption>(json).unwrap();
+    }
+
+    #[test]
+    fn test_flake_option_default_module() {
+        let json = r#"
+        {
+            "declarations": [],
+            "name": "test-option",
+            "flake": ["flake"]
+        }
+        "#;
+
+        serde_json::from_str::<NixOption>(json).unwrap();
     }
 
     #[test]
