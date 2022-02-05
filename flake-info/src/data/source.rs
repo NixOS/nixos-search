@@ -99,23 +99,33 @@ impl Source {
             sha: String,
         }
 
-        let git_ref = reqwest::Client::builder()
-            .user_agent("curl") // thank you github
+        let request = reqwest::Client::builder()
+            .user_agent("nixos-search")
             .build()?
             .get(format!(
                 "https://api.github.com/repos/nixos/nixpkgs/branches/nixos-{}",
                 channel
-            ))
-            .send()
-            .await?
-            .json::<ApiResult>()
-            .await?
-            .commit
-            .sha;
+            ));
 
-        let nixpkgs = Nixpkgs { channel, git_ref };
+        let request = match std::env::var("GITHUB_TOKEN") {
+            Ok(token) => request.bearer_auth(token),
+            _ => request,
+        };
 
-        Ok(nixpkgs)
+        let response = request.send().await?;
+
+        if !response.status().is_success() {
+            Err(anyhow::anyhow!("GitHub returned {:?} {}", response.status(), response.text().await?))
+        } else {
+            let git_ref = response.json::<ApiResult>()
+                .await?
+                .commit
+                .sha;
+
+            let nixpkgs = Nixpkgs { channel, git_ref };
+
+            Ok(nixpkgs)
+        }
     }
 }
 
