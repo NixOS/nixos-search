@@ -17,7 +17,6 @@ jobs:
         channel:
           - unstable
           - 21.11
-          - 21.05
 
     env:
       RUST_LOG: debug

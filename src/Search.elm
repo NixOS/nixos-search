@@ -15,8 +15,8 @@ module Search exposing
     , decodeResult
     , defaultFlakeId
     , elementId
-    , flakeFromId
-    , flakes
+    -- , flakeFromId
+    -- , flakes
     , fromSortId
     , init
     , makeRequest
@@ -269,7 +269,7 @@ ensureLoading :
     Model a b
     -> Model a b
 ensureLoading model =
-    if model.query /= Nothing && model.query /= Just "" && (List.member model.channel channels || List.member model.channel flakeIds) then
+    if model.query /= Nothing && model.query /= Just "" && List.member model.channel channels then
         { model | result = RemoteData.Loading }
 
     else
@@ -477,7 +477,6 @@ createUrl toRoute model =
 
 type Channel
     = Unstable
-    | Release_21_05
     | Release_21_11
 
 
@@ -503,9 +502,6 @@ channelDetails channel =
         Unstable ->
             ChannelDetails "unstable" "unstable" "nixos/trunk-combined" "nixos-unstable"
 
-        Release_21_05 ->
-            ChannelDetails "21.05" "21.05" "nixos/release-21.05" "nixos-21.05"
-
         Release_21_11 ->
             ChannelDetails "21.11" "21.11" "nixos/release-21.11" "nixos-21.11"
 
@@ -515,9 +511,6 @@ channelFromId channel_id =
     case channel_id of
         "unstable" ->
             Just Unstable
-
-        "21.05" ->
-            Just Release_21_05
 
         "21.11" ->
             Just Release_21_11
@@ -534,8 +527,7 @@ channelDetailsFromId channel_id =
 
 channels : List String
 channels =
-    [ "21.05"
-    , "21.11"
+    [ "21.11"
     , "unstable"
     ]
 
@@ -553,58 +545,58 @@ defaultFlakeId =
     "group-manual"
 
 
-flakeFromId : String -> Maybe Flake
-flakeFromId flake_id =
-    let
-        find : String -> List Flake -> Maybe Flake
-        find id_ list =
-            case list of
-                flake :: rest ->
-                    if flake.id == id_ then
-                        Just flake
-
-                    else
-                        find id_ rest
-
-                [] ->
-                    Nothing
-    in
-    find flake_id flakes
-
-
-flakeIds : List String
-flakeIds =
-    List.map .id flakes
-
-
-flakes : List Flake
-flakes =
-    [ { id = "latest-nixos-21.11-latest"
-      , isNixpkgs = True
-      , title = "Nixpkgs 21.11"
-      , source = ""
-      }
-    , { id = "latest-nixos-21.05-latest"
-      , isNixpkgs = True
-      , title = "Nixpkgs 21.05"
-      , source = ""
-      }
-    , { id = "nixos-21.09-latest"
-      , isNixpkgs = True
-      , title = "Nixpkgs 21.09"
-      , source = ""
-      }
-    , { id = "latest-nixos-unstable"
-      , isNixpkgs = True
-      , title = "Nixpkgs Unstable"
-      , source = ""
-      }
-    , { id = "flakes"
-      , isNixpkgs = False
-      , title = "Public Flakes"
-      , source = ""
-      }
-    ]
+-- flakeFromId : String -> Maybe Flake
+-- flakeFromId flake_id =
+--     let
+--         find : String -> List Flake -> Maybe Flake
+--         find id_ list =
+--             case list of
+--                 flake :: rest ->
+--                     if flake.id == id_ then
+--                         Just flake
+--
+--                     else
+--                         find id_ rest
+--
+--                 [] ->
+--                     Nothing
+--     in
+--     find flake_id flakes
+--
+--
+-- flakeIds : List String
+-- flakeIds =
+--     List.map .id flakes
+--
+--
+-- flakes : List Flake
+-- flakes =
+--     [ { id = "latest-nixos-21.11-latest"
+--       , isNixpkgs = True
+--       , title = "Nixpkgs 21.11"
+--       , source = ""
+--       }
+--     , { id = "latest-nixos-21.05-latest"
+--       , isNixpkgs = True
+--       , title = "Nixpkgs 21.05"
+--       , source = ""
+--       }
+--     , { id = "nixos-21.09-latest"
+--       , isNixpkgs = True
+--       , title = "Nixpkgs 21.09"
+--       , source = ""
+--       }
+--     , { id = "latest-nixos-unstable"
+--       , isNixpkgs = True
+--       , title = "Nixpkgs Unstable"
+--       , source = ""
+--       }
+--     , { id = "flakes"
+--       , isNixpkgs = False
+--       , title = "Public Flakes"
+--       , source = ""
+--       }
+--     ]
 
 
 sortBy : List Sort
