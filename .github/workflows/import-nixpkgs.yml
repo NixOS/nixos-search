@@ -24,6 +24,11 @@ jobs:
       FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL }}
 
     steps:
+    - name: Increase swap space
+      uses: pierotofy/set-swap-space@v1.0
+      with:
+        swap-size-gb: 10
+
     - name: Checking out the repository
       uses: actions/checkout@v3
 
