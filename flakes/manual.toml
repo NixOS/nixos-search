@@ -45,8 +45,23 @@ repo = "nixos"
 
 [[sources]]
 type = "github"
+owner = "Mic92"
+repo = "sops-nix"
+
+[[sources]]
+type = "github"
 owner = "PaddiM8"
 repo = "kalker"
+
+[[sources]]
+type = "github"
+owner = "yusdacra"
+repo = "nix-cargo-integration"
+
+[[sources]]
+type = "github"
+owner = "yusdacra"
+repo = "rust-nix-templater"
 
 [[sources]]
 type = "github"
