@@ -64,5 +64,15 @@ owner = "yusdacra"
 repo = "rust-nix-templater"
 
 [[sources]]
+type = "github"
+owner = "srid"
+repo = "emanote"
+
+[[sources]]
 type = "git"
 url = "git+https://git.sr.ht/~kerstin/sway-timetracker?ref=main"
+
+[[sources]]
+type = "github"
+owner = "PolyMC"
+repo = "PolyMC"
