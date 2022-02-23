@@ -20,6 +20,8 @@ import Html
     exposing
         ( Html
         , a
+        , br
+        , code
         , div
         , em
         , h4
@@ -330,11 +332,27 @@ viewResultItem channel showInstallDetails show item =
                             |> Maybe.map
                                 (\x ->
                                     [ li [ trapClick ]
-                                        [ createShortDetailsItem "Homepage" x ]
+                                        [ createShortDetailsItem "🏡 Homepage" x ]
                                     ]
                                 )
                             |> Maybe.withDefault []
                         )
+                    |> List.append
+                        (if item.source.pversion == "" then
+                            []
+
+                         else
+                            [ text "Version: "
+                            , li [] [ strong [] [ text item.source.pversion ] ]
+                            ]
+                        )
+                    |> List.append
+                        [ text "Name: "
+                        , li [] [ code [] [ text item.source.pname ] ]
+                        ]
+                    |> List.append
+                        [ br [] []
+                        ]
                     |> List.append
                         (item.source.licenses
                             |> List.filterMap
@@ -352,22 +370,9 @@ viewResultItem channel showInstallDetails show item =
                                         ( Just fullName, Just url ) ->
                                             Just (createShortDetailsItem fullName url)
                                 )
-                            |> List.intersperse (text ", ")
-                            |> (\x -> [ li [] (List.append [ text "Licenses: " ] x) ])
+                            |> List.intersperse (text " ▪ ")
+                            |> (\x -> [ li [] (List.append [ text "License(s): " ] x) ])
                         )
-                    |> List.append
-                        (if item.source.pversion == "" then
-                            []
-
-                         else
-                            [ text "Version: "
-                            , li [] [ text item.source.pversion ]
-                            ]
-                        )
-                    |> List.append
-                        [ text "Name: "
-                        , li [] [ text item.source.pname ]
-                        ]
                 )
 
         showMaintainer maintainer =
@@ -637,7 +642,7 @@ renderSource item channel trapClick createShortDetailsItem createGithubUrl =
                             Just channelDetails ->
                                 [ li [ trapClick ]
                                     [ createShortDetailsItem
-                                        "Source"
+                                        "📦 Source"
                                         (createGithubUrl channelDetails.branch position)
                                     ]
                                 ]

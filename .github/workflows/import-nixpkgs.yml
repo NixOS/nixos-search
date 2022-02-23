@@ -50,6 +50,8 @@ jobs:
         nix -vL build .#flake-info
 
     - name: Import ${{ matrix.channel }} channel
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         ./result/bin/flake-info --push --elastic-schema-version=$(< VERSION) nixpkgs ${{ matrix.channel }}
       if: github.repository_owner == 'NixOS'
