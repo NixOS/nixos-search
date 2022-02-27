@@ -40,4 +40,14 @@ jobs:
         for flake_group in $(find ./flakes -name "*.toml")
         do
           ./result/bin/flake-info group $flake_group $(basename $flake_group)
+
+    - name: Building import_scripts
+      run: |
+        nix build .#flake-info
+
+    - name: Try importing all custom flakes
+      run: |
+        for flake_group in flakes/**/*.toml
+        do
+          ./result/bin/flake-info group "$flake_group" "$(basename "$flake_group" .toml)"
         done
