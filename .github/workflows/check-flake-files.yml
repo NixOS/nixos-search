@@ -2,9 +2,10 @@ name: "Check Flake Groups"
 
 on:
   workflow_dispatch:
-  push:
-    files:
-      - flakes/**
+  pull_request:
+    paths:
+      - 'flakes/**.toml'
+
 jobs:
   automatic-custom-flakes-check:
 
