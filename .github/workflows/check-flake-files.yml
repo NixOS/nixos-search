@@ -43,7 +43,6 @@ jobs:
         nix-channel --add https://nixos.org/channels/nixpkgs-unstable
         nix-channel --update
 
-   
     - name: Building import_scripts
       run: |
         nix build ./#packages.x86_64-linux.flake-info
