@@ -16,7 +16,7 @@ jobs:
 
     env:
       RUST_LOG: debug
-    
+
     steps:
 
     - name: Checking out the repository
@@ -28,18 +28,6 @@ jobs:
       uses: ./.github/actions/common-setup
       with:
         CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
-
-   
-    - name: Building import_scripts
-      run: |
-        nix build ./#packages.x86_64-linux.flake-info
-
-    - name: Try importing all custom flakes
-      run: |
-
-        for flake_group in $(find ./flakes -name "*.toml")
-        do
-          ./result/bin/flake-info group $flake_group $(basename $flake_group)
 
     - name: Building import_scripts
       run: |
