@@ -45,7 +45,7 @@ jobs:
 
     - name: Building import_scripts
       run: |
-        nix build ./#packages.x86_64-linux.flake-info
+        nix build .#flake-info
 
     - name: Try importing all custom flakes
       run: |
