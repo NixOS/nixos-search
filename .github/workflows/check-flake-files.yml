@@ -1,0 +1,55 @@
+name: "Check Flake Groups"
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'flakes/**.toml'
+
+jobs:
+  automatic-custom-flakes-check:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: true
+
+    env:
+      RUST_LOG: debug
+    
+    steps:
+
+    - name: Checking out the repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Installing Nix
+      uses: cachix/install-nix-action@v16
+      with:
+        install_url: https://nixos-nix-install-tests.cachix.org/serve/i6laym9jw3wg9mw6ncyrk6gjx4l34vvx/install
+        install_options: '--tarball-url-prefix https://nixos-nix-install-tests.cachix.org/serve'
+        extra_nix_config: |
+          experimental-features = nix-command flakes
+          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+    - uses: cachix/cachix-action@v10
+      with:
+        name: nixos-search
+        signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
+
+    - name: Install unstable channel
+      run: |
+        nix-channel --add https://nixos.org/channels/nixpkgs-unstable
+        nix-channel --update
+
+    - name: Building import_scripts
+      run: |
+        nix build .#flake-info
+
+    - name: Try importing all custom flakes
+      run: |
+        for flake_group in flakes/**/*.toml
+        do
+          ./result/bin/flake-info group "$flake_group" "$(basename "$flake_group" .toml)"
+        done
