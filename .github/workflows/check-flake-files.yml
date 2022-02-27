@@ -49,7 +49,7 @@ jobs:
 
     - name: Try importing all custom flakes
       run: |
-        for flake_group in $(find ./flakes -name "*.toml")
+        for flake_group in flakes/**/*.toml
         do
-          ./result/bin/flake-info group $flake_group $(basename $flake_group)
+          ./result/bin/flake-info group "$flake_group" "$(basename "$flake_group" .toml)"
         done
