@@ -10,7 +10,7 @@ jobs:
     steps:
    
     - name: Setup
-      uses: .github/actions/common-setup
+      uses: ./.github/actions/common-setup
 
     - name: Building search.nixos.org
       run: |
