@@ -1,5 +1,8 @@
 name: Setup Environment
-
+inputs:
+  CACHIX_SIGNING_KEY: # determines what node version to install
+    required: true
+    description: 'Cachix Signing Key'
 runs:
   using: "composite"
   steps:
@@ -12,8 +15,9 @@ runs:
     - uses: cachix/cachix-action@v10
       with:
         name: nixos-search
-        signingKey: '${{ secrets.CACHIX_SIGNING_KEY }}'
+        signingKey: '${{ inputs.CACHIX_SIGNING_KEY }}'
 
     - name: Installing jq
+      shell: bash
       run: |
         nix-env -f '<nixpkgs>' -iA jq
