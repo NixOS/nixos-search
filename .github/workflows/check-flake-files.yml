@@ -33,6 +33,7 @@ jobs:
 
     - name: Try importing all custom flakes
       run: |
+        shopt -s globstar
         for flake_group in flakes/**/*.toml
         do
           ./result/bin/flake-info group "$flake_group" "$(basename "$flake_group" .toml)"
