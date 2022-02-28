@@ -155,17 +155,6 @@ async fn main() -> Result<()> {
     let command_result = run_command(args.command, args.kind, &args.extra).await;
 
     if let Err(error) = command_result {
-        match error {
-            FlakeInfoError::Flake(ref e)
-            | FlakeInfoError::Nixpkgs(ref e)
-            | FlakeInfoError::IO(ref e) => {
-                error!("{}", e);
-            }
-            FlakeInfoError::Group(ref el) => {
-                el.iter().for_each(|e| error!("{}", e));
-            }
-        }
-
         return Err(error.into());
     }
 
@@ -187,9 +176,8 @@ enum FlakeInfoError {
     Flake(anyhow::Error),
     #[error("Getting nixpkgs info caused an error: {0:?}")]
     Nixpkgs(anyhow::Error),
-    #[error("Getting group info caused one or more errors: {0:?}")]
-    Group(Vec<anyhow::Error>),
-
+    #[error("Some members of the group '{0}' could not be processed: \n {}", .1.iter().enumerate().map(|(n, e)| format!("{}: {:?}", n+1, e)).collect::<Vec<String>>().join("\n\n"))]
+    Group(String, Vec<anyhow::Error>),
     #[error("Couldn't perform IO: {0}")]
     IO(#[from] io::Error),
 }
