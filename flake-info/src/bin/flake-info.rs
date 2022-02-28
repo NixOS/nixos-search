@@ -191,7 +191,7 @@ enum FlakeInfoError {
     Group(Vec<anyhow::Error>),
 
     #[error("Couldn't perform IO: {0}")]
-    IO(anyhow::Error),
+    IO(#[from] io::Error),
 }
 
 async fn run_command(
