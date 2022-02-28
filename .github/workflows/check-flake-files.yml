@@ -4,11 +4,10 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - 'flakes/**.toml'
+      - "flakes/**.toml"
 
 jobs:
   automatic-custom-flakes-check:
-
     runs-on: ubuntu-latest
 
     strategy:
