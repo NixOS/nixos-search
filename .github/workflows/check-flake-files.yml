@@ -34,7 +34,7 @@ jobs:
       run: |
         shopt -s globstar
 
-        local had_error=0
+        had_error=0
 
         for flake_group in flakes/**/*.toml
         do
