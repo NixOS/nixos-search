@@ -50,5 +50,5 @@ jobs:
 
           echo ::endgroup::
 
-          exit $had_error
         done
+        exit $had_error
