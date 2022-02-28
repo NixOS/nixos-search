@@ -38,14 +38,14 @@ jobs:
 
         for flake_group in flakes/**/*.toml
         do
-          echo "::group::Group \"$(basename $flake_group)\""
+          echo "::group::Group \"$(basename $flake_group .toml)\""
         
          ./result/bin/flake-info group "$flake_group" "$(basename "$flake_group" .toml)" --report
 
           if [[ -f "./report.txt" ]]
           then
             had_error=1
-            echo "::error file=$flake_group::$(cat ./report.txt)"
+            echo "::error file=$flake_group::$(< ./report.txt)"
           fi
 
           echo ::endgroup::
