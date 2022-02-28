@@ -34,16 +34,22 @@ jobs:
 
     - name: Try importing all custom flakes
       run: |
+
+        local had_error=0
+
         for flake_group in flakes/**/*.toml
         do
-          echo ::group::{$(basename $flake_group)}
+          echo "::group::Group \"$(basename $flake_group)\""
         
          ./result/bin/flake-info group "$flake_group" "$(basename "$flake_group" .toml)" --report
 
           if [[ -f "./report.txt" ]]
           then
+            had_error=1
             echo "::error file=$flake_group::$(cat ./report.txt)"
           fi
 
           echo ::endgroup::
+
+          exit $had_error
         done
