@@ -85,3 +85,7 @@ repo = "nixos-mailserver"
 [[source]]
 type = "git"
 url = "git+https://codeberg.org/wolfangaukang/stream-alert-bot?ref=main"
+
+[[source]]
+type = "git"
+url = "git+https://codeberg.org/wolfangaukang/python-trovo?ref=main"
