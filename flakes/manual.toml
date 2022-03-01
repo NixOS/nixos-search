@@ -82,14 +82,14 @@ type = "gitlab"
 owner = "simple-nixos-mailserver"
 repo = "nixos-mailserver"
 
-[[source]]
+[[sources]]
 type = "git"
 url = "git+https://codeberg.org/wolfangaukang/stream-alert-bot?ref=main"
 
-[[source]]
+[[sources]]
 type = "git"
 url = "git+https://codeberg.org/wolfangaukang/python-trovo?ref=main"
 
-[[source]]
+[[sources]]
 type = "git"
 url = "git+https://codeberg.org/wolfangaukang/multifirefox?ref=main"
