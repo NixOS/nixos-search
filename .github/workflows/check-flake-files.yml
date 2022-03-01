@@ -48,11 +48,12 @@ jobs:
 
             # sic.:
             # Workaround for multi line output
-            echo "REPORT<<EOF" >> $GITHUB_ENV
-            echo "$(< ./report.txt)" >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-
-            echo "::error file=$flake_group::${{ env.REPORT }}"
+            report="$(< ./report.txt)"
+            report="${report//'%'/'%25'}"
+            report="${report//$'\n'/'%0A'}"
+            report="${report//$'\r'/'%0D'}"
+           
+            echo "::error file=$flake_group::$report"
           fi
 
           echo ::endgroup::
