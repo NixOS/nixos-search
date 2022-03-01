@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     ffi::OsStr,
     fs::{self, File},
-    io::Read,
+    io::{Read, self},
     path::Path,
 };
 
@@ -74,8 +74,8 @@ impl Source {
         }
     }
 
-    pub fn read_sources_file(path: &Path) -> Result<Vec<Source>> {
-        let mut file = File::open(path).with_context(|| "Failed to open input file")?;
+    pub fn read_sources_file(path: &Path) -> io::Result<Vec<Source>> {
+        let mut file = File::open(path)?;
 
         let mut buf = String::new();
         file.read_to_string(&mut buf)?;
