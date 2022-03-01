@@ -52,7 +52,7 @@ jobs:
             echo "$(< ./report.txt)" >> $GITHUB_ENV
             echo "EOF" >> $GITHUB_ENV
 
-            echo "::error file=$flake_group::${ env.REPORT }"
+            echo "::error file=$flake_group::${{ env.REPORT }}"
           fi
 
           echo ::endgroup::
