@@ -339,10 +339,11 @@ viewResultItem channel showInstallDetails show item =
                         , strong [] [ text item.source.pversion ]
                         ]
                     ]
-                ++ optionals (item.source.outputs /= [] && item.source.outputs /= [ "out" ])
+                ++ optionals (List.length item.source.outputs > 1)
                     [ li [] (
                         text "Outputs: "
                         :: (item.source.outputs
+                            |> List.sort
                             |> List.map (\o -> code [] [ text o ])
                             |> List.intersperse (text " "))
                         )
