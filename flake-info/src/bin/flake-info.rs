@@ -43,6 +43,7 @@ struct Args {
 
 #[derive(StructOpt, Debug)]
 enum Command {
+    #[structopt(about = "Import a flake")]
     Flake {
         #[structopt(help = "Flake identifier passed to nix to gather information about")]
         flake: String,
@@ -56,10 +57,13 @@ enum Command {
         #[structopt(long, help = "Whether to gc the store after info or not")]
         gc: bool,
     },
+    #[structopt(about = "Import official nixpkgs channel")]
     Nixpkgs {
         #[structopt(help = "Nixpkgs channel to import")]
         channel: String,
     },
+
+    #[structopt(about = "Load and import a group of flakes from a file")]
     Group {
         #[structopt(
             help = "Points to a TOML or JSON file containing info targets. If file does not end in 'toml' json is assumed"
