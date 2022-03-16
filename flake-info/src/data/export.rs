@@ -254,7 +254,7 @@ impl From<import::NixpkgsEntry> for Derivation {
                         .platforms
                         .map(Flatten::flatten)
                         .unwrap_or_default(),
-                    package_outputs: package.meta.outputs.unwrap_or_default(),
+                    package_outputs: package.outputs.into_keys().collect(),
                     package_license,
                     package_license_set,
                     package_maintainers,

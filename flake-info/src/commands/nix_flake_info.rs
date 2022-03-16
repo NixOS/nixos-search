@@ -14,7 +14,7 @@ pub fn get_flake_info<T: AsRef<str> + Display>(
 ) -> Result<Flake> {
     let args = ["flake", "metadata", "--json", "--no-write-lock-file"];
     let mut command = Command::with_args("nix", args);
-    let command = command.add_arg(flake_ref.as_ref());
+    command.add_arg(flake_ref.as_ref());
     if temp_store {
         let temp_store_path = PathBuf::from("/tmp/flake-info-store");
         if !temp_store_path.exists() {
@@ -24,7 +24,7 @@ pub fn get_flake_info<T: AsRef<str> + Display>(
         command.add_arg_pair("--store", temp_store_path.canonicalize()?);
     }
     command.add_args(extra);
-    let mut command = command.enable_capture();
+    command.enable_capture();
     command.log_to = LogTo::Log;
     command.log_output_on_error = true;
 

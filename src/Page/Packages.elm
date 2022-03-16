@@ -67,6 +67,7 @@ type alias ResultItemSource =
     { attr_name : String
     , pname : String
     , pversion : String
+    , outputs : List String
     , description : Maybe String
     , longDescription : Maybe String
     , licenses : List ResultPackageLicense
@@ -302,6 +303,8 @@ viewResultItem :
     -> Html Msg
 viewResultItem channel showInstallDetails show item =
     let
+        optionals b l = if b then l else []
+
         cleanPosition =
             Regex.fromString "^[0-9a-f]+\\.tar\\.gz\\/"
                 |> Maybe.withDefault Regex.never
@@ -324,109 +327,104 @@ viewResultItem channel showInstallDetails show item =
                 [ text title ]
 
         shortPackageDetails =
-            ul []
-                (renderSource item channel trapClick createShortDetailsItem createGithubUrl
-                    |> List.append
-                        (item.source.homepage
-                            |> List.head
-                            |> Maybe.map
-                                (\x ->
-                                    [ li [ trapClick ]
-                                        [ createShortDetailsItem "🏡 Homepage" x ]
-                                    ]
-                                )
-                            |> Maybe.withDefault []
-                        )
-                    |> List.append
-                        (if item.source.pversion == "" then
-                            []
-
-                         else
-                            [ text "Version: "
-                            , li [] [ strong [] [ text item.source.pversion ] ]
-                            ]
-                        )
-                    |> List.append
-                        [ text "Name: "
-                        , li [] [ code [] [ text item.source.pname ] ]
-                        ]
-                    |> List.append
-                        [ br [] []
-                        ]
-                    |> List.append
-                        (item.source.licenses
-                            |> List.filterMap
-                                (\license ->
-                                    case ( license.fullName, license.url ) of
-                                        ( Nothing, Nothing ) ->
-                                            Nothing
-
-                                        ( Just fullName, Nothing ) ->
-                                            Just (text fullName)
-
-                                        ( Nothing, Just url ) ->
-                                            Just (createShortDetailsItem "Unknown" url)
-
-                                        ( Just fullName, Just url ) ->
-                                            Just (createShortDetailsItem fullName url)
-                                )
-                            |> List.intersperse (text " ▪ ")
-                            |> (\x -> [ li [] (List.append [ text "License(s): " ] x) ])
-                        )
-                )
-
-        showMaintainer maintainer =
-            li []
-                [ div []
-                    [ a
-                        [ href <|
-                            case maintainer.github of
-                                Just github ->
-                                    "https://github.com/" ++ github
-
-                                Nothing ->
-                                    "#"
-                        ]
-                        [ text <| Maybe.withDefault "" maintainer.name ++ " <" ++ Maybe.withDefault "" maintainer.email ++ ">" ]
-                    , a
-                        [ href <|
-                            case maintainer.email of
-                                Just email ->
-                                    "mailto:" ++ email
-
-                                Nothing ->
-                                    "#"
-                        ]
-                        [ text "(mail)" ]
+            ul [] (
+                [ li []
+                    [ text "Name: "
+                    , code [] [ text item.source.pname ]
                     ]
                 ]
+                ++ optionals (item.source.pversion /= "")
+                    [ li []
+                        [ text "Version: "
+                        , strong [] [ text item.source.pversion ]
+                        ]
+                    ]
+                ++ optionals (List.length item.source.outputs > 1)
+                    [ li [] (
+                        text "Outputs: "
+                        :: (item.source.outputs
+                            |> List.sort
+                            |> List.map (\o -> code [] [ text o ])
+                            |> List.intersperse (text " "))
+                        )
+                    ]
+                ++ (
+                    item.source.homepage
+                    |> List.head
+                    |> Maybe.map
+                        (\x ->
+                            [ li [ trapClick ]
+                                [ createShortDetailsItem "🌐 Homepage" x ]
+                            ]
+                        )
+                    |> Maybe.withDefault []
+                )
+                ++ renderSource item channel trapClick createShortDetailsItem createGithubUrl
+                ++ (
+                    let
+                        licenses = item.source.licenses |> List.filterMap
+                            (\license ->
+                                case ( license.fullName, license.url ) of
+                                    ( Nothing, Nothing ) ->
+                                        Nothing
+
+                                    ( Just fullName, Nothing ) ->
+                                        Just (text fullName)
+
+                                    ( Nothing, Just url ) ->
+                                        Just (createShortDetailsItem "Unknown" url)
+
+                                    ( Just fullName, Just url ) ->
+                                        Just (createShortDetailsItem fullName url)
+                            )
+                    in
+                    optionals (licenses /= [])
+                        [ li [] (
+                            text ("License" ++ (if List.length licenses == 1 then "" else "s") ++ ": ")
+                            :: List.intersperse (text " ▪ ") licenses
+                        ) ]
+                )
+            )
+
+        showMaintainer maintainer =
+            let
+                optionalLink url node = case url of
+                    Just u -> a [ href u] [ node ]
+                    Nothing -> node
+
+                maybe m d = Maybe.withDefault d m
+            in
+            li [] (
+                optionalLink
+                    (Maybe.map (String.append "https://github.com/") maintainer.github)
+                    (text <| maybe maintainer.name <| maybe maintainer.github "Unknown")
+                :: case maintainer.email of
+                    Just email ->
+                        [ text " <"
+                        , a [ href ("mailto:" ++ email) ] [ text email ]
+                        , text ">" ]
+                    Nothing -> []
+                )
 
         mailtoAllMaintainers maintainers =
             let
-                maintainerMails =
-                    List.filterMap (\m -> m.email) maintainers
+                maintainerMails = List.filterMap (\m -> m.email) maintainers
             in
-            li []
-                [ a
-                    [ href <|
-                        ("mailto:" ++ String.join "," maintainerMails)
+            optionals (List.length maintainerMails > 1)
+                [ li []
+                    [ a
+                        [ href ("mailto:" ++ String.join "," maintainerMails) ]
+                        [ text "✉️ Mail to all maintainers" ]
                     ]
-                    [ text "Mail to all maintainers" ]
                 ]
 
         showPlatform platform =
             case Search.channelDetailsFromId channel of
                 Just channelDetails ->
                     let
-                        url =
-                            "https://hydra.nixos.org/job/" ++ channelDetails.jobset ++ "/nixpkgs." ++ item.source.attr_name ++ "." ++ platform
+                        url = "https://hydra.nixos.org/job/" ++ channelDetails.jobset ++ "/nixpkgs." ++ item.source.attr_name ++ "." ++ platform
                     in
-                    li []
-                        [ a
-                            [ href url
-                            ]
-                            [ text platform ]
-                        ]
+                    li [] [ a [ href url ] [ text platform ] ]
 
                 Nothing ->
                     li [] [ text platform ]
@@ -439,11 +437,10 @@ viewResultItem channel showInstallDetails show item =
                             [ p [] [ text "This package has no maintainers." ] ]
 
                          else
-                            [ ul []
-                                (List.singleton (mailtoAllMaintainers item.source.maintainers)
-                                    |> List.append (List.map showMaintainer item.source.maintainers)
-                                )
-                            ]
+                            [ ul [] (
+                                List.map showMaintainer item.source.maintainers
+                                ++ mailtoAllMaintainers item.source.maintainers
+                            ) ]
                         )
                     )
                 , div []
@@ -459,127 +456,124 @@ viewResultItem channel showInstallDetails show item =
             ]
 
         longerPackageDetails =
-            if Just item.source.attr_name == show then
+            optionals (Just item.source.attr_name == show)
                 [ div [ trapClick ]
-                    (maintainersAndPlatforms
-                        |> List.append
-                            (item.source.longDescription
-                                |> Maybe.map (\desc -> [ p [] [ text desc ] ])
-                                |> Maybe.withDefault []
-                            )
-                        |> List.append
-                            [ div []
-                                [ h4 []
-                                    [ text "How to install "
-                                    , em [] [ text item.source.attr_name ]
-                                    , text "?"
-                                    ]
-                                , ul [ class "nav nav-tabs" ] <|
-                                    Maybe.withDefault
-                                        [ li
-                                            [ classList
-                                                [ ( "active", List.member showInstallDetails [ Search.Unset, Search.FromNixOS, Search.FromFlake ] )
-                                                , ( "pull-right", True )
-                                                ]
-                                            ]
-                                            [ a
-                                                [ href "#"
-                                                , Search.onClickStop <|
-                                                    SearchMsg <|
-                                                        Search.ShowInstallDetails Search.FromNixOS
-                                                ]
-                                                [ text "On NixOS" ]
-                                            ]
-                                        , li
-                                            [ classList
-                                                [ ( "active", showInstallDetails == Search.FromNixpkgs )
-                                                , ( "pull-right", True )
-                                                ]
-                                            ]
-                                            [ a
-                                                [ href "#"
-                                                , Search.onClickStop <|
-                                                    SearchMsg <|
-                                                        Search.ShowInstallDetails Search.FromNixpkgs
-                                                ]
-                                                [ text "On non-NixOS" ]
-                                            ]
-                                        ]
-                                    <|
-                                        Maybe.map
-                                            (\_ ->
-                                                [ li
-                                                    [ classList
-                                                        [ ( "active", True )
-                                                        , ( "pull-right", True )
-                                                        ]
-                                                    ]
-                                                    [ a
-                                                        [ href "#"
-                                                        , Search.onClickStop <|
-                                                            SearchMsg <|
-                                                                Search.ShowInstallDetails Search.FromFlake
-                                                        ]
-                                                        [ text "Install from flake" ]
-                                                    ]
-                                                ]
-                                            )
-                                            item.source.flakeUrl
-                                , div
-                                    [ class "tab-content" ]
-                                  <|
-                                    Maybe.withDefault
-                                        [ div
-                                            [ classList
-                                                [ ( "active", showInstallDetails == Search.FromNixpkgs )
-                                                ]
-                                            , class "tab-pane"
-                                            , id "package-details-nixpkgs"
-                                            ]
-                                            [ pre [ class "code-block" ]
-                                                [ text "nix-env -iA nixpkgs."
-                                                , strong [] [ text item.source.attr_name ]
-                                                ]
-                                            ]
-                                        , div
-                                            [ classList
-                                                [ ( "tab-pane", True )
-                                                , ( "active", List.member showInstallDetails [ Search.Unset, Search.FromNixOS, Search.FromFlake ] )
-                                                ]
-                                            ]
-                                            [ pre [ class "code-block" ]
-                                                [ text <| "nix-env -iA nixos."
-                                                , strong [] [ text item.source.attr_name ]
-                                                ]
-                                            ]
-                                        ]
-                                    <|
-                                        Maybe.map
-                                            (\url ->
-                                                [ div
-                                                    [ classList
-                                                        [ ( "tab-pane", True )
-                                                        , ( "active", True )
-                                                        ]
-                                                    ]
-                                                    [ pre [ class "code-block" ]
-                                                        [ text "nix build "
-                                                        , strong [] [ text url ]
-                                                        , text "#"
-                                                        , em [] [ text item.source.attr_name ]
-                                                        ]
-                                                    ]
-                                                ]
-                                            )
-                                        <|
-                                            Maybe.map Tuple.first item.source.flakeUrl
+                    (
+                        [ div []
+                            [ h4 []
+                                [ text "How to install "
+                                , em [] [ text item.source.attr_name ]
+                                , text "?"
                                 ]
+                            , ul [ class "nav nav-tabs" ] <|
+                                Maybe.withDefault
+                                    [ li
+                                        [ classList
+                                            [ ( "active", List.member showInstallDetails [ Search.Unset, Search.FromNixOS, Search.FromFlake ] )
+                                            , ( "pull-right", True )
+                                            ]
+                                        ]
+                                        [ a
+                                            [ href "#"
+                                            , Search.onClickStop <|
+                                                SearchMsg <|
+                                                    Search.ShowInstallDetails Search.FromNixOS
+                                            ]
+                                            [ text "On NixOS" ]
+                                        ]
+                                    , li
+                                        [ classList
+                                            [ ( "active", showInstallDetails == Search.FromNixpkgs )
+                                            , ( "pull-right", True )
+                                            ]
+                                        ]
+                                        [ a
+                                            [ href "#"
+                                            , Search.onClickStop <|
+                                                SearchMsg <|
+                                                    Search.ShowInstallDetails Search.FromNixpkgs
+                                            ]
+                                            [ text "On non-NixOS" ]
+                                        ]
+                                    ]
+                                <|
+                                    Maybe.map
+                                        (\_ ->
+                                            [ li
+                                                [ classList
+                                                    [ ( "active", True )
+                                                    , ( "pull-right", True )
+                                                    ]
+                                                ]
+                                                [ a
+                                                    [ href "#"
+                                                    , Search.onClickStop <|
+                                                        SearchMsg <|
+                                                            Search.ShowInstallDetails Search.FromFlake
+                                                    ]
+                                                    [ text "Install from flake" ]
+                                                ]
+                                            ]
+                                        )
+                                        item.source.flakeUrl
+                            , div
+                                [ class "tab-content" ]
+                                <|
+                                Maybe.withDefault
+                                    [ div
+                                        [ classList
+                                            [ ( "active", showInstallDetails == Search.FromNixpkgs )
+                                            ]
+                                        , class "tab-pane"
+                                        , id "package-details-nixpkgs"
+                                        ]
+                                        [ pre [ class "code-block" ]
+                                            [ text "nix-env -iA nixpkgs."
+                                            , strong [] [ text item.source.attr_name ]
+                                            ]
+                                        ]
+                                    , div
+                                        [ classList
+                                            [ ( "tab-pane", True )
+                                            , ( "active", List.member showInstallDetails [ Search.Unset, Search.FromNixOS, Search.FromFlake ] )
+                                            ]
+                                        ]
+                                        [ pre [ class "code-block" ]
+                                            [ text <| "nix-env -iA nixos."
+                                            , strong [] [ text item.source.attr_name ]
+                                            ]
+                                        ]
+                                    ]
+                                <|
+                                    Maybe.map
+                                        (\url ->
+                                            [ div
+                                                [ classList
+                                                    [ ( "tab-pane", True )
+                                                    , ( "active", True )
+                                                    ]
+                                                ]
+                                                [ pre [ class "code-block" ]
+                                                    [ text "nix build "
+                                                    , strong [] [ text url ]
+                                                    , text "#"
+                                                    , em [] [ text item.source.attr_name ]
+                                                    ]
+                                                ]
+                                            ]
+                                        )
+                                    <|
+                                        Maybe.map Tuple.first item.source.flakeUrl
                             ]
+                        ]
+                        ++ (
+                            item.source.longDescription
+                            |> Maybe.map (\desc -> [ p [] [ text desc ] ])
+                            |> Maybe.withDefault []
+                        )
+                        ++ maintainersAndPlatforms
                     )
                 ]
-
-            else
-                []
 
         toggle =
             SearchMsg (Search.ShowDetails item.source.attr_name)
@@ -602,7 +596,6 @@ viewResultItem channel showInstallDetails show item =
                             ]
                             [ text item.source.attr_name ]
                       ]
-                    
 
                 _ ->
                     [ a
@@ -617,52 +610,39 @@ viewResultItem channel showInstallDetails show item =
         , classList [ ( "opened", isOpen ) ]
         , Search.elementId item.source.attr_name
         ]
-        ([]
-            |> List.append longerPackageDetails
-            |> List.append
-                [ span [] flakeOrNixpkgs
-                , div [] [ text <| Maybe.withDefault "" item.source.description ]
-                , shortPackageDetails
-                , Search.showMoreButton toggle isOpen
-                ]
+        (
+            [ span [] flakeOrNixpkgs
+            , div [] [ text <| Maybe.withDefault "" item.source.description ]
+            , shortPackageDetails
+            , Search.showMoreButton toggle isOpen
+            ] ++ longerPackageDetails
         )
 
 
 renderSource : Search.ResultItem ResultItemSource -> String -> Html.Attribute Msg -> (String -> String -> Html Msg) -> (String -> String -> String) -> List (Html Msg)
 renderSource item channel trapClick createShortDetailsItem createGithubUrl =
     let
-        postion =
+        makeLink text url = [ li [ trapClick ] [ createShortDetailsItem text url ] ]
+
+        position =
             item.source.position
                 |> Maybe.map
-                    (\position ->
+                    (\pos ->
                         case Search.channelDetailsFromId channel of
                             Nothing ->
                                 []
-
                             Just channelDetails ->
-                                [ li [ trapClick ]
-                                    [ createShortDetailsItem
-                                        "📦 Source"
-                                        (createGithubUrl channelDetails.branch position)
-                                    ]
-                                ]
+                                makeLink "📦 Source" (createGithubUrl channelDetails.branch pos)
                     )
 
         flakeDef =
             Maybe.map2
-                (\name resolved ->
-                    [ li [ trapClick ]
-                        [ createShortDetailsItem
-                            ("Flake: " ++ name)
-                            resolved
-                        ]
-                    ]
-                )
+                (\name resolved -> makeLink ("Flake: " ++ name) resolved)
                 item.source.flakeName
             <|
                 Maybe.map Tuple.second item.source.flakeUrl
     in
-    Maybe.withDefault (Maybe.withDefault [] flakeDef) postion
+    Maybe.withDefault (Maybe.withDefault [] flakeDef) position
 
 
 
@@ -795,6 +775,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.required "package_attr_name" Json.Decode.string
         |> Json.Decode.Pipeline.required "package_pname" Json.Decode.string
         |> Json.Decode.Pipeline.required "package_pversion" Json.Decode.string
+        |> Json.Decode.Pipeline.required "package_outputs" (Json.Decode.list Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_description" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_longDescription" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_license" (Json.Decode.list decodeResultPackageLicense)
