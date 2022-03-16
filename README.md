@@ -51,7 +51,7 @@ application.
 
 ## Deploying
 
-- On each commit to `main` branch a GitHub Action is trigger.
+- On each commit to `main` branch a GitHub Action is triggered.
 - GitHub Action then builds production version of the web application using
   `yarn prod` command.
 - The built web application (in `./dist`) is then deployed to Netlify.
