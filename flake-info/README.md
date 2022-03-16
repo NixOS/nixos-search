@@ -83,14 +83,14 @@ $ flake-info flake github:ngi-nix/offen
 
 nixpkgs currently have to be imported in a different way. This is what the `nixpkgs` subcommand exists for.
 
-It takes any valid git reference to the upstream [`nixos/nixpkgs`](https://github.com/iixos/nixpkgs/) repo as an argument and produces a complete output.
+It takes any valid git reference to the upstream [`nixos/nixpkgs`](https://github.com/nixos/nixpkgs/) repo as an argument and produces a complete output.
 
 **This operation may take a short while and produces lots of output**
 
 #### Example
 
 ```
-$ flake-info nixpkgs nixos-21.05
+$ flake-info nixpkgs unstable
 ```
 
 ### group
@@ -157,7 +157,7 @@ A number of flags is dedicated to pushing to elasticsearch.
 ```
 $ flake-info --push \
              --elastic-url http://localhost:5555 \
-             --elastic-index-name latest-21-21.05
+             --elastic-index-name latest-21-unstable
              --elastic-schema-version 21 group ./examples/ngi-nix.json ngi-nix
 ```
 
@@ -181,26 +181,23 @@ Enter the [nixos/nix](https://hub.docker.com/u/nixos/) docker image and proceed
 
 Note that you also need to have nix flakes support.
 
-Once you have nix installed run the following commands:
+Once you have nix (2.4 or later) installed run the following commands:
 
-1. ```
-   $ nix-shell -I nixpkgs=channel:nixos-21.05 -p nixFlakes
-   ```
-   to enter a shell with the preview version of nix flakes installed.
-2. ```
-   $ mkdir -p ~/.config/nix
-   $ echo "experimental-features = nix-command flakes" > .config/nix/nix.conf
-   ```
-   to enable flake support
+```
+$ mkdir -p ~/.config/nix
+$ echo "experimental-features = nix-command flakes" > .config/nix/nix.conf
+```
+
+to enable flake support.
 
 ### Installation, finally
 
 This project is defined as a flake therefore you can build the tool using
 
 ```
-$ nix build <project root>
+$ nix build <project root>#flake-info
 or
-$ nix build github:miszkur/github-search
+$ nix build github:nixos/nixos-search#flake-info
 ```
 
 Replace `build` with run if you want to run the tool directly.
