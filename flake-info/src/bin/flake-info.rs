@@ -63,6 +63,18 @@ enum Command {
         channel: String,
     },
 
+    #[structopt(about = "Import nixpkgs channel from archive or local git path")]
+    NixpkgsArchive {
+        #[structopt(help = "Nixpkgs archive to import")]
+        source: String,
+
+        #[structopt(
+            help = "Which channel to assign nixpkgs to",
+            default_value = "unstable"
+        )]
+        channel: String,
+    },
+
     #[structopt(about = "Load and import a group of flakes from a file")]
     Group {
         #[structopt(
@@ -223,10 +235,21 @@ async fn run_command(
                 .map_err(FlakeInfoError::Nixpkgs)?;
             let ident = (
                 "nixos".to_owned(),
-                nixpkgs.channel.clone(),
-                nixpkgs.git_ref.clone(),
+                nixpkgs.channel.to_owned(),
+                nixpkgs.git_ref.to_owned(),
             );
             let exports = flake_info::process_nixpkgs(&Source::Nixpkgs(nixpkgs), &kind)
+                .map_err(FlakeInfoError::Nixpkgs)?;
+
+            Ok((exports, ident))
+        }
+        Command::NixpkgsArchive { source, channel } => {
+            let ident = (
+                "nixos".to_string(),
+                channel.to_owned(),
+                "latest".to_string(),
+            );
+            let exports = flake_info::process_nixpkgs(&Source::Git { url: source }, &kind)
                 .map_err(FlakeInfoError::Nixpkgs)?;
 
             Ok((exports, ident))
