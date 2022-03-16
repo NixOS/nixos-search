@@ -42,7 +42,7 @@
         };
     in
     {
-      defaultPackage = forAllSystems (mkPackage ./.);
+      defaultPackage = forAllSystems (mkPackage ./flake-info);
       packages = forAllSystems packages;
       devShell = forAllSystems devShell;
     };
