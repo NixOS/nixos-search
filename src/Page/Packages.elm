@@ -20,7 +20,6 @@ import Html
     exposing
         ( Html
         , a
-        , br
         , code
         , div
         , em
@@ -40,19 +39,22 @@ import Html.Attributes
         , href
         , id
         , target
-        , type_
         )
 import Html.Events exposing (onClick)
 import Http exposing (Body)
-import Json.Decode exposing (Decoder)
+import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
 import Maybe
 import Regex
 import Route exposing (Route(..), SearchType)
-import Search exposing (Details(..), channelDetailsFromId, decodeResolvedFlake)
+import Search
+    exposing
+        ( Details(..)
+        , decodeResolvedFlake
+        )
 import Utils
-import View.Components.SearchInput exposing (closeButton, viewBucket)
+import View.Components.SearchInput exposing (viewBucket)
 
 
 
@@ -333,72 +335,72 @@ viewResultItem channel showInstallDetails show item =
 
         shortPackageDetails =
             ul []
-                ([ li []
+                (li []
                     [ text "Name: "
                     , code [] [ text item.source.pname ]
                     ]
-                 ]
-                    ++ optionals (item.source.pversion /= "")
-                        [ li []
-                            [ text "Version: "
-                            , strong [] [ text item.source.pversion ]
-                            ]
-                        ]
-                    ++ optionals (List.length item.source.outputs > 1)
-                        [ li []
-                            (text "Outputs: "
-                                :: (item.source.outputs
-                                        |> List.sort
-                                        |> List.map (\o -> code [] [ text o ])
-                                        |> List.intersperse (text " ")
-                                   )
-                            )
-                        ]
-                    ++ (item.source.homepage
-                            |> List.head
-                            |> Maybe.map
-                                (\x ->
-                                    [ li [ trapClick ]
-                                        [ createShortDetailsItem "🌐 Homepage" x ]
-                                    ]
-                                )
-                            |> Maybe.withDefault []
-                       )
-                    ++ renderSource item channel trapClick createShortDetailsItem createGithubUrl
-                    ++ (let
-                            licenses =
-                                item.source.licenses
-                                    |> List.filterMap
-                                        (\license ->
-                                            case ( license.fullName, license.url ) of
-                                                ( Nothing, Nothing ) ->
-                                                    Nothing
-
-                                                ( Just fullName, Nothing ) ->
-                                                    Just (text fullName)
-
-                                                ( Nothing, Just url ) ->
-                                                    Just (createShortDetailsItem "Unknown" url)
-
-                                                ( Just fullName, Just url ) ->
-                                                    Just (createShortDetailsItem fullName url)
-                                        )
-                        in
-                        optionals (licenses /= [])
+                    :: (optionals (item.source.pversion /= "")
                             [ li []
-                                (text
-                                    ("License"
-                                        ++ (if List.length licenses == 1 then
-                                                ""
-
-                                            else
-                                                "s"
-                                           )
-                                        ++ ": "
-                                    )
-                                    :: List.intersperse (text " ▪ ") licenses
-                                )
+                                [ text "Version: "
+                                , strong [] [ text item.source.pversion ]
+                                ]
                             ]
+                            ++ optionals (List.length item.source.outputs > 1)
+                                [ li []
+                                    (text "Outputs: "
+                                        :: (item.source.outputs
+                                                |> List.sort
+                                                |> List.map (\o -> code [] [ text o ])
+                                                |> List.intersperse (text " ")
+                                           )
+                                    )
+                                ]
+                            ++ (item.source.homepage
+                                    |> List.head
+                                    |> Maybe.map
+                                        (\x ->
+                                            [ li [ trapClick ]
+                                                [ createShortDetailsItem "🌐 Homepage" x ]
+                                            ]
+                                        )
+                                    |> Maybe.withDefault []
+                               )
+                            ++ renderSource item channel trapClick createShortDetailsItem createGithubUrl
+                            ++ (let
+                                    licenses =
+                                        item.source.licenses
+                                            |> List.filterMap
+                                                (\license ->
+                                                    case ( license.fullName, license.url ) of
+                                                        ( Nothing, Nothing ) ->
+                                                            Nothing
+
+                                                        ( Just fullName, Nothing ) ->
+                                                            Just (text fullName)
+
+                                                        ( Nothing, Just url ) ->
+                                                            Just (createShortDetailsItem "Unknown" url)
+
+                                                        ( Just fullName, Just url ) ->
+                                                            Just (createShortDetailsItem fullName url)
+                                                )
+                                in
+                                optionals (licenses /= [])
+                                    [ li []
+                                        (text
+                                            ("License"
+                                                ++ (if List.length licenses == 1 then
+                                                        ""
+
+                                                    else
+                                                        "s"
+                                                   )
+                                                ++ ": "
+                                            )
+                                            :: List.intersperse (text " ▪ ") licenses
+                                        )
+                                    ]
+                               )
                        )
                 )
 
@@ -486,7 +488,7 @@ viewResultItem channel showInstallDetails show item =
         longerPackageDetails =
             optionals (Just item.source.attr_name == show)
                 [ div [ trapClick ]
-                    ([ div []
+                    (div []
                         [ h4 []
                             [ text "How to install "
                             , em [] [ text item.source.attr_name ]
@@ -592,12 +594,12 @@ viewResultItem channel showInstallDetails show item =
                                 <|
                                     Maybe.map Tuple.first item.source.flakeUrl
                         ]
-                     ]
-                        ++ (item.source.longDescription
+                        :: ((item.source.longDescription
                                 |> Maybe.map (\desc -> [ p [] [ text desc ] ])
                                 |> Maybe.withDefault []
+                            )
+                                ++ maintainersAndPlatforms
                            )
-                        ++ maintainersAndPlatforms
                     )
                 ]
 
@@ -613,7 +615,7 @@ viewResultItem channel showInstallDetails show item =
         flakeOrNixpkgs =
             case ( item.source.flakeName, item.source.flakeUrl ) of
                 -- its a flake
-                ( Just name, Just ( flakeIdent, flakeUrl ) ) ->
+                ( Just _, Just ( flakeIdent, flakeUrl ) ) ->
                     [ a [ href flakeUrl ] [ text flakeIdent ]
                     , text "#"
                     , a
@@ -819,7 +821,11 @@ decodeResultItemSource =
 
 
 type alias ResolvedFlake =
-    { type_ : String, owner : Maybe String, repo : Maybe String, url : Maybe String }
+    { type_ : String
+    , owner : Maybe String
+    , repo : Maybe String
+    , url : Maybe String
+    }
 
 
 decodeResolvedFlake : Json.Decode.Decoder ( String, String )

@@ -15,10 +15,7 @@ module Search exposing
     , decodeResolvedFlake
     , decodeResult
     , defaultFlakeId
-    ,  elementId
-       -- , flakeFromId
-       -- , flakes
-
+    , elementId
     , fromSortId
     , init
     , makeRequest
@@ -77,7 +74,7 @@ import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
 import RemoteData
-import Route exposing (SearchArgs, SearchType)
+import Route exposing (SearchType)
 import Route.SearchQuery
 import Set
 import Task
@@ -148,7 +145,11 @@ type Sort
 
 
 type alias ResolvedFlake =
-    { type_ : String, owner : Maybe String, repo : Maybe String, url : Maybe String }
+    { type_ : String
+    , owner : Maybe String
+    , repo : Maybe String
+    , url : Maybe String
+    }
 
 
 decodeResolvedFlake : Json.Decode.Decoder String
@@ -200,22 +201,6 @@ init :
     -> ( Model a b, Cmd (Msg a b) )
 init args maybeModel =
     let
-        emptyRoute : Route.SearchArgs
-        emptyRoute =
-            { query = Nothing
-            , channel = Nothing
-            , show = Nothing
-            , from = Nothing
-            , size = Nothing
-            , buckets = Nothing
-
-            -- TODO= Nothing type
-            , sort = Nothing
-            , type_ = Nothing
-            }
-
-        -- args =
-        --     Maybe.withDefault emptyRoute maybeArgs
         getField getFn default =
             maybeModel
                 |> Maybe.map getFn
@@ -535,14 +520,6 @@ channels =
     [ "21.11"
     , "unstable"
     ]
-
-
-type alias Flake =
-    { id : String
-    , isNixpkgs : Bool
-    , title : String
-    , source : String
-    }
 
 
 defaultFlakeId : String
@@ -982,7 +959,7 @@ viewResults :
     -> (Msg a b -> c)
     -> String
     -> List (Html c)
-viewResults model result viewSuccess toRoute outMsg categoryName =
+viewResults model result viewSuccess _ outMsg categoryName =
     let
         from =
             String.fromInt (model.from + 1)

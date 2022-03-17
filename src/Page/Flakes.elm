@@ -1,16 +1,29 @@
-module Page.Flakes exposing (Model(..), Msg(..), init, makeRequest, update, view)
+module Page.Flakes exposing
+    ( Model(..)
+    , Msg(..)
+    , init
+    , makeRequest
+    , update
+    , view
+    )
 
 import Browser.Navigation
-import Html exposing (Html, a, code, div, li, nav, pre, strong, text, ul)
-import Html.Attributes exposing (class, classList, href, target)
-import Html.Events exposing (onClick)
-import Html.Parser
-import Html.Parser.Util
+import Html
+    exposing
+        ( Html
+        , a
+        , strong
+        , text
+        )
+import Html.Attributes exposing (href)
 import Http exposing (Body)
-import Json.Decode exposing (Decoder)
 import Page.Options exposing (Msg(..))
 import Page.Packages exposing (Msg(..))
-import Route exposing (Route(..), SearchArgs, SearchType(..))
+import Route
+    exposing
+        ( Route(..)
+        , SearchType(..)
+        )
 import Search
 import View.Components
 
@@ -27,8 +40,6 @@ type Model
 init : Route.SearchArgs -> Maybe Model -> ( Model, Cmd Msg )
 init searchArgs model =
     let
-        -- _ =
-        --     Debug.log "Flakes" "init"
         --  init with respective module or with packages by default
         searchType =
             Maybe.withDefault PackageSearch searchArgs.type_
@@ -54,9 +65,6 @@ init searchArgs model =
 
         ( newModel, newCmd ) =
             Maybe.withDefault default <| Maybe.map mapEitherModel model
-
-        -- _ =
-        --     Debug.log "mapped Model" <| Maybe.map mapEitherModel model
     in
     ( newModel
     , newCmd
@@ -78,17 +86,11 @@ update :
     -> Model
     -> ( Model, Cmd Msg )
 update navKey msg model =
-    -- let
-    --     _ =
-    --         Debug.log "Flake update" ( msg, model )
-    -- in
     case ( msg, model ) of
         ( OptionsMsg msg_, OptionModel model_ ) ->
             case msg_ of
                 Page.Options.SearchMsg subMsg ->
                     let
-                        -- _ =
-                        --     Debug.log "update - options"
                         ( newModel, newCmd ) =
                             Search.update
                                 Route.Flakes
@@ -102,8 +104,6 @@ update navKey msg model =
             case msg_ of
                 Page.Packages.SearchMsg subMsg ->
                     let
-                        -- _ =
-                        --     Debug.log "Flakes" "update - packages"
                         ( newModel, newCmd ) =
                             Search.update
                                 Route.Flakes
@@ -186,9 +186,6 @@ makeRequest options searchType index_id query from size maybeBuckets sort =
                         (Just "query-options")
                         |> Cmd.map Page.Options.SearchMsg
                         |> Cmd.map OptionsMsg
-
-        -- FlakeSearch ->
-        --     Debug.todo "branch 'FlakeSearch' not implemented"
     in
     cmd
 
@@ -201,8 +198,3 @@ makeRequestBody searchType query from size maybeBuckets sort =
 
         PackageSearch ->
             Page.Packages.makeRequestBody query from size maybeBuckets sort
-
-
-
--- FlakeSearch ->
---     Debug.todo "branch 'FlakeSearch' not implemented"

@@ -13,7 +13,6 @@ module Route exposing
     )
 
 import Browser.Navigation
-import Dict
 import Html
 import Html.Attributes
 import Route.SearchQuery exposing (SearchQuery)
@@ -34,8 +33,6 @@ type alias SearchArgs =
     , from : Maybe Int
     , size : Maybe Int
     , buckets : Maybe String
-
-    -- TODO: embed sort type
     , sort : Maybe String
     , type_ : Maybe SearchType
     }

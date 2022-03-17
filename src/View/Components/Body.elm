@@ -1,12 +1,29 @@
-module View.Components.Body exposing (..)
+module View.Components.Body exposing (view)
 
-import Html exposing (Html, details, div, h1)
+import Html
+    exposing
+        ( Html
+        , div
+        , h1
+        )
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import RemoteData exposing (RemoteData(..))
 import Route
-import Search exposing (Details, Model, Msg(..), ResultItem, SearchResult, viewResult)
-import View.Components.SearchInput exposing (viewFlakes, viewSearchInput)
+import Search
+    exposing
+        ( Details
+        , Model
+        , Msg(..)
+        , ResultItem
+        , SearchResult
+        , viewResult
+        )
+import View.Components.SearchInput
+    exposing
+        ( viewFlakes
+        , viewSearchInput
+        )
 
 
 view :
