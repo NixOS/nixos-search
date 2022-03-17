@@ -6,7 +6,6 @@ import Html
     exposing
         ( Html
         , a
-        , button
         , div
         , footer
         , header
@@ -20,25 +19,20 @@ import Html
         )
 import Html.Attributes
     exposing
-        ( attribute
-        , class
+        ( class
         , classList
         , href
         , id
         , src
-        , type_
         )
 import Page.Flakes exposing (Model(..))
 import Page.Home
 import Page.Options
 import Page.Packages
+import RemoteData exposing (RemoteData(..))
 import Route exposing (SearchType(..))
 import Search exposing (Msg(..), defaultFlakeId)
 import Url
-import Search exposing (defaultFlakeId)
-import Html exposing (sup)
-import Html exposing (small)
-import RemoteData exposing (RemoteData(..))
 
 
 
@@ -196,13 +190,15 @@ pageMatch m1 m2 =
         ( Packages model_a, Packages model_b ) ->
             { model_a | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked }
                 == { model_b | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked }
+
         ( Options model_a, Options model_b ) ->
-            {model_a | show = Nothing, result = NotAsked } == {model_b | show = Nothing, result = NotAsked}
+            { model_a | show = Nothing, result = NotAsked } == { model_b | show = Nothing, result = NotAsked }
+
         ( Flakes (OptionModel model_a), Flakes (OptionModel model_b) ) ->
-            {model_a | show = Nothing, result = NotAsked } == {model_b | show = Nothing, result = NotAsked}
+            { model_a | show = Nothing, result = NotAsked } == { model_b | show = Nothing, result = NotAsked }
 
         ( Flakes (PackagesModel model_a), Flakes (PackagesModel model_b) ) ->
-            {model_a | show = Nothing, result = NotAsked } == {model_b | show = Nothing, result = NotAsked}
+            { model_a | show = Nothing, result = NotAsked } == { model_b | show = Nothing, result = NotAsked }
 
         _ ->
             False

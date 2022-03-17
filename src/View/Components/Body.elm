@@ -1,15 +1,12 @@
 module View.Components.Body exposing (..)
 
-import Html exposing (Html, div, h1)
+import Html exposing (Html, details, div, h1)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import RemoteData exposing (RemoteData(..))
 import Route
-import Search exposing (Model, Msg(..), ResultItem, SearchResult, viewResult)
-import View.Components.SearchInput exposing (viewSearchInput)
-import View.Components.SearchInput exposing (viewFlakes)
-import Html exposing (details)
-import Search exposing (Details)
+import Search exposing (Details, Model, Msg(..), ResultItem, SearchResult, viewResult)
+import View.Components.SearchInput exposing (viewFlakes, viewSearchInput)
 
 
 view :
@@ -47,7 +44,6 @@ view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg =
 
                 RemoteData.Failure _ ->
                     "failure"
-    
     in
     div
         (List.append

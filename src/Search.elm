@@ -1,6 +1,7 @@
 module Search exposing
     ( Aggregation
     , AggregationsBucketItem
+    , Details(..)
     , Model
     , Msg(..)
     , Options
@@ -14,9 +15,10 @@ module Search exposing
     , decodeResolvedFlake
     , decodeResult
     , defaultFlakeId
-    , elementId
-    -- , flakeFromId
-    -- , flakes
+    ,  elementId
+       -- , flakeFromId
+       -- , flakes
+
     , fromSortId
     , init
     , makeRequest
@@ -27,11 +29,12 @@ module Search exposing
     , trapClick
     , update
     , view
-    , viewResult, Details(..)
+    , viewResult
     )
 
 import Base64
 import Browser.Dom
+import Browser.Events exposing (Visibility(..))
 import Browser.Navigation
 import Html
     exposing
@@ -78,7 +81,6 @@ import Route exposing (SearchArgs, SearchType)
 import Route.SearchQuery
 import Set
 import Task
-import Browser.Events exposing (Visibility(..))
 
 
 type alias Model a b =
@@ -302,11 +304,14 @@ type Msg a b
     | ChangePage Int
     | ShowInstallDetails Details
 
+
 type Details
     = FromNixpkgs
     | FromNixOS
     | FromFlake
     | Unset
+
+
 scrollToEntry :
     Maybe String
     -> Cmd (Msg a b)
@@ -543,6 +548,7 @@ type alias Flake =
 defaultFlakeId : String
 defaultFlakeId =
     "group-manual"
+
 
 
 -- flakeFromId : String -> Maybe Flake
@@ -812,7 +818,7 @@ viewResult :
 viewResult outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets =
     case model.result of
         RemoteData.NotAsked ->
-            div [] [  ]
+            div [] []
 
         RemoteData.Loading ->
             div [ class "loader-wrapper" ]
@@ -1313,8 +1319,12 @@ makeRequest :
     -> Maybe String
     -> Cmd (Msg a b)
 makeRequest body channel decodeResultItemSource decodeResultAggregations options responseMsg tracker =
-    let branch = Maybe.map (\details -> details.branch) (channelDetailsFromId channel) |> Maybe.withDefault channel
-        index = "latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ branch
+    let
+        branch =
+            Maybe.map (\details -> details.branch) (channelDetailsFromId channel) |> Maybe.withDefault channel
+
+        index =
+            "latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ branch
     in
     Http.riskyRequest
         { method = "POST"
