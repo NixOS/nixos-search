@@ -43,6 +43,7 @@ struct Args {
 
 #[derive(StructOpt, Debug)]
 enum Command {
+    #[structopt(about = "Import a flake")]
     Flake {
         #[structopt(help = "Flake identifier passed to nix to gather information about")]
         flake: String,
@@ -56,10 +57,25 @@ enum Command {
         #[structopt(long, help = "Whether to gc the store after info or not")]
         gc: bool,
     },
+    #[structopt(about = "Import official nixpkgs channel")]
     Nixpkgs {
         #[structopt(help = "Nixpkgs channel to import")]
         channel: String,
     },
+
+    #[structopt(about = "Import nixpkgs channel from archive or local git path")]
+    NixpkgsArchive {
+        #[structopt(help = "Nixpkgs archive to import")]
+        source: String,
+
+        #[structopt(
+            help = "Which channel to assign nixpkgs to",
+            default_value = "unstable"
+        )]
+        channel: String,
+    },
+
+    #[structopt(about = "Load and import a group of flakes from a file")]
     Group {
         #[structopt(
             help = "Points to a TOML or JSON file containing info targets. If file does not end in 'toml' json is assumed"
@@ -219,10 +235,21 @@ async fn run_command(
                 .map_err(FlakeInfoError::Nixpkgs)?;
             let ident = (
                 "nixos".to_owned(),
-                nixpkgs.channel.clone(),
-                nixpkgs.git_ref.clone(),
+                nixpkgs.channel.to_owned(),
+                nixpkgs.git_ref.to_owned(),
             );
             let exports = flake_info::process_nixpkgs(&Source::Nixpkgs(nixpkgs), &kind)
+                .map_err(FlakeInfoError::Nixpkgs)?;
+
+            Ok((exports, ident))
+        }
+        Command::NixpkgsArchive { source, channel } => {
+            let ident = (
+                "nixos".to_string(),
+                channel.to_owned(),
+                "latest".to_string(),
+            );
+            let exports = flake_info::process_nixpkgs(&Source::Git { url: source }, &kind)
                 .map_err(FlakeInfoError::Nixpkgs)?;
 
             Ok((exports, ident))

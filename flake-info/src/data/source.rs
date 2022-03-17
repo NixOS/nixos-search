@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     ffi::OsStr,
     fs::{self, File},
-    io::{Read, self},
+    io::{self, Read},
     path::Path,
 };
 
@@ -115,15 +115,14 @@ impl Source {
         let response = request.send().await?;
 
         if !response.status().is_success() {
-            Err(anyhow::anyhow!("GitHub returned {:?} {}", response.status(), response.text().await?))
+            Err(anyhow::anyhow!(
+                "GitHub returned {:?} {}",
+                response.status(),
+                response.text().await?
+            ))
         } else {
-            let git_ref = response.json::<ApiResult>()
-                .await?
-                .commit
-                .sha;
-
+            let git_ref = response.json::<ApiResult>().await?.commit.sha;
             let nixpkgs = Nixpkgs { channel, git_ref };
-
             Ok(nixpkgs)
         }
     }
@@ -132,5 +131,6 @@ impl Source {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Nixpkgs {
     pub channel: String,
+
     pub git_ref: String,
 }
