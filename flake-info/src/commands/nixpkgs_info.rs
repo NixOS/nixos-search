@@ -1,7 +1,8 @@
 use anyhow::{Context, Result};
+use semver::{Version, VersionReq};
 use serde_json::Deserializer;
 use std::io::Write;
-use std::{collections::HashMap, fmt::Display, fs::File};
+use std::{process::exit, collections::HashMap, fmt::Display, fs::File};
 
 use command_run::{Command, LogTo};
 use log::{debug, error};
@@ -11,6 +12,22 @@ use crate::data::import::{NixOption, NixpkgsEntry, Package};
 const FLAKE_INFO_SCRIPT: &str = include_str!("flake_info.nix");
 
 pub fn get_nixpkgs_info<T: AsRef<str> + Display>(nixpkgs_channel: T) -> Result<Vec<NixpkgsEntry>> {
+    let nix_version_requirement = VersionReq::parse(">=2.7.0")?; // we need PRs #5878 and #5922 for package outputs
+    let mut command = Command::with_args("nix", &["eval", "--raw", "--expr", "builtins.nixVersion"]);
+    command.log_command = false;
+    command.enable_capture();
+    let output = command.run()?;
+    let nix_version = Version::parse(
+        output.stdout_string_lossy()
+              .split(|c: char| c != '.' && !c.is_ascii_digit())
+              .next()
+              .unwrap()
+    )?;
+    if !nix_version_requirement.matches(&nix_version) {
+        error!("nix doesn't match version requirement {}", nix_version_requirement);
+        exit(1);
+    }
+
     let mut command = Command::new("nix-env");
     command.add_args(&[
         "-f",
