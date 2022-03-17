@@ -1,6 +1,9 @@
 name: "Hourly import to Elasticsearch"
 
 on:
+  push:
+    branches:
+      - cleanup
   workflow_dispatch:
   schedule:
   - cron: '0 * * * *'
