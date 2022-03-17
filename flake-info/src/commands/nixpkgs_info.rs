@@ -22,17 +22,8 @@ pub fn get_nixpkgs_info<T: AsRef<str> + Display>(nixpkgs_channel: T) -> Result<V
         "import <nixpkgs/pkgs/top-level/packages-config.nix>",
         "-qa",
         "--meta",
-        "--out-path",
         "--json",
     ]);
-
-    // Nix might fail to evaluate some disallowed packages
-    let mut env = HashMap::new();
-    env.insert("NIXPKGS_ALLOW_BROKEN".into(), "1".into());
-    env.insert("NIXPKGS_ALLOW_UNSUPPORTED_SYSTEM".into(), "1".into());
-    env.insert("NIXPKGS_ALLOW_UNFREE".into(), "1".into());
-    env.insert("NIXPKGS_ALLOW_INSECURE".into(), "1".into());
-    command.env = env;
 
     command.enable_capture();
     command.log_to = LogTo::Log;

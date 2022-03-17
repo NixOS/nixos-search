@@ -26,6 +26,7 @@ let
         version = drv.version or "";
         outputs = drv.outputs;
         # paths = builtins.listToAttrs ( map (output: {name = output; value = drv.${output};}) drv.outputs );
+        default_output = drv.outputName;
       }
       // lib.optionalAttrs (drv ? meta && drv.meta ? description) { inherit (drv.meta) description; }
       // lib.optionalAttrs (drv ? meta && drv.meta ? license) { inherit (drv.meta) license; }

@@ -32,6 +32,7 @@ pub enum FlakeEntry {
         version: String,
         platforms: Vec<System>,
         outputs: Vec<String>,
+        default_output: String,
         description: Option<String>,
         #[serde(deserialize_with = "string_or_struct", default)]
         license: License,
@@ -125,7 +126,9 @@ pub struct Package {
     pub pname: String,
     pub version: String,
     #[serde(default)]
-    pub outputs: HashMap<String, String>,
+    pub outputs: HashMap<String, Option<String>>,
+    #[serde(rename = "outputName", default)]
+    pub default_output: Option<String>,
     pub system: String,
     #[serde(default)]
     pub meta: Meta,
