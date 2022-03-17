@@ -81,14 +81,6 @@ pub fn get_nixpkgs_options<T: AsRef<str> + Display>(
         "nixos-options",
     ]);
 
-    // Nix might fail to evaluate some options that reference disallowed packages
-    let mut env = HashMap::new();
-    env.insert("NIXPKGS_ALLOW_BROKEN".into(), "1".into());
-    env.insert("NIXPKGS_ALLOW_UNSUPPORTED_SYSTEM".into(), "1".into());
-    env.insert("NIXPKGS_ALLOW_UNFREE".into(), "1".into());
-    env.insert("NIXPKGS_ALLOW_INSECURE".into(), "1".into());
-    command.env = env;
-
     command.enable_capture();
     command.log_to = LogTo::Log;
     command.log_output_on_error = true;
