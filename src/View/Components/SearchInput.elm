@@ -1,9 +1,47 @@
-module View.Components.SearchInput exposing (..)
+module View.Components.SearchInput exposing
+    ( closeButton
+    , viewBucket
+    , viewFlakes
+    , viewSearchInput
+    )
 
-import Html exposing (Html, a, button, div, form, h4, input, li, p, span, text, th, ul)
-import Html.Attributes exposing (attribute, autofocus, class, classList, href, id, placeholder, selected, type_, value)
-import Html.Events exposing (onClick, onInput, onSubmit)
-import Route exposing (SearchType, allTypes, searchTypeToString, searchTypeToTitle)
+import Html
+    exposing
+        ( Html
+        , a
+        , button
+        , div
+        , form
+        , input
+        , li
+        , span
+        , text
+        , ul
+        )
+import Html.Attributes
+    exposing
+        ( autofocus
+        , class
+        , classList
+        , href
+        , id
+        , placeholder
+        , type_
+        , value
+        )
+import Html.Events
+    exposing
+        ( onClick
+        , onInput
+        , onSubmit
+        )
+import Route
+    exposing
+        ( SearchType
+        , allTypes
+        , searchTypeToString
+        , searchTypeToTitle
+        )
 import Search exposing (Msg(..))
 
 
@@ -40,7 +78,7 @@ viewSearchInput outMsg category searchQuery =
 
 
 viewFlakes : (Msg a b -> msg) -> String -> SearchType -> List (Html msg)
-viewFlakes outMsg selectedFlake selectedCategory =
+viewFlakes outMsg _ selectedCategory =
     [ li []
         [ ul []
             (List.map

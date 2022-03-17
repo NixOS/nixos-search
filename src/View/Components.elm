@@ -1,10 +1,16 @@
-module View.Components exposing (..)
+module View.Components exposing (body)
 
 import Html exposing (Html)
 import Route exposing (SearchRoute)
-import Search exposing (Model, Msg, ResultItem, SearchResult)
+import Search
+    exposing
+        ( Details
+        , Model
+        , Msg
+        , ResultItem
+        , SearchResult
+        )
 import View.Components.Body
-import Search exposing (Details)
 
 
 body :

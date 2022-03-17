@@ -7,43 +7,42 @@
   };
 
   inputs = {
-    nixpkgs = { url = "nixpkgs/nixos-unstable"; };
+    nixpkgs.url = "nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs }:
-    let
-      systems = [ "x86_64-linux" "i686-linux" "x86_64-darwin" "aarch64-linux" ];
-      forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f system);
-      mkPackage = path: system:
+  outputs = { self
+            , nixpkgs
+            , flake-utils
+            }:
+    flake-utils.lib.eachSystem
+      (with flake-utils.lib.system; [
+        x86_64-linux
+        i686-linux
+        x86_64-darwin
+        aarch64-linux
+      ])
+      (system:
         let
-          pkgs = import nixpkgs {
-            inherit system;
-            overlays = [ ];
-          };
-        in
-        import path { inherit pkgs; };
-      packages = system:
-        {
-          flake-info = mkPackage ./flake-info system;
-          frontend = mkPackage ./. system;
-        };
-
-      devShell = system:
-        let
-          packages_inst = (packages system);
           pkgs = nixpkgs.legacyPackages.${system};
-        in
-        pkgs.mkShell {
-          inputsFrom = builtins.attrValues packages_inst;
-          shellHook = ''
-            export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
-            export NIXPKGS_PANDOC_FILTERS_PATH="${packages_inst.flake-info.NIXPKGS_PANDOC_FILTERS_PATH}";
-          '';
-        };
-    in
-    {
-      defaultPackage = forAllSystems (mkPackage ./flake-info);
-      packages = forAllSystems packages;
-      devShell = forAllSystems devShell;
-    };
+          warnToUpgradeNix = pkgs.lib.warn "Please upgrade Nix to 2.7 or later.";
+        in rec {
+
+          packages.default = packages.flake-info;
+          packages.flake-info = import ./flake-info { inherit pkgs; };
+          packages.frontend = import ./. { inherit pkgs; };
+
+          devShells.default = pkgs.mkShell {
+            inputsFrom = builtins.attrValues packages;
+            shellHook = ''
+              export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
+              export NIXPKGS_PANDOC_FILTERS_PATH="${packages.flake-info.NIXPKGS_PANDOC_FILTERS_PATH}";
+            '';
+          };
+
+          # XXX: for backwards compatibility
+          devShell = warnToUpgradeNix devShells.default;
+          defaultPackage = warnToUpgradeNix packages.default;
+        }
+      );
 }

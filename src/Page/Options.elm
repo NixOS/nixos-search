@@ -23,7 +23,6 @@ import Html
         , div
         , li
         , pre
-        , source
         , span
         , strong
         , text
@@ -45,10 +44,8 @@ import Html.Parser.Util
 import Http exposing (Body)
 import Json.Decode
 import Json.Decode.Pipeline
-import List exposing (sort)
 import Route exposing (SearchType)
 import Search exposing (Details, decodeResolvedFlake)
-import Url.Parser exposing (query)
 
 
 
@@ -247,31 +244,6 @@ viewResultItem channel _ show item =
 
         isOpen =
             Just item.source.name == show
-
-        githubUrlPrefix branch =
-            "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/"
-
-        cleanPosition value =
-            if String.startsWith "source/" value then
-                String.dropLeft 7 value
-
-            else
-                value
-
-        asGithubLink value =
-            case Search.channelDetailsFromId channel of
-                Just channelDetails ->
-                    a
-                        [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L")
-                        , target "_blank"
-                        ]
-                        [ text value ]
-
-                Nothing ->
-                    text <| cleanPosition value
-
-        sourceFile =
-            Maybe.map asGithubLink item.source.source
 
         flakeOrNixpkgs =
             let

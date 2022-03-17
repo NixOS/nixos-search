@@ -1,6 +1,7 @@
 module Search exposing
     ( Aggregation
     , AggregationsBucketItem
+    , Details(..)
     , Model
     , Msg(..)
     , Options
@@ -15,8 +16,6 @@ module Search exposing
     , decodeResult
     , defaultFlakeId
     , elementId
-    -- , flakeFromId
-    -- , flakes
     , fromSortId
     , init
     , makeRequest
@@ -27,11 +26,12 @@ module Search exposing
     , trapClick
     , update
     , view
-    , viewResult, Details(..)
+    , viewResult
     )
 
 import Base64
 import Browser.Dom
+import Browser.Events exposing (Visibility(..))
 import Browser.Navigation
 import Html
     exposing
@@ -74,11 +74,10 @@ import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
 import RemoteData
-import Route exposing (SearchArgs, SearchType)
+import Route exposing (SearchType)
 import Route.SearchQuery
 import Set
 import Task
-import Browser.Events exposing (Visibility(..))
 
 
 type alias Model a b =
@@ -146,7 +145,11 @@ type Sort
 
 
 type alias ResolvedFlake =
-    { type_ : String, owner : Maybe String, repo : Maybe String, url : Maybe String }
+    { type_ : String
+    , owner : Maybe String
+    , repo : Maybe String
+    , url : Maybe String
+    }
 
 
 decodeResolvedFlake : Json.Decode.Decoder String
@@ -198,22 +201,6 @@ init :
     -> ( Model a b, Cmd (Msg a b) )
 init args maybeModel =
     let
-        emptyRoute : Route.SearchArgs
-        emptyRoute =
-            { query = Nothing
-            , channel = Nothing
-            , show = Nothing
-            , from = Nothing
-            , size = Nothing
-            , buckets = Nothing
-
-            -- TODO= Nothing type
-            , sort = Nothing
-            , type_ = Nothing
-            }
-
-        -- args =
-        --     Maybe.withDefault emptyRoute maybeArgs
         getField getFn default =
             maybeModel
                 |> Maybe.map getFn
@@ -302,11 +289,14 @@ type Msg a b
     | ChangePage Int
     | ShowInstallDetails Details
 
+
 type Details
     = FromNixpkgs
     | FromNixOS
     | FromFlake
     | Unset
+
+
 scrollToEntry :
     Maybe String
     -> Cmd (Msg a b)
@@ -532,17 +522,10 @@ channels =
     ]
 
 
-type alias Flake =
-    { id : String
-    , isNixpkgs : Bool
-    , title : String
-    , source : String
-    }
-
-
 defaultFlakeId : String
 defaultFlakeId =
     "group-manual"
+
 
 
 -- flakeFromId : String -> Maybe Flake
@@ -812,7 +795,7 @@ viewResult :
 viewResult outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets =
     case model.result of
         RemoteData.NotAsked ->
-            div [] [  ]
+            div [] []
 
         RemoteData.Loading ->
             div [ class "loader-wrapper" ]
@@ -976,7 +959,7 @@ viewResults :
     -> (Msg a b -> c)
     -> String
     -> List (Html c)
-viewResults model result viewSuccess toRoute outMsg categoryName =
+viewResults model result viewSuccess _ outMsg categoryName =
     let
         from =
             String.fromInt (model.from + 1)
@@ -1313,8 +1296,12 @@ makeRequest :
     -> Maybe String
     -> Cmd (Msg a b)
 makeRequest body channel decodeResultItemSource decodeResultAggregations options responseMsg tracker =
-    let branch = Maybe.map (\details -> details.branch) (channelDetailsFromId channel) |> Maybe.withDefault channel
-        index = "latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ branch
+    let
+        branch =
+            Maybe.map (\details -> details.branch) (channelDetailsFromId channel) |> Maybe.withDefault channel
+
+        index =
+            "latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ branch
     in
     Http.riskyRequest
         { method = "POST"
