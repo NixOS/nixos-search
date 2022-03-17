@@ -7,7 +7,31 @@ on:
 
 jobs:
 
+
+
+  build-flake-info:
+    runs-on: ubuntu-latest
+
+    env:
+      RUST_LOG: debug
+
+    steps:
+    - name: Checking out the repository
+      uses: actions/checkout@v3
+
+    - name: Setup
+      uses: ./.github/actions/common-setup
+      with:
+        CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+
+    - name: Building flake-info
+      run: |
+        nix -vL build .#flake-info
+
+
+
   import-nixpkgs:
+    needs: build-flake-info
 
     runs-on: ubuntu-latest
 
@@ -19,7 +43,6 @@ jobs:
           - 21.11
 
     env:
-      RUST_LOG: debug
       FI_ES_EXISTS_STRATEGY: abort
       FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL }}
 
@@ -37,17 +60,11 @@ jobs:
       with:
         CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
-
-
-    - name: Building flake-info
-      run: |
-        nix -vL build .#flake-info
-
     - name: Import ${{ matrix.channel }} channel
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        ./result/bin/flake-info --push --elastic-schema-version=$(< VERSION) nixpkgs ${{ matrix.channel }}
+        nix run .#flake-info -- --push --elastic-schema-version=$(< VERSION) nixpkgs ${{ matrix.channel }}
       if: github.repository_owner == 'NixOS'
 
     - name: Warmup ${{ matrix.channel }} channel
@@ -56,7 +73,11 @@ jobs:
           curl -sS ${{ secrets.ELASTICSEARCH_URL }}/latest-$(< VERSION)-nixos-${{ matrix.channel }}/_search | jq -c '.took // .'
         done
       if: github.repository_owner == 'NixOS'
+
+
+
   import-flakes:
+    needs: build-flake-info
 
     runs-on: ubuntu-latest
 
@@ -67,7 +88,6 @@ jobs:
           - "manual"
 
     env:
-      RUST_LOG: debug
       FI_ES_EXISTS_STRATEGY: recreate
       FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL }}
 
@@ -81,15 +101,9 @@ jobs:
       with:
         CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
-
-
-    - name: Building flake-info
-      run: |
-        nix -vL build .#flake-info
-
     - name: Import ${{ matrix.group }} group
       run: |
-        ./result/bin/flake-info --push --elastic-schema-version=$(< ./VERSION) group ./flakes/${{ matrix.group }}.toml ${{ matrix.group }}
+        nix run .#flake-info -- --push --elastic-schema-version=$(< ./VERSION) group ./flakes/${{ matrix.group }}.toml ${{ matrix.group }}
       if: github.repository_owner == 'NixOS'
 
     - name: Warmup ${{ matrix.group }} group
