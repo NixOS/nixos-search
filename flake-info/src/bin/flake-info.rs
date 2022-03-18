@@ -1,10 +1,12 @@
 use anyhow::{Context, Result};
 use commands::run_gc;
+use flake_info::commands::NixCheckError;
 use flake_info::data::import::{Kind, NixOption};
 use flake_info::data::{self, Export, Nixpkgs, Source};
 use flake_info::elastic::{ElasticsearchError, ExistsStrategy};
 use flake_info::{commands, elastic};
 use log::{debug, error, info, warn};
+use semver::VersionReq;
 use sha2::Digest;
 use std::path::{Path, PathBuf};
 use std::ptr::hash;
@@ -193,6 +195,9 @@ async fn main() -> Result<()> {
 
 #[derive(Debug, Error)]
 enum FlakeInfoError {
+    #[error("Nix check failed: {0}")]
+    NixCheck(#[from] NixCheckError),
+
     #[error("Getting flake info caused an error: {0:?}")]
     Flake(anyhow::Error),
     #[error("Getting nixpkgs info caused an error: {0:?}")]
@@ -208,6 +213,8 @@ async fn run_command(
     kind: Kind,
     extra: &[String],
 ) -> Result<(Vec<Export>, (String, String, String)), FlakeInfoError> {
+    flake_info::commands::check_nix_version(env!("MIN_NIX_VERSION"))?;
+
     match command {
         Command::Flake {
             flake,
