@@ -5,7 +5,7 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum NixCheckError {
-    #[error("Installed nix doesn't match version requirement: {0} (required >={1})")]
+    #[error("Installed nix doesn't match version requirement: {0} (required {1})")]
     IncompatibleNixVersion(Version, VersionReq),
 
     #[error("SemVer error (this should not occur, please file a bug report): {0}")]
