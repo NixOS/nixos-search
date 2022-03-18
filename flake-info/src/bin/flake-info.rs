@@ -195,7 +195,6 @@ async fn main() -> Result<()> {
 
 #[derive(Debug, Error)]
 enum FlakeInfoError {
-
     #[error("Nix check failed: {0}")]
     NixCheck(#[from] NixCheckError),
 
@@ -214,9 +213,8 @@ async fn run_command(
     kind: Kind,
     extra: &[String],
 ) -> Result<(Vec<Export>, (String, String, String)), FlakeInfoError> {
-    
     flake_info::commands::check_nix_version(env!("MIN_NIX_VERSION"))?;
-    
+
     match command {
         Command::Flake {
             flake,
