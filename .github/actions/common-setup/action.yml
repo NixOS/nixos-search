@@ -6,7 +6,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-  
+
     - name: Installing Nix
       uses: cachix/install-nix-action@v16
       with:
