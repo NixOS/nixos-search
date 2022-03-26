@@ -45,6 +45,7 @@ import Html
         , h4
         , input
         , li
+        , small
         , p
         , span
         , strong
@@ -478,6 +479,7 @@ type alias ChannelDetails =
     , title : String
     , jobset : String
     , branch : String
+    , beta : Bool
     }
 
 
@@ -490,10 +492,10 @@ channelDetails : Channel -> ChannelDetails
 channelDetails channel =
     case channel of
         Unstable ->
-            ChannelDetails "unstable" "unstable" "nixos/trunk-combined" "nixos-unstable"
+            ChannelDetails "unstable" "unstable" "nixos/trunk-combined" "nixos-unstable" False
 
         Release_21_11 ->
-            ChannelDetails "21.11" "21.11" "nixos/release-21.11" "nixos-21.11"
+            ChannelDetails "21.11" "21.11" "nixos/release-21.11" "nixos-21.11" False
 
 
 channelFromId : String -> Maybe Channel
@@ -926,7 +928,7 @@ viewChannels outMsg selectedChannel =
                                             ]
                                         , onClick <| outMsg (ChannelChange channel.id)
                                         ]
-                                        [ text channel.title ]
+                                        [ text channel.title, if channel.beta then span [] [ span [ class "label label-info" ] [ small [] [ text "Beta" ] ] ] else text "" ]
                                 )
                     )
                     channels
