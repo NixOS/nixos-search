@@ -71,6 +71,7 @@ pub enum Derivation {
         package_pversion: String,
         package_platforms: Vec<System>,
         package_outputs: Vec<String>,
+        package_default_output: Option<String>,
         package_license: Vec<License>,
         package_license_set: Vec<String>,
         package_maintainers: Vec<Maintainer>,
@@ -125,6 +126,7 @@ impl From<(import::FlakeEntry, super::Flake)> for Derivation {
                 version,
                 platforms,
                 outputs,
+                default_output,
                 description,
                 license,
             } => {
@@ -159,6 +161,7 @@ impl From<(import::FlakeEntry, super::Flake)> for Derivation {
                     package_pversion: version,
                     package_platforms: platforms,
                     package_outputs: outputs,
+                    package_default_output: Some(default_output),
                     package_license,
                     package_license_set,
                     package_description: description.clone(),
@@ -255,6 +258,7 @@ impl From<import::NixpkgsEntry> for Derivation {
                         .map(Flatten::flatten)
                         .unwrap_or_default(),
                     package_outputs: package.outputs.into_keys().collect(),
+                    package_default_output: package.default_output,
                     package_license,
                     package_license_set,
                     package_maintainers,

@@ -45,11 +45,6 @@ jobs:
       FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL }}
 
     steps:
-    - name: Increase swap space
-      uses: pierotofy/set-swap-space@v1.0
-      with:
-        swap-size-gb: 10
-
     - name: Checking out the repository
       uses: actions/checkout@v3
 
@@ -57,6 +52,11 @@ jobs:
       uses: ./.github/actions/common-setup
       with:
         CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+
+    - name: Installing Nix unstable
+      run: |
+        nix-env -f '<nixpkgs>' -iA nixVersions.unstable # for https://github.com/NixOS/nix/pull/6242
+        echo "$HOME/.nix-profile/bin" >> "$GITHUB_PATH"
 
     - name: Import ${{ matrix.channel }} channel
       env:

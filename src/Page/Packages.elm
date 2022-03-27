@@ -70,6 +70,7 @@ type alias ResultItemSource =
     , pname : String
     , pversion : String
     , outputs : List String
+    , default_output : Maybe String
     , description : Maybe String
     , longDescription : Maybe String
     , licenses : List ResultPackageLicense
@@ -348,7 +349,12 @@ viewResultItem channel showInstallDetails show item =
                             ++ optionals (List.length item.source.outputs > 1)
                                 [ li []
                                     (text "Outputs: "
-                                        :: (item.source.outputs
+                                        :: (item.source.default_output
+                                                |> Maybe.map (\d -> [ strong [] [ code [] [ text d ] ], text " " ])
+                                                |> Maybe.withDefault []
+                                           )
+                                        ++ (item.source.outputs
+                                                |> List.filter (\o -> Just o /= item.source.default_output)
                                                 |> List.sort
                                                 |> List.map (\o -> code [] [ text o ])
                                                 |> List.intersperse (text " ")
@@ -806,6 +812,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.required "package_pname" Json.Decode.string
         |> Json.Decode.Pipeline.required "package_pversion" Json.Decode.string
         |> Json.Decode.Pipeline.required "package_outputs" (Json.Decode.list Json.Decode.string)
+        |> Json.Decode.Pipeline.required "package_default_output" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_description" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_longDescription" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_license" (Json.Decode.list decodeResultPackageLicense)
