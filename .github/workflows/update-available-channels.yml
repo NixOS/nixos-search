@@ -1,0 +1,29 @@
+name: "Update available channels"
+on:
+  workflow_dispatch:
+
+jobs:
+  update-channels:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out the repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Install dependencies
+      run: sudo apt install -y curl jq
+
+    - name: Generate channels list
+      run: "curl -fsL 'https://monitoring.nixos.org/prometheus/api/v1/query?query=channel_revision' | jq '.data.result[] | select(.metric.status != \"unmaintained\") | select(.metric.variant == \"primary\") | { (.metric.channel | sub(\"^nixos-\"; \"\")): { status: (.metric.status) } }' > channels.json"
+
+    - name: Commit updated files and push them
+      uses: stefanzweifel/git-auto-commit-action@v4
+      with:
+        commit_message: "Automated channel update"
+        file_pattern: channels.json
+        commit_user_name: NixOS webmaster
+        commit_user_email: webmaster@nixos.org
+        commit_author: GitHub Actions <webmaster@nixos.org>
+      if: github.repository == 'NixOS/nixos-search'
