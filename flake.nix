@@ -30,7 +30,7 @@
 
           packages.default = packages.flake-info;
           packages.flake-info = import ./flake-info { inherit pkgs; };
-          packages.frontend = import ./. { inherit pkgs; };
+          packages.frontend = import ./frontend { inherit pkgs; };
 
           devShells.default = pkgs.mkShell {
             inputsFrom = builtins.attrValues packages;
