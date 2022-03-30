@@ -1,5 +1,5 @@
 { pkgs ? import <nixpkgs> { }
-, version ? pkgs.lib.removeSuffix "\n" (builtins.readFile ./VERSION)
+, version ? pkgs.lib.removeSuffix "\n" (builtins.readFile ../VERSION)
 }:
 let
   package = builtins.fromJSON (builtins.readFile ./package.json);
@@ -76,12 +76,12 @@ pkgs.stdenv.mkDerivation {
     cp netlify.toml $out/
   '';
   shellHook = ''
-    rm -rf node_modules
-    ln -sf ${yarnPkg}/libexec/${package.name}/node_modules .
-    export PATH=$PWD/node_modules/.bin:$PATH
+    rm -rf frontend/node_modules
+    ln -sf ${yarnPkg}/libexec/${package.name}/node_modules frontend/
+    export PATH=$PWD/frontend/node_modules/.bin:$PATH
     export ELASTICSEARCH_MAPPING_SCHEMA_VERSION=${version}
     echo "============================"
-    echo "= To develop run: yarn dev ="
+    echo "= To develop the frontend run: cd frontend && yarn dev ="
     echo "============================"
   '';
 
