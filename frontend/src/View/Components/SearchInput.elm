@@ -1,17 +1,12 @@
 module View.Components.SearchInput exposing
     ( closeButton
     , viewFlakes
-    , viewSearchInput
     )
 
 import Html
     exposing
         ( Html
         , a
-        , button
-        , div
-        , form
-        , input
         , li
         , span
         , text
@@ -19,61 +14,21 @@ import Html
         )
 import Html.Attributes
     exposing
-        ( autofocus
-        , class
-        , classList
+        ( 
+         classList
         , href
-        , id
-        , placeholder
-        , type_
-        , value
         )
 import Html.Events
     exposing
         ( onClick
-        , onInput
-        , onSubmit
         )
 import Route
     exposing
         ( SearchType
         , allTypes
-        , searchTypeToString
         , searchTypeToTitle
         )
 import Search exposing (Msg(..))
-
-
-viewSearchInput :
-    (Msg a b -> c)
-    -> SearchType
-    -> Maybe String
-    -> Html c
-viewSearchInput outMsg category searchQuery =
-    let
-        searchHint =
-            Maybe.withDefault "Packages and Options" <| Maybe.map (\_ -> searchTypeToString category) searchQuery
-    in
-    form
-        [ onSubmit (outMsg QueryInputSubmit)
-        , class "search-input"
-        ]
-        [ div []
-            [ div []
-                [ input
-                    [ type_ "text"
-                    , id "search-query-input"
-                    , autofocus True
-                    , placeholder <| "Search for " ++ searchHint
-                    , onInput (outMsg << QueryInput)
-                    , value <| Maybe.withDefault "" searchQuery
-                    ]
-                    []
-                ]
-            , button [ class "btn", type_ "submit" ]
-                [ text "Search" ]
-            ]
-        ]
 
 
 viewFlakes : (Msg a b -> msg) -> String -> SearchType -> List (Html msg)

@@ -767,7 +767,7 @@ view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg search
             )
         )
         [ h1 [] title
-        , viewSearchInput outMsg categoryName model.channel model.query
+        , viewSearchInput outMsg categoryName (Just model.channel) model.query
         , viewResult outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets
         ]
 
@@ -923,7 +923,7 @@ viewBucket title buckets searchMsgFor selectedBucket sets =
 viewSearchInput :
     (Msg a b -> c)
     -> String
-    -> String
+    -> Maybe String
     -> Maybe String
     -> Html c
 viewSearchInput outMsg categoryName selectedChannel searchQuery =
@@ -931,23 +931,30 @@ viewSearchInput outMsg categoryName selectedChannel searchQuery =
         [ onSubmit (outMsg QueryInputSubmit)
         , class "search-input"
         ]
-        [ div []
+        ([]
+          |> List.append
             [ div []
-                [ input
-                    [ type_ "text"
-                    , id "search-query-input"
-                    , autofocus True
-                    , placeholder <| "Search for " ++ categoryName
-                    , onInput (outMsg << QueryInput)
-                    , value <| Maybe.withDefault "" searchQuery
-                    ]
-                    []
-                ]
-            , button [ class "btn", type_ "submit" ]
-                [ text "Search" ]
+              [ div []
+                  [ input
+                      [ type_ "text"
+                      , id "search-query-input"
+                      , autofocus True
+                      , placeholder <| "Search for " ++ categoryName
+                      , onInput (outMsg << QueryInput)
+                      , value <| Maybe.withDefault "" searchQuery
+                      ]
+                      []
+                  ]
+              , button [ class "btn", type_ "submit" ]
+                  [ text "Search" ]
+              ]
             ]
-        , div [] (viewChannels outMsg selectedChannel)
-        ]
+          |> List.append
+            (selectedChannel
+              |> Maybe.map (\x -> [ div [] (viewChannels outMsg x) ])
+              |> Maybe.withDefault []
+            )
+        )
 
 
 viewChannels :

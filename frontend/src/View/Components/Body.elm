@@ -19,10 +19,10 @@ import Search
         , SearchResult
         , viewResult
         )
+import Search exposing (viewSearchInput)
 import View.Components.SearchInput
     exposing
         ( viewFlakes
-        , viewSearchInput
         )
 
 
@@ -73,6 +73,6 @@ view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg =
             )
         )
         [ h1 [] title
-        , viewSearchInput outMsg model.searchType model.query
+        , viewSearchInput outMsg categoryName Nothing model.query
         , viewResult outMsg toRoute categoryName model viewSuccess viewBuckets <| viewFlakes outMsg model.channel model.searchType
         ]
