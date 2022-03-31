@@ -28,6 +28,7 @@ module Search exposing
     , update
     , view
     , viewBucket
+    , viewFlakes
     , viewResult
     , viewSearchInput
     )
@@ -77,7 +78,12 @@ import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
 import RemoteData
-import Route exposing (SearchType)
+import Route
+    exposing
+        ( SearchType
+        , allTypes
+        , searchTypeToTitle
+        )
 import Route.SearchQuery
 import Set
 import Task
@@ -770,6 +776,37 @@ view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg search
         , viewSearchInput outMsg categoryName (Just model.channel) model.query
         , viewResult outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets
         ]
+
+
+viewFlakes :
+    (Msg a b -> msg)
+    -> String
+    -> SearchType
+    -> List (Html msg)
+viewFlakes outMsg _ selectedCategory =
+    [ li []
+        [ ul []
+            (List.map
+                (\category ->
+                    li []
+                        [ a
+                            [ href "#"
+                            , onClick <| outMsg (SubjectChange category)
+                            , classList
+                                [ ( "selected"
+                                  , category == selectedCategory
+                                  )
+                                ]
+                            ]
+                            [ span [] [ text <| searchTypeToTitle category ]
+                            , closeButton
+                            ]
+                        ]
+                )
+                allTypes
+            )
+        ]
+    ]
 
 
 viewResult :

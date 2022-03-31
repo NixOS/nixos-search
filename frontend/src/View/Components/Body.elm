@@ -18,12 +18,9 @@ import Search
         , ResultItem
         , SearchResult
         , viewResult
+        , viewFlakes
         )
 import Search exposing (viewSearchInput)
-import View.Components.SearchInput
-    exposing
-        ( viewFlakes
-        )
 
 
 view :
