@@ -14,18 +14,31 @@ import Html
         , a
         , strong
         , text
+        , div
+        , h1
         )
-import Html.Attributes exposing (href)
+import Html.Attributes
+    exposing
+        ( href
+        , class
+        )
+import Html.Events exposing (onClick)
 import Http exposing (Body)
 import Page.Options exposing (Msg(..))
 import Page.Packages exposing (Msg(..))
+import RemoteData exposing (RemoteData(..))
 import Route
     exposing
         ( Route(..)
         , SearchType(..)
         )
 import Search
-import View.Components
+    exposing
+        ( Msg(..)
+        , viewSearchInput
+        , viewResult
+        , viewFlakes
+        )
 
 
 
@@ -124,15 +137,45 @@ update navKey msg model =
 view : Model -> Html Msg
 view model =
     let
-        mkBody categoryName =
-            View.Components.body { toRoute = Route.Flakes, categoryName = categoryName }
-                [ text "Search packages and options of "
-                , strong []
-                    [ a
-                        [ href "https://github.com/NixOS/nixos-search/blob/main/flakes/manual.toml" ]
-                        [ text "public flakes" ]
-                    ]
+        resultStatus result =
+            case result of
+                RemoteData.NotAsked ->
+                    "not-asked"
+
+                RemoteData.Loading ->
+                    "loading"
+
+                RemoteData.Success _ ->
+                    "success"
+
+                RemoteData.Failure _ ->
+                    "failure"
+
+        bodyTitle =
+            [ text "Search packages and options of "
+            , strong []
+                [ a
+                    [ href "https://github.com/NixOS/nixos-search/blob/main/flakes/manual.toml" ]
+                    [ text "public flakes" ]
                 ]
+            ]
+
+        mkBody categoryName model_ viewSuccess viewBuckets outMsg =
+          div
+              (List.append
+                  [ class <| "search-page " ++ (resultStatus model_.result) ]
+                  (if model_.showSort then
+                      [ onClick (outMsg ToggleSort) ]
+
+                   else
+                      []
+                  )
+              )
+              [ h1 [] bodyTitle
+              , viewSearchInput outMsg categoryName Nothing model_.query
+              , viewResult outMsg Route.Flakes categoryName model_ viewSuccess viewBuckets
+                  <| viewFlakes outMsg model_.channel model_.searchType
+              ]
 
         body =
             case model of
