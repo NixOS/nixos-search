@@ -957,6 +957,8 @@ viewBucket title buckets searchMsgFor selectedBucket sets =
                 ]
             ]
         )
+
+
 viewSearchInput :
     (Msg a b -> c)
     -> String
@@ -968,29 +970,25 @@ viewSearchInput outMsg categoryName selectedChannel searchQuery =
         [ onSubmit (outMsg QueryInputSubmit)
         , class "search-input"
         ]
-        ([]
-          |> List.append
+        (div []
             [ div []
-              [ div []
-                  [ input
-                      [ type_ "text"
-                      , id "search-query-input"
-                      , autofocus True
-                      , placeholder <| "Search for " ++ categoryName
-                      , onInput (outMsg << QueryInput)
-                      , value <| Maybe.withDefault "" searchQuery
-                      ]
-                      []
-                  ]
-              , button [ class "btn", type_ "submit" ]
-                  [ text "Search" ]
-              ]
+                [ input
+                    [ type_ "text"
+                    , id "search-query-input"
+                    , autofocus True
+                    , placeholder <| "Search for " ++ categoryName
+                    , onInput (outMsg << QueryInput)
+                    , value <| Maybe.withDefault "" searchQuery
+                    ]
+                    []
+                ]
+            , button [ class "btn", type_ "submit" ]
+                [ text "Search" ]
             ]
-          |> List.append
-            (selectedChannel
-              |> Maybe.map (\x -> [ div [] (viewChannels outMsg x) ])
-              |> Maybe.withDefault []
-            )
+            :: (selectedChannel
+                    |> Maybe.map (\x -> [ div [] (viewChannels outMsg x) ])
+                    |> Maybe.withDefault []
+               )
         )
 
 

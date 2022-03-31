@@ -12,15 +12,15 @@ import Html
     exposing
         ( Html
         , a
-        , strong
-        , text
         , div
         , h1
+        , strong
+        , text
         )
 import Html.Attributes
     exposing
-        ( href
-        , class
+        ( class
+        , href
         )
 import Html.Events exposing (onClick)
 import Http exposing (Body)
@@ -35,9 +35,9 @@ import Route
 import Search
     exposing
         ( Msg(..)
-        , viewSearchInput
-        , viewResult
         , viewFlakes
+        , viewResult
+        , viewSearchInput
         )
 
 
@@ -161,21 +161,21 @@ view model =
             ]
 
         mkBody categoryName model_ viewSuccess viewBuckets outMsg =
-          div
-              (List.append
-                  [ class <| "search-page " ++ (resultStatus model_.result) ]
-                  (if model_.showSort then
-                      [ onClick (outMsg ToggleSort) ]
+            div
+                (List.append
+                    [ class <| "search-page " ++ resultStatus model_.result ]
+                    (if model_.showSort then
+                        [ onClick (outMsg ToggleSort) ]
 
-                   else
-                      []
-                  )
-              )
-              [ h1 [] bodyTitle
-              , viewSearchInput outMsg categoryName Nothing model_.query
-              , viewResult outMsg Route.Flakes categoryName model_ viewSuccess viewBuckets
-                  <| viewFlakes outMsg model_.channel model_.searchType
-              ]
+                     else
+                        []
+                    )
+                )
+                [ h1 [] bodyTitle
+                , viewSearchInput outMsg categoryName Nothing model_.query
+                , viewResult outMsg Route.Flakes categoryName model_ viewSuccess viewBuckets <|
+                    viewFlakes outMsg model_.channel model_.searchType
+                ]
 
         body =
             case model of
