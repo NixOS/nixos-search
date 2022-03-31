@@ -1,6 +1,5 @@
 module View.Components.SearchInput exposing
     ( closeButton
-    , viewBucket
     , viewFlakes
     , viewSearchInput
     )
@@ -103,54 +102,6 @@ viewFlakes outMsg _ selectedCategory =
         ]
     ]
 
-
 closeButton : Html a
 closeButton =
     span [] []
-
-
-viewBucket :
-    String
-    -> List Search.AggregationsBucketItem
-    -> (String -> a)
-    -> List String
-    -> List (Html a)
-    -> List (Html a)
-viewBucket title buckets searchMsgFor selectedBucket sets =
-    List.append
-        sets
-        (if List.isEmpty buckets then
-            []
-
-         else
-            [ li []
-                [ ul []
-                    (List.append
-                        [ li [ class "header" ] [ text title ] ]
-                        (List.map
-                            (\bucket ->
-                                li []
-                                    [ a
-                                        [ href "#"
-                                        , onClick <| searchMsgFor bucket.key
-                                        , classList
-                                            [ ( "selected"
-                                              , List.member bucket.key selectedBucket
-                                              )
-                                            ]
-                                        ]
-                                        [ span [] [ text bucket.key ]
-                                        , if List.member bucket.key selectedBucket then
-                                            closeButton
-
-                                          else
-                                            span [] [ span [ class "badge" ] [ text <| String.fromInt bucket.doc_count ] ]
-                                        ]
-                                    ]
-                            )
-                            buckets
-                        )
-                    )
-                ]
-            ]
-        )

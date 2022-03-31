@@ -11,6 +11,7 @@ module Search exposing
     , Sort(..)
     , channelDetailsFromId
     , channels
+    , closeButton
     , decodeAggregation
     , decodeResolvedFlake
     , decodeResult
@@ -26,7 +27,9 @@ module Search exposing
     , trapClick
     , update
     , view
+    , viewBucket
     , viewResult
+    , viewSearchInput
     )
 
 import Base64
@@ -867,6 +870,56 @@ viewNoResults categoryName =
         ]
 
 
+closeButton : Html a
+closeButton =
+    span [] []
+
+
+viewBucket :
+    String
+    -> List AggregationsBucketItem
+    -> (String -> a)
+    -> List String
+    -> List (Html a)
+    -> List (Html a)
+viewBucket title buckets searchMsgFor selectedBucket sets =
+    List.append
+        sets
+        (if List.isEmpty buckets then
+            []
+
+         else
+            [ li []
+                [ ul []
+                    (List.append
+                        [ li [ class "header" ] [ text title ] ]
+                        (List.map
+                            (\bucket ->
+                                li []
+                                    [ a
+                                        [ href "#"
+                                        , onClick <| searchMsgFor bucket.key
+                                        , classList
+                                            [ ( "selected"
+                                              , List.member bucket.key selectedBucket
+                                              )
+                                            ]
+                                        ]
+                                        [ span [] [ text bucket.key ]
+                                        , if List.member bucket.key selectedBucket then
+                                            closeButton
+
+                                          else
+                                            span [] [ span [ class "badge" ] [ text <| String.fromInt bucket.doc_count ] ]
+                                        ]
+                                    ]
+                            )
+                            buckets
+                        )
+                    )
+                ]
+            ]
+        )
 viewSearchInput :
     (Msg a b -> c)
     -> String

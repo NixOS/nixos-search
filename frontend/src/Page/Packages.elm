@@ -52,9 +52,9 @@ import Search
     exposing
         ( Details(..)
         , decodeResolvedFlake
+        , viewBucket
         )
 import Utils
-import View.Components.SearchInput exposing (viewBucket)
 
 
 
