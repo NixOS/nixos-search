@@ -398,10 +398,6 @@ update toRoute navKey msg model =
                 |> pushUrl toRoute navKey
 
         QueryResponse result ->
-            -- let
-            -- _ =
-            --     Debug.log "got query result" result
-            -- in
             ( { model
                 | result = result
               }
