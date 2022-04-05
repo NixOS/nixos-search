@@ -37,6 +37,7 @@ import Base64
 import Browser.Dom
 import Browser.Events exposing (Visibility(..))
 import Browser.Navigation
+import Channels
 import Html
     exposing
         ( Html
@@ -472,7 +473,7 @@ createUrl toRoute model =
 
 type Channel
     = Unstable
-    | Release_21_11
+    | Release String
 
 
 {-| TODO: we should consider using more dynamic approach here
@@ -488,7 +489,13 @@ type alias ChannelDetails =
 
 defaultChannel : String
 defaultChannel =
-    "21.11"
+    -- default channel is the first one in `channels` list
+    case channels of
+        [] ->
+            ""
+
+        default :: _ ->
+            default
 
 
 channelDetails : Channel -> ChannelDetails
@@ -497,8 +504,8 @@ channelDetails channel =
         Unstable ->
             ChannelDetails "unstable" "unstable" "nixos/trunk-combined" "nixos-unstable"
 
-        Release_21_11 ->
-            ChannelDetails "21.11" "21.11" "nixos/release-21.11" "nixos-21.11"
+        Release rls ->
+            ChannelDetails rls rls ("nixos/release-" ++ rls) ("nixos-" ++ rls)
 
 
 channelFromId : String -> Maybe Channel
@@ -507,11 +514,8 @@ channelFromId channel_id =
         "unstable" ->
             Just Unstable
 
-        "21.11" ->
-            Just Release_21_11
-
         _ ->
-            Nothing
+            Just (Release channel_id)
 
 
 channelDetailsFromId : String -> Maybe ChannelDetails
@@ -520,11 +524,50 @@ channelDetailsFromId channel_id =
         |> Maybe.map channelDetails
 
 
+type alias ChannelJSON =
+    { channel : String
+    , status : String
+    }
+
+
+decodeChannelsJSON : Json.Decode.Decoder (List ChannelJSON)
+decodeChannelsJSON =
+    Json.Decode.list decodeChannelJSON
+
+
+decodeChannelJSON : Json.Decode.Decoder ChannelJSON
+decodeChannelJSON =
+    Json.Decode.succeed ChannelJSON
+        |> Json.Decode.Pipeline.required "channel" Json.Decode.string
+        |> Json.Decode.Pipeline.required "status" Json.Decode.string
+
+
 channels : List String
 channels =
-    [ "21.11"
-    , "unstable"
-    ]
+    let
+        availableChannels =
+            Json.Decode.decodeString decodeChannelsJSON Channels.channelsJSON
+    in
+    case availableChannels of
+        Err _ ->
+            []
+
+        Ok chans ->
+            let
+                -- order channels by status (stable first)
+                sortedChannels : List ChannelJSON
+                sortedChannels =
+                    List.sortBy
+                        (\c ->
+                            if c.status == "stable" then
+                                0
+
+                            else
+                                1
+                        )
+                        chans
+            in
+            List.map (\c -> c.channel) sortedChannels
 
 
 defaultFlakeId : String
@@ -986,7 +1029,7 @@ viewSearchInput outMsg categoryName selectedChannel searchQuery =
                 [ text "Search" ]
             ]
             :: (selectedChannel
-                    |> Maybe.map (\x -> [ div [] (viewChannels outMsg x) ])
+                    |> Maybe.map (\x -> [ viewChannels outMsg x ])
                     |> Maybe.withDefault []
                )
         )
@@ -995,45 +1038,33 @@ viewSearchInput outMsg categoryName selectedChannel searchQuery =
 viewChannels :
     (Msg a b -> c)
     -> String
-    -> List (Html c)
+    -> Html c
 viewChannels outMsg selectedChannel =
-    List.append
-        [ div []
-            [ h4 [] [ text "Channel: " ]
-            , div
-                [ class "btn-group"
-                , attribute "data-toggle" "buttons-radio"
-                ]
-                (List.filterMap
-                    (\channelId ->
-                        channelDetailsFromId channelId
-                            |> Maybe.map
-                                (\channel ->
-                                    button
-                                        [ type_ "button"
-                                        , classList
-                                            [ ( "btn", True )
-                                            , ( "active", channel.id == selectedChannel )
-                                            ]
-                                        , onClick <| outMsg (ChannelChange channel.id)
+    div []
+        [ h4 [] [ text "Channel: " ]
+        , div
+            [ class "btn-group"
+            , attribute "data-toggle" "buttons-radio"
+            ]
+            (List.filterMap
+                (\channelId ->
+                    channelDetailsFromId channelId
+                        |> Maybe.map
+                            (\channel ->
+                                button
+                                    [ type_ "button"
+                                    , classList
+                                        [ ( "btn", True )
+                                        , ( "active", channel.id == selectedChannel )
                                         ]
-                                        [ text channel.title ]
-                                )
-                    )
-                    channels
+                                    , onClick <| outMsg (ChannelChange channel.id)
+                                    ]
+                                    [ text channel.title ]
+                            )
                 )
-            ]
+                channels
+            )
         ]
-        (if List.member selectedChannel channels then
-            []
-
-         else
-            [ p [ class "alert alert-error" ]
-                [ h4 [] [ text "Wrong channel selected!" ]
-                , text <| "Please select one of the channels above!"
-                ]
-            ]
-        )
 
 
 viewResults :
