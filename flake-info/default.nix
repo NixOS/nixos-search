@@ -1,5 +1,6 @@
-{ pkgs ? import <nixpkgs> { } }: with pkgs;
-rustPlatform.buildRustPackage rec {
+{ pkgs ? import <nixpkgs> { }
+}:
+pkgs.rustPlatform.buildRustPackage rec {
   name = "flake-info";
   src = ./.;
   cargoLock = {
@@ -8,11 +9,18 @@ rustPlatform.buildRustPackage rec {
       "elasticsearch-8.0.0-alpha.1" = "sha256-gjmk3Q3LTAvLhzQ+k1knSp1HBwtqNiubjXNnLy/cS5M=";
     };
   };
-  nativeBuildInputs = [ pkg-config ];
-  buildInputs = [ openssl openssl.dev makeWrapper ] 
-              ++ lib.optional pkgs.stdenv.isDarwin [ libiconv darwin.apple_sdk.frameworks.Security ];
+  nativeBuildInputs = with pkgs; [ pkg-config ];
+  buildInputs =
+    with pkgs; [
+      openssl
+      openssl.dev
+      makeWrapper
+    ] ++ lib.optional pkgs.stdenv.isDarwin [
+      libiconv
+      darwin.apple_sdk.frameworks.Security
+    ];
   
-  checkInputs = [ pandoc ];
+  checkInputs = with pkgs; [ pandoc ];
   
   NIXPKGS_PANDOC_FILTERS_PATH = "${pkgs.path + "/doc/build-aux/pandoc-filters"}";
 
@@ -24,6 +32,6 @@ rustPlatform.buildRustPackage rec {
   postInstall = ''
     wrapProgram $out/bin/flake-info \
       --set NIXPKGS_PANDOC_FILTERS_PATH "${NIXPKGS_PANDOC_FILTERS_PATH}" \
-      --prefix PATH : ${pandoc}/bin
+      --prefix PATH : ${pkgs.pandoc}/bin
   '';
 }
