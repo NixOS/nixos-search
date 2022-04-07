@@ -41,11 +41,11 @@ better queries which in turn will produce better results.
 To start developing open a terminal and run:
 
 ```
-$ cd src
+`nix-shell --run "cd frontend && yarn dev"`
 <!-- enter nix shell -->
 $ nix-shell
-<!-- install yarn dependencies -->
-[nix-shell]$ yarn
+<!-- change to frontend directory -->
+[nix-shell]$ cd frontend
 <!-- start webpack development server -->
 [nix-shell]$ yarn dev
 ```
