@@ -1,15 +1,15 @@
 {
   description = "Code behind search.nixos.org";
 
-  nixConfig = {
-    extra-substituters = [ "https://nixos-search.cachix.org" ];
-    extra-trusted-public-keys = [ "nixos-search.cachix.org-1:1HV3YF8az4fywnH+pAd+CXFEdpTXtv9WpoivPi+H70o=" ];
-  };
+  nixConfig.extra-substituters = [ "https://nixos-search.cachix.org" ];
+  nixConfig.extra-trusted-public-keys = [ "nixos-search.cachix.org-1:1HV3YF8az4fywnH+pAd+CXFEdpTXtv9WpoivPi+H70o=" ];
 
-  inputs = {
-    nixpkgs.url = "nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
-  };
+  # TODO: follow nixos-unstable once elm-format fix is merged and release 
+  #       on nixos-unstable channels:
+  #         https://github.com/NixOS/nixpkgs/pull/167642
+  # inputs.nixpkgs.url = "nixpkgs/nixos-unstable";
+  inputs.nixpkgs.url = "github:aforemny/nixpkgs/fix/elm-format";
+  inputs.flake-utils.url = "github:numtide/flake-utils";
 
   outputs = { self
             , nixpkgs

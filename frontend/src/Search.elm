@@ -11,6 +11,7 @@ module Search exposing
     , Sort(..)
     , channelDetailsFromId
     , channels
+    , closeButton
     , decodeAggregation
     , decodeResolvedFlake
     , decodeResult
@@ -26,7 +27,10 @@ module Search exposing
     , trapClick
     , update
     , view
+    , viewBucket
+    , viewFlakes
     , viewResult
+    , viewSearchInput
     )
 
 import Base64
@@ -74,7 +78,12 @@ import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
 import RemoteData
-import Route exposing (SearchType)
+import Route
+    exposing
+        ( SearchType
+        , allTypes
+        , searchTypeToTitle
+        )
 import Route.SearchQuery
 import Set
 import Task
@@ -398,10 +407,6 @@ update toRoute navKey msg model =
                 |> pushUrl toRoute navKey
 
         QueryResponse result ->
-            -- let
-            -- _ =
-            --     Debug.log "got query result" result
-            -- in
             ( { model
                 | result = result
               }
@@ -768,9 +773,40 @@ view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg search
             )
         )
         [ h1 [] title
-        , viewSearchInput outMsg categoryName model.channel model.query
+        , viewSearchInput outMsg categoryName (Just model.channel) model.query
         , viewResult outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets
         ]
+
+
+viewFlakes :
+    (Msg a b -> msg)
+    -> String
+    -> SearchType
+    -> List (Html msg)
+viewFlakes outMsg _ selectedCategory =
+    [ li []
+        [ ul []
+            (List.map
+                (\category ->
+                    li []
+                        [ a
+                            [ href "#"
+                            , onClick <| outMsg (SubjectChange category)
+                            , classList
+                                [ ( "selected"
+                                  , category == selectedCategory
+                                  )
+                                ]
+                            ]
+                            [ span [] [ text <| searchTypeToTitle category ]
+                            , closeButton
+                            ]
+                        ]
+                )
+                allTypes
+            )
+        ]
+    ]
 
 
 viewResult :
@@ -871,10 +907,62 @@ viewNoResults categoryName =
         ]
 
 
+closeButton : Html a
+closeButton =
+    span [] []
+
+
+viewBucket :
+    String
+    -> List AggregationsBucketItem
+    -> (String -> a)
+    -> List String
+    -> List (Html a)
+    -> List (Html a)
+viewBucket title buckets searchMsgFor selectedBucket sets =
+    List.append
+        sets
+        (if List.isEmpty buckets then
+            []
+
+         else
+            [ li []
+                [ ul []
+                    (List.append
+                        [ li [ class "header" ] [ text title ] ]
+                        (List.map
+                            (\bucket ->
+                                li []
+                                    [ a
+                                        [ href "#"
+                                        , onClick <| searchMsgFor bucket.key
+                                        , classList
+                                            [ ( "selected"
+                                              , List.member bucket.key selectedBucket
+                                              )
+                                            ]
+                                        ]
+                                        [ span [] [ text bucket.key ]
+                                        , if List.member bucket.key selectedBucket then
+                                            closeButton
+
+                                          else
+                                            span [] [ span [ class "badge" ] [ text <| String.fromInt bucket.doc_count ] ]
+                                        ]
+                                    ]
+                            )
+                            buckets
+                        )
+                    )
+                ]
+            ]
+        )
+
+
 viewSearchInput :
     (Msg a b -> c)
     -> String
-    -> String
+    -> Maybe String
     -> Maybe String
     -> Html c
 viewSearchInput outMsg categoryName selectedChannel searchQuery =
@@ -882,7 +970,7 @@ viewSearchInput outMsg categoryName selectedChannel searchQuery =
         [ onSubmit (outMsg QueryInputSubmit)
         , class "search-input"
         ]
-        [ div []
+        (div []
             [ div []
                 [ input
                     [ type_ "text"
@@ -897,8 +985,11 @@ viewSearchInput outMsg categoryName selectedChannel searchQuery =
             , button [ class "btn", type_ "submit" ]
                 [ text "Search" ]
             ]
-        , div [] (viewChannels outMsg selectedChannel)
-        ]
+            :: (selectedChannel
+                    |> Maybe.map (\x -> [ div [] (viewChannels outMsg x) ])
+                    |> Maybe.withDefault []
+               )
+        )
 
 
 viewChannels :

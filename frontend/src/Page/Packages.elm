@@ -52,9 +52,9 @@ import Search
     exposing
         ( Details(..)
         , decodeResolvedFlake
+        , viewBucket
         )
 import Utils
-import View.Components.SearchInput exposing (viewBucket)
 
 
 
@@ -167,9 +167,6 @@ init searchArgs model =
     let
         ( newModel, newCmd ) =
             Search.init searchArgs model
-
-        -- _ =
-        --     Debug.log "New package model" newModel
     in
     ( newModel
     , Cmd.map SearchMsg newCmd
