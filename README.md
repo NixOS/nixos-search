@@ -41,7 +41,13 @@ better queries which in turn will produce better results.
 To start developing open a terminal and run:
 
 ```
-$ nix-shell --run "yarn dev"
+$ cd src
+<!-- enter nix shell -->
+$ nix-shell
+<!-- install yarn dependencies -->
+[nix-shell]$ yarn
+<!-- start webpack development server -->
+[nix-shell]$ yarn dev
 ```
 
 You can point your browser to `http://localhost:3000` and start developing.
