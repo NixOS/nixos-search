@@ -61,7 +61,11 @@ pub struct NixOption {
     #[serde(rename = "type")]
     /// Nix generated description of the options type
     pub option_type: Option<String>,
+    #[serde(deserialize_with = "optional_field", default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub default: Option<DocValue>,
+    #[serde(deserialize_with = "optional_field", default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub example: Option<DocValue>,
 
     /// If defined in a flake, contains defining flake and optionally a module
@@ -89,9 +93,9 @@ pub enum DocValue {
 #[serde(tag = "_type", content = "text")]
 pub enum Literal {
     #[serde(rename = "literalExpression")]
-    LiteralExpression(Value),
+    LiteralExpression(String),
     #[serde(rename = "literalExample")]
-    LiteralExample(Value),
+    LiteralExample(String),
     #[serde(rename = "literalDocBook")]
     LiteralDocBook(String),
 }
@@ -103,7 +107,7 @@ impl Serialize for DocValue {
     {
         match self {
             DocValue::Literal(Literal::LiteralExample(s) | Literal::LiteralExpression(s)) => {
-                return serializer.serialize_some(&s);
+                return serializer.serialize_str(&s);
             }
             DocValue::Literal(Literal::LiteralDocBook(doc_book)) => {
                 return serializer.serialize_str(&doc_book.render().unwrap_or_else(|e| {
@@ -293,6 +297,16 @@ where
     }
 
     deserializer.deserialize_any(StringOrStruct(PhantomData))
+}
+
+/// Deserializes an Option<T> by passing `null` along to T's deserializer instead
+/// of treating it as a missing field
+fn optional_field<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Ok(Some(T::deserialize(deserializer)?))
 }
 
 #[cfg(test)]

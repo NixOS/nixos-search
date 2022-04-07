@@ -178,63 +178,59 @@ viewResultItem channel _ show item =
                 Err _ ->
                     Nothing
 
-        default =
-            "Not given"
-
         asPre value =
             pre [] [ text value ]
 
         asPreCode value =
             div [] [ pre [] [ code [ class "code-block" ] [ text value ] ] ]
 
-        withEmpty wrapWith maybe =
-            case maybe of
-                Nothing ->
-                    asPre default
-
-                Just "" ->
-                    asPre default
-
-                Just value ->
-                    wrapWith value
-
-        wrapped wrapWith value =
-            case value of
-                "" ->
-                    wrapWith <| "\"" ++ value ++ "\""
-
-                _ ->
-                    wrapWith value
-
         showDetails =
             if Just item.source.name == show then
-                div [ Html.Attributes.map SearchMsg Search.trapClick ]
-                    [ div [] [ text "Name" ]
-                    , div [] [ wrapped asPreCode item.source.name ]
-                    , div [] [ text "Description" ]
-                    , div [] <|
-                        (item.source.description
-                            |> Maybe.andThen showHtml
-                            |> Maybe.withDefault []
-                        )
-                    , div [] [ text "Default value" ]
-                    , div [] <|
-                        (item.source.default
-                            |> Maybe.map (\value -> Maybe.withDefault [ asPreCode value ] (showHtml value))
-                            |> Maybe.withDefault [ asPre default ]
-                        )
-                    , div [] [ text "Type" ]
-                    , div [] [ withEmpty asPre item.source.type_ ]
-                    , div [] [ text "Example" ]
-                    , div [] <|
-                        (item.source.example
-                            |> Maybe.map (\value -> Maybe.withDefault [ asPreCode value ] (showHtml value))
-                            |> Maybe.withDefault [ asPre default ]
-                        )
-                    , div [] [ text "Declared in" ]
-                    , div [] <| findSource channel item.source
-                    ]
-                    |> Just
+                Just <|
+                    div [ Html.Attributes.map SearchMsg Search.trapClick ] <|
+                        [ div [] [ text "Name" ]
+                        , div [] [ asPreCode item.source.name ]
+                        ]
+                            ++ (item.source.description
+                                    |> Maybe.andThen showHtml
+                                    |> Maybe.map
+                                        (\description ->
+                                            [ div [] [ text "Description" ]
+                                            , div [] description
+                                            ]
+                                        )
+                                    |> Maybe.withDefault []
+                               )
+                            ++ (item.source.type_
+                                    |> Maybe.map
+                                        (\type_ ->
+                                            [ div [] [ text "Type" ]
+                                            , div [] [ asPre type_ ]
+                                            ]
+                                        )
+                                    |> Maybe.withDefault []
+                               )
+                            ++ (item.source.default
+                                    |> Maybe.map
+                                        (\default ->
+                                            [ div [] [ text "Default" ]
+                                            , div [] <| Maybe.withDefault [ asPreCode default ] (showHtml default)
+                                            ]
+                                        )
+                                    |> Maybe.withDefault []
+                               )
+                            ++ (item.source.example
+                                    |> Maybe.map
+                                        (\example ->
+                                            [ div [] [ text "Example" ]
+                                            , div [] <| Maybe.withDefault [ asPreCode example ] (showHtml example)
+                                            ]
+                                        )
+                                    |> Maybe.withDefault []
+                               )
+                            ++ [ div [] [ text "Declared in" ]
+                               , div [] <| findSource channel item.source
+                               ]
 
             else
                 Nothing
