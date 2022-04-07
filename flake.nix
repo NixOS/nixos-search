@@ -31,13 +31,31 @@
           warnToUpgradeNix = pkgs.lib.warn "Please upgrade Nix to 2.7 or later.";
           version = pkgs.lib.removeSuffix "\n" (builtins.readFile ./VERSION);
           channels =
-            pkgs.lib.filterAttrs
-              (n: v:
-                builtins.elem v.status ["beta" "stable" "rolling"] &&
-                pkgs.lib.hasPrefix "nixos-" n &&
-                v ? variant && v.variant == "primary"
-              )
-              (import "${nixos-org-configurations}/channels.nix").channels;
+            let
+              allChannels = (import "${nixos-org-configurations}/channels.nix").channels;
+              filterChannels = 
+                pkgs.lib.filterAttrs
+                  (n: v:
+                    builtins.elem v.status ["beta" "stable" "rolling"] &&
+                    pkgs.lib.hasPrefix "nixos-" n &&
+                    v ? variant && v.variant == "primary"
+                  )
+                  allChannels;
+            in
+              builtins.map
+                (n: let v = filterChannels.${n}; in
+                  {
+                    id = pkgs.lib.removePrefix "nixos-" n;
+                    title = pkgs.lib.removePrefix "nixos-" n;
+                    status = v.status;
+                    jobset =
+                      builtins.concatStringsSep
+                        "/"
+                        (pkgs.lib.init (pkgs.lib.splitString "/" v.job));
+                    branch = n;
+                  }
+                )
+                (builtins.attrNames filterChannels);
         in rec {
 
           packages.default = packages.flake-info;

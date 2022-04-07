@@ -29,6 +29,7 @@ import Page.Flakes exposing (Model(..))
 import Page.Home
 import Page.Options
 import Page.Packages
+import Json.Decode
 import RemoteData exposing (RemoteData(..))
 import Route exposing (SearchType(..))
 import Search exposing (Msg(..), defaultFlakeId)
@@ -44,6 +45,7 @@ type alias Flags =
     , elasticsearchUrl : String
     , elasticsearchUsername : String
     , elasticsearchPassword : String
+    , nixosChannels : Json.Decode.Value
     }
 
 
@@ -51,8 +53,24 @@ type alias Model =
     { navKey : Browser.Navigation.Key
     , route : Route.Route
     , elasticsearch : Search.Options
+    , nixosChannels : List NixOSChannel
     , page : Page
     }
+
+
+type alias NixOSChannel =
+    { id : String
+    , title : String
+    , status: NixOSChannelStatus
+    , jobset : String
+    , branch : String
+    }
+
+
+type NixOSChannelStatus
+    = Rolling
+    | Stable
+    | Beta
 
 
 type Page
@@ -78,12 +96,37 @@ init flags url navKey =
                     flags.elasticsearchUrl
                     flags.elasticsearchUsername
                     flags.elasticsearchPassword
+            , nixosChannels = 
+                case Json.Decode.decodeValue decodeNixOSChannels flags.nixosChannels of
+                  Ok c -> c
+                  Err _ -> []
             , page = NotFound
             , route = Route.Home
             }
     in
     changeRouteTo model url
 
+
+decodeNixOSChannels : Json.Decode.Decoder (List NixOSChannel)
+decodeNixOSChannels =
+  Json.Decode.list
+    ( Json.Decode.map5 NixOSChannel
+        (Json.Decode.field "id" Json.Decode.string)
+        (Json.Decode.field "title" Json.Decode.string)
+        (Json.Decode.field "status" (
+          Json.Decode.string
+            |> Json.Decode.andThen
+                 (\status ->
+                     case status of 
+                       "rolling" -> Json.Decode.succeed Rolling
+                       "stable" -> Json.Decode.succeed Stable
+                       "beta" -> Json.Decode.succeed Beta
+                       _ -> Json.Decode.fail ("Unknown status: " ++ status)
+                 )
+        ))
+        (Json.Decode.field "jobset" Json.Decode.string)
+        (Json.Decode.field "branch" Json.Decode.string)
+    )
 
 
 -- UPDATE
