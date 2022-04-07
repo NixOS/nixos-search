@@ -1,5 +1,10 @@
 [[sources]]
 type = "github"
+owner = "NixOS"
+repo = "hydra"
+
+[[sources]]
+type = "github"
 owner = "ngi-nix"
 repo = "offen"
 
@@ -53,6 +58,11 @@ type = "github"
 owner = "PaddiM8"
 repo = "kalker"
 
+[[source]]
+type = "github"
+owner = "pta2002"
+repo = "nixvim"
+
 [[sources]]
 type = "github"
 owner = "yusdacra"
@@ -93,3 +103,8 @@ url = "git+https://codeberg.org/wolfangaukang/python-trovo?ref=main"
 [[sources]]
 type = "git"
 url = "git+https://codeberg.org/wolfangaukang/multifirefox?ref=main"
+
+[[sources]]
+type = "github"
+owner = "juliosueiras-nix"
+repo = "nix-security"

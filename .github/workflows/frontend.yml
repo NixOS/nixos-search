@@ -2,13 +2,10 @@ name: "Frontend: Build & Deploy to Netlify"
 on:
   pull_request:
     paths:
-      - "src/**"
-      - "elm-srcs.nix"
-      - "elm.json"
-      - "netflify.toml"
+      - "flake.nix"
+      - "flake.lock"
+      - "frontend/**"
       - "VERSION"
-      - "webpack.config.js"
-      - "yarn.lock"
 
   push:
     branches:
@@ -49,4 +46,4 @@ jobs:
         enable-commit-comment: true
         enable-commit-status: true
         overwrites-pull-request-comment: false
-      if: github.repository == 'NixOS/nixos-search'
+      if: github.repository_owner == 'NixOS'

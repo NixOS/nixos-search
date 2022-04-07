@@ -7,47 +7,7 @@ on:
 
 jobs:
 
-
-
-  build-flake-info:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checking out the repository
-      uses: actions/checkout@v3
-
-    - name: Setup
-      uses: ./.github/actions/common-setup
-      with:
-        CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
-
-    - name: Building flake-info
-      run: |
-        nix -vL build .#flake-info
-
-
-  find-releases:
-    runs-on: ubuntu-latest
-
-    outputs:
-      nixpkgs-versions: "${{ steps.generate-release-matrix.outputs.nixpkgs-versions }}"
-    steps:
-    - name: Setup
-      uses: ./.github/actions/common-setup
-      with:
-        CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
-
-    - name: Generate Release Matrix
-      id: generate-release-matrix
-      run: |
-        channels="$(curl -fsL 'https://monitoring.nixos.org/prometheus/api/v1/query?query=channel_revision' | jq '[.data.result[] | select(.metric.status == "beta" or .metric.status == "stable" or .metric.status == "rolling" or .metric.status == "deprecated") | select(.metric.variant == "primary") | .metric.channel | sub("^nixos-"; "")')]"
-        echo ::set-output name=nixpkgs-versions::${channels}
-
   import-nixpkgs:
-    needs:
-      - build-flake-info
-      - find-releases
-
     runs-on: ubuntu-latest
 
     strategy:
@@ -89,10 +49,7 @@ jobs:
       if: github.repository_owner == 'NixOS'
 
 
-
   import-flakes:
-    needs: build-flake-info
-
     runs-on: ubuntu-latest
 
     strategy:
