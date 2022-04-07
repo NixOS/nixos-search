@@ -58,6 +58,11 @@ type = "github"
 owner = "PaddiM8"
 repo = "kalker"
 
+[[source]]
+type = "github"
+owner = "pta2002"
+repo = "nixvim"
+
 [[sources]]
 type = "github"
 owner = "yusdacra"
