@@ -1,0 +1,2 @@
+[env]
+MIN_NIX_VERSION = "2.4.0" # flakes

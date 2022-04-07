@@ -1,6 +1,7 @@
 module Search exposing
     ( Aggregation
     , AggregationsBucketItem
+    , Details(..)
     , Model
     , Msg(..)
     , Options
@@ -10,13 +11,12 @@ module Search exposing
     , Sort(..)
     , channelDetailsFromId
     , channels
+    , closeButton
     , decodeAggregation
     , decodeResolvedFlake
     , decodeResult
     , defaultFlakeId
     , elementId
-    , flakeFromId
-    , flakes
     , fromSortId
     , init
     , makeRequest
@@ -27,11 +27,15 @@ module Search exposing
     , trapClick
     , update
     , view
-    , viewResult, Details(..)
+    , viewBucket
+    , viewFlakes
+    , viewResult
+    , viewSearchInput
     )
 
 import Base64
 import Browser.Dom
+import Browser.Events exposing (Visibility(..))
 import Browser.Navigation
 import Html
     exposing
@@ -74,11 +78,15 @@ import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
 import RemoteData
-import Route exposing (SearchArgs, SearchType)
+import Route
+    exposing
+        ( SearchType
+        , allTypes
+        , searchTypeToTitle
+        )
 import Route.SearchQuery
 import Set
 import Task
-import Browser.Events exposing (Visibility(..))
 
 
 type alias Model a b =
@@ -146,7 +154,11 @@ type Sort
 
 
 type alias ResolvedFlake =
-    { type_ : String, owner : Maybe String, repo : Maybe String, url : Maybe String }
+    { type_ : String
+    , owner : Maybe String
+    , repo : Maybe String
+    , url : Maybe String
+    }
 
 
 decodeResolvedFlake : Json.Decode.Decoder String
@@ -198,22 +210,6 @@ init :
     -> ( Model a b, Cmd (Msg a b) )
 init args maybeModel =
     let
-        emptyRoute : Route.SearchArgs
-        emptyRoute =
-            { query = Nothing
-            , channel = Nothing
-            , show = Nothing
-            , from = Nothing
-            , size = Nothing
-            , buckets = Nothing
-
-            -- TODO= Nothing type
-            , sort = Nothing
-            , type_ = Nothing
-            }
-
-        -- args =
-        --     Maybe.withDefault emptyRoute maybeArgs
         getField getFn default =
             maybeModel
                 |> Maybe.map getFn
@@ -269,7 +265,7 @@ ensureLoading :
     Model a b
     -> Model a b
 ensureLoading model =
-    if model.query /= Nothing && model.query /= Just "" && (List.member model.channel channels || List.member model.channel flakeIds) then
+    if model.query /= Nothing && model.query /= Just "" && List.member model.channel channels then
         { model | result = RemoteData.Loading }
 
     else
@@ -302,11 +298,14 @@ type Msg a b
     | ChangePage Int
     | ShowInstallDetails Details
 
-type Details 
+
+type Details
     = FromNixpkgs
     | FromNixOS
     | FromFlake
     | Unset
+
+
 scrollToEntry :
     Maybe String
     -> Cmd (Msg a b)
@@ -408,10 +407,6 @@ update toRoute navKey msg model =
                 |> pushUrl toRoute navKey
 
         QueryResponse result ->
-            -- let
-            -- _ =
-            --     Debug.log "got query result" result
-            -- in
             ( { model
                 | result = result
               }
@@ -477,8 +472,6 @@ createUrl toRoute model =
 
 type Channel
     = Unstable
-    | Release_20_09
-    | Release_21_05
     | Release_21_11
 
 
@@ -504,12 +497,6 @@ channelDetails channel =
         Unstable ->
             ChannelDetails "unstable" "unstable" "nixos/trunk-combined" "nixos-unstable"
 
-        Release_20_09 ->
-            ChannelDetails "20.09" "20.09" "nixos/release-20.09" "nixos-20.09"
-
-        Release_21_05 ->
-            ChannelDetails "21.05" "21.05" "nixos/release-21.05" "nixos-21.05"
-
         Release_21_11 ->
             ChannelDetails "21.11" "21.11" "nixos/release-21.11" "nixos-21.11"
 
@@ -519,12 +506,6 @@ channelFromId channel_id =
     case channel_id of
         "unstable" ->
             Just Unstable
-
-        "20.09" ->
-            Just Release_20_09
-
-        "21.05" ->
-            Just Release_21_05
 
         "21.11" ->
             Just Release_21_11
@@ -541,19 +522,9 @@ channelDetailsFromId channel_id =
 
 channels : List String
 channels =
-    [ "20.09"
-    , "21.05"
-    , "21.11"
+    [ "21.11"
     , "unstable"
     ]
-
-
-type alias Flake =
-    { id : String
-    , isNixpkgs : Bool
-    , title : String
-    , source : String
-    }
 
 
 defaultFlakeId : String
@@ -561,58 +532,59 @@ defaultFlakeId =
     "group-manual"
 
 
-flakeFromId : String -> Maybe Flake
-flakeFromId flake_id =
-    let
-        find : String -> List Flake -> Maybe Flake
-        find id_ list =
-            case list of
-                flake :: rest ->
-                    if flake.id == id_ then
-                        Just flake
 
-                    else
-                        find id_ rest
-
-                [] ->
-                    Nothing
-    in
-    find flake_id flakes
-
-
-flakeIds : List String
-flakeIds =
-    List.map .id flakes
-
-
-flakes : List Flake
-flakes =
-    [ { id = "latest-nixos-21.11-latest"
-      , isNixpkgs = True
-      , title = "Nixpkgs 21.11"
-      , source = ""
-      }
-    , { id = "latest-nixos-21.05-latest"
-      , isNixpkgs = True
-      , title = "Nixpkgs 21.05"
-      , source = ""
-      }
-    , { id = "nixos-21.09-latest"
-      , isNixpkgs = True
-      , title = "Nixpkgs 21.09"
-      , source = ""
-      }
-    , { id = "latest-nixos-unstable"
-      , isNixpkgs = True
-      , title = "Nixpkgs Unstable"
-      , source = ""
-      }
-    , { id = "flakes"
-      , isNixpkgs = False
-      , title = "Public Flakes"
-      , source = ""
-      }
-    ]
+-- flakeFromId : String -> Maybe Flake
+-- flakeFromId flake_id =
+--     let
+--         find : String -> List Flake -> Maybe Flake
+--         find id_ list =
+--             case list of
+--                 flake :: rest ->
+--                     if flake.id == id_ then
+--                         Just flake
+--
+--                     else
+--                         find id_ rest
+--
+--                 [] ->
+--                     Nothing
+--     in
+--     find flake_id flakes
+--
+--
+-- flakeIds : List String
+-- flakeIds =
+--     List.map .id flakes
+--
+--
+-- flakes : List Flake
+-- flakes =
+--     [ { id = "latest-nixos-21.11-latest"
+--       , isNixpkgs = True
+--       , title = "Nixpkgs 21.11"
+--       , source = ""
+--       }
+--     , { id = "latest-nixos-21.05-latest"
+--       , isNixpkgs = True
+--       , title = "Nixpkgs 21.05"
+--       , source = ""
+--       }
+--     , { id = "nixos-21.09-latest"
+--       , isNixpkgs = True
+--       , title = "Nixpkgs 21.09"
+--       , source = ""
+--       }
+--     , { id = "latest-nixos-unstable"
+--       , isNixpkgs = True
+--       , title = "Nixpkgs Unstable"
+--       , source = ""
+--       }
+--     , { id = "flakes"
+--       , isNixpkgs = False
+--       , title = "Public Flakes"
+--       , source = ""
+--       }
+--     ]
 
 
 sortBy : List Sort
@@ -801,9 +773,40 @@ view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg search
             )
         )
         [ h1 [] title
-        , viewSearchInput outMsg categoryName model.channel model.query
+        , viewSearchInput outMsg categoryName (Just model.channel) model.query
         , viewResult outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets
         ]
+
+
+viewFlakes :
+    (Msg a b -> msg)
+    -> String
+    -> SearchType
+    -> List (Html msg)
+viewFlakes outMsg _ selectedCategory =
+    [ li []
+        [ ul []
+            (List.map
+                (\category ->
+                    li []
+                        [ a
+                            [ href "#"
+                            , onClick <| outMsg (SubjectChange category)
+                            , classList
+                                [ ( "selected"
+                                  , category == selectedCategory
+                                  )
+                                ]
+                            ]
+                            [ span [] [ text <| searchTypeToTitle category ]
+                            , closeButton
+                            ]
+                        ]
+                )
+                allTypes
+            )
+        ]
+    ]
 
 
 viewResult :
@@ -828,7 +831,7 @@ viewResult :
 viewResult outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets =
     case model.result of
         RemoteData.NotAsked ->
-            div [] [  ]
+            div [] []
 
         RemoteData.Loading ->
             div [ class "loader-wrapper" ]
@@ -904,10 +907,62 @@ viewNoResults categoryName =
         ]
 
 
+closeButton : Html a
+closeButton =
+    span [] []
+
+
+viewBucket :
+    String
+    -> List AggregationsBucketItem
+    -> (String -> a)
+    -> List String
+    -> List (Html a)
+    -> List (Html a)
+viewBucket title buckets searchMsgFor selectedBucket sets =
+    List.append
+        sets
+        (if List.isEmpty buckets then
+            []
+
+         else
+            [ li []
+                [ ul []
+                    (List.append
+                        [ li [ class "header" ] [ text title ] ]
+                        (List.map
+                            (\bucket ->
+                                li []
+                                    [ a
+                                        [ href "#"
+                                        , onClick <| searchMsgFor bucket.key
+                                        , classList
+                                            [ ( "selected"
+                                              , List.member bucket.key selectedBucket
+                                              )
+                                            ]
+                                        ]
+                                        [ span [] [ text bucket.key ]
+                                        , if List.member bucket.key selectedBucket then
+                                            closeButton
+
+                                          else
+                                            span [] [ span [ class "badge" ] [ text <| String.fromInt bucket.doc_count ] ]
+                                        ]
+                                    ]
+                            )
+                            buckets
+                        )
+                    )
+                ]
+            ]
+        )
+
+
 viewSearchInput :
     (Msg a b -> c)
     -> String
-    -> String
+    -> Maybe String
     -> Maybe String
     -> Html c
 viewSearchInput outMsg categoryName selectedChannel searchQuery =
@@ -915,7 +970,7 @@ viewSearchInput outMsg categoryName selectedChannel searchQuery =
         [ onSubmit (outMsg QueryInputSubmit)
         , class "search-input"
         ]
-        [ div []
+        (div []
             [ div []
                 [ input
                     [ type_ "text"
@@ -930,8 +985,11 @@ viewSearchInput outMsg categoryName selectedChannel searchQuery =
             , button [ class "btn", type_ "submit" ]
                 [ text "Search" ]
             ]
-        , div [] (viewChannels outMsg selectedChannel)
-        ]
+            :: (selectedChannel
+                    |> Maybe.map (\x -> [ div [] (viewChannels outMsg x) ])
+                    |> Maybe.withDefault []
+               )
+        )
 
 
 viewChannels :
@@ -992,7 +1050,7 @@ viewResults :
     -> (Msg a b -> c)
     -> String
     -> List (Html c)
-viewResults model result viewSuccess toRoute outMsg categoryName =
+viewResults model result viewSuccess _ outMsg categoryName =
     let
         from =
             String.fromInt (model.from + 1)
@@ -1329,8 +1387,12 @@ makeRequest :
     -> Maybe String
     -> Cmd (Msg a b)
 makeRequest body channel decodeResultItemSource decodeResultAggregations options responseMsg tracker =
-    let branch = Maybe.map (\details -> details.branch) (channelDetailsFromId channel) |> Maybe.withDefault channel
-        index = "latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ branch
+    let
+        branch =
+            Maybe.map (\details -> details.branch) (channelDetailsFromId channel) |> Maybe.withDefault channel
+
+        index =
+            "latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ branch
     in
     Http.riskyRequest
         { method = "POST"

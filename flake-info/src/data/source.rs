@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     ffi::OsStr,
     fs::{self, File},
-    io::Read,
+    io::{self, Read},
     path::Path,
 };
 
@@ -74,8 +74,8 @@ impl Source {
         }
     }
 
-    pub fn read_sources_file(path: &Path) -> Result<Vec<Source>> {
-        let mut file = File::open(path).with_context(|| "Failed to open input file")?;
+    pub fn read_sources_file(path: &Path) -> io::Result<Vec<Source>> {
+        let mut file = File::open(path)?;
 
         let mut buf = String::new();
         file.read_to_string(&mut buf)?;
@@ -99,28 +99,38 @@ impl Source {
             sha: String,
         }
 
-        let git_ref = reqwest::Client::builder()
-            .user_agent("curl") // thank you github
+        let request = reqwest::Client::builder()
+            .user_agent("nixos-search")
             .build()?
             .get(format!(
                 "https://api.github.com/repos/nixos/nixpkgs/branches/nixos-{}",
                 channel
+            ));
+
+        let request = match std::env::var("GITHUB_TOKEN") {
+            Ok(token) => request.bearer_auth(token),
+            _ => request,
+        };
+
+        let response = request.send().await?;
+
+        if !response.status().is_success() {
+            Err(anyhow::anyhow!(
+                "GitHub returned {:?} {}",
+                response.status(),
+                response.text().await?
             ))
-            .send()
-            .await?
-            .json::<ApiResult>()
-            .await?
-            .commit
-            .sha;
-
-        let nixpkgs = Nixpkgs { channel, git_ref };
-
-        Ok(nixpkgs)
+        } else {
+            let git_ref = response.json::<ApiResult>().await?.commit.sha;
+            let nixpkgs = Nixpkgs { channel, git_ref };
+            Ok(nixpkgs)
+        }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Nixpkgs {
     pub channel: String,
+
     pub git_ref: String,
 }

@@ -1,0 +1,89 @@
+name: "Hourly import to Elasticsearch"
+
+on:
+  workflow_dispatch:
+  schedule:
+  - cron: '0 * * * *'
+
+jobs:
+
+  import-nixpkgs:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        channel:
+          - unstable
+          - 21.11
+
+    env:
+      RUST_LOG: debug
+      FI_ES_EXISTS_STRATEGY: abort
+      FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL }}
+
+    steps:
+    - name: Checking out the repository
+      uses: actions/checkout@v3
+
+    - name: Setup
+      uses: ./.github/actions/common-setup
+      with:
+        CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+
+    - name: Installing Nix unstable
+      run: |
+        nix-env -f '<nixpkgs>' -iA nixVersions.unstable # for https://github.com/NixOS/nix/pull/6242
+        echo "$HOME/.nix-profile/bin" >> "$GITHUB_PATH"
+
+    - name: Import ${{ matrix.channel }} channel
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        nix run .#flake-info -- --push --elastic-schema-version=$(< VERSION) nixpkgs ${{ matrix.channel }}
+      if: github.repository_owner == 'NixOS'
+
+    - name: Warmup ${{ matrix.channel }} channel
+      run: |
+        for (( i = 0; i < 3; i++ )) do
+          curl -sS ${{ secrets.ELASTICSEARCH_URL }}/latest-$(< VERSION)-nixos-${{ matrix.channel }}/_search | jq -c '.took // .'
+        done
+      if: github.repository_owner == 'NixOS'
+
+
+
+  import-flakes:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        group:
+          - "manual"
+
+    env:
+      RUST_LOG: debug
+      FI_ES_EXISTS_STRATEGY: recreate
+      FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL }}
+
+    steps:
+
+    - name: Checking out the repository
+      uses: actions/checkout@v3
+
+    - name: Setup
+      uses: ./.github/actions/common-setup
+      with:
+        CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+
+    - name: Import ${{ matrix.group }} group
+      run: |
+        nix run .#flake-info -- --push --elastic-schema-version=$(< ./VERSION) group ./flakes/${{ matrix.group }}.toml ${{ matrix.group }}
+      if: github.repository_owner == 'NixOS'
+
+    - name: Warmup ${{ matrix.group }} group
+      run: |
+        for (( i = 0; i < 3; i++ )) do
+          curl -sS ${{ secrets.ELASTICSEARCH_URL }}/latest-$(< VERSION)-group-${{ matrix.group }}/_search | jq -c '.took // .'
+        done
+      if: github.repository_owner == 'NixOS'

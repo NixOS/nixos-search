@@ -11,8 +11,6 @@ dist
 elm-stuff/
 eval-*
 ignore
-import-scripts/import_scripts/__pycache__/
-import-scripts/tests/__pycache__/
 logs
 node_modules
 npm-debug.log*
@@ -20,3 +18,4 @@ package-lock.json
 repl-temp-*
 result
 src-url
+.direnv/

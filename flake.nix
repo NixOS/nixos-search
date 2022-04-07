@@ -1,41 +1,48 @@
 {
   description = "Code behind search.nixos.org";
 
-  inputs = {
-    nixpkgs = { url = "nixpkgs/nixos-unstable"; };
+  nixConfig = {
+    extra-substituters = [ "https://nixos-search.cachix.org" ];
+    extra-trusted-public-keys = [ "nixos-search.cachix.org-1:1HV3YF8az4fywnH+pAd+CXFEdpTXtv9WpoivPi+H70o=" ];
   };
 
-  outputs = { self, nixpkgs }:
-    let
-      systems = [ "x86_64-linux" "i686-linux" "x86_64-darwin" "aarch64-linux" ];
-      forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f system);
-      mkPackage = path: system:
-        let
-          pkgs = import nixpkgs {
-            inherit system;
-            overlays = [];
-          };
-        in
-          import path { inherit pkgs; };
-      packages = system:
-        {
-          flake-info = mkPackage ./flake-info system;
-          frontend = mkPackage ./. system;
-        };
+  inputs = {
+    nixpkgs.url = "nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
+  };
 
-      devShell = system:
-        let packages_inst = (packages system);
-        in
-        nixpkgs.legacyPackages.${system}.mkShell {
-          inputsFrom = builtins.attrValues packages_inst;
-          shellHook = ''
-            export NIXPKGS_PANDOC_FILTERS_PATH="${packages_inst.flake_info.NIXPKGS_PANDOC_FILTERS_PATH}";
-          '';
-        };
-    in
-      {
-        defaultPackage = forAllSystems (mkPackage ./.);
-        packages = forAllSystems packages;
-        devShell = forAllSystems devShell;
-      };
+  outputs = { self
+            , nixpkgs
+            , flake-utils
+            }:
+    flake-utils.lib.eachSystem
+      (with flake-utils.lib.system; [
+        x86_64-linux
+        i686-linux
+        x86_64-darwin
+        aarch64-linux
+      ])
+      (system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          warnToUpgradeNix = pkgs.lib.warn "Please upgrade Nix to 2.7 or later.";
+        in rec {
+
+          packages.default = packages.flake-info;
+          packages.flake-info = import ./flake-info { inherit pkgs; };
+          packages.frontend = import ./frontend { inherit pkgs; };
+
+          devShells.default = pkgs.mkShell {
+            inputsFrom = builtins.attrValues packages;
+            shellHook = ''
+              export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
+              export NIXPKGS_PANDOC_FILTERS_PATH="${packages.flake-info.NIXPKGS_PANDOC_FILTERS_PATH}";
+            '';
+          };
+
+          # XXX: for backwards compatibility
+          devShell = warnToUpgradeNix devShells.default;
+          defaultPackage = warnToUpgradeNix packages.default;
+        }
+      );
 }

@@ -23,7 +23,6 @@ import Html
         , div
         , li
         , pre
-        , source
         , span
         , strong
         , text
@@ -45,10 +44,8 @@ import Html.Parser.Util
 import Http exposing (Body)
 import Json.Decode
 import Json.Decode.Pipeline
-import List exposing (sort)
 import Route exposing (SearchType)
 import Search exposing (Details, decodeResolvedFlake)
-import Url.Parser exposing (query)
 
 
 
@@ -68,7 +65,7 @@ type alias ResultItemSource =
     , source : Maybe String
 
     -- flake
-    , flake : Maybe ( String, String )
+    , flake : Maybe (List String)
     , flakeName : Maybe String
     , flakeDescription : Maybe String
     , flakeUrl : Maybe String
@@ -171,12 +168,15 @@ viewResultItem :
 viewResultItem channel _ show item =
     let
         showHtml value =
-            case Html.Parser.run value of
-                Ok nodes ->
-                    Html.Parser.Util.toVirtualDom nodes
+            case Html.Parser.run <| String.trim value of
+                Ok [ Html.Parser.Element "rendered-docbook" _ nodes ] ->
+                    Just <| Html.Parser.Util.toVirtualDom nodes
+
+                Ok _ ->
+                    Nothing
 
                 Err _ ->
-                    []
+                    Nothing
 
         default =
             "Not given"
@@ -214,15 +214,23 @@ viewResultItem channel _ show item =
                     , div [] [ text "Description" ]
                     , div [] <|
                         (item.source.description
-                            |> Maybe.map showHtml
+                            |> Maybe.andThen showHtml
                             |> Maybe.withDefault []
                         )
                     , div [] [ text "Default value" ]
-                    , div [] [ withEmpty (wrapped asPreCode) item.source.default ]
+                    , div [] <|
+                        (item.source.default
+                            |> Maybe.map (\value -> Maybe.withDefault [ asPreCode value ] (showHtml value))
+                            |> Maybe.withDefault [ asPre default ]
+                        )
                     , div [] [ text "Type" ]
                     , div [] [ withEmpty asPre item.source.type_ ]
                     , div [] [ text "Example" ]
-                    , div [] [ withEmpty (wrapped asPreCode) item.source.example ]
+                    , div [] <|
+                        (item.source.example
+                            |> Maybe.map (\value -> Maybe.withDefault [ asPreCode value ] (showHtml value))
+                            |> Maybe.withDefault [ asPre default ]
+                        )
                     , div [] [ text "Declared in" ]
                     , div [] <| findSource channel item.source
                     ]
@@ -237,40 +245,20 @@ viewResultItem channel _ show item =
         isOpen =
             Just item.source.name == show
 
-        githubUrlPrefix branch =
-            "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/"
-
-        cleanPosition value =
-            if String.startsWith "source/" value then
-                String.dropLeft 7 value
-
-            else
-                value
-
-        asGithubLink value =
-            case Search.channelDetailsFromId channel of
-                Just channelDetails ->
-                    a
-                        [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L")
-                        , target "_blank"
-                        ]
-                        [ text value ]
-
-                Nothing ->
-                    text <| cleanPosition value
-
-        sourceFile =
-            Maybe.map asGithubLink item.source.source
-
         flakeOrNixpkgs =
-            case ( item.source.flakeName, item.source.flake, item.source.flakeUrl ) of
+            let
+                mkLink flake url =
+                    a [ href url ] [ text flake ]
+            in
+            case ( item.source.flake, item.source.flakeUrl ) of
                 -- its a flake
-                ( Just name, Just ( _, module_ ), Just flakeUrl_ ) ->
+                ( Just (flake :: []), Just url ) ->
                     Just
-                        [ li []
-                            [ a [ href flakeUrl_ ] [ text name ]
-                            ]
+                        [ li [] [ mkLink flake url ]
                         ]
+
+                ( Just (flake :: moduleName :: []), Just url ) ->
+                    Just [ li [] [ mkLink flake url, text "#", text moduleName ] ]
 
                 _ ->
                     Nothing
@@ -331,12 +319,16 @@ findSource channel source =
         flakeOrNixpkgs =
             case ( source.flake, source.flakeUrl ) of
                 -- its a flake
-                ( Just ( name, module_ ), Just flakeUrl_ ) ->
+                ( Just (name :: attrs), Just flakeUrl_ ) ->
+                    let
+                        module_ =
+                            Maybe.withDefault "(default)" <| Maybe.map (\m -> "(Module: " ++ m ++ ")") <| List.head attrs
+                    in
                     Just <|
                         List.append
                             (Maybe.withDefault [] <| Maybe.map (\sourceFile_ -> [ sourceFile_, span [] [ text " in " ] ]) sourceFile)
                             [ span [] [ text "Flake: " ]
-                            , a [ href flakeUrl_ ] [ text <| name ++ "(Module: " ++ module_ ++ ")" ]
+                            , a [ href flakeUrl_ ] [ text <| name ++ module_ ]
                             ]
 
                 ( Nothing, _ ) ->
@@ -407,7 +399,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "option_example" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "option_source" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "option_flake"
-            (Json.Decode.map Just <| Json.Decode.map2 Tuple.pair (Json.Decode.index 0 Json.Decode.string) (Json.Decode.index 1 Json.Decode.string))
+            (Json.Decode.map Just <| Json.Decode.list Json.Decode.string)
             Nothing
         |> Json.Decode.Pipeline.optional "flake_name" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_description" (Json.Decode.map Just Json.Decode.string) Nothing

@@ -1,16 +1,20 @@
 use anyhow::{Context, Result};
 use commands::run_gc;
+use flake_info::commands::NixCheckError;
 use flake_info::data::import::{Kind, NixOption};
 use flake_info::data::{self, Export, Nixpkgs, Source};
 use flake_info::elastic::{ElasticsearchError, ExistsStrategy};
 use flake_info::{commands, elastic};
 use log::{debug, error, info, warn};
+use semver::VersionReq;
 use sha2::Digest;
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::ptr::hash;
+use std::{fs, io};
 use structopt::{clap::ArgGroup, StructOpt};
 use thiserror::Error;
+use tokio::fs::File;
+use tokio::io::AsyncWriteExt;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -41,6 +45,7 @@ struct Args {
 
 #[derive(StructOpt, Debug)]
 enum Command {
+    #[structopt(about = "Import a flake")]
     Flake {
         #[structopt(help = "Flake identifier passed to nix to gather information about")]
         flake: String,
@@ -54,10 +59,25 @@ enum Command {
         #[structopt(long, help = "Whether to gc the store after info or not")]
         gc: bool,
     },
+    #[structopt(about = "Import official nixpkgs channel")]
     Nixpkgs {
         #[structopt(help = "Nixpkgs channel to import")]
         channel: String,
     },
+
+    #[structopt(about = "Import nixpkgs channel from archive or local git path")]
+    NixpkgsArchive {
+        #[structopt(help = "Nixpkgs archive to import")]
+        source: String,
+
+        #[structopt(
+            help = "Which channel to assign nixpkgs to",
+            default_value = "unstable"
+        )]
+        channel: String,
+    },
+
+    #[structopt(about = "Load and import a group of flakes from a file")]
     Group {
         #[structopt(
             help = "Points to a TOML or JSON file containing info targets. If file does not end in 'toml' json is assumed"
@@ -74,6 +94,9 @@ enum Command {
 
         #[structopt(long, help = "Whether to gc the store after info or not")]
         gc: bool,
+
+        #[structopt(long, help = "Whether write an error report about failed packages")]
+        report: bool,
     },
 }
 
@@ -155,17 +178,6 @@ async fn main() -> Result<()> {
     let command_result = run_command(args.command, args.kind, &args.extra).await;
 
     if let Err(error) = command_result {
-        match error {
-            FlakeInfoError::Flake(ref e)
-            | FlakeInfoError::Nixpkgs(ref e)
-            | FlakeInfoError::IO(ref e) => {
-                error!("{}", e);
-            }
-            FlakeInfoError::Group(ref el) => {
-                el.iter().for_each(|e| error!("{}", e));
-            }
-        }
-
         return Err(error.into());
     }
 
@@ -183,15 +195,17 @@ async fn main() -> Result<()> {
 
 #[derive(Debug, Error)]
 enum FlakeInfoError {
-    #[error("Getting flake info caused an error: {0}")]
-    Flake(anyhow::Error),
-    #[error("Getting nixpkgs info caused an error: {0}")]
-    Nixpkgs(anyhow::Error),
-    #[error("Getting group info caused one or more errors: {0:?}")]
-    Group(Vec<anyhow::Error>),
+    #[error("Nix check failed: {0}")]
+    NixCheck(#[from] NixCheckError),
 
+    #[error("Getting flake info caused an error: {0:?}")]
+    Flake(anyhow::Error),
+    #[error("Getting nixpkgs info caused an error: {0:?}")]
+    Nixpkgs(anyhow::Error),
+    #[error("Some members of the group '{0}' could not be processed: \n {}", .1.iter().enumerate().map(|(n, e)| format!("{}: {:?}", n+1, e)).collect::<Vec<String>>().join("\n\n"))]
+    Group(String, Vec<anyhow::Error>),
     #[error("Couldn't perform IO: {0}")]
-    IO(anyhow::Error),
+    IO(#[from] io::Error),
 }
 
 async fn run_command(
@@ -199,6 +213,8 @@ async fn run_command(
     kind: Kind,
     extra: &[String],
 ) -> Result<(Vec<Export>, (String, String, String)), FlakeInfoError> {
+    flake_info::commands::check_nix_version(env!("MIN_NIX_VERSION"))?;
+
     match command {
         Command::Flake {
             flake,
@@ -226,10 +242,21 @@ async fn run_command(
                 .map_err(FlakeInfoError::Nixpkgs)?;
             let ident = (
                 "nixos".to_owned(),
-                nixpkgs.channel.clone(),
-                nixpkgs.git_ref.clone(),
+                nixpkgs.channel.to_owned(),
+                nixpkgs.git_ref.to_owned(),
             );
             let exports = flake_info::process_nixpkgs(&Source::Nixpkgs(nixpkgs), &kind)
+                .map_err(FlakeInfoError::Nixpkgs)?;
+
+            Ok((exports, ident))
+        }
+        Command::NixpkgsArchive { source, channel } => {
+            let ident = (
+                "nixos".to_string(),
+                channel.to_owned(),
+                "latest".to_string(),
+            );
+            let exports = flake_info::process_nixpkgs(&Source::Git { url: source }, &kind)
                 .map_err(FlakeInfoError::Nixpkgs)?;
 
             Ok((exports, ident))
@@ -239,8 +266,14 @@ async fn run_command(
             temp_store,
             gc,
             name,
+            report,
         } => {
-            let sources = Source::read_sources_file(&targets).map_err(FlakeInfoError::IO)?;
+            // if reporting is enabled delete old report
+            if report && tokio::fs::metadata("report.txt").await.is_ok() {
+                tokio::fs::remove_file("report.txt").await?;
+            }
+
+            let sources = Source::read_sources_file(&targets)?;
             let (exports_and_hashes, errors) = sources
                 .iter()
                 .map(|source| match source {
@@ -273,14 +306,19 @@ async fn run_command(
                 .collect::<Vec<_>>();
 
             if !errors.is_empty() {
-
+                let error = FlakeInfoError::Group(name.clone(), errors);
                 if exports.is_empty() {
-                    return Err(FlakeInfoError::Group(errors));
+                    return Err(error);
                 }
+
                 warn!("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=");
-                warn!("Some group members could not be evaluated: {}", FlakeInfoError::Group(errors));
+                warn!("{}", error);
                 warn!("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=");
 
+                if report {
+                    let mut file = File::create("report.txt").await?;
+                    file.write_all(format!("{}", error).as_bytes()).await?;
+                }
             }
 
             let hash = {

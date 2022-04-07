@@ -41,17 +41,17 @@ better queries which in turn will produce better results.
 To start developing open a terminal and run:
 
 ```
-$ nix-shell --run "yarn dev"
+nix-shell --run "cd frontend && yarn dev"
 ```
 
 You can point your browser to `http://localhost:3000` and start developing.
-Any changes to source files (`./src`) will trigger a hot reload of an
+Any changes to source files (`./frontend/src`) will trigger a hot reload of an
 application.
 
 
 ## Deploying
 
-- On each commit to `main` branch a GitHub Action is trigger.
+- On each commit to `main` branch a GitHub Action is triggered.
 - GitHub Action then builds production version of the web application using
   `yarn prod` command.
 - The built web application (in `./dist`) is then deployed to Netlify.

@@ -6,37 +6,33 @@ import Html
     exposing
         ( Html
         , a
-        , button
         , div
         , footer
         , header
         , img
         , li
+        , small
         , span
+        , sup
         , text
         , ul
         )
 import Html.Attributes
     exposing
-        ( attribute
-        , class
+        ( class
         , classList
         , href
         , id
         , src
-        , type_
         )
 import Page.Flakes exposing (Model(..))
 import Page.Home
 import Page.Options
 import Page.Packages
+import RemoteData exposing (RemoteData(..))
 import Route exposing (SearchType(..))
-import Search
+import Search exposing (Msg(..), defaultFlakeId)
 import Url
-import Search exposing (defaultFlakeId)
-import Search exposing (channels)
-import Html exposing (sup)
-import Html exposing (small)
 
 
 
@@ -159,26 +155,19 @@ attemptQuery (( model, _ ) as pair) =
 
         Flakes (OptionModel searchModel) ->
             if Search.shouldLoad searchModel then
-                submitQuery FlakesMsg Page.Flakes.makeRequest {searchModel | channel = defaultFlakeId }
+                submitQuery FlakesMsg Page.Flakes.makeRequest { searchModel | channel = defaultFlakeId }
 
             else
                 noEffects pair
 
         Flakes (PackagesModel searchModel) ->
             if Search.shouldLoad searchModel then
-                -- let
-                --     _ = Debug.log "main" "submit flake message"
-                -- in
-                submitQuery FlakesMsg Page.Flakes.makeRequest {searchModel | channel = defaultFlakeId}
+                submitQuery FlakesMsg Page.Flakes.makeRequest { searchModel | channel = defaultFlakeId }
 
             else
-                --   let _ = Debug.log "main" "should not load flakes" in
                 noEffects pair
 
         _ ->
-            -- let
-            --  _ = Debug.log "pair" <| Debug.toString pair
-            -- in
             pair
 
 
@@ -191,17 +180,18 @@ pageMatch m1 m2 =
         ( Home _, Home _ ) ->
             True
 
-        ( Packages _, Packages _ ) ->
-            True
+        ( Packages model_a, Packages model_b ) ->
+            { model_a | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked }
+                == { model_b | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked }
 
-        ( Options _, Options _ ) ->
-            True
+        ( Options model_a, Options model_b ) ->
+            { model_a | show = Nothing, result = NotAsked } == { model_b | show = Nothing, result = NotAsked }
 
-        ( Flakes (OptionModel _), Flakes (OptionModel _) ) ->
-            True
+        ( Flakes (OptionModel model_a), Flakes (OptionModel model_b) ) ->
+            { model_a | show = Nothing, result = NotAsked } == { model_b | show = Nothing, result = NotAsked }
 
-        ( Flakes (PackagesModel _), Flakes (PackagesModel _) ) ->
-            True
+        ( Flakes (PackagesModel model_a), Flakes (PackagesModel model_b) ) ->
+            { model_a | show = Nothing, result = NotAsked } == { model_b | show = Nothing, result = NotAsked }
 
         _ ->
             False
@@ -271,7 +261,6 @@ changeRouteTo currentModel url =
 
                 Route.Flakes searchArgs ->
                     let
-                        -- _ = Debug.log "changeRouteTo" "flakes"
                         modelPage =
                             case model.page of
                                 Flakes x ->
@@ -288,8 +277,6 @@ changeRouteTo currentModel url =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    -- let _ = Debug.log "main" "update"
-    -- in
     case ( msg, model.page ) of
         ( ClickedLink urlRequest, _ ) ->
             case urlRequest of
@@ -425,8 +412,7 @@ viewNavigation route =
             (viewNavigationItem route)
             [ ( toRoute Route.Packages, text "Packages" )
             , ( toRoute Route.Options, text "Options" )
-            , ( toRoute Route.Flakes, span [] [ text "Flakes", sup [] [span [class "label label-info"][small [] [text "Experimental"]]]] )
-            
+            , ( toRoute Route.Flakes, span [] [ text "Flakes", sup [] [ span [ class "label label-info" ] [ small [] [ text "Experimental" ] ] ] ] )
             ]
 
 

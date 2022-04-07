@@ -1,33 +1,33 @@
 use anyhow::{Context, Result};
+use serde_json::Deserializer;
 use std::io::Write;
 use std::{collections::HashMap, fmt::Display, fs::File};
 
-use command_run::Command;
+use command_run::{Command, LogTo};
 use log::{debug, error};
 
 use crate::data::import::{NixOption, NixpkgsEntry, Package};
 
-const NIXPKGS_SCRIPT: &str = include_str!("packages-config.nix");
 const FLAKE_INFO_SCRIPT: &str = include_str!("flake_info.nix");
 
 pub fn get_nixpkgs_info<T: AsRef<str> + Display>(nixpkgs_channel: T) -> Result<Vec<NixpkgsEntry>> {
-    let script_dir = tempfile::tempdir()?;
-    let script_path = script_dir.path().join("packages-config.nix");
-    writeln!(File::create(&script_path)?, "{}", NIXPKGS_SCRIPT)?;
-
     let mut command = Command::new("nix-env");
-    let command = command.enable_capture();
-    let command = command.add_args(&[
+    command.add_args(&[
         "-f",
         "<nixpkgs>",
         "-I",
         format!("nixpkgs={}", nixpkgs_channel.as_ref()).as_str(),
         "--arg",
         "config",
-        format!("import {}", script_path.to_str().unwrap()).as_str(),
+        "import <nixpkgs/pkgs/top-level/packages-config.nix>",
         "-qa",
+        "--meta",
         "--json",
     ]);
+
+    command.enable_capture();
+    command.log_to = LogTo::Log;
+    command.log_output_on_error = true;
 
     let parsed: Result<Vec<NixpkgsEntry>> = command
         .run()
@@ -38,9 +38,10 @@ pub fn get_nixpkgs_info<T: AsRef<str> + Display>(nixpkgs_channel: T) -> Result<V
             )
         })
         .and_then(|o| {
-            debug!("stderr: {}", o.stderr_string_lossy());
+            let output = &*o.stdout_string_lossy();
+            let de = &mut Deserializer::from_str(output);
             let attr_set: HashMap<String, Package> =
-                serde_json::de::from_str(&o.stdout_string_lossy())?;
+                serde_path_to_error::deserialize(de).with_context(|| "Could not parse packages")?;
             Ok(attr_set
                 .into_iter()
                 .map(|(attribute, package)| NixpkgsEntry::Derivation { attribute, package })
@@ -58,8 +59,7 @@ pub fn get_nixpkgs_options<T: AsRef<str> + Display>(
     writeln!(File::create(&script_path)?, "{}", FLAKE_INFO_SCRIPT)?;
 
     let mut command = Command::new("nix");
-    let command = command.enable_capture();
-    let mut command = command.add_args(&[
+    command.add_args(&[
         "eval",
         "--json",
         "-f",
@@ -72,12 +72,9 @@ pub fn get_nixpkgs_options<T: AsRef<str> + Display>(
         "nixos-options",
     ]);
 
-    // Nix might fail to evaluate some options that reference insecure packages
-    let mut env = HashMap::new();
-    env.insert("NIXPKGS_ALLOW_INSECURE".into(), "1".into());
-    env.insert("NIXPKGS_ALLOW_UNFREE".into(), "1".into());
-
-    command.env = env;
+    command.enable_capture();
+    command.log_to = LogTo::Log;
+    command.log_output_on_error = true;
 
     let parsed = command.run().with_context(|| {
         format!(
@@ -91,8 +88,10 @@ pub fn get_nixpkgs_options<T: AsRef<str> + Display>(
     }
 
     parsed.and_then(|o| {
-        debug!("stderr: {}", o.stderr_string_lossy());
-        let attr_set: Vec<NixOption> = serde_json::de::from_str(&o.stdout_string_lossy())?;
+        let output = &*o.stdout_string_lossy();
+        let de = &mut Deserializer::from_str(output);
+        let attr_set: Vec<NixOption> =
+            serde_path_to_error::deserialize(de).with_context(|| "Could not parse options")?;
         Ok(attr_set.into_iter().map(NixpkgsEntry::Option).collect())
     })
 }

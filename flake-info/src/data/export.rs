@@ -1,12 +1,13 @@
 /// This module defines the unified putput format as expected by the elastic search
 /// Additionally, we implement converseions from the two possible input formats, i.e.
 /// Flakes, or Nixpkgs.
-use std::path::PathBuf;
+use std::{convert::TryInto, path::PathBuf};
 
+use super::{import::{DocValue, ModulePath}, pandoc::PandocExt};
 use crate::data::import::NixOption;
 use log::error;
-use pandoc::{InputFormat, InputKind, OutputFormat, OutputKind, PandocOption, PandocOutput, PandocError};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use super::{
     import,
@@ -70,6 +71,7 @@ pub enum Derivation {
         package_pversion: String,
         package_platforms: Vec<System>,
         package_outputs: Vec<String>,
+        package_default_output: Option<String>,
         package_license: Vec<License>,
         package_license_set: Vec<String>,
         package_maintainers: Vec<Maintainer>,
@@ -105,11 +107,11 @@ pub enum Derivation {
 
         option_type: Option<String>,
 
-        option_default: Option<String>,
+        option_default: Option<DocValue>,
 
-        option_example: Option<String>,
+        option_example: Option<DocValue>,
 
-        option_flake: Option<(String, String)>,
+        option_flake: Option<ModulePath>,
     },
 }
 
@@ -124,6 +126,7 @@ impl From<(import::FlakeEntry, super::Flake)> for Derivation {
                 version,
                 platforms,
                 outputs,
+                default_output,
                 description,
                 license,
             } => {
@@ -158,6 +161,7 @@ impl From<(import::FlakeEntry, super::Flake)> for Derivation {
                     package_pversion: version,
                     package_platforms: platforms,
                     package_outputs: outputs,
+                    package_default_output: Some(default_output),
                     package_license,
                     package_license_set,
                     package_description: description.clone(),
@@ -216,10 +220,13 @@ impl From<import::NixpkgsEntry> for Derivation {
                     .map(|l: &License| l.fullName.to_owned())
                     .collect();
 
-                let package_maintainers = package
+                let package_maintainers: Vec<Maintainer> = package
                     .meta
                     .maintainers
-                    .map_or(Default::default(), Flatten::flatten);
+                    .map_or(Default::default(), Flatten::flatten)
+                    .into_iter()
+                    .map(Into::into)
+                    .collect();
 
                 let package_maintainers_set = package_maintainers
                     .iter()
@@ -250,7 +257,8 @@ impl From<import::NixpkgsEntry> for Derivation {
                         .platforms
                         .map(Flatten::flatten)
                         .unwrap_or_default(),
-                    package_outputs: package.meta.outputs.unwrap_or_default(),
+                    package_outputs: package.outputs.into_keys().collect(),
+                    package_default_output: package.default_output,
                     package_license,
                     package_license_set,
                     package_maintainers,
@@ -285,46 +293,23 @@ impl From<import::NixOption> for Derivation {
             flake,
         }: import::NixOption,
     ) -> Self {
-        let citeref_filter = {
-            let mut p = FILTERS_PATH.clone();
-            p.push("docbook-reader/citerefentry-to-rst-role.lua");
-            p
-        };
-        let man_filter = {
-            let mut p = FILTERS_PATH.clone();
-            p.push("link-unix-man-references.lua");
-            p
-        };
-
-        let description = if let Some(description) = description {
-            let mut pandoc = pandoc::new();
-            let description_xml = format!(
-                "
-                <xml xmlns:xlink=\"http://www.w3.org/1999/xlink\">
-                <para>{}</para>
-                </xml>
-                ",
-                description
-            );
-
-            pandoc.set_input(InputKind::Pipe(description_xml));
-            pandoc.set_input_format(InputFormat::DocBook, Vec::new());
-            pandoc.set_output(OutputKind::Pipe);
-            pandoc.set_output_format(OutputFormat::Html, Vec::new());
-            pandoc.add_options(&[
-                PandocOption::LuaFilter(citeref_filter),
-                PandocOption::LuaFilter(man_filter),
-            ]);
-
-            let result = pandoc.execute().expect(&format!("Pandoc could not parse documentation of '{}'", name));
-
-            match result {
-                PandocOutput::ToBuffer(description) => Some(description),
-                _ => unreachable!(),
-            }
-        } else {
-            description
-        };
+        let description = description
+            .as_ref()
+            .map(PandocExt::render)
+            .transpose()
+            .expect(&format!("Could not render descript of `{}`", name));
+        let option_default = default;
+        // .map(TryInto::try_into)
+        // .transpose()
+        // .expect(&format!("Could not render option_default of `{}`", name));
+        let option_example = example;
+        // .map(TryInto::try_into)
+        // .transpose()
+        // .expect(&format!("Could not render option_example of `{}`", name));
+        let option_type = option_type;
+        // .map(TryInto::try_into)
+        // .transpose()
+        // .expect(&format!("Could not render option_type of `{}`", name));
 
         Derivation::Option {
             option_source: declarations.get(0).map(Clone::clone),
@@ -332,8 +317,8 @@ impl From<import::NixOption> for Derivation {
             option_name_reverse: Reverse(name.clone()),
             option_description: description.clone(),
             option_description_reverse: description.map(Reverse),
-            option_default: default.map(print_value),
-            option_example: example.map(print_value),
+            option_default,
+            option_example,
             option_flake: flake,
             option_type,
             option_name_query: AttributeQuery::new(&name),
@@ -342,7 +327,33 @@ impl From<import::NixOption> for Derivation {
     }
 }
 
-type Maintainer = import::Maintainer;
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Maintainer {
+    name: Option<String>,
+    github: Option<String>,
+    email: Option<String>,
+}
+
+impl From<import::Maintainer> for Maintainer {
+    fn from(import: import::Maintainer) -> Self {
+        match import {
+            import::Maintainer::Full {
+                name,
+                github,
+                email,
+            } => Maintainer {
+                name,
+                github,
+                email,
+            },
+            import::Maintainer::Simple(name) => Maintainer {
+                name: Some(name),
+                github: None,
+                email: None,
+            },
+        }
+    }
+}
 
 impl From<super::Flake> for Maintainer {
     fn from(flake: super::Flake) -> Self {
@@ -401,14 +412,15 @@ mod tests {
         let option: NixOption = serde_json::from_str(r#"
         {
             "declarations":["/nix/store/s1q1238ahiks5a4g6j6qhhfb3rlmamvz-source/nixos/modules/system/boot/luksroot.nix"],
-            "default":"",
+            "default": {"one": 1, "two" : { "three": "tree", "four": []}},
             "description":"Commands that should be run right after we have mounted our LUKS device.\n",
-            "example":"oneline\ntwoline\nthreeline\n",
+            "example":null,
             "internal":false,
             "loc":["boot","initrd","luks","devices","<name>","postOpenCommands"],
             "name":"boot.initrd.luks.devices.<name>.postOpenCommands",
-            "readOnly":false,"type":
-            "strings concatenated with \"\\n\"","visible":true
+            "readOnly":false,
+            "type": "boolean",
+            "visible":true
         }"#).unwrap();
 
         let option: Derivation = option.into();

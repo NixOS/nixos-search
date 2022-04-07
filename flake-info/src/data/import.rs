@@ -1,13 +1,19 @@
+use std::collections::{BTreeMap, HashMap};
+use std::convert::TryInto;
 use std::fmt::{self, write, Display};
 use std::marker::PhantomData;
 use std::{path::PathBuf, str::FromStr};
 
 use clap::arg_enum;
+use log::warn;
+use pandoc::PandocError;
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
 use thiserror::Error;
 
+use super::pandoc::PandocExt;
+use super::prettyprint::{self, print_value};
 use super::system::System;
 use super::utility::{Flatten, OneOrMany};
 
@@ -26,6 +32,7 @@ pub enum FlakeEntry {
         version: String,
         platforms: Vec<System>,
         outputs: Vec<String>,
+        default_output: String,
         description: Option<String>,
         #[serde(deserialize_with = "string_or_struct", default)]
         license: License,
@@ -50,14 +57,63 @@ pub struct NixOption {
 
     pub description: Option<String>,
     pub name: String,
+
     #[serde(rename = "type")]
     /// Nix generated description of the options type
     pub option_type: Option<String>,
-    pub default: Option<Value>,
-    pub example: Option<Value>,
+    pub default: Option<DocValue>,
+    pub example: Option<DocValue>,
 
-    /// If defined in a flake, contains defining flake and module
-    pub flake: Option<(String, String)>,
+    /// If defined in a flake, contains defining flake and optionally a module
+    pub flake: Option<ModulePath>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum ModulePath {
+    /// A module taken from <flake>.nixosModule
+    /// JSON representation is a list, therefore use a 1-Tuple as representation
+    DefaultModule((String,)),
+    /// A module taken from <flake>.nixosModules.<name>
+    NamedModule((String, String)),
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(untagged)]
+pub enum DocValue {
+    Literal(Literal),
+    Value(Value),
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(tag = "_type", content = "text")]
+pub enum Literal {
+    #[serde(rename = "literalExpression")]
+    LiteralExpression(Value),
+    #[serde(rename = "literalExample")]
+    LiteralExample(Value),
+    #[serde(rename = "literalDocBook")]
+    LiteralDocBook(String),
+}
+
+impl Serialize for DocValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            DocValue::Literal(Literal::LiteralExample(s) | Literal::LiteralExpression(s)) => {
+                return serializer.serialize_some(&s);
+            }
+            DocValue::Literal(Literal::LiteralDocBook(doc_book)) => {
+                return serializer.serialize_str(&doc_book.render().unwrap_or_else(|e| {
+                    warn!("Could not render docbook content: {}", e);
+                    doc_book.to_owned()
+                }));
+            }
+            DocValue::Value(v) => serializer.serialize_str(&print_value(v.to_owned())),
+        }
+    }
 }
 
 /// Package as defined in nixpkgs
@@ -69,7 +125,12 @@ pub struct NixOption {
 pub struct Package {
     pub pname: String,
     pub version: String,
+    #[serde(default)]
+    pub outputs: HashMap<String, Option<String>>,
+    #[serde(rename = "outputName", default)]
+    pub default_output: Option<String>,
     pub system: String,
+    #[serde(default)]
     pub meta: Meta,
 }
 
@@ -83,10 +144,8 @@ pub enum NixpkgsEntry {
 
 /// Most information about packages in nixpkgs is contained in the meta key
 /// This struct represents a subset of that metadata
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct Meta {
-    #[serde(rename = "outputsToInstall")]
-    pub outputs: Option<Vec<String>>,
     pub license: Option<OneOrMany<StringOrStruct<License>>>,
     pub maintainers: Option<Flatten<Maintainer>>,
     pub homepage: Option<OneOrMany<String>>,
@@ -98,10 +157,14 @@ pub struct Meta {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Maintainer {
-    pub name: Option<String>,
-    pub github: Option<String>,
-    pub email: Option<String>,
+#[serde(untagged)]
+pub enum Maintainer {
+    Full {
+        name: Option<String>,
+        github: Option<String>,
+        email: Option<String>,
+    },
+    Simple(String),
 }
 
 arg_enum! {
@@ -267,7 +330,8 @@ mod tests {
                     "github": "AndersonTorres",
                     "githubId": 5954806,
                     "name": "Anderson Torres"
-                  }
+                  },
+                  "Fred Flintstone"
                 ],
                 "name": "0verkill-unstable-2011-01-13",
                 "outputsToInstall": [
@@ -294,4 +358,33 @@ mod tests {
             .map(|(attribute, package)| NixpkgsEntry::Derivation { attribute, package })
             .collect();
     }
+
+    #[test]
+    fn test_flake_option() {
+        let json = r#"
+        {
+            "declarations": [],
+            "name": "test-option",
+            "flake": ["flake", "module"]
+        }
+        "#;
+
+        serde_json::from_str::<NixOption>(json).unwrap();
+    }
+
+    #[test]
+    fn test_flake_option_default_module() {
+        let json = r#"
+        {
+            "declarations": [],
+            "name": "test-option",
+            "flake": ["flake"]
+        }
+        "#;
+
+        serde_json::from_str::<NixOption>(json).unwrap();
+    }
+
+    #[test]
+    fn test_option_parsing() {}
 }
