@@ -86,7 +86,7 @@ init : Route.SearchArgs -> Maybe Model -> ( Model, Cmd Msg )
 init searchArgs model =
     let
         ( newModel, newCmd ) =
-            Search.init searchArgs model
+            Search.init { searchArgs | type_ = Just Route.OptionSearch } model
     in
     ( newModel
     , Cmd.map SearchMsg newCmd

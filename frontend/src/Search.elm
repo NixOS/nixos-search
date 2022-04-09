@@ -210,6 +210,17 @@ init :
     -> ( Model a b, Cmd (Msg a b) )
 init args maybeModel =
     let
+        searchType =
+            Maybe.withDefault Route.PackageSearch args.type_
+
+        defaultSort =
+            case searchType of
+                Route.PackageSearch ->
+                    Relevance
+
+                Route.OptionSearch ->
+                    AlphabeticallyAsc
+
         getField getFn default =
             maybeModel
                 |> Maybe.map getFn
@@ -244,10 +255,10 @@ init args maybeModel =
             args.sort
                 |> Maybe.withDefault ""
                 |> fromSortId
-                |> Maybe.withDefault Relevance
+                |> Maybe.withDefault defaultSort
       , showSort = False
       , showInstallDetails = Unset
-      , searchType = Maybe.withDefault Route.PackageSearch args.type_
+      , searchType = searchType
       }
         |> ensureLoading
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
