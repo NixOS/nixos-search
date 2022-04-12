@@ -7,13 +7,34 @@ on:
 
 jobs:
 
+  nixos-channels:
+    runs-on: ubuntu-latest
+
+    outputs:
+  ￼   nixos-channels: "${{ steps.nixos-channels.outputs.nixos-channels }}"
+
+    steps:
+￼    - name: Setup
+￼      uses: ./.github/actions/common-setup
+￼      with:
+￼        CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+￼
+￼    - name: NixOS Channels
+￼      id: nixos-channels
+       run: |
+         nix build -L .#nixosChannels
+  ￼      channels="$(cat ./result)"
+￼        echo ::set-output name=nixos-channels::${channels}
+￼
+
   import-nixpkgs:
+    needs: nixos-channels
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
-        channel: ${{ fromJSON(needs.find-releases.outputs.nixpkgs-versions }}
+        channel: ${{ fromJSON(needs.nixos-channels.outputs.nixos-channels}}
 
     env:
       RUST_LOG: debug

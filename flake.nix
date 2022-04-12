@@ -46,7 +46,6 @@
                 (n: let v = filterChannels.${n}; in
                   {
                     id = pkgs.lib.removePrefix "nixos-" n;
-                    title = pkgs.lib.removePrefix "nixos-" n;
                     status = v.status;
                     jobset =
                       builtins.concatStringsSep
@@ -56,11 +55,16 @@
                   }
                 )
                 (builtins.attrNames filterChannels);
+
+          nixosChannels = pkgs.runCommand "nixosChannels.json" {} ''
+            echo '${builtins.toJSON (builtins.map (c: c.id) channels)}' > $out
+          '';
         in rec {
 
           packages.default = packages.flake-info;
           packages.flake-info = import ./flake-info { inherit pkgs; };
           packages.frontend = import ./frontend { inherit pkgs channels version; };
+          packages.nixosChannels = nixosChannels;
 
           devShells.default = pkgs.mkShell {
             inputsFrom = builtins.attrValues packages;
