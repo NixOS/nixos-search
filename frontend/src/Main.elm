@@ -25,14 +25,20 @@ import Html.Attributes
         , id
         , src
         )
+import Json.Decode
 import Page.Flakes exposing (Model(..))
 import Page.Home
 import Page.Options
 import Page.Packages
-import Json.Decode
 import RemoteData exposing (RemoteData(..))
 import Route exposing (SearchType(..))
-import Search exposing (Msg(..), defaultFlakeId)
+import Search
+    exposing
+        ( Msg(..)
+        , NixOSChannel
+        , decodeNixOSChannels
+        , defaultFlakeId
+        )
 import Url
 
 
@@ -58,21 +64,6 @@ type alias Model =
     }
 
 
-type alias NixOSChannel =
-    { id : String
-    , title : String
-    , status: NixOSChannelStatus
-    , jobset : String
-    , branch : String
-    }
-
-
-type NixOSChannelStatus
-    = Rolling
-    | Stable
-    | Beta
-
-
 type Page
     = NotFound
     | Home Page.Home.Model
@@ -96,37 +87,19 @@ init flags url navKey =
                     flags.elasticsearchUrl
                     flags.elasticsearchUsername
                     flags.elasticsearchPassword
-            , nixosChannels = 
+            , nixosChannels =
                 case Json.Decode.decodeValue decodeNixOSChannels flags.nixosChannels of
-                  Ok c -> c
-                  Err _ -> []
+                    Ok c ->
+                        c
+
+                    Err _ ->
+                        []
             , page = NotFound
             , route = Route.Home
             }
     in
     changeRouteTo model url
 
-
-decodeNixOSChannels : Json.Decode.Decoder (List NixOSChannel)
-decodeNixOSChannels =
-  Json.Decode.list
-    ( Json.Decode.map5 NixOSChannel
-        (Json.Decode.field "id" Json.Decode.string)
-        (Json.Decode.field "title" Json.Decode.string)
-        (Json.Decode.field "status" (
-          Json.Decode.string
-            |> Json.Decode.andThen
-                 (\status ->
-                     case status of 
-                       "rolling" -> Json.Decode.succeed Rolling
-                       "stable" -> Json.Decode.succeed Stable
-                       "beta" -> Json.Decode.succeed Beta
-                       _ -> Json.Decode.fail ("Unknown status: " ++ status)
-                 )
-        ))
-        (Json.Decode.field "jobset" Json.Decode.string)
-        (Json.Decode.field "branch" Json.Decode.string)
-    )
 
 
 -- UPDATE
@@ -170,6 +143,7 @@ attemptQuery (( model, _ ) as pair) =
                         , Cmd.map msg <|
                             makeRequest
                                 model.elasticsearch
+                                model.nixosChannels
                                 searchModel.searchType
                                 searchModel.channel
                                 (Maybe.withDefault "" searchModel.query)
@@ -282,7 +256,7 @@ changeRouteTo currentModel url =
                                 _ ->
                                     Nothing
                     in
-                    Page.Packages.init searchArgs modelPage
+                    Page.Packages.init searchArgs currentModel.nixosChannels modelPage
                         |> updateWith Packages PackagesMsg model
                         |> avoidReinit
                         |> attemptQuery
@@ -297,7 +271,7 @@ changeRouteTo currentModel url =
                                 _ ->
                                     Nothing
                     in
-                    Page.Options.init searchArgs modelPage
+                    Page.Options.init searchArgs currentModel.nixosChannels modelPage
                         |> updateWith Options OptionsMsg model
                         |> avoidReinit
                         |> attemptQuery
@@ -312,7 +286,7 @@ changeRouteTo currentModel url =
                                 _ ->
                                     Nothing
                     in
-                    Page.Flakes.init searchArgs modelPage
+                    Page.Flakes.init searchArgs currentModel.nixosChannels modelPage
                         |> updateWith Flakes FlakesMsg model
                         |> avoidReinit
                         |> attemptQuery
@@ -343,19 +317,19 @@ update msg model =
             changeRouteTo model url
 
         ( HomeMsg subMsg, Home subModel ) ->
-            Page.Home.update subMsg subModel
+            Page.Home.update subMsg subModel model.nixosChannels
                 |> updateWith Home HomeMsg model
 
         ( PackagesMsg subMsg, Packages subModel ) ->
-            Page.Packages.update model.navKey subMsg subModel
+            Page.Packages.update model.navKey subMsg subModel model.nixosChannels
                 |> updateWith Packages PackagesMsg model
 
         ( OptionsMsg subMsg, Options subModel ) ->
-            Page.Options.update model.navKey subMsg subModel
+            Page.Options.update model.navKey subMsg subModel model.nixosChannels
                 |> updateWith Options OptionsMsg model
 
         ( FlakesMsg subMsg, Flakes subModel ) ->
-            Page.Flakes.update model.navKey subMsg subModel
+            Page.Flakes.update model.navKey subMsg subModel model.nixosChannels
                 |> updateWith Flakes FlakesMsg model
 
         ( _, _ ) ->
@@ -479,13 +453,13 @@ viewPage model =
             div [] [ text "Welcome" ]
 
         Packages packagesModel ->
-            Html.map (\m -> PackagesMsg m) <| Page.Packages.view packagesModel
+            Html.map (\m -> PackagesMsg m) <| Page.Packages.view model.nixosChannels packagesModel
 
         Options optionsModel ->
-            Html.map (\m -> OptionsMsg m) <| Page.Options.view optionsModel
+            Html.map (\m -> OptionsMsg m) <| Page.Options.view model.nixosChannels optionsModel
 
         Flakes flakesModel ->
-            Html.map (\m -> FlakesMsg m) <| Page.Flakes.view flakesModel
+            Html.map (\m -> FlakesMsg m) <| Page.Flakes.view model.nixosChannels flakesModel
 
 
 

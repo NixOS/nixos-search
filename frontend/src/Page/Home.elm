@@ -1,6 +1,7 @@
 module Page.Home exposing (Model, Msg, init, update, view)
 
 import Html exposing (Html, div, text)
+import Search exposing (NixOSChannel)
 
 
 
@@ -24,8 +25,12 @@ type Msg
     = NoOp
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
+update :
+    Msg
+    -> Model
+    -> List NixOSChannel
+    -> ( Model, Cmd Msg )
+update msg model _ =
     case msg of
         NoOp ->
             ( model, Cmd.none )

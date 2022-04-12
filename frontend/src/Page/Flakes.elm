@@ -35,6 +35,7 @@ import Route
 import Search
     exposing
         ( Msg(..)
+        , NixOSChannel
         , viewFlakes
         , viewResult
         , viewSearchInput
@@ -50,8 +51,12 @@ type Model
     | PackagesModel Page.Packages.Model
 
 
-init : Route.SearchArgs -> Maybe Model -> ( Model, Cmd Msg )
-init searchArgs model =
+init :
+    Route.SearchArgs
+    -> List NixOSChannel
+    -> Maybe Model
+    -> ( Model, Cmd Msg )
+init searchArgs nixosChannels model =
     let
         --  init with respective module or with packages by default
         searchType =
@@ -60,10 +65,14 @@ init searchArgs model =
         mapEitherModel m =
             case ( searchType, m ) of
                 ( OptionSearch, OptionModel model_ ) ->
-                    Tuple.mapBoth OptionModel (Cmd.map OptionsMsg) <| Page.Options.init searchArgs <| Just model_
+                    Tuple.mapBoth OptionModel (Cmd.map OptionsMsg) <|
+                        Page.Options.init searchArgs nixosChannels <|
+                            Just model_
 
                 ( PackageSearch, PackagesModel model_ ) ->
-                    Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg) <| Page.Packages.init searchArgs <| Just model_
+                    Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg) <|
+                        Page.Packages.init searchArgs nixosChannels <|
+                            Just model_
 
                 _ ->
                     default
@@ -71,10 +80,12 @@ init searchArgs model =
         default =
             case searchType of
                 PackageSearch ->
-                    Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg) <| Page.Packages.init searchArgs Nothing
+                    Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg) <|
+                        Page.Packages.init searchArgs nixosChannels Nothing
 
                 OptionSearch ->
-                    Tuple.mapBoth OptionModel (Cmd.map OptionsMsg) <| Page.Options.init searchArgs Nothing
+                    Tuple.mapBoth OptionModel (Cmd.map OptionsMsg) <|
+                        Page.Options.init searchArgs nixosChannels Nothing
 
         ( newModel, newCmd ) =
             Maybe.withDefault default <| Maybe.map mapEitherModel model
@@ -97,8 +108,9 @@ update :
     Browser.Navigation.Key
     -> Msg
     -> Model
+    -> List NixOSChannel
     -> ( Model, Cmd Msg )
-update navKey msg model =
+update navKey msg model nixosChannels =
     case ( msg, model ) of
         ( OptionsMsg msg_, OptionModel model_ ) ->
             case msg_ of
@@ -110,6 +122,7 @@ update navKey msg model =
                                 navKey
                                 subMsg
                                 model_
+                                nixosChannels
                     in
                     ( newModel, Cmd.map Page.Options.SearchMsg newCmd ) |> Tuple.mapBoth OptionModel (Cmd.map OptionsMsg)
 
@@ -123,6 +136,7 @@ update navKey msg model =
                                 navKey
                                 subMsg
                                 model_
+                                nixosChannels
                     in
                     ( newModel, Cmd.map Page.Packages.SearchMsg newCmd ) |> Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg)
 
@@ -134,8 +148,11 @@ update navKey msg model =
 -- VIEW
 
 
-view : Model -> Html Msg
-view model =
+view :
+    List NixOSChannel
+    -> Model
+    -> Html Msg
+view nixosChannels model =
     let
         resultStatus result =
             case result of
@@ -172,8 +189,8 @@ view model =
                     )
                 )
                 [ h1 [] bodyTitle
-                , viewSearchInput outMsg categoryName Nothing model_.query
-                , viewResult outMsg Route.Flakes categoryName model_ viewSuccess viewBuckets <|
+                , viewSearchInput nixosChannels outMsg categoryName Nothing model_.query
+                , viewResult nixosChannels outMsg Route.Flakes categoryName model_ viewSuccess viewBuckets <|
                     viewFlakes outMsg model_.channel model_.searchType
                 ]
 
@@ -194,6 +211,7 @@ view model =
 
 makeRequest :
     Search.Options
+    -> List NixOSChannel
     -> SearchType
     -> String
     -> String
@@ -202,13 +220,14 @@ makeRequest :
     -> Maybe String
     -> Search.Sort
     -> Cmd Msg
-makeRequest options searchType index_id query from size maybeBuckets sort =
+makeRequest options nixosChannels searchType index_id query from size maybeBuckets sort =
     let
         cmd =
             case searchType of
                 PackageSearch ->
                     Search.makeRequest
                         (makeRequestBody searchType query from size maybeBuckets sort)
+                        nixosChannels
                         index_id
                         Page.Packages.decodeResultItemSource
                         Page.Packages.decodeResultAggregations
@@ -221,6 +240,7 @@ makeRequest options searchType index_id query from size maybeBuckets sort =
                 OptionSearch ->
                     Search.makeRequest
                         (makeRequestBody searchType query from size maybeBuckets sort)
+                        nixosChannels
                         index_id
                         Page.Options.decodeResultItemSource
                         Page.Options.decodeResultAggregations

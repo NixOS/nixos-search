@@ -51,6 +51,7 @@ import Route exposing (Route(..), SearchType)
 import Search
     exposing
         ( Details(..)
+        , NixOSChannel
         , decodeResolvedFlake
         , viewBucket
         )
@@ -162,11 +163,15 @@ initBuckets bucketsAsString =
         |> Maybe.withDefault emptyBuckets
 
 
-init : Route.SearchArgs -> Maybe Model -> ( Model, Cmd Msg )
-init searchArgs model =
+init :
+    Route.SearchArgs
+    -> List NixOSChannel
+    -> Maybe Model
+    -> ( Model, Cmd Msg )
+init searchArgs nixosChannels model =
     let
         ( newModel, newCmd ) =
-            Search.init searchArgs model
+            Search.init searchArgs nixosChannels model
     in
     ( newModel
     , Cmd.map SearchMsg newCmd
@@ -195,8 +200,9 @@ update :
     Browser.Navigation.Key
     -> Msg
     -> Model
+    -> List NixOSChannel
     -> ( Model, Cmd Msg )
-update navKey msg model =
+update navKey msg model nixosChannels =
     case msg of
         SearchMsg subMsg ->
             let
@@ -206,6 +212,7 @@ update navKey msg model =
                         navKey
                         subMsg
                         model
+                        nixosChannels
             in
             ( newModel, Cmd.map SearchMsg newCmd )
 
@@ -214,12 +221,16 @@ update navKey msg model =
 -- VIEW
 
 
-view : Model -> Html Msg
-view model =
+view :
+    List NixOSChannel
+    -> Model
+    -> Html Msg
+view nixosChannels model =
     Search.view { toRoute = Route.Packages, categoryName = "packages" }
         [ text "Search more than "
         , strong [] [ text "80 000 packages" ]
         ]
+        nixosChannels
         model
         viewSuccess
         viewBuckets
@@ -282,26 +293,28 @@ filterPlatformsBucket =
 
 
 viewSuccess :
-    String
+    List NixOSChannel
+    -> String
     -> Details
     -> Maybe String
     -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
-viewSuccess channel showInstallDetails show hits =
+viewSuccess nixosChannels channel showInstallDetails show hits =
     ul []
         (List.map
-            (viewResultItem channel showInstallDetails show)
+            (viewResultItem nixosChannels channel showInstallDetails show)
             hits
         )
 
 
 viewResultItem :
-    String
+    List NixOSChannel
+    -> String
     -> Details
     -> Maybe String
     -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItem channel showInstallDetails show item =
+viewResultItem nixosChannels channel showInstallDetails show item =
     let
         optionals b l =
             if b then
@@ -368,7 +381,7 @@ viewResultItem channel showInstallDetails show item =
                                         )
                                     |> Maybe.withDefault []
                                )
-                            ++ renderSource item channel trapClick createShortDetailsItem createGithubUrl
+                            ++ renderSource item nixosChannels channel trapClick createShortDetailsItem createGithubUrl
                             ++ (let
                                     licenses =
                                         item.source.licenses
@@ -450,7 +463,7 @@ viewResultItem channel showInstallDetails show item =
                 ]
 
         showPlatform platform =
-            case Search.channelDetailsFromId channel of
+            case List.head (List.filter (\x -> x.id == channel) nixosChannels) of
                 Just channelDetails ->
                     let
                         url =
@@ -650,8 +663,23 @@ viewResultItem channel showInstallDetails show item =
         )
 
 
-renderSource : Search.ResultItem ResultItemSource -> String -> Html.Attribute Msg -> (String -> String -> Html Msg) -> (String -> String -> String) -> List (Html Msg)
-renderSource item channel trapClick createShortDetailsItem createGithubUrl =
+renderSource :
+    Search.ResultItem ResultItemSource
+    -> List NixOSChannel
+    -> String
+    -> Html.Attribute Msg
+    ->
+        (String
+         -> String
+         -> Html Msg
+        )
+    ->
+        (String
+         -> String
+         -> String
+        )
+    -> List (Html Msg)
+renderSource item nixosChannels channel trapClick createShortDetailsItem createGithubUrl =
     let
         makeLink text url =
             [ li [ trapClick ] [ createShortDetailsItem text url ] ]
@@ -660,7 +688,7 @@ renderSource item channel trapClick createShortDetailsItem createGithubUrl =
             item.source.position
                 |> Maybe.map
                     (\pos ->
-                        case Search.channelDetailsFromId channel of
+                        case List.head (List.filter (\x -> x.id == channel) nixosChannels) of
                             Nothing ->
                                 []
 
@@ -684,6 +712,7 @@ renderSource item channel trapClick createShortDetailsItem createGithubUrl =
 
 makeRequest :
     Search.Options
+    -> List NixOSChannel
     -> SearchType
     -> String
     -> String
@@ -692,9 +721,10 @@ makeRequest :
     -> Maybe String
     -> Search.Sort
     -> Cmd Msg
-makeRequest options _ channel query from size maybeBuckets sort =
+makeRequest options nixosChannels _ channel query from size maybeBuckets sort =
     Search.makeRequest
         (makeRequestBody query from size maybeBuckets sort)
+        nixosChannels
         channel
         decodeResultItemSource
         decodeResultAggregations
