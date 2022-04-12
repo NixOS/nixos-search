@@ -32,7 +32,6 @@ jobs:
     - name: Installing Nix unstable
       run: |
         nix-env -f '<nixpkgs>' -iA nixVersions.unstable # for https://github.com/NixOS/nix/pull/6242
-        echo "$HOME/.nix-profile/bin" >> "$GITHUB_PATH"
 
     - name: Import ${{ matrix.channel }} channel
       env:
