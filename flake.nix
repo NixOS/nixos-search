@@ -30,32 +30,39 @@
           pkgs = nixpkgs.legacyPackages.${system};
           warnToUpgradeNix = pkgs.lib.warn "Please upgrade Nix to 2.7 or later.";
           version = pkgs.lib.removeSuffix "\n" (builtins.readFile ./VERSION);
+          allChannels = (import "${nixos-org-configurations}/channels.nix").channels;
+          filteredChannels = 
+            pkgs.lib.filterAttrs
+              (n: v:
+                builtins.elem v.status ["beta" "stable" "rolling"] &&
+                pkgs.lib.hasPrefix "nixos-" n &&
+                v ? variant && v.variant == "primary"
+              )
+              allChannels;
           channels =
-            let
-              allChannels = (import "${nixos-org-configurations}/channels.nix").channels;
-              filterChannels = 
-                pkgs.lib.filterAttrs
-                  (n: v:
-                    builtins.elem v.status ["beta" "stable" "rolling"] &&
-                    pkgs.lib.hasPrefix "nixos-" n &&
-                    v ? variant && v.variant == "primary"
+            builtins.map
+              (n: let v = filteredChannels.${n}; in
+                {
+                  id = pkgs.lib.removePrefix "nixos-" n;
+                  status = v.status;
+                  jobset =
+                    builtins.concatStringsSep
+                      "/"
+                      (pkgs.lib.init (pkgs.lib.splitString "/" v.job));
+                  branch = n;
+                }
+              )
+              (builtins.attrNames filteredChannels);
+          defaultChannel =
+            builtins.head
+              (builtins.sort (e1: e2: ! (builtins.lessThan e1 e2))
+                (builtins.map
+                  (pkgs.lib.removePrefix "nixos-")
+                  (builtins.attrNames
+                    (pkgs.lib.filterAttrs (_: v: v.status == "stable") filteredChannels)
                   )
-                  allChannels;
-            in
-              builtins.map
-                (n: let v = filterChannels.${n}; in
-                  {
-                    id = pkgs.lib.removePrefix "nixos-" n;
-                    status = v.status;
-                    jobset =
-                      builtins.concatStringsSep
-                        "/"
-                        (pkgs.lib.init (pkgs.lib.splitString "/" v.job));
-                    branch = n;
-                  }
                 )
-                (builtins.attrNames filterChannels);
-
+              );
           nixosChannels = pkgs.runCommand "nixosChannels.json" {} ''
             echo '${builtins.toJSON (builtins.map (c: c.id) channels)}' > $out
           '';
@@ -71,7 +78,7 @@
             shellHook = ''
               export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
               export NIXPKGS_PANDOC_FILTERS_PATH="${packages.flake-info.NIXPKGS_PANDOC_FILTERS_PATH}";
-              export NIXOS_CHANNELS='${builtins.toJSON channels}';
+              export NIXOS_CHANNELS='${builtins.toJSON { inherit defaultChannel channels; }}';
               export ELASTICSEARCH_MAPPING_SCHEMA_VERSION="${version}";
               export PATH=$PWD/frontend/node_modules/.bin:$PATH
 

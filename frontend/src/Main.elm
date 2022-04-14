@@ -59,6 +59,7 @@ type alias Model =
     { navKey : Browser.Navigation.Key
     , route : Route.Route
     , elasticsearch : Search.Options
+    , defaultNixOSChannel : String
     , nixosChannels : List NixOSChannel
     , page : Page
     }
@@ -79,6 +80,13 @@ init :
     -> ( Model, Cmd Msg )
 init flags url navKey =
     let
+        nixosChannels =
+            case Json.Decode.decodeValue decodeNixOSChannels flags.nixosChannels of
+                Ok c ->
+                    c
+
+                Err _ ->
+                    { default = "", channels = [] }
         model =
             { navKey = navKey
             , elasticsearch =
@@ -87,13 +95,8 @@ init flags url navKey =
                     flags.elasticsearchUrl
                     flags.elasticsearchUsername
                     flags.elasticsearchPassword
-            , nixosChannels =
-                case Json.Decode.decodeValue decodeNixOSChannels flags.nixosChannels of
-                    Ok c ->
-                        c
-
-                    Err _ ->
-                        []
+            , defaultNixOSChannel = nixosChannels.default
+            , nixosChannels = nixosChannels.channels
             , page = NotFound
             , route = Route.Home
             }
@@ -256,7 +259,7 @@ changeRouteTo currentModel url =
                                 _ ->
                                     Nothing
                     in
-                    Page.Packages.init searchArgs currentModel.nixosChannels modelPage
+                    Page.Packages.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
                         |> updateWith Packages PackagesMsg model
                         |> avoidReinit
                         |> attemptQuery
@@ -271,7 +274,7 @@ changeRouteTo currentModel url =
                                 _ ->
                                     Nothing
                     in
-                    Page.Options.init searchArgs currentModel.nixosChannels modelPage
+                    Page.Options.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
                         |> updateWith Options OptionsMsg model
                         |> avoidReinit
                         |> attemptQuery
@@ -286,7 +289,7 @@ changeRouteTo currentModel url =
                                 _ ->
                                     Nothing
                     in
-                    Page.Flakes.init searchArgs currentModel.nixosChannels modelPage
+                    Page.Flakes.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
                         |> updateWith Flakes FlakesMsg model
                         |> avoidReinit
                         |> attemptQuery

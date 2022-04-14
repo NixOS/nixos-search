@@ -53,10 +53,11 @@ type Model
 
 init :
     Route.SearchArgs
+    -> String
     -> List NixOSChannel
     -> Maybe Model
     -> ( Model, Cmd Msg )
-init searchArgs nixosChannels model =
+init searchArgs defaultNixOSChannel nixosChannels model =
     let
         --  init with respective module or with packages by default
         searchType =
@@ -66,12 +67,12 @@ init searchArgs nixosChannels model =
             case ( searchType, m ) of
                 ( OptionSearch, OptionModel model_ ) ->
                     Tuple.mapBoth OptionModel (Cmd.map OptionsMsg) <|
-                        Page.Options.init searchArgs nixosChannels <|
+                        Page.Options.init searchArgs defaultNixOSChannel nixosChannels <|
                             Just model_
 
                 ( PackageSearch, PackagesModel model_ ) ->
                     Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg) <|
-                        Page.Packages.init searchArgs nixosChannels <|
+                        Page.Packages.init searchArgs defaultNixOSChannel nixosChannels <|
                             Just model_
 
                 _ ->
@@ -81,11 +82,11 @@ init searchArgs nixosChannels model =
             case searchType of
                 PackageSearch ->
                     Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg) <|
-                        Page.Packages.init searchArgs nixosChannels Nothing
+                        Page.Packages.init searchArgs defaultNixOSChannel nixosChannels Nothing
 
                 OptionSearch ->
                     Tuple.mapBoth OptionModel (Cmd.map OptionsMsg) <|
-                        Page.Options.init searchArgs nixosChannels Nothing
+                        Page.Options.init searchArgs defaultNixOSChannel nixosChannels Nothing
 
         ( newModel, newCmd ) =
             Maybe.withDefault default <| Maybe.map mapEitherModel model

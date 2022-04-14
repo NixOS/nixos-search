@@ -165,13 +165,14 @@ initBuckets bucketsAsString =
 
 init :
     Route.SearchArgs
+    -> String
     -> List NixOSChannel
     -> Maybe Model
     -> ( Model, Cmd Msg )
-init searchArgs nixosChannels model =
+init searchArgs defaultNixOSChannel nixosChannels model =
     let
         ( newModel, newCmd ) =
-            Search.init searchArgs nixosChannels model
+            Search.init searchArgs defaultNixOSChannel nixosChannels model
     in
     ( newModel
     , Cmd.map SearchMsg newCmd

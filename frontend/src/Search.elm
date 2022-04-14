@@ -154,6 +154,12 @@ type Sort
     | AlphabeticallyDesc
 
 
+type alias NixOSChannels =
+    { default : String
+    , channels : List NixOSChannel
+    }
+
+
 type alias NixOSChannel =
     { id : String
     , title : String
@@ -169,34 +175,40 @@ type NixOSChannelStatus
     | Beta
 
 
-decodeNixOSChannels : Json.Decode.Decoder (List NixOSChannel)
+decodeNixOSChannels : Json.Decode.Decoder NixOSChannels
 decodeNixOSChannels =
-    Json.Decode.list
-        (Json.Decode.map5 NixOSChannel
-            (Json.Decode.field "id" Json.Decode.string)
-            (Json.Decode.field "title" Json.Decode.string)
-            (Json.Decode.field "status"
-                (Json.Decode.string
-                    |> Json.Decode.andThen
-                        (\status ->
-                            case status of
-                                "rolling" ->
-                                    Json.Decode.succeed Rolling
+    Json.Decode.map2 NixOSChannels
+        (Json.Decode.field "default" Json.Decode.string)
+        (Json.Decode.field "channels" (Json.Decode.list decodeNixOSChannel))
 
-                                "stable" ->
-                                    Json.Decode.succeed Stable
 
-                                "beta" ->
-                                    Json.Decode.succeed Beta
 
-                                _ ->
-                                    Json.Decode.fail ("Unknown status: " ++ status)
-                        )
-                )
+decodeNixOSChannel : Json.Decode.Decoder NixOSChannel
+decodeNixOSChannel =
+    Json.Decode.map5 NixOSChannel
+        (Json.Decode.field "id" Json.Decode.string)
+        (Json.Decode.field "title" Json.Decode.string)
+        (Json.Decode.field "status"
+            (Json.Decode.string
+                |> Json.Decode.andThen
+                    (\status ->
+                        case status of
+                            "rolling" ->
+                                Json.Decode.succeed Rolling
+
+                            "stable" ->
+                                Json.Decode.succeed Stable
+
+                            "beta" ->
+                                Json.Decode.succeed Beta
+
+                            _ ->
+                                Json.Decode.fail ("Unknown status: " ++ status)
+                    )
             )
-            (Json.Decode.field "jobset" Json.Decode.string)
-            (Json.Decode.field "branch" Json.Decode.string)
         )
+        (Json.Decode.field "jobset" Json.Decode.string)
+        (Json.Decode.field "branch" Json.Decode.string)
 
 
 type alias ResolvedFlake =
@@ -252,10 +264,11 @@ decodeResolvedFlake =
 
 init :
     Route.SearchArgs
+    -> String
     -> List NixOSChannel
     -> Maybe (Model a b)
     -> ( Model a b, Cmd (Msg a b) )
-init args nixosChannels maybeModel =
+init args defaultNixOSChannel nixosChannels maybeModel =
     let
         getField getFn default =
             maybeModel
@@ -263,7 +276,7 @@ init args nixosChannels maybeModel =
                 |> Maybe.withDefault default
 
         modelChannel =
-            getField .channel defaultChannel
+            getField .channel defaultNixOSChannel
 
         modelFrom =
             getField .from 0
@@ -523,69 +536,9 @@ createUrl toRoute model =
 -- VIEW
 
 
-defaultChannel : String
-defaultChannel =
-    "21.11"
-
-
 defaultFlakeId : String
 defaultFlakeId =
     "group-manual"
-
-
-
--- flakeFromId : String -> Maybe Flake
--- flakeFromId flake_id =
---     let
---         find : String -> List Flake -> Maybe Flake
---         find id_ list =
---             case list of
---                 flake :: rest ->
---                     if flake.id == id_ then
---                         Just flake
---
---                     else
---                         find id_ rest
---
---                 [] ->
---                     Nothing
---     in
---     find flake_id flakes
---
---
--- flakeIds : List String
--- flakeIds =
---     List.map .id flakes
---
---
--- flakes : List Flake
--- flakes =
---     [ { id = "latest-nixos-21.11-latest"
---       , isNixpkgs = True
---       , title = "Nixpkgs 21.11"
---       , source = ""
---       }
---     , { id = "latest-nixos-21.05-latest"
---       , isNixpkgs = True
---       , title = "Nixpkgs 21.05"
---       , source = ""
---       }
---     , { id = "nixos-21.09-latest"
---       , isNixpkgs = True
---       , title = "Nixpkgs 21.09"
---       , source = ""
---       }
---     , { id = "latest-nixos-unstable"
---       , isNixpkgs = True
---       , title = "Nixpkgs Unstable"
---       , source = ""
---       }
---     , { id = "flakes"
---       , isNixpkgs = False
---       , title = "Public Flakes"
---       , source = ""
---       }
---     ]
 
 
 sortBy : List Sort
