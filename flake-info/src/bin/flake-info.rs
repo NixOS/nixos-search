@@ -426,15 +426,17 @@ async fn push_to_elastic(
 /// Used to filter the input arguments for `flake-info nixpkgs` and `flake-info nixpkgs-archive`
 #[derive(Clone, Debug, Deserialize)]
 struct NixosChannels {
-    channels: Vec<String>,
+    channels: Vec<Channel>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct Channel {
+    branch: String
 }
 
 impl NixosChannels {
     fn check_channel(&self, channel: &String) -> Result<(), FlakeInfoError> {
-        if !self.channels.contains(channel) {
-            return Err(FlakeInfoError::UnknownNixOSChannel(channel.clone(), self.clone()))
-        }
-        Ok(())
+        self.channels.iter().find(|c| &c.branch == channel).map_or_else(|| Ok(()), |_| Err(FlakeInfoError::UnknownNixOSChannel(channel.clone(), self.clone())))
     }
 }
 
