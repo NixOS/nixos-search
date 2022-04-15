@@ -1,4 +1,5 @@
-{ pkgs ? import <nixpkgs> { }
+{ pkgs ? import <nixpkgs> {}
+, nixosChannels ? {}
 }:
 pkgs.rustPlatform.buildRustPackage rec {
   name = "flake-info";
@@ -32,6 +33,7 @@ pkgs.rustPlatform.buildRustPackage rec {
   postInstall = ''
     wrapProgram $out/bin/flake-info \
       --set NIXPKGS_PANDOC_FILTERS_PATH "${NIXPKGS_PANDOC_FILTERS_PATH}" \
+      --set NIXOS_CHANNELS "${builtins.toJSON nixosChannels}" \
       --prefix PATH : ${pkgs.pandoc}/bin
   '';
 }

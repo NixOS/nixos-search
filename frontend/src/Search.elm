@@ -162,7 +162,6 @@ type alias NixOSChannels =
 
 type alias NixOSChannel =
     { id : String
-    , title : String
     , status : NixOSChannelStatus
     , jobset : String
     , branch : String
@@ -175,6 +174,13 @@ type NixOSChannelStatus
     | Beta
 
 
+channelTitle : NixOSChannel -> String
+channelTitle channel =
+  if channel.status == Beta
+  then channel.id ++ " (Beta)"
+  else channel.id
+
+
 decodeNixOSChannels : Json.Decode.Decoder NixOSChannels
 decodeNixOSChannels =
     Json.Decode.map2 NixOSChannels
@@ -185,9 +191,8 @@ decodeNixOSChannels =
 
 decodeNixOSChannel : Json.Decode.Decoder NixOSChannel
 decodeNixOSChannel =
-    Json.Decode.map5 NixOSChannel
+    Json.Decode.map4 NixOSChannel
         (Json.Decode.field "id" Json.Decode.string)
-        (Json.Decode.field "title" Json.Decode.string)
         (Json.Decode.field "status"
             (Json.Decode.string
                 |> Json.Decode.andThen
@@ -978,7 +983,7 @@ viewChannels nixosChannels outMsg selectedChannel =
                                 ]
                             , onClick <| outMsg (ChannelChange channel.id)
                             ]
-                            [ text channel.title ]
+                            [ text <| channelTitle channel ]
                     )
                     nixosChannels
                 )

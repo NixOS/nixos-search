@@ -1,5 +1,5 @@
 { pkgs ? import <nixpkgs> { }
-, channels
+, nixosChannels
 , version
 }:
 let
@@ -54,7 +54,7 @@ pkgs.stdenv.mkDerivation {
     ]);
 
   ELASTICSEARCH_MAPPING_SCHEMA_VERSION = version;
-  NIXOS_CHANNELS = builtins.toJSON channels;
+  NIXOS_CHANNELS = builtins.toJSON nixosChannels;
 
   configurePhase = pkgs.elmPackages.fetchElmDeps {
     elmPackages = import ./elm-srcs.nix;
