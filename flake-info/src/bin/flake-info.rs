@@ -7,9 +7,11 @@ use flake_info::elastic::{ElasticsearchError, ExistsStrategy};
 use flake_info::{commands, elastic};
 use log::{debug, error, info, warn};
 use semver::VersionReq;
+use serde::Deserialize;
 use sha2::Digest;
 use std::path::{Path, PathBuf};
 use std::ptr::hash;
+use std::str::FromStr;
 use std::{fs, io};
 use structopt::{clap::ArgGroup, StructOpt};
 use thiserror::Error;
@@ -197,6 +199,9 @@ async fn main() -> Result<()> {
 enum FlakeInfoError {
     #[error("Nix check failed: {0}")]
     NixCheck(#[from] NixCheckError),
+
+    #[error("Nixos Channel `{0}` not among the allowed Channels set by NIXOS_CHANNELS ({:?}", .1.channels)]
+    UnknownNixOSChannel(String, NixosChannels),
 
     #[error("Getting flake info caused an error: {0:?}")]
     Flake(anyhow::Error),
@@ -409,4 +414,29 @@ async fn push_to_elastic(
     }
 
     Ok(())
+}
+
+/// Information about allowed and default nixos channels.
+/// Typyically passed by environment variable NIXOS_CHANNELS.
+/// Used to filter the input arguments for `flake-info nixpkgs` and `flake-info nixpkgs-archive`
+#[derive(Clone, Debug, Deserialize)]
+struct NixosChannels {
+    channels: Vec<String>,
+}
+
+impl NixosChannels {
+    fn check_channel(&self, channel: &String) -> Result<(), FlakeInfoError> {
+        if !self.channels.contains(channel) {
+            return Err(FlakeInfoError::UnknownNixOSChannel(channel.clone(), self.clone()))
+        }
+        Ok(())
+    }
+}
+
+impl FromStr for NixosChannels {
+    type Err=serde_json::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        serde_json::from_str(s)
+    }
 }
