@@ -63,6 +63,9 @@ enum Command {
     },
     #[structopt(about = "Import official nixpkgs channel")]
     Nixpkgs {
+        #[structopt(env="NIXOS_CHANNELS")]
+        nixos_channels: Option<NixosChannels>,
+
         #[structopt(help = "Nixpkgs channel to import")]
         channel: String,
     },
@@ -71,6 +74,9 @@ enum Command {
     NixpkgsArchive {
         #[structopt(help = "Nixpkgs archive to import")]
         source: String,
+
+        #[structopt(env="NIXOS_CHANNELS")]
+        nixos_channels: Option<NixosChannels>,
 
         #[structopt(
             help = "Which channel to assign nixpkgs to",
