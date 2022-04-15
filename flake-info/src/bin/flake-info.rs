@@ -247,10 +247,10 @@ async fn run_command(
 
             Ok((exports, ident))
         }
-        Command::Nixpkgs { channel } => {
-            // TODO: if NIXOS_CHANNELS environment variable is present check
-            //       that channel passed here is one of the channels in 
-            //       NIXOS_CHANNELS
+        Command::Nixpkgs { channel, nixos_channels } => {
+
+            nixos_channels.map_or( Ok(()), |c| c.check_channel(&channel) )?;
+
             let nixpkgs = Source::nixpkgs(channel)
                 .await
                 .map_err(FlakeInfoError::Nixpkgs)?;
@@ -264,10 +264,9 @@ async fn run_command(
 
             Ok((exports, ident))
         }
-        Command::NixpkgsArchive { source, channel } => {
-            // TODO: if NIXOS_CHANNELS environment variable is present check
-            //       that channel passed here is one of the channels in 
-            //       NIXOS_CHANNELS
+        Command::NixpkgsArchive { source, channel, nixos_channels} => {
+            nixos_channels.map_or( Ok(()), |c| c.check_channel(&channel) )?;
+
             let ident = (
                 "nixos".to_string(),
                 channel.to_owned(),
