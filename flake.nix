@@ -18,13 +18,7 @@
             , flake-utils
             , nixos-org-configurations 
             }:
-    flake-utils.lib.eachSystem
-      (with flake-utils.lib.system; [
-        x86_64-linux
-        i686-linux
-        x86_64-darwin
-        aarch64-linux
-      ])
+    flake-utils.lib.eachDefaultSystem
       (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
