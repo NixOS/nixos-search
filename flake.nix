@@ -65,6 +65,16 @@
           nixosChannelsFile = pkgs.runCommand "nixosChannels.json" {} ''
             echo '${builtins.toJSON (builtins.map (c: c.id) nixosChannels.channels)}' > $out
           '';
+
+          mkDevShell = { inputsFrom ? [], extraPackages ? [], extraShellHook ? "" }: 
+            pkgs.mkShell {
+              inherit inputsFrom shellHook;
+              packages = extraPackages;
+              shellHook = ''
+                export NIXOS_CHANNELS='${builtins.toJSON nixosChannels}';
+                export ELASTICSEARCH_MAPPING_SCHEMA_VERSION="${version}";
+              '' ++ extraShellHook;
+            };
         in rec {
 
           packages.default = packages.flake-info;
@@ -72,13 +82,20 @@
           packages.frontend = import ./frontend { inherit pkgs nixosChannels version; };
           packages.nixosChannels = nixosChannelsFile;
 
-          devShells.default = pkgs.mkShell {
-            inputsFrom = builtins.attrValues packages;
-            shellHook = ''
+          devShells.default = devShells.flake-info;
+
+          devShells.flake-info = mkDevShell {
+            inputsFrom = packages.flake-info;
+            extraPackages = [ pkgs.rustfmt ];
+            extraShellHook = ''
               export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
               export NIXPKGS_PANDOC_FILTERS_PATH="${packages.flake-info.NIXPKGS_PANDOC_FILTERS_PATH}";
-              export NIXOS_CHANNELS='${builtins.toJSON nixosChannels}';
-              export ELASTICSEARCH_MAPPING_SCHEMA_VERSION="${version}";
+            '';
+          };
+
+          devShells.flake-info = mkDevShell {
+            inputsFrom = [packages.frontend] ;
+            extraShellHook = ''
               export PATH=$PWD/frontend/node_modules/.bin:$PATH
 
               rm -rf frontend/node_modules
