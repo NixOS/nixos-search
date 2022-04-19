@@ -31,10 +31,6 @@ jobs:
       with:
         CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
-    - name: Installing Nix unstable
-      run: |
-        nix-env -f '<nixpkgs>' -iA nixVersions.unstable # for https://github.com/NixOS/nix/pull/6242
-
     - name: Import ${{ matrix.channel }} channel
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
