@@ -22,16 +22,17 @@
       (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          warnToUpgradeNix = pkgs.lib.warn "Please upgrade Nix to 2.7 or later.";
-          version = pkgs.lib.removeSuffix "\n" (builtins.readFile ./VERSION);
+          lib = nixpkgs.lib;
+          warnToUpgradeNix = lib.warn "Please upgrade Nix to 2.7 or later.";
+          version = lib.fileContents ./VERSION;
           nixosChannels =
             let
               allChannels = (import "${nixos-org-configurations}/channels.nix").channels;
               filteredChannels =
-                pkgs.lib.filterAttrs
+                lib.filterAttrs
                   (n: v:
                     builtins.elem v.status ["beta" "stable" "rolling"] &&
-                    pkgs.lib.hasPrefix "nixos-" n &&
+                    lib.hasPrefix "nixos-" n &&
                     v ? variant && v.variant == "primary"
                   )
                   allChannels;
@@ -41,12 +42,12 @@
                 builtins.map
                   (n: let v = filteredChannels.${n}; in
                     {
-                      id = pkgs.lib.removePrefix "nixos-" n;
+                      id = lib.removePrefix "nixos-" n;
                       status = v.status;
                       jobset =
                         builtins.concatStringsSep
                           "/"
-                          (pkgs.lib.init (pkgs.lib.splitString "/" v.job));
+                          (lib.init (lib.splitString "/" v.job));
                       branch = n;
                     }
                   )
@@ -55,9 +56,9 @@
                 builtins.head
                   (builtins.sort (e1: e2: ! (builtins.lessThan e1 e2))
                     (builtins.map
-                      (pkgs.lib.removePrefix "nixos-")
+                      (lib.removePrefix "nixos-")
                       (builtins.attrNames
-                        (pkgs.lib.filterAttrs (_: v: v.status == "stable") filteredChannels)
+                        (lib.filterAttrs (_: v: v.status == "stable") filteredChannels)
                       )
                     )
                   );
