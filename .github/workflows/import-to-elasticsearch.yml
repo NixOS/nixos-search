@@ -23,8 +23,8 @@ jobs:
 ￼      id: nixos-channels
        run: |
          nix build -L .#nixosChannels
-  ￼      channels="$(cat ./result)"
-￼        echo ::set-output name=nixos-channels::${channels}
+  ￼      channels="$(< ./result)"
+￼        echo "::set-output name=nixos-channels::$channels"
 ￼
 
   import-nixpkgs:
