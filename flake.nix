@@ -35,8 +35,8 @@
             in
             {
               channels =
-                builtins.map
-                  (n: let v = filteredChannels.${n}; in
+                lib.mapAttrsToList
+                  (n: v:
                     {
                       id = lib.removePrefix "nixos-" n;
                       status = v.status;
