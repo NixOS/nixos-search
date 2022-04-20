@@ -21,12 +21,14 @@ jobs:
       uses: ./.github/actions/common-setup
       with:
         CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+
     - name: NixOS Channels
       id: nixos-channels
       run: |
         nix build -L .#nixosChannels
-        channels="$(< ./result)"
-        echo '::set-output name=matrix::{"channel":$channels}'
+        channels='{"channel": $(< ./result)}'
+        echo $channels
+        echo "::set-output name=matrix::$channels"
 
   import-nixpkgs:
     needs: nixos-channels
