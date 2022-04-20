@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      nixos-channels: "${{ steps.nixos-channels.outputs.nixos-channels }}"
+      matrix: ${{ steps.nixos-channels.outputs.matrix }}
 
     steps:
     - name: Setup
@@ -23,7 +23,7 @@ jobs:
       run: |
         nix build -L .#nixosChannels
         channels="$(< ./result)"
-        echo "::set-output name=nixos-channels::$channels"
+        echo '::set-output name=matrix::{"channel":$channels}'
 
   import-nixpkgs:
     needs: nixos-channels
@@ -31,8 +31,7 @@ jobs:
 
     strategy:
       fail-fast: false
-      matrix:
-        channel: ${{ fromJSON(needs.nixos-channels.outputs.nixos-channels }}
+      matrix: ${{ fromJSON(needs.nixos-channels.outputs.matrix }}
 
     env:
       RUST_LOG: debug
