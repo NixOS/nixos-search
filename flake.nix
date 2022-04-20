@@ -68,12 +68,12 @@
 
           mkDevShell = { inputsFrom ? [], extraPackages ? [], extraShellHook ? "" }: 
             pkgs.mkShell {
-              inherit inputsFrom shellHook;
+              inherit inputsFrom;
               packages = extraPackages;
               shellHook = ''
                 export NIXOS_CHANNELS='${builtins.toJSON nixosChannels}';
                 export ELASTICSEARCH_MAPPING_SCHEMA_VERSION="${version}";
-              '' ++ extraShellHook;
+              '' + extraShellHook;
             };
         in rec {
 
@@ -82,22 +82,38 @@
           packages.frontend = import ./frontend { inherit pkgs nixosChannels version; };
           packages.nixosChannels = nixosChannelsFile;
 
-          devShells.default = devShells.flake-info;
+          devShells.default = mkDevShell {
+            inputsFrom = [
+              packages.flake-info
+              packages.frontend
+            ];
+            extraPackages = [pkgs.rustfmt];
+            extraShellHook = ''
+              export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
+              export NIXPKGS_PANDOC_FILTERS_PATH="${packages.flake-info.NIXPKGS_PANDOC_FILTERS_PATH}";
+              export PATH=$PWD/frontend/node_modules/.bin:$PATH
+
+              rm -rf frontend/node_modules
+              ln -sf ${packages.frontend.yarnPkg}/libexec/${(builtins.parseDrvName packages.frontend.name).name}/node_modules frontend/
+              echo "========================================================"
+              echo "= To develop the frontend run: cd frontend && yarn dev ="
+              echo "========================================================"
+            '';
+          };
 
           devShells.flake-info = mkDevShell {
-            inputsFrom = packages.flake-info;
-            extraPackages = [ pkgs.rustfmt ];
+            inputsFrom = [packages.flake-info];
+            extraPackages = [pkgs.rustfmt];
             extraShellHook = ''
               export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
               export NIXPKGS_PANDOC_FILTERS_PATH="${packages.flake-info.NIXPKGS_PANDOC_FILTERS_PATH}";
             '';
           };
 
-          devShells.flake-info = mkDevShell {
+          devShells.frontend = mkDevShell {
             inputsFrom = [packages.frontend] ;
             extraShellHook = ''
               export PATH=$PWD/frontend/node_modules/.bin:$PATH
-
               rm -rf frontend/node_modules
               ln -sf ${packages.frontend.yarnPkg}/libexec/${(builtins.parseDrvName packages.frontend.name).name}/node_modules frontend/
               echo "========================================================"
