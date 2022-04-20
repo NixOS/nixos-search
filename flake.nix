@@ -47,7 +47,7 @@
                       branch = n;
                     }
                   )
-                  (builtins.attrNames filteredChannels);
+                  filteredChannels;
               default =
                 builtins.head
                   (builtins.sort (e1: e2: ! (builtins.lessThan e1 e2))
