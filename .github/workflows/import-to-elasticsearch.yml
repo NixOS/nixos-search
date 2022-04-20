@@ -32,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        channel: ${{ fromJSON(needs.nixos-channels.outputs.nixos-channels}}
+        channel: ${{ fromJSON(needs.nixos-channels.outputs.nixos-channels }}
 
     env:
       RUST_LOG: debug
