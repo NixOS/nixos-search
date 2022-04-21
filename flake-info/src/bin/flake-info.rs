@@ -5,6 +5,7 @@ use flake_info::data::import::{Kind, NixOption};
 use flake_info::data::{self, Export, Nixpkgs, Source};
 use flake_info::elastic::{ElasticsearchError, ExistsStrategy};
 use flake_info::{commands, elastic};
+use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
 use semver::VersionReq;
 use serde::Deserialize;
@@ -63,9 +64,6 @@ enum Command {
     },
     #[structopt(about = "Import official nixpkgs channel")]
     Nixpkgs {
-        #[structopt(env="NIXOS_CHANNELS")]
-        nixos_channels: Option<NixosChannels>,
-
         #[structopt(help = "Nixpkgs channel to import")]
         channel: String,
     },
@@ -74,9 +72,6 @@ enum Command {
     NixpkgsArchive {
         #[structopt(help = "Nixpkgs archive to import")]
         source: String,
-
-        #[structopt(env="NIXOS_CHANNELS")]
-        nixos_channels: Option<NixosChannels>,
 
         #[structopt(
             help = "Which channel to assign nixpkgs to",
@@ -247,9 +242,8 @@ async fn run_command(
 
             Ok((exports, ident))
         }
-        Command::Nixpkgs { channel, nixos_channels } => {
-
-            nixos_channels.map_or( Ok(()), |c| c.check_channel(&channel) )?;
+        Command::Nixpkgs { channel } => {
+            NIXOS_CHANNELS.check_channel(&channel)?;
 
             let nixpkgs = Source::nixpkgs(channel)
                 .await
@@ -264,8 +258,8 @@ async fn run_command(
 
             Ok((exports, ident))
         }
-        Command::NixpkgsArchive { source, channel, nixos_channels} => {
-            nixos_channels.map_or( Ok(()), |c| c.check_channel(&channel) )?;
+        Command::NixpkgsArchive { source, channel } => {
+            NIXOS_CHANNELS.check_channel(&channel)?;
 
             let ident = (
                 "nixos".to_string(),
@@ -446,4 +440,10 @@ impl FromStr for NixosChannels {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         serde_json::from_str(s)
     }
+}
+
+lazy_static! {
+    static ref NIXOS_CHANNELS: NixosChannels = std::env::var("NIXOS_CHANNELS")
+        .unwrap_or("".to_string())
+        .parse().unwrap();
 }
