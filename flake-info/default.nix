@@ -33,7 +33,7 @@ pkgs.rustPlatform.buildRustPackage rec {
   postInstall = ''
     wrapProgram $out/bin/flake-info \
       --set NIXPKGS_PANDOC_FILTERS_PATH "${NIXPKGS_PANDOC_FILTERS_PATH}" \
-      --set NIXOS_CHANNELS "${builtins.toJSON nixosChannels}" \
+      --set NIXOS_CHANNELS '${builtins.toJSON nixosChannels}' \
       --prefix PATH : ${pkgs.pandoc}/bin
   '';
 }
