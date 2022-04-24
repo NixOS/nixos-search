@@ -27,7 +27,8 @@ var common = {
     },
     plugins: [
         new webpack.EnvironmentPlugin([
-          "ELASTICSEARCH_MAPPING_SCHEMA_VERSION"
+          "ELASTICSEARCH_MAPPING_SCHEMA_VERSION",
+          "NIXOS_CHANNELS"
         ]),
         new HTMLWebpackPlugin({
             // Use this template to get basic responsive meta tags

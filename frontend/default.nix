@@ -1,5 +1,6 @@
 { pkgs ? import <nixpkgs> { }
-, version ? pkgs.lib.removeSuffix "\n" (builtins.readFile ../VERSION)
+, nixosChannels
+, version
 }:
 let
   package = builtins.fromJSON (builtins.readFile ./package.json);
@@ -52,6 +53,9 @@ pkgs.stdenv.mkDerivation {
       elm-analyse
     ]);
 
+  ELASTICSEARCH_MAPPING_SCHEMA_VERSION = version;
+  NIXOS_CHANNELS = builtins.toJSON nixosChannels;
+
   configurePhase = pkgs.elmPackages.fetchElmDeps {
     elmPackages = import ./elm-srcs.nix;
     elmVersion = pkgs.elmPackages.elm.version;
@@ -66,7 +70,6 @@ pkgs.stdenv.mkDerivation {
   buildPhase = ''
     # Yarn writes cache directories etc to $HOME.
     export HOME=$PWD/yarn_home
-    sed -i -e "s|process.env.ELASTICSEARCH_MAPPING_SCHEMA_VERSION|${version}|" src/index.js
     yarn prod
   '';
 
@@ -75,14 +78,6 @@ pkgs.stdenv.mkDerivation {
     cp -R ./dist/* $out/
     cp netlify.toml $out/
   '';
-  shellHook = ''
-    rm -rf frontend/node_modules
-    ln -sf ${yarnPkg}/libexec/${package.name}/node_modules frontend/
-    export PATH=$PWD/frontend/node_modules/.bin:$PATH
-    export ELASTICSEARCH_MAPPING_SCHEMA_VERSION=${version}
-    echo "============================"
-    echo "= To develop the frontend run: cd frontend && yarn dev ="
-    echo "============================"
-  '';
 
+  passthru.yarnPkg = yarnPkg;
 }

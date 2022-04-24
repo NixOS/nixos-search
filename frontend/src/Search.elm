@@ -4,15 +4,16 @@ module Search exposing
     , Details(..)
     , Model
     , Msg(..)
+    , NixOSChannel
+    , NixOSChannelStatus
     , Options
     , ResultHits
     , ResultItem
     , SearchResult
     , Sort(..)
-    , channelDetailsFromId
-    , channels
     , closeButton
     , decodeAggregation
+    , decodeNixOSChannels
     , decodeResolvedFlake
     , decodeResult
     , defaultFlakeId
@@ -153,6 +154,68 @@ type Sort
     | AlphabeticallyDesc
 
 
+type alias NixOSChannels =
+    { default : String
+    , channels : List NixOSChannel
+    }
+
+
+type alias NixOSChannel =
+    { id : String
+    , status : NixOSChannelStatus
+    , jobset : String
+    , branch : String
+    }
+
+
+type NixOSChannelStatus
+    = Rolling
+    | Stable
+    | Beta
+
+
+channelTitle : NixOSChannel -> String
+channelTitle channel =
+  if channel.status == Beta
+  then channel.id ++ " (Beta)"
+  else channel.id
+
+
+decodeNixOSChannels : Json.Decode.Decoder NixOSChannels
+decodeNixOSChannels =
+    Json.Decode.map2 NixOSChannels
+        (Json.Decode.field "default" Json.Decode.string)
+        (Json.Decode.field "channels" (Json.Decode.list decodeNixOSChannel))
+
+
+
+decodeNixOSChannel : Json.Decode.Decoder NixOSChannel
+decodeNixOSChannel =
+    Json.Decode.map4 NixOSChannel
+        (Json.Decode.field "id" Json.Decode.string)
+        (Json.Decode.field "status"
+            (Json.Decode.string
+                |> Json.Decode.andThen
+                    (\status ->
+                        case status of
+                            "rolling" ->
+                                Json.Decode.succeed Rolling
+
+                            "stable" ->
+                                Json.Decode.succeed Stable
+
+                            "beta" ->
+                                Json.Decode.succeed Beta
+
+                            _ ->
+                                Json.Decode.fail ("Unknown status: " ++ status)
+                    )
+            )
+        )
+        (Json.Decode.field "jobset" Json.Decode.string)
+        (Json.Decode.field "branch" Json.Decode.string)
+
+
 type alias ResolvedFlake =
     { type_ : String
     , owner : Maybe String
@@ -206,9 +269,11 @@ decodeResolvedFlake =
 
 init :
     Route.SearchArgs
+    -> String
+    -> List NixOSChannel
     -> Maybe (Model a b)
     -> ( Model a b, Cmd (Msg a b) )
-init args maybeModel =
+init args defaultNixOSChannel nixosChannels maybeModel =
     let
         getField getFn default =
             maybeModel
@@ -216,7 +281,7 @@ init args maybeModel =
                 |> Maybe.withDefault default
 
         modelChannel =
-            getField .channel defaultChannel
+            getField .channel defaultNixOSChannel
 
         modelFrom =
             getField .from 0
@@ -249,7 +314,7 @@ init args maybeModel =
       , showInstallDetails = Unset
       , searchType = Maybe.withDefault Route.PackageSearch args.type_
       }
-        |> ensureLoading
+        |> ensureLoading nixosChannels
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
     )
 
@@ -262,9 +327,14 @@ shouldLoad model =
 
 
 ensureLoading :
-    Model a b
+    List NixOSChannel
     -> Model a b
-ensureLoading model =
+    -> Model a b
+ensureLoading nixosChannels model =
+    let
+        channels =
+            List.map .id nixosChannels
+    in
     if model.query /= Nothing && model.query /= Just "" && List.member model.channel channels then
         { model | result = RemoteData.Loading }
 
@@ -324,8 +394,9 @@ update :
     -> Browser.Navigation.Key
     -> Msg a b
     -> Model a b
+    -> List NixOSChannel
     -> ( Model a b, Cmd (Msg a b) )
-update toRoute navKey msg model =
+update toRoute navKey msg model nixosChannels =
     case msg of
         NoOp ->
             ( model
@@ -338,7 +409,7 @@ update toRoute navKey msg model =
                 , show = Nothing
                 , from = 0
             }
-                |> ensureLoading
+                |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
 
         ToggleSort ->
@@ -359,7 +430,7 @@ update toRoute navKey msg model =
                 , show = Nothing
                 , from = 0
             }
-                |> ensureLoading
+                |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
 
         ChannelChange channel ->
@@ -369,7 +440,7 @@ update toRoute navKey msg model =
                 , buckets = Nothing
                 , from = 0
             }
-                |> ensureLoading
+                |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
 
         FlakeChange flake ->
@@ -379,7 +450,7 @@ update toRoute navKey msg model =
                 , buckets = Nothing
                 , from = 0
             }
-                |> ensureLoading
+                |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
 
         SubjectChange subject ->
@@ -389,7 +460,7 @@ update toRoute navKey msg model =
                 , buckets = Nothing
                 , from = 0
             }
-                |> ensureLoading
+                |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
 
         QueryInput query ->
@@ -403,7 +474,7 @@ update toRoute navKey msg model =
                 , show = Nothing
                 , buckets = Nothing
             }
-                |> ensureLoading
+                |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
 
         QueryResponse result ->
@@ -426,7 +497,7 @@ update toRoute navKey msg model =
 
         ChangePage from ->
             { model | from = from }
-                |> ensureLoading
+                |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
 
         ShowInstallDetails details ->
@@ -470,121 +541,9 @@ createUrl toRoute model =
 -- VIEW
 
 
-type Channel
-    = Unstable
-    | Release_21_11
-
-
-{-| TODO: we should consider using more dynamic approach here
-and load channels from apis similar to what status page does
--}
-type alias ChannelDetails =
-    { id : String
-    , title : String
-    , jobset : String
-    , branch : String
-    }
-
-
-defaultChannel : String
-defaultChannel =
-    "21.11"
-
-
-channelDetails : Channel -> ChannelDetails
-channelDetails channel =
-    case channel of
-        Unstable ->
-            ChannelDetails "unstable" "unstable" "nixos/trunk-combined" "nixos-unstable"
-
-        Release_21_11 ->
-            ChannelDetails "21.11" "21.11" "nixos/release-21.11" "nixos-21.11"
-
-
-channelFromId : String -> Maybe Channel
-channelFromId channel_id =
-    case channel_id of
-        "unstable" ->
-            Just Unstable
-
-        "21.11" ->
-            Just Release_21_11
-
-        _ ->
-            Nothing
-
-
-channelDetailsFromId : String -> Maybe ChannelDetails
-channelDetailsFromId channel_id =
-    channelFromId channel_id
-        |> Maybe.map channelDetails
-
-
-channels : List String
-channels =
-    [ "21.11"
-    , "unstable"
-    ]
-
-
 defaultFlakeId : String
 defaultFlakeId =
     "group-manual"
-
-
-
--- flakeFromId : String -> Maybe Flake
--- flakeFromId flake_id =
---     let
---         find : String -> List Flake -> Maybe Flake
---         find id_ list =
---             case list of
---                 flake :: rest ->
---                     if flake.id == id_ then
---                         Just flake
---
---                     else
---                         find id_ rest
---
---                 [] ->
---                     Nothing
---     in
---     find flake_id flakes
---
---
--- flakeIds : List String
--- flakeIds =
---     List.map .id flakes
---
---
--- flakes : List Flake
--- flakes =
---     [ { id = "latest-nixos-21.11-latest"
---       , isNixpkgs = True
---       , title = "Nixpkgs 21.11"
---       , source = ""
---       }
---     , { id = "latest-nixos-21.05-latest"
---       , isNixpkgs = True
---       , title = "Nixpkgs 21.05"
---       , source = ""
---       }
---     , { id = "nixos-21.09-latest"
---       , isNixpkgs = True
---       , title = "Nixpkgs 21.09"
---       , source = ""
---       }
---     , { id = "latest-nixos-unstable"
---       , isNixpkgs = True
---       , title = "Nixpkgs Unstable"
---       , source = ""
---       }
---     , { id = "flakes"
---       , isNixpkgs = False
---       , title = "Public Flakes"
---       , source = ""
---       }
---     ]
 
 
 sortBy : List Sort
@@ -730,9 +689,11 @@ view :
     , categoryName : String
     }
     -> List (Html c)
+    -> List NixOSChannel
     -> Model a b
     ->
-        (String
+        (List NixOSChannel
+         -> String
          -> Details
          -> Maybe String
          -> List (ResultItem a)
@@ -746,7 +707,7 @@ view :
     -> (Msg a b -> c)
     -> List (Html c)
     -> Html c
-view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg searchBuckets =
+view { toRoute, categoryName } title nixosChannels model viewSuccess viewBuckets outMsg searchBuckets =
     let
         resultStatus =
             case model.result of
@@ -773,8 +734,8 @@ view { toRoute, categoryName } title model viewSuccess viewBuckets outMsg search
             )
         )
         [ h1 [] title
-        , viewSearchInput outMsg categoryName (Just model.channel) model.query
-        , viewResult outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets
+        , viewSearchInput nixosChannels outMsg categoryName (Just model.channel) model.query
+        , viewResult nixosChannels outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets
         ]
 
 
@@ -810,12 +771,14 @@ viewFlakes outMsg _ selectedCategory =
 
 
 viewResult :
-    (Msg a b -> c)
+    List NixOSChannel
+    -> (Msg a b -> c)
     -> Route.SearchRoute
     -> String
     -> Model a b
     ->
-        (String
+        (List NixOSChannel
+         -> String
          -> Details
          -> Maybe String
          -> List (ResultItem a)
@@ -828,7 +791,7 @@ viewResult :
         )
     -> List (Html c)
     -> Html c
-viewResult outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets =
+viewResult nixosChannels outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets =
     case model.result of
         RemoteData.NotAsked ->
             div [] []
@@ -855,14 +818,14 @@ viewResult outMsg toRoute categoryName model viewSuccess viewBuckets searchBucke
                 div [ class "search-results" ]
                     [ ul [ class "search-sidebar" ] <| List.append searchBuckets buckets
                     , div []
-                        (viewResults model result viewSuccess toRoute outMsg categoryName)
+                        (viewResults nixosChannels model result viewSuccess toRoute outMsg categoryName)
                     ]
 
             else
                 div [ class "search-results" ]
                     [ ul [ class "search-sidebar" ] searchBuckets
                     , div []
-                        (viewResults model result viewSuccess toRoute outMsg categoryName)
+                        (viewResults nixosChannels model result viewSuccess toRoute outMsg categoryName)
                     ]
 
         RemoteData.Failure error ->
@@ -960,12 +923,13 @@ viewBucket title buckets searchMsgFor selectedBucket sets =
 
 
 viewSearchInput :
-    (Msg a b -> c)
+    List NixOSChannel
+    -> (Msg a b -> c)
     -> String
     -> Maybe String
     -> Maybe String
     -> Html c
-viewSearchInput outMsg categoryName selectedChannel searchQuery =
+viewSearchInput nixosChannels outMsg categoryName selectedChannel searchQuery =
     form
         [ onSubmit (outMsg QueryInputSubmit)
         , class "search-input"
@@ -986,17 +950,22 @@ viewSearchInput outMsg categoryName selectedChannel searchQuery =
                 [ text "Search" ]
             ]
             :: (selectedChannel
-                    |> Maybe.map (\x -> [ div [] (viewChannels outMsg x) ])
+                    |> Maybe.map (\x -> [ div [] (viewChannels nixosChannels outMsg x) ])
                     |> Maybe.withDefault []
                )
         )
 
 
 viewChannels :
-    (Msg a b -> c)
+    List NixOSChannel
+    -> (Msg a b -> c)
     -> String
     -> List (Html c)
-viewChannels outMsg selectedChannel =
+viewChannels nixosChannels outMsg selectedChannel =
+    let
+        channels =
+            List.map .id nixosChannels
+    in
     List.append
         [ div []
             [ h4 [] [ text "Channel: " ]
@@ -1004,23 +973,19 @@ viewChannels outMsg selectedChannel =
                 [ class "btn-group"
                 , attribute "data-toggle" "buttons-radio"
                 ]
-                (List.filterMap
-                    (\channelId ->
-                        channelDetailsFromId channelId
-                            |> Maybe.map
-                                (\channel ->
-                                    button
-                                        [ type_ "button"
-                                        , classList
-                                            [ ( "btn", True )
-                                            , ( "active", channel.id == selectedChannel )
-                                            ]
-                                        , onClick <| outMsg (ChannelChange channel.id)
-                                        ]
-                                        [ text channel.title ]
-                                )
+                (List.map
+                    (\channel ->
+                        button
+                            [ type_ "button"
+                            , classList
+                                [ ( "btn", True )
+                                , ( "active", channel.id == selectedChannel )
+                                ]
+                            , onClick <| outMsg (ChannelChange channel.id)
+                            ]
+                            [ text <| channelTitle channel ]
                     )
-                    channels
+                    nixosChannels
                 )
             ]
         ]
@@ -1037,10 +1002,12 @@ viewChannels outMsg selectedChannel =
 
 
 viewResults :
-    Model a b
+    List NixOSChannel
+    -> Model a b
     -> SearchResult a b
     ->
-        (String
+        (List NixOSChannel
+         -> String
          -> Details
          -> Maybe String
          -> List (ResultItem a)
@@ -1050,7 +1017,7 @@ viewResults :
     -> (Msg a b -> c)
     -> String
     -> List (Html c)
-viewResults model result viewSuccess _ outMsg categoryName =
+viewResults nixosChannels model result viewSuccess _ outMsg categoryName =
     let
         from =
             String.fromInt (model.from + 1)
@@ -1093,7 +1060,7 @@ viewResults model result viewSuccess _ outMsg categoryName =
                 )
             )
         ]
-    , viewSuccess model.channel model.showInstallDetails model.show result.hits.hits
+    , viewSuccess nixosChannels model.channel model.showInstallDetails model.show result.hits.hits
     , Html.map outMsg <| viewPager model result.hits.total.value
     ]
 
@@ -1379,6 +1346,7 @@ makeRequestBody query from sizeRaw sort type_ sortField otherSortFields bucketsF
 
 makeRequest :
     Http.Body
+    -> List NixOSChannel
     -> String
     -> Json.Decode.Decoder a
     -> Json.Decode.Decoder b
@@ -1386,10 +1354,15 @@ makeRequest :
     -> (RemoteData.WebData (SearchResult a b) -> Msg a b)
     -> Maybe String
     -> Cmd (Msg a b)
-makeRequest body channel decodeResultItemSource decodeResultAggregations options responseMsg tracker =
+makeRequest body nixosChannels channel decodeResultItemSource decodeResultAggregations options responseMsg tracker =
     let
+        branch : String
         branch =
-            Maybe.map (\details -> details.branch) (channelDetailsFromId channel) |> Maybe.withDefault channel
+            nixosChannels
+                |> List.filter (\x -> x.id == channel)
+                |> List.head
+                |> Maybe.map (\x -> x.branch)
+                |> Maybe.withDefault channel
 
         index =
             "latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ branch

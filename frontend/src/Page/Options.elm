@@ -45,7 +45,12 @@ import Http exposing (Body)
 import Json.Decode
 import Json.Decode.Pipeline
 import Route exposing (SearchType)
-import Search exposing (Details, decodeResolvedFlake)
+import Search
+    exposing
+        ( Details
+        , NixOSChannel
+        , decodeResolvedFlake
+        )
 
 
 
@@ -82,11 +87,16 @@ type alias AggregationsAll =
     }
 
 
-init : Route.SearchArgs -> Maybe Model -> ( Model, Cmd Msg )
-init searchArgs model =
+init :
+    Route.SearchArgs
+    -> String
+    -> List NixOSChannel
+    -> Maybe Model
+    -> ( Model, Cmd Msg )
+init searchArgs defaultNixOSChannel nixosChannels model =
     let
         ( newModel, newCmd ) =
-            Search.init searchArgs model
+            Search.init searchArgs defaultNixOSChannel nixosChannels model
     in
     ( newModel
     , Cmd.map SearchMsg newCmd
@@ -105,8 +115,9 @@ update :
     Browser.Navigation.Key
     -> Msg
     -> Model
+    -> List NixOSChannel
     -> ( Model, Cmd Msg )
-update navKey msg model =
+update navKey msg model nixosChannels =
     case msg of
         SearchMsg subMsg ->
             let
@@ -116,6 +127,7 @@ update navKey msg model =
                         navKey
                         subMsg
                         model
+                        nixosChannels
             in
             ( newModel, Cmd.map SearchMsg newCmd )
 
@@ -124,12 +136,16 @@ update navKey msg model =
 -- VIEW
 
 
-view : Model -> Html Msg
-view model =
+view :
+    List NixOSChannel
+    -> Model
+    -> Html Msg
+view nixosChannels model =
     Search.view { toRoute = Route.Options, categoryName = "options" }
         [ text "Search more than "
         , strong [] [ text "10 000 options" ]
         ]
+        nixosChannels
         model
         viewSuccess
         viewBuckets
@@ -146,26 +162,28 @@ viewBuckets _ _ =
 
 
 viewSuccess :
-    String
+    List NixOSChannel
+    -> String
     -> Details
     -> Maybe String
     -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
-viewSuccess channel showInstallDetails show hits =
+viewSuccess nixosChannels channel showInstallDetails show hits =
     ul []
         (List.map
-            (viewResultItem channel showInstallDetails show)
+            (viewResultItem nixosChannels channel showInstallDetails show)
             hits
         )
 
 
 viewResultItem :
-    String
+    List NixOSChannel
+    -> String
     -> Details
     -> Maybe String
     -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItem channel _ show item =
+viewResultItem nixosChannels channel _ show item =
     let
         showHtml value =
             case Html.Parser.run <| String.trim value of
@@ -229,7 +247,7 @@ viewResultItem channel _ show item =
                                     |> Maybe.withDefault []
                                )
                             ++ [ div [] [ text "Declared in" ]
-                               , div [] <| findSource channel item.source
+                               , div [] <| findSource nixosChannels channel item.source
                                ]
 
             else
@@ -283,8 +301,12 @@ viewResultItem channel _ show item =
             ]
 
 
-findSource : String -> ResultItemSource -> List (Html a)
-findSource channel source =
+findSource :
+    List NixOSChannel
+    -> String
+    -> ResultItemSource
+    -> List (Html a)
+findSource nixosChannels channel source =
     let
         githubUrlPrefix branch =
             "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/"
@@ -297,7 +319,7 @@ findSource channel source =
                 value
 
         asGithubLink value =
-            case Search.channelDetailsFromId channel of
+            case List.head (List.filter (\x -> x.id == channel) nixosChannels) of
                 Just channelDetails ->
                     a
                         [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L")
@@ -342,6 +364,7 @@ findSource channel source =
 
 makeRequest :
     Search.Options
+    -> List NixOSChannel
     -> SearchType
     -> String
     -> String
@@ -350,9 +373,10 @@ makeRequest :
     -> Maybe String
     -> Search.Sort
     -> Cmd Msg
-makeRequest options _ channel query from size _ sort =
+makeRequest options nixosChannels _ channel query from size _ sort =
     Search.makeRequest
         (makeRequestBody query from size sort)
+        nixosChannels
         channel
         decodeResultItemSource
         decodeResultAggregations

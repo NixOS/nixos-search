@@ -7,15 +7,36 @@ on:
 
 jobs:
 
+  nixos-channels:
+    runs-on: ubuntu-latest
+
+    outputs:
+      matrix: ${{ steps.nixos-channels.outputs.matrix }}
+
+    steps:
+    - name: Checking out the repository
+      uses: actions/checkout@v3
+
+    - name: Setup
+      uses: ./.github/actions/common-setup
+      with:
+        CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+
+    - name: NixOS Channels
+      id: nixos-channels
+      run: |
+        nix build -L .#nixosChannels
+        channels="{\"channel\": $(< ./result)}"
+        echo $channels
+        echo "::set-output name=matrix::$channels"
+
   import-nixpkgs:
+    needs: nixos-channels
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
-      matrix:
-        channel:
-          - unstable
-          - 21.11
+      matrix: ${{ fromJSON(needs.nixos-channels.outputs.matrix) }}
 
     env:
       RUST_LOG: debug
@@ -44,7 +65,6 @@ jobs:
           curl -sS ${{ secrets.ELASTICSEARCH_URL }}/latest-$(< VERSION)-nixos-${{ matrix.channel }}/_search | jq -c '.took // .'
         done
       if: github.repository_owner == 'NixOS'
-
 
 
   import-flakes:

@@ -25,13 +25,20 @@ import Html.Attributes
         , id
         , src
         )
+import Json.Decode
 import Page.Flakes exposing (Model(..))
 import Page.Home
 import Page.Options
 import Page.Packages
 import RemoteData exposing (RemoteData(..))
 import Route exposing (SearchType(..))
-import Search exposing (Msg(..), defaultFlakeId)
+import Search
+    exposing
+        ( Msg(..)
+        , NixOSChannel
+        , decodeNixOSChannels
+        , defaultFlakeId
+        )
 import Url
 
 
@@ -44,6 +51,7 @@ type alias Flags =
     , elasticsearchUrl : String
     , elasticsearchUsername : String
     , elasticsearchPassword : String
+    , nixosChannels : Json.Decode.Value
     }
 
 
@@ -51,6 +59,8 @@ type alias Model =
     { navKey : Browser.Navigation.Key
     , route : Route.Route
     , elasticsearch : Search.Options
+    , defaultNixOSChannel : String
+    , nixosChannels : List NixOSChannel
     , page : Page
     }
 
@@ -70,6 +80,14 @@ init :
     -> ( Model, Cmd Msg )
 init flags url navKey =
     let
+        nixosChannels =
+            case Json.Decode.decodeValue decodeNixOSChannels flags.nixosChannels of
+                Ok c ->
+                    c
+
+                Err _ ->
+                    { default = "", channels = [] }
+
         model =
             { navKey = navKey
             , elasticsearch =
@@ -78,6 +96,8 @@ init flags url navKey =
                     flags.elasticsearchUrl
                     flags.elasticsearchUsername
                     flags.elasticsearchPassword
+            , defaultNixOSChannel = nixosChannels.default
+            , nixosChannels = nixosChannels.channels
             , page = NotFound
             , route = Route.Home
             }
@@ -127,6 +147,7 @@ attemptQuery (( model, _ ) as pair) =
                         , Cmd.map msg <|
                             makeRequest
                                 model.elasticsearch
+                                model.nixosChannels
                                 searchModel.searchType
                                 searchModel.channel
                                 (Maybe.withDefault "" searchModel.query)
@@ -239,7 +260,7 @@ changeRouteTo currentModel url =
                                 _ ->
                                     Nothing
                     in
-                    Page.Packages.init searchArgs modelPage
+                    Page.Packages.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
                         |> updateWith Packages PackagesMsg model
                         |> avoidReinit
                         |> attemptQuery
@@ -254,7 +275,7 @@ changeRouteTo currentModel url =
                                 _ ->
                                     Nothing
                     in
-                    Page.Options.init searchArgs modelPage
+                    Page.Options.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
                         |> updateWith Options OptionsMsg model
                         |> avoidReinit
                         |> attemptQuery
@@ -269,7 +290,7 @@ changeRouteTo currentModel url =
                                 _ ->
                                     Nothing
                     in
-                    Page.Flakes.init searchArgs modelPage
+                    Page.Flakes.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
                         |> updateWith Flakes FlakesMsg model
                         |> avoidReinit
                         |> attemptQuery
@@ -300,19 +321,19 @@ update msg model =
             changeRouteTo model url
 
         ( HomeMsg subMsg, Home subModel ) ->
-            Page.Home.update subMsg subModel
+            Page.Home.update subMsg subModel model.nixosChannels
                 |> updateWith Home HomeMsg model
 
         ( PackagesMsg subMsg, Packages subModel ) ->
-            Page.Packages.update model.navKey subMsg subModel
+            Page.Packages.update model.navKey subMsg subModel model.nixosChannels
                 |> updateWith Packages PackagesMsg model
 
         ( OptionsMsg subMsg, Options subModel ) ->
-            Page.Options.update model.navKey subMsg subModel
+            Page.Options.update model.navKey subMsg subModel model.nixosChannels
                 |> updateWith Options OptionsMsg model
 
         ( FlakesMsg subMsg, Flakes subModel ) ->
-            Page.Flakes.update model.navKey subMsg subModel
+            Page.Flakes.update model.navKey subMsg subModel model.nixosChannels
                 |> updateWith Flakes FlakesMsg model
 
         ( _, _ ) ->
@@ -436,13 +457,13 @@ viewPage model =
             div [] [ text "Welcome" ]
 
         Packages packagesModel ->
-            Html.map (\m -> PackagesMsg m) <| Page.Packages.view packagesModel
+            Html.map (\m -> PackagesMsg m) <| Page.Packages.view model.nixosChannels packagesModel
 
         Options optionsModel ->
-            Html.map (\m -> OptionsMsg m) <| Page.Options.view optionsModel
+            Html.map (\m -> OptionsMsg m) <| Page.Options.view model.nixosChannels optionsModel
 
         Flakes flakesModel ->
-            Html.map (\m -> FlakesMsg m) <| Page.Flakes.view flakesModel
+            Html.map (\m -> FlakesMsg m) <| Page.Flakes.view model.nixosChannels flakesModel
 
 
 
