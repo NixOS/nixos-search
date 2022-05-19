@@ -1,6 +1,6 @@
-{ flake }:
+{ flake ? null }:
 let
-  resolved = builtins.getFlake (toString flake);
+  resolved = builtins.getFlake "input-flake";
 
   nixpkgs = (import <nixpkgs> {});
   lib = nixpkgs.lib;
@@ -93,7 +93,7 @@ let
         flake = modulePath;
       };
     in
-      map (cleanUpOption extraAttrs) (lib.filter (x: !x.internal) opts);
+      map (cleanUpOption extraAttrs) (lib.filter (x: x.visible && !x.internal) opts);
 
   readFlakeOptions = let
     nixosModulesOpts = builtins.concatLists (lib.mapAttrsToList (moduleName: module:
@@ -144,8 +144,10 @@ rec {
   packages = lib.attrValues (collectSystems packages');
   apps = lib.attrValues (collectSystems apps');
   options = readFlakeOptions;
-  nixos-options = readOptions {
-    module = import "${builtins.fetchTarball { url = flake; }}/nixos/modules/module-list.nix";
-  };
   all = packages ++ apps ++ options;
+
+  # nixpkgs-specific, doesn't use the flake argument
+  nixos-options = lib.mapAttrsToList (name: option: option // { inherit name; })
+    (builtins.fromJSON (builtins.unsafeDiscardStringContext (builtins.readFile
+      "${(import <nixpkgs/nixos/release.nix> {}).options}/share/doc/nixos/options.json")));
 }

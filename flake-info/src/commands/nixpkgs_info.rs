@@ -13,6 +13,7 @@ const FLAKE_INFO_SCRIPT: &str = include_str!("flake_info.nix");
 pub fn get_nixpkgs_info<T: AsRef<str> + Display>(nixpkgs_channel: T) -> Result<Vec<NixpkgsEntry>> {
     let mut command = Command::new("nix-env");
     command.add_args(&[
+        "--json",
         "-f",
         "<nixpkgs>",
         "-I",
@@ -22,7 +23,6 @@ pub fn get_nixpkgs_info<T: AsRef<str> + Display>(nixpkgs_channel: T) -> Result<V
         "import <nixpkgs/pkgs/top-level/packages-config.nix>",
         "-qa",
         "--meta",
-        "--json",
     ]);
 
     command.enable_capture();
@@ -66,9 +66,6 @@ pub fn get_nixpkgs_options<T: AsRef<str> + Display>(
         script_path.to_str().unwrap(),
         "-I",
         format!("nixpkgs={}", nixpkgs_channel.as_ref()).as_str(),
-        "--arg",
-        "flake",
-        nixpkgs_channel.as_ref(),
         "nixos-options",
     ]);
 

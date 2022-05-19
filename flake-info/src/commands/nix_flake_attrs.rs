@@ -25,7 +25,8 @@ pub fn get_derivation_info<T: AsRef<str> + Display>(
 
     let mut command = Command::with_args("nix", ARGS.iter());
     command.add_arg_pair("-f", script_path.as_os_str());
-    command.add_args(["--arg", "flake", flake_ref.as_ref()].iter());
+    command.add_args(["--override-flake", "input-flake", flake_ref.as_ref()].iter());
+    command.add_args(["--argstr", "flake", flake_ref.as_ref()].iter());
     command.add_arg(kind.as_ref());
     if temp_store {
         let temp_store_path = PathBuf::from("/tmp/flake-info-store");
