@@ -170,15 +170,27 @@ type alias NixOSChannel =
 
 type NixOSChannelStatus
     = Rolling
-    | Stable
     | Beta
+    | Stable
+    | Deprecated
 
 
-channelTitle : NixOSChannel -> String
-channelTitle channel =
-  if channel.status == Beta
-  then channel.id ++ " (Beta)"
-  else channel.id
+channelBadge : NixOSChannelStatus -> List (Html msg)
+channelBadge status =
+    case status of
+        Rolling ->
+            -- [ span [ class "label label-success" ] [ text "Rolling" ] ]
+            []
+
+        Beta ->
+            [ span [ class "label label-info" ] [ text "Beta" ] ]
+
+        Stable ->
+            -- [ span [ class "label label-success" ] [ text "Stable" ] ]
+            []
+
+        Deprecated ->
+            [ span [ class "label label-warning" ] [ text "Deprecated" ] ]
 
 
 decodeNixOSChannels : Json.Decode.Decoder NixOSChannels
@@ -186,7 +198,6 @@ decodeNixOSChannels =
     Json.Decode.map2 NixOSChannels
         (Json.Decode.field "default" Json.Decode.string)
         (Json.Decode.field "channels" (Json.Decode.list decodeNixOSChannel))
-
 
 
 decodeNixOSChannel : Json.Decode.Decoder NixOSChannel
@@ -201,11 +212,14 @@ decodeNixOSChannel =
                             "rolling" ->
                                 Json.Decode.succeed Rolling
 
+                            "beta" ->
+                                Json.Decode.succeed Beta
+
                             "stable" ->
                                 Json.Decode.succeed Stable
 
-                            "beta" ->
-                                Json.Decode.succeed Beta
+                            "deprecated" ->
+                                Json.Decode.succeed Deprecated
 
                             _ ->
                                 Json.Decode.fail ("Unknown status: " ++ status)
@@ -983,7 +997,7 @@ viewChannels nixosChannels outMsg selectedChannel =
                                 ]
                             , onClick <| outMsg (ChannelChange channel.id)
                             ]
-                            [ text <| channelTitle channel ]
+                            (List.intersperse (text " ") ([ text channel.id ] ++ channelBadge channel.status))
                     )
                     nixosChannels
                 )
