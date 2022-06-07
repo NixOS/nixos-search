@@ -12,7 +12,7 @@
   outputs = { self
             , nixpkgs
             , flake-utils
-            , nixos-org-configurations 
+            , nixos-org-configurations
             }:
     flake-utils.lib.eachDefaultSystem
       (system:
@@ -27,7 +27,7 @@
               filteredChannels =
                 lib.filterAttrs
                   (n: v:
-                    builtins.elem v.status ["beta" "stable" "rolling"] &&
+                    builtins.elem v.status ["rolling" "beta" "stable" "deprecated"] &&
                     lib.hasPrefix "nixos-" n &&
                     v ? variant && v.variant == "primary"
                   )
@@ -63,7 +63,7 @@
             echo '${builtins.toJSON (builtins.map (c: c.id) nixosChannels.channels)}' > $out
           '';
 
-          mkDevShell = { inputsFrom ? [], extraPackages ? [], extraShellHook ? "" }: 
+          mkDevShell = { inputsFrom ? [], extraPackages ? [], extraShellHook ? "" }:
             pkgs.mkShell {
               inherit inputsFrom;
               packages = extraPackages;
