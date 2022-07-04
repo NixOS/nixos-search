@@ -349,7 +349,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
             ul []
                 (li []
                     [ text "Name: "
-                    , code [] [ text item.source.pname ]
+                    , code [ class "package-name" ] [ text item.source.pname ]
                     ]
                     :: (optionals (item.source.pversion /= "")
                             [ li []
