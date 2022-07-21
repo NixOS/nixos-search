@@ -228,10 +228,7 @@ async fn run_command(
             gc,
         } => {
             let source = Source::Git { url: flake };
-            let exports = flake_info::process_flake(&source, &kind, temp_store, extra)
-                .map_err(FlakeInfoError::Flake)?;
-
-            let info = flake_info::get_flake_info(source.to_flake_ref(), temp_store, extra)
+            let (info, exports) = flake_info::process_flake(&source, &kind, temp_store, extra)
                 .map_err(FlakeInfoError::Flake)?;
 
             let ident = (
@@ -288,19 +285,21 @@ async fn run_command(
                 .iter()
                 .map(|source| match source {
                     Source::Nixpkgs(nixpkgs) => flake_info::process_nixpkgs(source, &kind)
+                        .with_context(|| {
+                            format!("While processing nixpkgs archive {}", source.to_flake_ref())
+                        })
                         .map(|result| (result, nixpkgs.git_ref.to_owned())),
-                    _ => flake_info::process_flake(source, &kind, temp_store, &extra).and_then(
-                        |result| {
-                            flake_info::get_flake_info(source.to_flake_ref(), temp_store, extra)
-                                .map(|info| (result, info.revision.unwrap_or("latest".into())))
-                        },
-                    ),
+                    _ => flake_info::process_flake(source, &kind, temp_store, &extra)
+                        .with_context(|| {
+                            format!("While processing flake {}", source.to_flake_ref())
+                        })
+                        .map(|(info, result)| (result, info.revision.unwrap_or("latest".into()))),
                 })
                 .partition::<Vec<_>, _>(Result::is_ok);
 
             let (exports, hashes) = exports_and_hashes
                 .into_iter()
-                .map(|result| result.unwrap())
+                .map(|result| result.unwrap()) // each result is_ok
                 .fold(
                     (Vec::new(), Vec::new()),
                     |(mut exports, mut hashes), (export, hash)| {
@@ -312,7 +311,7 @@ async fn run_command(
 
             let errors = errors
                 .into_iter()
-                .map(Result::unwrap_err)
+                .map(Result::unwrap_err) // each result is_err
                 .collect::<Vec<_>>();
 
             if !errors.is_empty() {
@@ -425,17 +424,28 @@ struct NixosChannels {
 
 #[derive(Clone, Debug, Deserialize)]
 struct Channel {
-    branch: String
+    branch: String,
 }
 
 impl NixosChannels {
     fn check_channel(&self, channel: &String) -> Result<(), FlakeInfoError> {
-        self.channels.iter().find(|c| &c.branch == channel).map_or_else(|| Ok(()), |_| Err(FlakeInfoError::UnknownNixOSChannel(channel.clone(), self.clone())))
+        self.channels
+            .iter()
+            .find(|c| &c.branch == channel)
+            .map_or_else(
+                || Ok(()),
+                |_| {
+                    Err(FlakeInfoError::UnknownNixOSChannel(
+                        channel.clone(),
+                        self.clone(),
+                    ))
+                },
+            )
     }
 }
 
 impl FromStr for NixosChannels {
-    type Err=serde_json::Error;
+    type Err = serde_json::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         serde_json::from_str(s)
@@ -445,5 +455,6 @@ impl FromStr for NixosChannels {
 lazy_static! {
     static ref NIXOS_CHANNELS: NixosChannels = std::env::var("NIXOS_CHANNELS")
         .unwrap_or("".to_string())
-        .parse().unwrap();
+        .parse()
+        .unwrap();
 }
