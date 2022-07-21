@@ -285,10 +285,14 @@ async fn run_command(
                 .iter()
                 .map(|source| match source {
                     Source::Nixpkgs(nixpkgs) => flake_info::process_nixpkgs(source, &kind)
-                        .with_context(|| format!("While processing nixpkgs archive {}", source.to_flake_ref()))
+                        .with_context(|| {
+                            format!("While processing nixpkgs archive {}", source.to_flake_ref())
+                        })
                         .map(|result| (result, nixpkgs.git_ref.to_owned())),
                     _ => flake_info::process_flake(source, &kind, temp_store, &extra)
-                        .with_context(|| format!("While processing flake {}", source.to_flake_ref()))
+                        .with_context(|| {
+                            format!("While processing flake {}", source.to_flake_ref())
+                        })
                         .map(|(info, result)| (result, info.revision.unwrap_or("latest".into()))),
                 })
                 .partition::<Vec<_>, _>(Result::is_ok);
@@ -420,17 +424,28 @@ struct NixosChannels {
 
 #[derive(Clone, Debug, Deserialize)]
 struct Channel {
-    branch: String
+    branch: String,
 }
 
 impl NixosChannels {
     fn check_channel(&self, channel: &String) -> Result<(), FlakeInfoError> {
-        self.channels.iter().find(|c| &c.branch == channel).map_or_else(|| Ok(()), |_| Err(FlakeInfoError::UnknownNixOSChannel(channel.clone(), self.clone())))
+        self.channels
+            .iter()
+            .find(|c| &c.branch == channel)
+            .map_or_else(
+                || Ok(()),
+                |_| {
+                    Err(FlakeInfoError::UnknownNixOSChannel(
+                        channel.clone(),
+                        self.clone(),
+                    ))
+                },
+            )
     }
 }
 
 impl FromStr for NixosChannels {
-    type Err=serde_json::Error;
+    type Err = serde_json::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         serde_json::from_str(s)
@@ -440,5 +455,6 @@ impl FromStr for NixosChannels {
 lazy_static! {
     static ref NIXOS_CHANNELS: NixosChannels = std::env::var("NIXOS_CHANNELS")
         .unwrap_or("".to_string())
-        .parse().unwrap();
+        .parse()
+        .unwrap();
 }

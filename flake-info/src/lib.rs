@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use data::{import::Kind, Export, Source, Flake};
+use data::{import::Kind, Export, Flake, Source};
 
 pub mod commands;
 pub mod data;
@@ -48,6 +48,9 @@ pub fn process_nixpkgs(nixpkgs: &Source, kind: &Kind) -> Result<Vec<Export>, any
     let mut all = drvs;
     all.append(&mut options);
 
-    let exports = all.into_iter().map(Export::nixpkgs).collect::<Result<Vec<Export>>>()?;
+    let exports = all
+        .into_iter()
+        .map(Export::nixpkgs)
+        .collect::<Result<Vec<Export>>>()?;
     Ok(exports)
 }

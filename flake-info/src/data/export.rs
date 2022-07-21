@@ -1,11 +1,17 @@
 /// This module defines the unified putput format as expected by the elastic search
 /// Additionally, we implement converseions from the two possible input formats, i.e.
 /// Flakes, or Nixpkgs.
-use std::{convert::{TryInto, TryFrom}, path::PathBuf};
+use std::{
+    convert::{TryFrom, TryInto},
+    path::PathBuf,
+};
 
-use super::{import::{DocValue, ModulePath}, pandoc::PandocExt};
-use anyhow::Context;
+use super::{
+    import::{DocValue, ModulePath},
+    pandoc::PandocExt,
+};
 use crate::data::import::NixOption;
+use anyhow::Context;
 use log::error;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
