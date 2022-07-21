@@ -9,7 +9,7 @@ use std::io::Write;
 use std::path::PathBuf;
 
 const SCRIPT: &str = include_str!("flake_info.nix");
-const ARGS: [&str; 3] = ["eval", "--json", "--no-write-lock-file"];
+const ARGS: [&str; 5] = ["eval", "--json", "--no-allow-import-from-derivation", "--read-only", "--no-write-lock-file"];
 
 /// Uses `nix` to fetch the provided flake and read general information
 /// about it using `nix flake info`
