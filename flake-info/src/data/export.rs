@@ -1,9 +1,10 @@
 /// This module defines the unified putput format as expected by the elastic search
 /// Additionally, we implement converseions from the two possible input formats, i.e.
 /// Flakes, or Nixpkgs.
-use std::{convert::TryInto, path::PathBuf};
+use std::{convert::{TryInto, TryFrom}, path::PathBuf};
 
 use super::{import::{DocValue, ModulePath}, pandoc::PandocExt};
+use anyhow::Context;
 use crate::data::import::NixOption;
 use log::error;
 use serde::{Deserialize, Serialize};
@@ -117,9 +118,11 @@ pub enum Derivation {
 
 // ----- Conversions
 
-impl From<(import::FlakeEntry, super::Flake)> for Derivation {
-    fn from((d, f): (import::FlakeEntry, super::Flake)) -> Self {
-        match d {
+impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
+    type Error = anyhow::Error;
+
+    fn try_from((d, f): (import::FlakeEntry, super::Flake)) -> Result<Self, Self::Error> {
+        Ok(match d {
             import::FlakeEntry::Package {
                 attribute_name,
                 name,
@@ -187,14 +190,16 @@ impl From<(import::FlakeEntry, super::Flake)> for Derivation {
                 app_bin: bin,
                 app_type,
             },
-            import::FlakeEntry::Option(option) => option.into(),
-        }
+            import::FlakeEntry::Option(option) => option.try_into()?,
+        })
     }
 }
 
-impl From<import::NixpkgsEntry> for Derivation {
-    fn from(entry: import::NixpkgsEntry) -> Self {
-        match entry {
+impl TryFrom<import::NixpkgsEntry> for Derivation {
+    type Error = anyhow::Error;
+
+    fn try_from(entry: import::NixpkgsEntry) -> Result<Self, Self::Error> {
+        Ok(match entry {
             import::NixpkgsEntry::Derivation { attribute, package } => {
                 let package_attr_set: Vec<_> = attribute.split(".").collect();
                 let package_attr_set: String = (if package_attr_set.len() > 1 {
@@ -230,8 +235,7 @@ impl From<import::NixpkgsEntry> for Derivation {
 
                 let package_maintainers_set = package_maintainers
                     .iter()
-                    .filter(|m| m.name.is_some())
-                    .map(|m| m.name.to_owned().unwrap())
+                    .flat_map(|m| m.name.to_owned())
                     .collect();
 
                 let position: Option<String> = package.meta.position.map(|p| {
@@ -276,13 +280,15 @@ impl From<import::NixpkgsEntry> for Derivation {
                     package_position: position,
                 }
             }
-            import::NixpkgsEntry::Option(option) => option.into(),
-        }
+            import::NixpkgsEntry::Option(option) => option.try_into()?,
+        })
     }
 }
 
-impl From<import::NixOption> for Derivation {
-    fn from(
+impl TryFrom<import::NixOption> for Derivation {
+    type Error = anyhow::Error;
+
+    fn try_from(
         NixOption {
             declarations,
             description,
@@ -292,26 +298,26 @@ impl From<import::NixOption> for Derivation {
             example,
             flake,
         }: import::NixOption,
-    ) -> Self {
+    ) -> Result<Self, Self::Error> {
         let description = description
             .as_ref()
             .map(PandocExt::render)
             .transpose()
-            .expect(&format!("Could not render descript of `{}`", name));
+            .with_context(|| format!("While rendering the description for option `{}`", name))?;
         let option_default = default;
         // .map(TryInto::try_into)
         // .transpose()
-        // .expect(&format!("Could not render option_default of `{}`", name));
+        // .with_context(|| format!("While rendering the default for option `{}`", name))?;
         let option_example = example;
         // .map(TryInto::try_into)
         // .transpose()
-        // .expect(&format!("Could not render option_example of `{}`", name));
+        // .with_context(|| format!("While rendering the example for option `{}`", name))?;
         let option_type = option_type;
         // .map(TryInto::try_into)
         // .transpose()
-        // .expect(&format!("Could not render option_type of `{}`", name));
+        // .with_context(|| format!("While rendering the type for option `{}`", name))?;
 
-        Derivation::Option {
+        Ok(Derivation::Option {
             option_source: declarations.get(0).map(Clone::clone),
             option_name: name.clone(),
             option_name_reverse: Reverse(name.clone()),
@@ -323,7 +329,7 @@ impl From<import::NixOption> for Derivation {
             option_type,
             option_name_query: AttributeQuery::new(&name),
             option_name_query_reverse: Reverse(AttributeQuery::new(&name)),
-        }
+        })
     }
 }
 
@@ -387,19 +393,19 @@ pub struct Export {
 
 impl Export {
     /// Construct Export from Flake and Flake entry
-    pub fn flake(flake: Flake, item: import::FlakeEntry) -> Self {
-        Self {
+    pub fn flake(flake: Flake, item: import::FlakeEntry) -> anyhow::Result<Self> {
+        Ok(Self {
             flake: Some(flake.clone()),
-            item: Derivation::from((item, flake)),
-        }
+            item: Derivation::try_from((item, flake))?,
+        })
     }
 
     /// Construct Export from NixpkgsEntry
-    pub fn nixpkgs(item: import::NixpkgsEntry) -> Self {
-        Self {
+    pub fn nixpkgs(item: import::NixpkgsEntry) -> anyhow::Result<Self> {
+        Ok(Self {
             flake: None,
-            item: Derivation::from(item),
-        }
+            item: Derivation::try_from(item)?,
+        })
     }
 }
 
@@ -423,7 +429,7 @@ mod tests {
             "visible":true
         }"#).unwrap();
 
-        let option: Derivation = option.into();
+        let option: Derivation = option.try_into().unwrap();
 
         println!("{}", serde_json::to_string_pretty(&option).unwrap());
     }

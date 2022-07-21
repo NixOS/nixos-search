@@ -228,10 +228,7 @@ async fn run_command(
             gc,
         } => {
             let source = Source::Git { url: flake };
-            let exports = flake_info::process_flake(&source, &kind, temp_store, extra)
-                .map_err(FlakeInfoError::Flake)?;
-
-            let info = flake_info::get_flake_info(source.to_flake_ref(), temp_store, extra)
+            let (info, exports) = flake_info::process_flake(&source, &kind, temp_store, extra)
                 .map_err(FlakeInfoError::Flake)?;
 
             let ident = (
@@ -288,19 +285,17 @@ async fn run_command(
                 .iter()
                 .map(|source| match source {
                     Source::Nixpkgs(nixpkgs) => flake_info::process_nixpkgs(source, &kind)
+                        .with_context(|| format!("While processing nixpkgs archive {}", source.to_flake_ref()))
                         .map(|result| (result, nixpkgs.git_ref.to_owned())),
-                    _ => flake_info::process_flake(source, &kind, temp_store, &extra).and_then(
-                        |result| {
-                            flake_info::get_flake_info(source.to_flake_ref(), temp_store, extra)
-                                .map(|info| (result, info.revision.unwrap_or("latest".into())))
-                        },
-                    ),
+                    _ => flake_info::process_flake(source, &kind, temp_store, &extra)
+                        .with_context(|| format!("While processing flake {}", source.to_flake_ref()))
+                        .map(|(info, result)| (result, info.revision.unwrap_or("latest".into()))),
                 })
                 .partition::<Vec<_>, _>(Result::is_ok);
 
             let (exports, hashes) = exports_and_hashes
                 .into_iter()
-                .map(|result| result.unwrap())
+                .map(|result| result.unwrap()) // each result is_ok
                 .fold(
                     (Vec::new(), Vec::new()),
                     |(mut exports, mut hashes), (export, hash)| {
@@ -312,7 +307,7 @@ async fn run_command(
 
             let errors = errors
                 .into_iter()
-                .map(Result::unwrap_err)
+                .map(Result::unwrap_err) // each result is_err
                 .collect::<Vec<_>>();
 
             if !errors.is_empty() {

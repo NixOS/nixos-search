@@ -499,6 +499,7 @@ mod tests {
         let exports = sources
             .iter()
             .flat_map(|s| process_flake(s, &Kind::All, false, &[]))
+            .map(|(info, exports)| exports)
             .flatten()
             .collect::<Vec<Export>>();
         println!("{}", serde_json::to_string(&exports[1]).unwrap());
