@@ -4,7 +4,7 @@ use std::io::Write;
 use std::{collections::HashMap, fmt::Display, fs::File};
 
 use command_run::{Command, LogTo};
-use log::{debug, error};
+use log::error;
 
 use crate::data::import::{NixOption, NixpkgsEntry, Package};
 

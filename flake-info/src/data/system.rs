@@ -31,8 +31,3 @@ pub struct InstancePlatform {
     system: System,
     version: String,
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-}

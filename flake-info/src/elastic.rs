@@ -1,15 +1,8 @@
-use std::{borrow::Borrow, collections::HashMap};
+use std::collections::HashMap;
 
 use clap::arg_enum;
 pub use elasticsearch::http::transport::Transport;
-use elasticsearch::{
-    http::response::{self, Response},
-    indices::{
-        IndicesCreateParts, IndicesDeleteAliasParts, IndicesDeleteParts, IndicesExistsParts,
-        IndicesGetAliasParts, IndicesPutAliasParts, IndicesUpdateAliasesParts,
-    },
-    BulkOperation, Elasticsearch as Client,
-};
+use elasticsearch::{http::response, indices::*, BulkOperation, Elasticsearch as Client};
 use lazy_static::lazy_static;
 use log::{info, warn};
 use serde_json::{json, Value};
@@ -380,7 +373,7 @@ impl Elasticsearch {
 
     pub async fn write_alias(
         &self,
-        config: &Config<'_>,
+        _config: &Config<'_>,
         index: &str,
         alias: &str,
     ) -> Result<(), ElasticsearchError> {
@@ -499,7 +492,7 @@ mod tests {
         let exports = sources
             .iter()
             .flat_map(|s| process_flake(s, &Kind::All, false, &[]))
-            .map(|(info, exports)| exports)
+            .map(|(_info, exports)| exports)
             .flatten()
             .collect::<Vec<Export>>();
         println!("{}", serde_json::to_string(&exports[1]).unwrap());

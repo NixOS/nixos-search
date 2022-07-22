@@ -1,7 +1,6 @@
 use crate::data::import::{FlakeEntry, Kind};
 use anyhow::{Context, Result};
 use command_run::{Command, LogTo};
-use log::debug;
 use serde_json::Deserializer;
 use std::fmt::Display;
 use std::fs::File;

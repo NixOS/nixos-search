@@ -1,8 +1,8 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::{
     ffi::OsStr,
-    fs::{self, File},
+    fs::File,
     io::{self, Read},
     path::Path,
 };

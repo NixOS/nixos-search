@@ -12,13 +12,10 @@ use super::{
 };
 use crate::data::import::NixOption;
 use anyhow::Context;
-use log::error;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 use super::{
     import,
-    prettyprint::print_value,
     system::System,
     utility::{AttributeQuery, Flatten, OneOrMany, Reverse},
 };
@@ -66,6 +63,7 @@ impl From<import::License> for License {
 #[serde(tag = "type")]
 pub enum Derivation {
     #[serde(rename = "package")]
+    #[allow(non_snake_case)]
     Package {
         package_attr_name: String,
         package_attr_name_reverse: Reverse<String>,

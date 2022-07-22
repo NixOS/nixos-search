@@ -1,7 +1,5 @@
 #![recursion_limit = "256"]
 
-use std::path::PathBuf;
-
 use anyhow::Result;
 use data::{import::Kind, Export, Flake, Source};
 
