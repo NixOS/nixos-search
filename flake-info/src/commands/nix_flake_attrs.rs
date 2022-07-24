@@ -9,10 +9,11 @@ use std::io::Write;
 use std::path::PathBuf;
 
 const SCRIPT: &str = include_str!("flake_info.nix");
-const ARGS: [&str; 4] = [
+const ARGS: [&str; 5] = [
     "eval",
     "--json",
     "--no-allow-import-from-derivation",
+    "--read-only",
     "--no-write-lock-file",
 ];
 
