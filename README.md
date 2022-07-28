@@ -41,7 +41,7 @@ better queries which in turn will produce better results.
 To start developing open a terminal and run:
 
 ```
-nix-shell --run "cd frontend && yarn dev"
+env --chdir=frontend nix develop -c yarn dev
 ```
 
 You can point your browser to `http://localhost:3000` and start developing.
