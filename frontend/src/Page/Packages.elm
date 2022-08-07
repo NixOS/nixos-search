@@ -506,6 +506,11 @@ viewResultItem nixosChannels channel showInstallDetails show item =
             optionals (Just item.source.attr_name == show)
                 [ div [ trapClick ]
                     (div []
+                        (item.source.longDescription
+                            |> Maybe.map (\desc -> [ p [] [ text desc ] ])
+                            |> Maybe.withDefault []
+                        )
+                    :: div []
                         [ h4 []
                             [ text "How to install "
                             , em [] [ text item.source.attr_name ]
@@ -716,12 +721,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                 <|
                                     Maybe.map Tuple.first item.source.flakeUrl
                         ]
-                        :: ((item.source.longDescription
-                                |> Maybe.map (\desc -> [ p [] [ text desc ] ])
-                                |> Maybe.withDefault []
-                            )
-                                ++ maintainersAndPlatforms
-                           )
+                        :: maintainersAndPlatforms
                     )
                 ]
 

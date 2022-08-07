@@ -388,8 +388,13 @@ header .navbar.navbar-static-top {
               margin: 2em 0 1em 1em;
               text-align: left;
 
-              // how to install a package
+              // long description of a package
               & > :nth-child(1) {
+                margin-top: 1em;
+              }
+
+              // how to install a package
+              & > :nth-child(2) {
 
                 h4 {
                   font-size: 1.2em;
@@ -415,11 +420,6 @@ header .navbar.navbar-static-top {
                   .terminal();
                 }
 
-              }
-
-              // long description of a package
-              & > :nth-child(2) {
-                margin-top: 1em;
               }
 
               // maintainers and platforms
