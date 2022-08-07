@@ -616,8 +616,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                     , class "tab-pane"
                                     , id "package-details-nixpkgs"
                                     ]
-                                    [ pre [ class "code-block" ]
-                                        [ text "$ nix-env -iA nixos."
+                                    [ pre [ class "code-block shell-command" ]
+                                        [ text "nix-env -iA nixos."
                                         , strong [] [ text item.source.attr_name ]
                                         ]
                                     ]
@@ -638,8 +638,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                     , class "tab-pane"
                                     , id "package-details-nixpkgs"
                                     ]
-                                    [ pre [ class "code-block" ]
-                                        [ text "$ nix-env -iA nixpkgs."
+                                    [ pre [ class "code-block shell-command" ]
+                                        [ text "nix-env -iA nixpkgs."
                                         , strong [] [ text item.source.attr_name ]
                                         ]
                                     ]
@@ -666,8 +666,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                     , class "tab-pane"
                                     , id "package-details-nixpkgs"
                                     ]
-                                    [ pre [ class "code-block" ]
-                                        [ text "$ nix-shell -p "
+                                    [ pre [ class "code-block shell-command" ]
+                                        [ text "nix-shell -p "
                                         , strong [] [ text item.source.attr_name ]
                                         ]
                                     ]
@@ -704,8 +704,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                                 , ( "active", True )
                                                 ]
                                             ]
-                                            [ pre [ class "code-block" ]
-                                                [ text "$ nix build "
+                                            [ pre [ class "code-block shell-command" ]
+                                                [ text "nix build "
                                                 , strong [] [ text url ]
                                                 , text "#"
                                                 , em [] [ text item.source.attr_name ]
