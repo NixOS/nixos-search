@@ -384,8 +384,9 @@ type Msg a b
 
 
 type Details
-    = FromNixpkgs
-    | FromNixOS
+    = ViaNixShell
+    | ViaNixOS
+    | ViaNixEnv
     | FromFlake
     | Unset
 
