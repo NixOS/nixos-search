@@ -113,3 +113,8 @@ repo = "nix-security"
 type = "github"
 owner = "input-output-hk"
 repo = "haskell.nix"
+
+[[sources]]
+type = "sourcehut"
+owner = "~munksgaard"
+repo = "geomyidae-flake"
