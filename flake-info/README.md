@@ -98,7 +98,7 @@ $ flake-info nixpkgs nixos-21.05
 
 to perform a bulk import grouping multiple inputs under the same name/index use the group command.
 
-It expects a json file as input that contains references to flakes or nixpkgs. If those resources are on github, gitlab our sourcehut they can be extended with more meta information including pinning the commit hash/ref.
+It expects a JSON file as input that contains references to flakes or nixpkgs. If those resources are on GitHub, GitLab or SourceHut they can be extended with more meta information including pinning the commit hash/ref.
 
 The second argument is the group name that is used to provide the index name.
 
