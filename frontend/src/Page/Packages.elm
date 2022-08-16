@@ -1001,6 +1001,9 @@ decodeResolvedFlake =
                         "gitlab" ->
                             Maybe.map (\repoPath_ -> ( "gitlab:" ++ repoPath_, "https://gitlab.com/" ++ repoPath_ )) repoPath
 
+                        "sourcehut" ->
+                            Maybe.map (\repoPath_ -> ( "sourcehut:" ++ repoPath_, "https://sr.ht/" ++ repoPath_ )) repoPath
+
                         "git" ->
                             Maybe.map (\url_ -> ( url_, url_ )) url
 

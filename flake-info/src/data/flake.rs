@@ -33,19 +33,21 @@ impl Flake {
             Repo::Git { .. } => Default::default(),
             Repo::GitHub { repo, .. } => repo.clone(),
             Repo::Gitlab { repo, .. } => repo.clone(),
+            Repo::SourceHut { repo, .. } => repo.clone(),
         };
         self
     }
 }
 
 /// Information about the flake origin
-/// Supports (local/raw) Git, GitHub and Gitlab repos
+/// Supports (local/raw) Git, GitHub, SourceHut and Gitlab repos
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Repo {
     Git { url: PathBuf },
     GitHub { owner: String, repo: String },
     Gitlab { owner: String, repo: String },
+    SourceHut { owner: String, repo: String },
 }
 
 #[cfg(test)]

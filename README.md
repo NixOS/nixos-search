@@ -63,7 +63,7 @@ application.
 
 To add your own flakes to the search index edit [./flakes/manual.toml](./flakes/manual.toml).
 
-Possible types are `github`, `gitlab`, and `git` (which is the fallback for any kind of git repository but requires to set a revision key manually as of now).
+Possible types are `github`, `gitlab`, `sourcehut`, and `git` (which is the fallback for any kind of git repository but requires to set a revision key manually as of now).
 
 To test whether your flake is compatible with nix flake-info you can try running `flake-info` against it
 

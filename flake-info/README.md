@@ -68,7 +68,8 @@ The `<flake>` argument should contain a valid reference to a flake. It accepts a
 
 > use git+<url> to checkout a git repository at <url>
 > use /local/absolute/path or ./relative/path to load a local source
-> use gitlab:<user>/<repo>/github:<user>/<repo> to shortcut gitlab or github repositories
+> use gitlab:<user>/<repo>/github:<user>/<repo>/sourcehut:<user>/<repo> to
+> shortcut gitlab, github or sourcehut repositories
 
 
 Optionally, analyzing can be done in a temporary store enabled by the `--temp-store` option.
@@ -97,7 +98,7 @@ $ flake-info nixpkgs nixos-21.05
 
 to perform a bulk import grouping multiple inputs under the same name/index use the group command.
 
-It expects a json file as input that contains references to flakes or nixpkgs. If those resources are on github or gitlab they can be extended with more meta information including pinning the commit hash/ref.
+It expects a json file as input that contains references to flakes or nixpkgs. If those resources are on github, gitlab our sourcehut they can be extended with more meta information including pinning the commit hash/ref.
 
 The second argument is the group name that is used to provide the index name.
 
