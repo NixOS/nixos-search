@@ -696,7 +696,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                     [ pre [ class "code-block" ]
                                         [ text <| "  environment.systemPackages = [\n    pkgs."
                                         , strong [] [ text item.source.attr_name ]
-                                        , text <| "    \n  ];"
+                                        , text <| "\n  ];"
                                         ]
                                     ]
                                 ]
