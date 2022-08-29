@@ -3,7 +3,6 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use lazy_static::lazy_static;
-use log::debug;
 use pandoc::{
     InputFormat, InputKind, OutputFormat, OutputKind, PandocError, PandocOption, PandocOutput,
 };
