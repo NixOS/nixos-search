@@ -51,8 +51,6 @@ let
           (
             { ... }: {
               _module.check = false;
-              nixpkgs.system = lib.mkDefault "x86_64-linux";
-              nixpkgs.config.allowBroken = true;
             }
           )
         ];
@@ -93,7 +91,7 @@ let
         flake = modulePath;
       };
     in
-      map (cleanUpOption extraAttrs) (lib.filter (x: x.visible && !x.internal) opts);
+      map (cleanUpOption extraAttrs) (lib.filter (x: x.visible && !x.internal && lib.head x.loc != "_module") opts);
 
   readFlakeOptions = let
     nixosModulesOpts = builtins.concatLists (lib.mapAttrsToList (moduleName: module:
