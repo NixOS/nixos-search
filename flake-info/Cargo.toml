@@ -27,7 +27,11 @@ sha2 = "0.9"
 pandoc = "0.8"
 semver = "1.0"
 
-elasticsearch = {git = "https://github.com/elastic/elasticsearch-rs", features = ["rustls-tls"]}
+elasticsearch = {git = "https://github.com/elastic/elasticsearch-rs", features = ["rustls-tls"], optional = true}
+
+[features]
+default = ["elastic"]
+elastic = ["elasticsearch"]
 
 [lib]
 name = "flake_info"
