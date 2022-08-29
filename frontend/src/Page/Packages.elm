@@ -520,21 +520,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                             Maybe.withDefault
                                 [ li
                                     [ classList
-                                        [ ( "active", List.member showInstallDetails [ Search.Unset, Search.ViaNixOS, Search.FromFlake ] )
-                                        , ( "pull-right", True )
-                                        ]
-                                    ]
-                                    [ a
-                                        [ href "#"
-                                        , Search.onClickStop <|
-                                            SearchMsg <|
-                                                Search.ShowInstallDetails Search.ViaNixOS
-                                        ]
-                                        [ text "NixOS Configuration" ]
-                                    ]
-                                , li
-                                    [ classList
-                                        [ ( "active", showInstallDetails == Search.ViaNixShell )
+                                        [ ( "active", List.member showInstallDetails [ Search.Unset, Search.ViaNixShell, Search.FromFlake ] )
                                         , ( "pull-right", True )
                                         ]
                                     ]
@@ -545,6 +531,20 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                                 Search.ShowInstallDetails Search.ViaNixShell
                                         ]
                                         [ text "nix-shell" ]
+                                    ]
+                                , li
+                                    [ classList
+                                        [ ( "active", showInstallDetails == Search.ViaNixOS )
+                                        , ( "pull-right", True )
+                                        ]
+                                    ]
+                                    [ a
+                                        [ href "#"
+                                        , Search.onClickStop <|
+                                            SearchMsg <|
+                                                Search.ShowInstallDetails Search.ViaNixOS
+                                        ]
+                                        [ text "NixOS Configuration" ]
                                     ]
                                 , li
                                     [ classList
@@ -651,7 +651,31 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                 , div
                                     [ classList
                                         [ ( "tab-pane", True )
-                                        , ( "active", showInstallDetails == Search.ViaNixShell )
+                                        , ( "active", showInstallDetails == Search.ViaNixOS )
+                                        ]
+                                    ]
+                                    [ p []
+                                        [ text "Add the following Nix code to your NixOS Configuration, usually located in "
+                                        , strong [] [ text "/etc/nixos/configuration.nix" ]
+                                        ]
+                                    ]
+                                , div
+                                    [ classList
+                                        [ ( "active", showInstallDetails == Search.ViaNixOS )
+                                        ]
+                                    , class "tab-pane"
+                                    , id "package-details-nixpkgs"
+                                    ]
+                                    [ pre [ class "code-block" ]
+                                        [ text <| "  environment.systemPackages = [\n    pkgs."
+                                        , strong [] [ text item.source.attr_name ]
+                                        , text <| "\n  ];"
+                                        ]
+                                    ]
+                                , div
+                                    [ classList
+                                        [ ( "tab-pane", True )
+                                        , ( "active", List.member showInstallDetails [ Search.Unset, Search.ViaNixShell, Search.FromFlake ] )
                                         ]
                                     ]
                                     [ p []
@@ -666,37 +690,13 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                     ]
                                 , div
                                     [ classList
-                                        [ ( "active", showInstallDetails == Search.ViaNixShell )
+                                        [ ( "tab-pane", True )
+                                        , ( "active", List.member showInstallDetails [ Search.Unset, Search.ViaNixShell, Search.FromFlake ] )
                                         ]
-                                    , class "tab-pane"
-                                    , id "package-details-nixpkgs"
                                     ]
                                     [ pre [ class "code-block shell-command" ]
                                         [ text "nix-shell -p "
                                         , strong [] [ text item.source.attr_name ]
-                                        ]
-                                    ]
-                                , div
-                                    [ classList
-                                        [ ( "tab-pane", True )
-                                        , ( "active", List.member showInstallDetails [ Search.Unset, Search.ViaNixOS, Search.FromFlake ] )
-                                        ]
-                                    ]
-                                    [ p []
-                                        [ text "Add the following Nix code to your NixOS Configuration, usually located in "
-                                        , strong [] [ text "/etc/nixos/configuration.nix" ]
-                                        ]
-                                    ]
-                                , div
-                                    [ classList
-                                        [ ( "tab-pane", True )
-                                        , ( "active", List.member showInstallDetails [ Search.Unset, Search.ViaNixOS, Search.FromFlake ] )
-                                        ]
-                                    ]
-                                    [ pre [ class "code-block" ]
-                                        [ text <| "  environment.systemPackages = [\n    pkgs."
-                                        , strong [] [ text item.source.attr_name ]
-                                        , text <| "\n  ];"
                                         ]
                                     ]
                                 ]
