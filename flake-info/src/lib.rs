@@ -5,6 +5,8 @@ use data::{import::Kind, Export, Flake, Source};
 
 pub mod commands;
 pub mod data;
+
+#[cfg(feature = "elastic")]
 pub mod elastic;
 
 pub use commands::get_flake_info;
