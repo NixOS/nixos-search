@@ -44,7 +44,7 @@ let
     )
   ) apps;
 
-  readOptions = let
+  readNixOSOptions = let
     declarations = module: (
       lib.evalModules {
         modules = (if lib.isList module then module else [ module ]) ++ [
@@ -54,6 +54,13 @@ let
             }
           )
         ];
+        specialArgs = {
+          # !!! NixOS-specific. Unfortunately, NixOS modules can rely on the `modulesPath`
+          # argument to import modules from the nixos tree. However, most of the time
+          # this is done to import *profiles* which do not declare any options, so we
+          # can allow it.
+          modulesPath = "${nixpkgs.path}/nixos/modules";
+        };
       }
     ).options;
 
@@ -95,14 +102,14 @@ let
 
   readFlakeOptions = let
     nixosModulesOpts = builtins.concatLists (lib.mapAttrsToList (moduleName: module:
-      readOptions {
+      readNixOSOptions {
         inherit module;
         modulePath = [ flake moduleName ];
       }
     ) (resolved.nixosModules or {}));
 
     nixosModuleOpts = lib.optionals (resolved ? nixosModule) (
-      readOptions {
+      readNixOSOptions {
         module = resolved.nixosModule;
         modulePath = [ flake ];
       }
