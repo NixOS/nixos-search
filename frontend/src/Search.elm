@@ -270,6 +270,9 @@ decodeResolvedFlake =
                         "gitlab" ->
                             Maybe.map (\repoPath_ -> "https://gitlab.com/" ++ repoPath_) repoPath
 
+                        "sourcehut" ->
+                            Maybe.map (\repoPath_ -> "https://sr.ht/" ++ repoPath_) repoPath
+
                         "git" ->
                             url
 
@@ -384,8 +387,9 @@ type Msg a b
 
 
 type Details
-    = FromNixpkgs
-    | FromNixOS
+    = ViaNixShell
+    | ViaNixOS
+    | ViaNixEnv
     | FromFlake
     | Unset
 

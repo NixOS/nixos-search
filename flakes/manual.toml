@@ -113,3 +113,13 @@ repo = "nix-security"
 type = "github"
 owner = "astro"
 repo = "microvm.nix"
+
+[[sources]]
+type = "github"
+owner = "input-output-hk"
+repo = "haskell.nix"
+
+[[sources]]
+type = "sourcehut"
+owner = "~munksgaard"
+repo = "geomyidae-flake"

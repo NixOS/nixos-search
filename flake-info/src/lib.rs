@@ -1,12 +1,12 @@
 #![recursion_limit = "256"]
 
-use std::path::PathBuf;
-
 use anyhow::Result;
-use data::{import::Kind, Export, Source};
+use data::{import::Kind, Export, Flake, Source};
 
 pub mod commands;
 pub mod data;
+
+#[cfg(feature = "elastic")]
 pub mod elastic;
 
 pub use commands::get_flake_info;
@@ -17,7 +17,7 @@ pub fn process_flake(
     kind: &data::import::Kind,
     temp_store: bool,
     extra: &[String],
-) -> Result<Vec<Export>> {
+) -> Result<(Flake, Vec<Export>)> {
     let mut info = commands::get_flake_info(source.to_flake_ref(), temp_store, extra)?;
     info.source = Some(source.clone());
     let packages = commands::get_derivation_info(source.to_flake_ref(), *kind, temp_store, extra)?;
@@ -27,9 +27,9 @@ pub fn process_flake(
     let exports: Vec<Export> = packages
         .into_iter()
         .map(|p| Export::flake(info.clone(), p))
-        .collect();
+        .collect::<Result<Vec<Export>>>()?;
 
-    Ok(exports)
+    Ok((info, exports))
 }
 
 pub fn process_nixpkgs(nixpkgs: &Source, kind: &Kind) -> Result<Vec<Export>, anyhow::Error> {
@@ -48,6 +48,9 @@ pub fn process_nixpkgs(nixpkgs: &Source, kind: &Kind) -> Result<Vec<Export>, any
     let mut all = drvs;
     all.append(&mut options);
 
-    let exports = all.into_iter().map(Export::nixpkgs).collect();
+    let exports = all
+        .into_iter()
+        .map(Export::nixpkgs)
+        .collect::<Result<Vec<Export>>>()?;
     Ok(exports)
 }

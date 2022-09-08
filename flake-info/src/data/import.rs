@@ -1,19 +1,16 @@
-use std::collections::{BTreeMap, HashMap};
-use std::convert::TryInto;
-use std::fmt::{self, write, Display};
+use std::collections::HashMap;
+use std::fmt;
 use std::marker::PhantomData;
 use std::{path::PathBuf, str::FromStr};
 
 use clap::arg_enum;
 use log::warn;
-use pandoc::PandocError;
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
-use thiserror::Error;
 
 use super::pandoc::PandocExt;
-use super::prettyprint::{self, print_value};
+use super::prettyprint::print_value;
 use super::system::System;
 use super::utility::{Flatten, OneOrMany};
 
@@ -226,6 +223,7 @@ pub enum License {
     Simple {
         license: String,
     },
+    #[allow(non_snake_case)]
     Full {
         fullName: String,
         // shortName: String,
@@ -312,8 +310,6 @@ where
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-
-    use serde_json::Value;
 
     use super::*;
 

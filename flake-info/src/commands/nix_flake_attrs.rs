@@ -1,7 +1,6 @@
 use crate::data::import::{FlakeEntry, Kind};
 use anyhow::{Context, Result};
 use command_run::{Command, LogTo};
-use log::debug;
 use serde_json::Deserializer;
 use std::fmt::Display;
 use std::fs::File;
@@ -9,7 +8,12 @@ use std::io::Write;
 use std::path::PathBuf;
 
 const SCRIPT: &str = include_str!("flake_info.nix");
-const ARGS: [&str; 3] = ["eval", "--json", "--no-write-lock-file"];
+const ARGS: [&str; 4] = [
+    "eval",
+    "--json",
+    "--no-allow-import-from-derivation",
+    "--no-write-lock-file",
+];
 
 /// Uses `nix` to fetch the provided flake and read general information
 /// about it using `nix flake info`
