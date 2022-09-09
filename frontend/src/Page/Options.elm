@@ -187,13 +187,10 @@ viewResultItem nixosChannels channel _ show item =
     let
         showHtml value =
             case Html.Parser.run <| String.trim value of
-                Ok [ Html.Parser.Element "rendered-docbook" _ nodes ] ->
+                Ok [ Html.Parser.Element "rendered-html" _ nodes ] ->
                     Just <| Html.Parser.Util.toVirtualDom nodes
 
-                Ok _ ->
-                    Nothing
-
-                Err _ ->
+                _ ->
                     Nothing
 
         asPre value =

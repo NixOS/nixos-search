@@ -6,12 +6,8 @@ use std::{
     path::PathBuf,
 };
 
-use super::{
-    import::{DocValue, ModulePath},
-    pandoc::PandocExt,
-};
+use super::import::{DocString, DocValue, ModulePath};
 use crate::data::import::NixOption;
-use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -19,13 +15,6 @@ use super::{
     system::System,
     utility::{AttributeQuery, Flatten, OneOrMany, Reverse},
 };
-use lazy_static::lazy_static;
-
-lazy_static! {
-    static ref FILTERS_PATH: PathBuf = std::env::var("NIXPKGS_PANDOC_FILTERS_PATH")
-        .unwrap_or("".into())
-        .into();
-}
 
 type Flake = super::Flake;
 
@@ -107,8 +96,7 @@ pub enum Derivation {
         option_name_query: AttributeQuery,
         option_name_query_reverse: Reverse<AttributeQuery>,
 
-        option_description: Option<String>,
-        option_description_reverse: Option<Reverse<String>>,
+        option_description: Option<DocString>,
 
         option_type: Option<String>,
 
@@ -303,32 +291,13 @@ impl TryFrom<import::NixOption> for Derivation {
             flake,
         }: import::NixOption,
     ) -> Result<Self, Self::Error> {
-        let description = description
-            .as_ref()
-            .map(PandocExt::render)
-            .transpose()
-            .with_context(|| format!("While rendering the description for option `{}`", name))?;
-        let option_default = default;
-        // .map(TryInto::try_into)
-        // .transpose()
-        // .with_context(|| format!("While rendering the default for option `{}`", name))?;
-        let option_example = example;
-        // .map(TryInto::try_into)
-        // .transpose()
-        // .with_context(|| format!("While rendering the example for option `{}`", name))?;
-        let option_type = option_type;
-        // .map(TryInto::try_into)
-        // .transpose()
-        // .with_context(|| format!("While rendering the type for option `{}`", name))?;
-
         Ok(Derivation::Option {
             option_source: declarations.get(0).map(Clone::clone),
             option_name: name.clone(),
             option_name_reverse: Reverse(name.clone()),
-            option_description: description.clone(),
-            option_description_reverse: description.map(Reverse),
-            option_default,
-            option_example,
+            option_description: description,
+            option_default: default,
+            option_example: example,
             option_flake: flake,
             option_type,
             option_name_query: AttributeQuery::new(&name),

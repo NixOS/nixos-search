@@ -20,19 +20,17 @@ pkgs.rustPlatform.buildRustPackage rec {
       libiconv
       darwin.apple_sdk.frameworks.Security
     ];
-  
+
   checkInputs = with pkgs; [ pandoc ];
-  
+
   NIXPKGS_PANDOC_FILTERS_PATH = "${pkgs.path + "/doc/build-aux/pandoc-filters"}";
 
   checkFlags = [
     "--skip elastic::tests"
-    "--skip nix_gc::tests"
   ];
 
   postInstall = ''
     wrapProgram $out/bin/flake-info \
-      --set NIXPKGS_PANDOC_FILTERS_PATH "${NIXPKGS_PANDOC_FILTERS_PATH}" \
       --set NIXOS_CHANNELS '${builtins.toJSON nixosChannels}' \
       --prefix PATH : ${pkgs.pandoc}/bin
   '';

@@ -19,6 +19,7 @@ let
   readPackages = system: drvs: lib.mapAttrsToList (
     attribute_name: drv: (
       {
+        entry_type = "package";
         attribute_name = attribute_name;
         system = system;
         name = drv.name;
@@ -35,6 +36,7 @@ let
   readApps = system: apps: lib.mapAttrsToList (
     attribute_name: app: (
       {
+        entry_type = "app";
         attribute_name = attribute_name;
         system = system;
       }
@@ -86,6 +88,7 @@ let
              x;
       in
         opt
+        // { entry_type = "option"; }
         // applyOnAttr "default" substFunction
         // applyOnAttr "example" substFunction # (_: { __type = "function"; })
         // applyOnAttr "type" substFunction
