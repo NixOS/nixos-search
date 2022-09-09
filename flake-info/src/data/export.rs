@@ -135,7 +135,12 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
 
                 let package_attr_set_reverse = Reverse(package_attr_set.clone());
 
-                let package_license: Vec<License> = vec![license.into()];
+                let package_license: Vec<License> = license
+                    .map(OneOrMany::into_list)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|sos| sos.0.into())
+                    .collect();
                 let package_license_set: Vec<String> = package_license
                     .iter()
                     .clone()
@@ -203,7 +208,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
 
                 let package_attr_set_reverse = Reverse(package_attr_set.clone());
 
-                let package_license: Vec<_> = package
+                let package_license: Vec<License> = package
                     .meta
                     .license
                     .map(OneOrMany::into_list)

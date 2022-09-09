@@ -31,8 +31,7 @@ pub enum FlakeEntry {
         outputs: Vec<String>,
         default_output: String,
         description: Option<String>,
-        #[serde(deserialize_with = "string_or_struct", default)]
-        license: License,
+        license: Option<OneOrMany<StringOrStruct<License>>>,
     },
     /// An "application" that can be called using nix run <..>
     App {
