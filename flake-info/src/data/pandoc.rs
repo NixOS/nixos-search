@@ -1,9 +1,7 @@
 use lazy_static::lazy_static;
 use std::path::{Path, PathBuf};
 
-use pandoc::{
-    InputFormat, InputKind, OutputFormat, OutputKind, PandocError, PandocOption, PandocOutput,
-};
+use pandoc::*;
 
 const FILTERS_PATH: &str = env!("NIXPKGS_PANDOC_FILTERS_PATH");
 
@@ -62,7 +60,19 @@ impl<T: AsRef<str>> PandocExt for T {
     fn render_markdown(&self) -> Result<String, PandocError> {
         let mut pandoc = pandoc::new();
         pandoc.set_input(InputKind::Pipe(self.as_ref().into()));
-        pandoc.set_input_format(InputFormat::Markdown, Vec::new());
+        pandoc.set_input_format(
+            InputFormat::Commonmark,
+            [
+                MarkdownExtension::Attributes,
+                MarkdownExtension::BracketedSpans,
+                MarkdownExtension::DefinitionLists,
+                MarkdownExtension::FencedDivs,
+                MarkdownExtension::PipeTables,
+                MarkdownExtension::RawAttribute,
+                MarkdownExtension::Smart,
+            ]
+            .to_vec(),
+        );
         pandoc.set_output(OutputKind::Pipe);
         pandoc.set_output_format(OutputFormat::Html, Vec::new());
         pandoc.add_options(&[
