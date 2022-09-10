@@ -23,6 +23,7 @@ pkgs.rustPlatform.buildRustPackage rec {
 
   checkInputs = with pkgs; [ pandoc ];
 
+  ROOTDIR = builtins.placeholder "out";
   NIXPKGS_PANDOC_FILTERS_PATH = "${pkgs.path + "/doc/build-aux/pandoc-filters"}";
 
   checkFlags = [
@@ -30,6 +31,8 @@ pkgs.rustPlatform.buildRustPackage rec {
   ];
 
   postInstall = ''
+    cp -rt "$out" assets
+
     wrapProgram $out/bin/flake-info \
       --set NIXOS_CHANNELS '${builtins.toJSON nixosChannels}' \
       --prefix PATH : ${pkgs.pandoc}/bin

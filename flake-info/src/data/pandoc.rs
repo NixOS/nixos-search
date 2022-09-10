@@ -1,14 +1,21 @@
-use std::fs::File;
-use std::io::Write;
-use std::path::Path;
+use lazy_static::lazy_static;
+use std::path::{Path, PathBuf};
 
 use pandoc::{
     InputFormat, InputKind, OutputFormat, OutputKind, PandocError, PandocOption, PandocOutput,
 };
 
-const XREF_FILTER: &str = include_str!("fix-xrefs.lua");
-
 const FILTERS_PATH: &str = env!("NIXPKGS_PANDOC_FILTERS_PATH");
+
+lazy_static! {
+    static ref DOCBOOK_ROLES_FILTER: PathBuf =
+        Path::new(FILTERS_PATH).join("docbook-reader/citerefentry-to-rst-role.lua");
+    static ref MARKDOWN_ROLES_FILTER: PathBuf =
+        Path::new(FILTERS_PATH).join("myst-reader/roles.lua");
+    static ref MANPAGE_LINK_FILTER: PathBuf =
+        Path::new(FILTERS_PATH).join("link-unix-man-references.lua");
+    static ref XREF_FILTER: PathBuf = crate::DATADIR.join("data/fix-xrefs.lua");
+}
 
 pub trait PandocExt {
     fn render_docbook(&self) -> Result<String, PandocError>;
@@ -23,13 +30,6 @@ impl<T: AsRef<str>> PandocExt for T {
                 self.as_ref()
             ));
         }
-
-        let citeref_filter =
-            Path::new(FILTERS_PATH).join("docbook-reader/citerefentry-to-rst-role.lua");
-        let man_filter = Path::new(FILTERS_PATH).join("link-unix-man-references.lua");
-        let tmpdir = tempfile::tempdir()?;
-        let xref_filter = tmpdir.path().join("fix-xrefs.lua");
-        writeln!(File::create(&xref_filter)?, "{}", XREF_FILTER)?;
 
         let wrapper_xml = format!(
             "
@@ -46,9 +46,9 @@ impl<T: AsRef<str>> PandocExt for T {
         pandoc.set_output(OutputKind::Pipe);
         pandoc.set_output_format(OutputFormat::Html, Vec::new());
         pandoc.add_options(&[
-            PandocOption::LuaFilter(citeref_filter),
-            PandocOption::LuaFilter(man_filter),
-            PandocOption::LuaFilter(xref_filter),
+            PandocOption::LuaFilter(DOCBOOK_ROLES_FILTER.clone()),
+            PandocOption::LuaFilter(MANPAGE_LINK_FILTER.clone()),
+            PandocOption::LuaFilter(XREF_FILTER.clone()),
         ]);
 
         pandoc.execute().map(|result| match result {
@@ -60,21 +60,15 @@ impl<T: AsRef<str>> PandocExt for T {
     }
 
     fn render_markdown(&self) -> Result<String, PandocError> {
-        let roles_filter = Path::new(FILTERS_PATH).join("myst-reader/roles.lua");
-        let man_filter = Path::new(FILTERS_PATH).join("link-unix-man-references.lua");
-        let tmpdir = tempfile::tempdir()?;
-        let xref_filter = tmpdir.path().join("fix-xrefs.lua");
-        writeln!(File::create(&xref_filter)?, "{}", XREF_FILTER)?;
-
         let mut pandoc = pandoc::new();
         pandoc.set_input(InputKind::Pipe(self.as_ref().into()));
         pandoc.set_input_format(InputFormat::Markdown, Vec::new());
         pandoc.set_output(OutputKind::Pipe);
         pandoc.set_output_format(OutputFormat::Html, Vec::new());
         pandoc.add_options(&[
-            PandocOption::LuaFilter(roles_filter),
-            PandocOption::LuaFilter(man_filter),
-            PandocOption::LuaFilter(xref_filter),
+            PandocOption::LuaFilter(MARKDOWN_ROLES_FILTER.clone()),
+            PandocOption::LuaFilter(MANPAGE_LINK_FILTER.clone()),
+            PandocOption::LuaFilter(XREF_FILTER.clone()),
         ]);
 
         pandoc.execute().map(|result| match result {
