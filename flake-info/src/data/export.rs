@@ -6,12 +6,11 @@ use std::{
     path::PathBuf,
 };
 
-use super::import::{DocString, DocValue, ModulePath};
-use crate::data::import::NixOption;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    import,
+    import::{self, DocString, DocValue, ModulePath, NixOption},
+    pandoc::PandocExt,
     system::System,
     utility::{AttributeQuery, Flatten, OneOrMany, Reverse},
 };
@@ -235,6 +234,12 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     .flat_map(|m| m.name.to_owned())
                     .collect();
 
+                let long_description = package
+                    .meta
+                    .long_description
+                    .map(|s| s.render_markdown())
+                    .transpose()?;
+
                 let position: Option<String> = package.meta.position.map(|p| {
                     if p.starts_with("/nix/store") {
                         p.split("/").skip(4).collect::<Vec<&str>>().join("/")
@@ -266,8 +271,8 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     package_maintainers_set,
                     package_description: package.meta.description.clone(),
                     package_description_reverse: package.meta.description.map(Reverse),
-                    package_longDescription: package.meta.long_description.clone(),
-                    package_longDescription_reverse: package.meta.long_description.map(Reverse),
+                    package_longDescription: long_description.clone(),
+                    package_longDescription_reverse: long_description.map(Reverse),
                     package_hydra: (),
                     package_system: package.system,
                     package_homepage: package
