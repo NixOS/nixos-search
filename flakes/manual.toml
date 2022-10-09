@@ -123,3 +123,8 @@ repo = "haskell.nix"
 type = "sourcehut"
 owner = "~munksgaard"
 repo = "geomyidae-flake"
+
+[[sources]]
+type = "github"
+owner = "Wazzaps"
+repo = "fingerpaint"
