@@ -1,48 +1,34 @@
-use std::fs::File;
-use std::io::Write;
-use std::path::PathBuf;
-
 use lazy_static::lazy_static;
-use pandoc::{
-    InputFormat, InputKind, OutputFormat, OutputKind, PandocError, PandocOption, PandocOutput,
-};
+use std::path::{Path, PathBuf};
 
-const XREF_FILTER: &str = include_str!("fix-xrefs.lua");
+use pandoc::*;
+
+const FILTERS_PATH: &str = env!("NIXPKGS_PANDOC_FILTERS_PATH");
 
 lazy_static! {
-    static ref FILTERS_PATH: PathBuf = std::env::var("NIXPKGS_PANDOC_FILTERS_PATH")
-        .unwrap_or("".into())
-        .into();
+    static ref DOCBOOK_ROLES_FILTER: PathBuf =
+        Path::new(FILTERS_PATH).join("docbook-reader/citerefentry-to-rst-role.lua");
+    static ref MARKDOWN_ROLES_FILTER: PathBuf =
+        Path::new(FILTERS_PATH).join("myst-reader/roles.lua");
+    static ref MANPAGE_LINK_FILTER: PathBuf =
+        Path::new(FILTERS_PATH).join("link-unix-man-references.lua");
+    static ref XREF_FILTER: PathBuf = crate::DATADIR.join("data/fix-xrefs.lua");
 }
 
 pub trait PandocExt {
-    fn render(&self) -> Result<String, PandocError>;
+    fn render_docbook(&self) -> Result<String, PandocError>;
+    fn render_markdown(&self) -> Result<String, PandocError>;
 }
 
 impl<T: AsRef<str>> PandocExt for T {
-    fn render(&self) -> Result<String, PandocError> {
+    fn render_docbook(&self) -> Result<String, PandocError> {
         if !self.as_ref().contains("<") {
             return Ok(format!(
-                "<rendered-docbook>{}</rendered-docbook>",
+                "<rendered-html><p>{}</p></rendered-html>",
                 self.as_ref()
             ));
         }
 
-        let citeref_filter = {
-            let mut p = FILTERS_PATH.clone();
-            p.push("docbook-reader/citerefentry-to-rst-role.lua");
-            p
-        };
-        let man_filter = {
-            let mut p = FILTERS_PATH.clone();
-            p.push("link-unix-man-references.lua");
-            p
-        };
-        let tmpdir = tempfile::tempdir()?;
-        let xref_filter = tmpdir.path().join("fix-xrefs.lua");
-        writeln!(File::create(&xref_filter)?, "{}", XREF_FILTER)?;
-
-        let mut pandoc = pandoc::new();
         let wrapper_xml = format!(
             "
                 <xml xmlns:xlink=\"http://www.w3.org/1999/xlink\">
@@ -52,19 +38,52 @@ impl<T: AsRef<str>> PandocExt for T {
             self.as_ref()
         );
 
+        let mut pandoc = pandoc::new();
         pandoc.set_input(InputKind::Pipe(wrapper_xml));
         pandoc.set_input_format(InputFormat::DocBook, Vec::new());
         pandoc.set_output(OutputKind::Pipe);
         pandoc.set_output_format(OutputFormat::Html, Vec::new());
         pandoc.add_options(&[
-            PandocOption::LuaFilter(citeref_filter),
-            PandocOption::LuaFilter(man_filter),
-            PandocOption::LuaFilter(xref_filter),
+            PandocOption::LuaFilter(DOCBOOK_ROLES_FILTER.clone()),
+            PandocOption::LuaFilter(MANPAGE_LINK_FILTER.clone()),
+            PandocOption::LuaFilter(XREF_FILTER.clone()),
         ]);
 
         pandoc.execute().map(|result| match result {
-            PandocOutput::ToBuffer(description) => {
-                format!("<rendered-docbook>{}</rendered-docbook>", description)
+            PandocOutput::ToBuffer(html) => {
+                format!("<rendered-html>{}</rendered-html>", html)
+            }
+            _ => unreachable!(),
+        })
+    }
+
+    fn render_markdown(&self) -> Result<String, PandocError> {
+        let mut pandoc = pandoc::new();
+        pandoc.set_input(InputKind::Pipe(self.as_ref().into()));
+        pandoc.set_input_format(
+            InputFormat::Commonmark,
+            [
+                MarkdownExtension::Attributes,
+                MarkdownExtension::BracketedSpans,
+                MarkdownExtension::DefinitionLists,
+                MarkdownExtension::FencedDivs,
+                MarkdownExtension::PipeTables,
+                MarkdownExtension::RawAttribute,
+                MarkdownExtension::Smart,
+            ]
+            .to_vec(),
+        );
+        pandoc.set_output(OutputKind::Pipe);
+        pandoc.set_output_format(OutputFormat::Html, Vec::new());
+        pandoc.add_options(&[
+            PandocOption::LuaFilter(MARKDOWN_ROLES_FILTER.clone()),
+            PandocOption::LuaFilter(MANPAGE_LINK_FILTER.clone()),
+            PandocOption::LuaFilter(XREF_FILTER.clone()),
+        ]);
+
+        pandoc.execute().map(|result| match result {
+            PandocOutput::ToBuffer(html) => {
+                format!("<rendered-html>{}</rendered-html>", html)
             }
             _ => unreachable!(),
         })

@@ -18,13 +18,12 @@ structopt = "0.3"
 command-run = "0.13"
 env_logger = "0.9"
 log = "0.4"
-tempfile = "3"
 lazy_static = "1.4"
 fancy-regex = "0.6"
 tokio = { version = "*", features = ["full"] }
 reqwest = { version = "0.11", features = ["json", "blocking"] }
 sha2 = "0.9"
-pandoc = "0.8"
+pandoc = "0.8.10"
 semver = "1.0"
 
 elasticsearch = {git = "https://github.com/elastic/elasticsearch-rs", features = ["rustls-tls"], optional = true}

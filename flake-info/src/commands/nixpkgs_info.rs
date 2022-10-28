@@ -1,14 +1,11 @@
 use anyhow::{Context, Result};
 use serde_json::Deserializer;
-use std::io::Write;
-use std::{collections::HashMap, fmt::Display, fs::File};
+use std::{collections::HashMap, fmt::Display};
 
 use command_run::{Command, LogTo};
 use log::error;
 
 use crate::data::import::{NixOption, NixpkgsEntry, Package};
-
-const FLAKE_INFO_SCRIPT: &str = include_str!("flake_info.nix");
 
 pub fn get_nixpkgs_info<T: AsRef<str> + Display>(nixpkgs_channel: T) -> Result<Vec<NixpkgsEntry>> {
     let mut command = Command::new("nix-env");
@@ -54,20 +51,10 @@ pub fn get_nixpkgs_info<T: AsRef<str> + Display>(nixpkgs_channel: T) -> Result<V
 pub fn get_nixpkgs_options<T: AsRef<str> + Display>(
     nixpkgs_channel: T,
 ) -> Result<Vec<NixpkgsEntry>> {
-    let script_dir = tempfile::tempdir()?;
-    let script_path = script_dir.path().join("flake_info.nix");
-    writeln!(File::create(&script_path)?, "{}", FLAKE_INFO_SCRIPT)?;
-
-    let mut command = Command::new("nix");
-    command.add_args(&[
-        "eval",
-        "--json",
-        "-f",
-        script_path.to_str().unwrap(),
-        "-I",
-        format!("nixpkgs={}", nixpkgs_channel.as_ref()).as_str(),
-        "nixos-options",
-    ]);
+    let mut command = Command::with_args("nix", &["eval", "--json"]);
+    command.add_arg_pair("-f", super::EXTRACT_SCRIPT.clone());
+    command.add_arg_pair("-I", format!("nixpkgs={}", nixpkgs_channel.as_ref()));
+    command.add_arg("nixos-options");
 
     command.enable_capture();
     command.log_to = LogTo::Log;

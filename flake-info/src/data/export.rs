@@ -6,26 +6,14 @@ use std::{
     path::PathBuf,
 };
 
-use super::{
-    import::{DocValue, ModulePath},
-    pandoc::PandocExt,
-};
-use crate::data::import::NixOption;
-use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    import,
+    import::{self, DocString, DocValue, ModulePath, NixOption},
+    pandoc::PandocExt,
     system::System,
     utility::{AttributeQuery, Flatten, OneOrMany, Reverse},
 };
-use lazy_static::lazy_static;
-
-lazy_static! {
-    static ref FILTERS_PATH: PathBuf = std::env::var("NIXPKGS_PANDOC_FILTERS_PATH")
-        .unwrap_or("".into())
-        .into();
-}
 
 type Flake = super::Flake;
 
@@ -107,8 +95,7 @@ pub enum Derivation {
         option_name_query: AttributeQuery,
         option_name_query_reverse: Reverse<AttributeQuery>,
 
-        option_description: Option<String>,
-        option_description_reverse: Option<Reverse<String>>,
+        option_description: Option<DocString>,
 
         option_type: Option<String>,
 
@@ -147,7 +134,12 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
 
                 let package_attr_set_reverse = Reverse(package_attr_set.clone());
 
-                let package_license: Vec<License> = vec![license.into()];
+                let package_license: Vec<License> = license
+                    .map(OneOrMany::into_list)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|sos| sos.0.into())
+                    .collect();
                 let package_license_set: Vec<String> = package_license
                     .iter()
                     .clone()
@@ -215,7 +207,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
 
                 let package_attr_set_reverse = Reverse(package_attr_set.clone());
 
-                let package_license: Vec<_> = package
+                let package_license: Vec<License> = package
                     .meta
                     .license
                     .map(OneOrMany::into_list)
@@ -241,6 +233,12 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     .iter()
                     .flat_map(|m| m.name.to_owned())
                     .collect();
+
+                let long_description = package
+                    .meta
+                    .long_description
+                    .map(|s| s.render_markdown())
+                    .transpose()?;
 
                 let position: Option<String> = package.meta.position.map(|p| {
                     if p.starts_with("/nix/store") {
@@ -273,8 +271,8 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     package_maintainers_set,
                     package_description: package.meta.description.clone(),
                     package_description_reverse: package.meta.description.map(Reverse),
-                    package_longDescription: package.meta.long_description.clone(),
-                    package_longDescription_reverse: package.meta.long_description.map(Reverse),
+                    package_longDescription: long_description.clone(),
+                    package_longDescription_reverse: long_description.map(Reverse),
                     package_hydra: (),
                     package_system: package.system,
                     package_homepage: package
@@ -303,32 +301,13 @@ impl TryFrom<import::NixOption> for Derivation {
             flake,
         }: import::NixOption,
     ) -> Result<Self, Self::Error> {
-        let description = description
-            .as_ref()
-            .map(PandocExt::render)
-            .transpose()
-            .with_context(|| format!("While rendering the description for option `{}`", name))?;
-        let option_default = default;
-        // .map(TryInto::try_into)
-        // .transpose()
-        // .with_context(|| format!("While rendering the default for option `{}`", name))?;
-        let option_example = example;
-        // .map(TryInto::try_into)
-        // .transpose()
-        // .with_context(|| format!("While rendering the example for option `{}`", name))?;
-        let option_type = option_type;
-        // .map(TryInto::try_into)
-        // .transpose()
-        // .with_context(|| format!("While rendering the type for option `{}`", name))?;
-
         Ok(Derivation::Option {
             option_source: declarations.get(0).map(Clone::clone),
             option_name: name.clone(),
             option_name_reverse: Reverse(name.clone()),
-            option_description: description.clone(),
-            option_description_reverse: description.map(Reverse),
-            option_default,
-            option_example,
+            option_description: description,
+            option_default: default,
+            option_example: example,
             option_flake: flake,
             option_type,
             option_name_query: AttributeQuery::new(&name),

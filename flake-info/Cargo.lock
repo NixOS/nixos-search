@@ -341,7 +341,6 @@ dependencies = [
  "serde_path_to_error",
  "sha2",
  "structopt",
- "tempfile",
  "thiserror",
  "tokio",
  "toml",
@@ -866,9 +865,9 @@ dependencies = [
 
 [[package]]
 name = "pandoc"
-version = "0.8.8"
+version = "0.8.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0eac785b7de8de25c5ec48b3a9df1be552de03906f99145ed6d7da3d696c0dbb"
+checksum = "2eb8469d27ed9fd7925629076a3675fea964c3f44c49662bdf549a8b7ddf0820"
 dependencies = [
  "itertools",
 ]

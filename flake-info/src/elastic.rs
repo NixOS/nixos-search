@@ -174,11 +174,6 @@ lazy_static! {
                     "analyzer": "english",
                     "fields": {"edge": {"type": "text", "analyzer": "edge"}},
                 },
-                "option_description_reverse": {
-                    "type": "text",
-                    "analyzer": "english",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
                 "option_type": {"type": "keyword"},
                 "option_default": {"type": "text"},
                 "option_example": {"type": "text"},

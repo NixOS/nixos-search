@@ -39,8 +39,6 @@ import Html.Events
     exposing
         ( onClick
         )
-import Html.Parser
-import Html.Parser.Util
 import Http exposing (Body)
 import Json.Decode
 import Json.Decode.Pipeline
@@ -51,6 +49,7 @@ import Search
         , NixOSChannel
         , decodeResolvedFlake
         )
+import Utils
 
 
 
@@ -185,17 +184,6 @@ viewResultItem :
     -> Html Msg
 viewResultItem nixosChannels channel _ show item =
     let
-        showHtml value =
-            case Html.Parser.run <| String.trim value of
-                Ok [ Html.Parser.Element "rendered-docbook" _ nodes ] ->
-                    Just <| Html.Parser.Util.toVirtualDom nodes
-
-                Ok _ ->
-                    Nothing
-
-                Err _ ->
-                    Nothing
-
         asPre value =
             pre [] [ text value ]
 
@@ -210,7 +198,7 @@ viewResultItem nixosChannels channel _ show item =
                         , div [] [ asPreCode item.source.name ]
                         ]
                             ++ (item.source.description
-                                    |> Maybe.andThen showHtml
+                                    |> Maybe.andThen Utils.showHtml
                                     |> Maybe.map
                                         (\description ->
                                             [ div [] [ text "Description" ]
@@ -232,7 +220,7 @@ viewResultItem nixosChannels channel _ show item =
                                     |> Maybe.map
                                         (\default ->
                                             [ div [] [ text "Default" ]
-                                            , div [] <| Maybe.withDefault [ asPreCode default ] (showHtml default)
+                                            , div [] <| Maybe.withDefault [ asPreCode default ] (Utils.showHtml default)
                                             ]
                                         )
                                     |> Maybe.withDefault []
@@ -241,7 +229,7 @@ viewResultItem nixosChannels channel _ show item =
                                     |> Maybe.map
                                         (\example ->
                                             [ div [] [ text "Example" ]
-                                            , div [] <| Maybe.withDefault [ asPreCode example ] (showHtml example)
+                                            , div [] <| Maybe.withDefault [ asPreCode example ] (Utils.showHtml example)
                                             ]
                                         )
                                     |> Maybe.withDefault []

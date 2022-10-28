@@ -16,7 +16,7 @@ use super::utility::{Flatten, OneOrMany};
 
 /// Holds information about a specific derivation
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(untagged)]
+#[serde(tag = "entry_type", rename_all = "lowercase")]
 pub enum FlakeEntry {
     /// A package as it may be defined in a flake
     ///
@@ -31,8 +31,7 @@ pub enum FlakeEntry {
         outputs: Vec<String>,
         default_output: String,
         description: Option<String>,
-        #[serde(deserialize_with = "string_or_struct", default)]
-        license: License,
+        license: Option<OneOrMany<StringOrStruct<License>>>,
     },
     /// An "application" that can be called using nix run <..>
     App {
@@ -52,7 +51,7 @@ pub struct NixOption {
     /// Location of the defining module(s)
     pub declarations: Vec<String>,
 
-    pub description: Option<String>,
+    pub description: Option<DocString>,
     pub name: String,
 
     #[serde(rename = "type")]
@@ -81,6 +80,20 @@ pub enum ModulePath {
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(untagged)]
+pub enum DocString {
+    DocFormat(DocFormat),
+    String(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(tag = "_type", content = "text")]
+pub enum DocFormat {
+    #[serde(rename = "mdDoc")]
+    MarkdownDoc(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(untagged)]
 pub enum DocValue {
     Literal(Literal),
     Value(Value),
@@ -89,12 +102,34 @@ pub enum DocValue {
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(tag = "_type", content = "text")]
 pub enum Literal {
-    #[serde(rename = "literalExpression")]
+    #[serde(rename = "literalExpression", alias = "literalExample")]
     LiteralExpression(String),
-    #[serde(rename = "literalExample")]
-    LiteralExample(String),
     #[serde(rename = "literalDocBook")]
     LiteralDocBook(String),
+    #[serde(rename = "literalMD")]
+    LiteralMarkdown(String),
+}
+
+impl Serialize for DocString {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            DocString::String(db) => {
+                serializer.serialize_str(&db.render_docbook().unwrap_or_else(|e| {
+                    warn!("Could not render DocBook content: {}", e);
+                    db.to_owned()
+                }))
+            }
+            DocString::DocFormat(DocFormat::MarkdownDoc(md)) => {
+                serializer.serialize_str(&md.render_markdown().unwrap_or_else(|e| {
+                    warn!("Could not render Markdown content: {}", e);
+                    md.to_owned()
+                }))
+            }
+        }
+    }
 }
 
 impl Serialize for DocValue {
@@ -103,14 +138,18 @@ impl Serialize for DocValue {
         S: Serializer,
     {
         match self {
-            DocValue::Literal(Literal::LiteralExample(s) | Literal::LiteralExpression(s)) => {
-                return serializer.serialize_str(&s);
+            DocValue::Literal(Literal::LiteralExpression(s)) => serializer.serialize_str(&s),
+            DocValue::Literal(Literal::LiteralDocBook(db)) => {
+                serializer.serialize_str(&db.render_docbook().unwrap_or_else(|e| {
+                    warn!("Could not render DocBook content: {}", e);
+                    db.to_owned()
+                }))
             }
-            DocValue::Literal(Literal::LiteralDocBook(doc_book)) => {
-                return serializer.serialize_str(&doc_book.render().unwrap_or_else(|e| {
-                    warn!("Could not render docbook content: {}", e);
-                    doc_book.to_owned()
-                }));
+            DocValue::Literal(Literal::LiteralMarkdown(md)) => {
+                serializer.serialize_str(&md.render_markdown().unwrap_or_else(|e| {
+                    warn!("Could not render Markdown content: {}", e);
+                    md.to_owned()
+                }))
             }
             DocValue::Value(v) => serializer.serialize_str(&print_value(v.to_owned())),
         }
