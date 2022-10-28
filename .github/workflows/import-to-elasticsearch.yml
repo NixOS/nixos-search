@@ -20,6 +20,7 @@ jobs:
     - name: Setup
       uses: ./.github/actions/common-setup
       with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
     - name: NixOS Channels
@@ -50,6 +51,7 @@ jobs:
     - name: Setup
       uses: ./.github/actions/common-setup
       with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
     - name: Import ${{ matrix.channel }} channel
@@ -89,6 +91,7 @@ jobs:
     - name: Setup
       uses: ./.github/actions/common-setup
       with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
     - name: Import ${{ matrix.group }} group
