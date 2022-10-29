@@ -2,7 +2,7 @@ name: Setup Environment
 inputs:
   GITHUB_TOKEN:
     required: true
-    description: 'GitHub access token used to prevent GitHub's rate limit for unauthenticated requests'
+    description: "GitHub access token used to prevent GitHub's rate limit for unauthenticated requests"
   CACHIX_SIGNING_KEY: # determines what node version to install
     required: true
     description: 'Cachix Signing Key'
