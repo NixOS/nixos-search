@@ -2,14 +2,14 @@
 /* -- Utils ---------------------------------------------------------------- */
 /* ------------------------------------------------------------------------- */
 
-.terminal() {
+@mixin terminal() {
   background: #333;
   color: #fff;
   margin: 0;
 }
 
 
-.search-result-item() {
+@mixin search-result-item() {
   .result-item-show-more-wrapper {
       text-align: center;
   }
@@ -358,7 +358,7 @@ header .navbar.navbar-static-top {
           }
 
           &.package {
-            .search-result-item();
+            @include search-result-item;
 
             // Description
             & > :nth-child(2) {
@@ -417,7 +417,7 @@ header .navbar.navbar-static-top {
                 }
 
                 pre {
-                  .terminal();
+                  @include terminal;
                 }
 
               }
@@ -531,18 +531,6 @@ header .navbar.navbar-static-top {
 }
 .loader:after {
   left: 1.5em;
-}
-@-webkit-keyframes load1 {
-  0%,
-  80%,
-  100% {
-    box-shadow: 0 0;
-    height: 4em;
-  }
-  40% {
-    box-shadow: 0 -2em;
-    height: 5em;
-  }
 }
 @keyframes load1 {
   0%,

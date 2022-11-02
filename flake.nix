@@ -6,18 +6,28 @@
 
   inputs.nixpkgs.url = "nixpkgs/nixos-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
+  inputs.npmlock2nix.url = "github:nix-community/npmlock2nix";
+  inputs.npmlock2nix.flake = false;
   inputs.nixos-org-configurations.url = "github:NixOS/nixos-org-configurations";
   inputs.nixos-org-configurations.flake = false;
 
   outputs = { self
             , nixpkgs
             , flake-utils
+            , npmlock2nix
             , nixos-org-configurations
             }:
     flake-utils.lib.eachDefaultSystem
       (system:
         let
-          pkgs = nixpkgs.legacyPackages.${system};
+          pkgs = import nixpkgs {
+            inherit system;
+            overlays = [
+              (self: super: {
+                npmlock2nix = super.callPackage npmlock2nix {};
+              })
+            ];
+          };
           lib = nixpkgs.lib;
           warnToUpgradeNix = lib.warn "Please upgrade Nix to 2.7 or later.";
           version = lib.fileContents ./VERSION;
@@ -84,17 +94,13 @@
               packages.flake-info
               packages.frontend
             ];
-            extraPackages = [pkgs.rustfmt];
+            extraPackages = [
+              pkgs.rustfmt
+            ];
             extraShellHook = ''
               export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
               export NIXPKGS_PANDOC_FILTERS_PATH="${packages.flake-info.NIXPKGS_PANDOC_FILTERS_PATH}";
               export PATH=$PWD/frontend/node_modules/.bin:$PATH
-
-              rm -rf frontend/node_modules
-              ln -sf ${packages.frontend.yarnPkg}/libexec/${(builtins.parseDrvName packages.frontend.name).name}/node_modules frontend/
-              echo "========================================================"
-              echo "= To develop the frontend run: cd frontend && yarn dev ="
-              echo "========================================================"
             '';
           };
 
