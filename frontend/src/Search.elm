@@ -1287,7 +1287,7 @@ searchFields query mainField fields =
                   )
                 ]
             )
-            (String.words (String.toLower query))
+            (String.words query)
         )
 
 
