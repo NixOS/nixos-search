@@ -6,7 +6,8 @@ pkgs.npmlock2nix.build {
   src = ./.;
   installPhase = ''
     mkdir $out
-    cp -R dist/* $out
+    cp -R dist/* $out/
+    cp netlify.toml $out/
   '';
   postConfigure = pkgs.elmPackages.fetchElmDeps {
     elmPackages = import ./elm-srcs.nix;
