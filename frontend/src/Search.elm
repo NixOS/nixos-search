@@ -307,6 +307,9 @@ init args defaultNixOSChannel nixosChannels maybeModel =
       , query =
             args.query
                 |> Maybe.andThen Route.SearchQuery.searchQueryToString
+                |> \ x -> case x of
+                    Just q -> Just q
+                    Nothing -> args.show
       , result = getField .result RemoteData.NotAsked
       , show = args.show
       , from =
