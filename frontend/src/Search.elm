@@ -1278,6 +1278,7 @@ searchFields query mainField fields =
                         [ ( mainField
                           , Json.Encode.object
                                 [ ( "value", Json.Encode.string ("*" ++ queryWord ++ "*") )
+                                , ( "case_insensitive", Json.Encode.bool True )
                                 ]
                           )
                         ]
