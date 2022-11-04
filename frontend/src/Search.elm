@@ -299,12 +299,6 @@ init args defaultNixOSChannel nixosChannels maybeModel =
 
         modelChannel =
             getField .channel defaultNixOSChannel
-
-        modelFrom =
-            getField .from 0
-
-        modelSize =
-            getField .size 50
     in
     ( { channel =
             args.channel
@@ -317,10 +311,10 @@ init args defaultNixOSChannel nixosChannels maybeModel =
       , show = args.show
       , from =
             args.from
-                |> Maybe.withDefault modelFrom
+                |> Maybe.withDefault 0
       , size =
             args.size
-                |> Maybe.withDefault modelSize
+                |> Maybe.withDefault 50
       , buckets = args.buckets
       , sort =
             args.sort
