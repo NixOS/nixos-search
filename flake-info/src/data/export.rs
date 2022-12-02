@@ -30,16 +30,19 @@ impl From<import::License> for License {
         match license {
             import::License::None { .. } => License {
                 url: None,
-                fullName: "No License Specified".to_string(),
+                fullName: "no license specified".to_string(),
             },
             import::License::Simple { license } => License {
                 url: None,
                 fullName: license,
             },
-            import::License::Full { fullName, url, .. } => License { url, fullName },
-            import::License::Url { url } => License {
-                url: Some(url),
-                fullName: "No Name".into(),
+            import::License::Full {
+                fullName,
+                shortName,
+                url,
+            } => License {
+                url,
+                fullName: fullName.unwrap_or(shortName.unwrap_or("custom".into())),
             },
         }
     }

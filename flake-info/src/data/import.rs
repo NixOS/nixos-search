@@ -264,12 +264,9 @@ pub enum License {
     },
     #[allow(non_snake_case)]
     Full {
-        fullName: String,
-        // shortName: String,
+        fullName: Option<String>,
+        shortName: Option<String>,
         url: Option<String>,
-    },
-    Url {
-        url: String,
     },
 }
 
