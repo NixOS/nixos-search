@@ -2,6 +2,7 @@
 /// Additionally, we implement converseions from the two possible input formats, i.e.
 /// Flakes, or Nixpkgs.
 use std::{
+    collections::HashSet,
     convert::{TryFrom, TryInto},
     path::PathBuf,
 };
@@ -11,7 +12,6 @@ use serde::{Deserialize, Serialize};
 use super::{
     import::{self, DocString, DocValue, ModulePath, NixOption},
     pandoc::PandocExt,
-    system::System,
     utility::{AttributeQuery, Flatten, OneOrMany, Reverse},
 };
 
@@ -65,7 +65,7 @@ pub enum Derivation {
         package_pname: String,
         package_pname_reverse: Reverse<String>,
         package_pversion: String,
-        package_platforms: Vec<System>,
+        package_platforms: Vec<String>,
         package_outputs: Vec<String>,
         package_default_output: Option<String>,
         package_license: Vec<License>,
@@ -84,7 +84,7 @@ pub enum Derivation {
     #[serde(rename = "app")]
     App {
         app_attr_name: String,
-        app_platforms: Vec<System>,
+        app_platforms: Vec<String>,
 
         app_type: Option<String>,
 
@@ -213,8 +213,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                 let package_license: Vec<License> = package
                     .meta
                     .license
-                    .map(OneOrMany::into_list)
-                    .unwrap_or_default()
+                    .map_or(Default::default(), OneOrMany::into_list)
                     .into_iter()
                     .map(|sos| sos.0.into())
                     .collect();
@@ -223,6 +222,23 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     .iter()
                     .map(|l: &License| l.fullName.to_owned())
                     .collect();
+
+                let platforms: HashSet<String> = package
+                    .meta
+                    .platforms
+                    .map_or(Default::default(), Flatten::flatten)
+                    .into_iter()
+                    .collect();
+
+                let bad_platforms: HashSet<String> = package
+                    .meta
+                    .bad_platforms
+                    .map_or(Default::default(), Flatten::flatten)
+                    .into_iter()
+                    .collect();
+
+                let platforms: Vec<String> =
+                    platforms.difference(&bad_platforms).cloned().collect();
 
                 let package_maintainers: Vec<Maintainer> = package
                     .meta
@@ -261,11 +277,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     package_pname: package.pname.clone(),
                     package_pname_reverse: Reverse(package.pname),
                     package_pversion: package.version,
-                    package_platforms: package
-                        .meta
-                        .platforms
-                        .map(Flatten::flatten)
-                        .unwrap_or_default(),
+                    package_platforms: platforms,
                     package_outputs: package.outputs.into_keys().collect(),
                     package_default_output: package.default_output,
                     package_license,
