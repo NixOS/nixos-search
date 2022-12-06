@@ -11,7 +11,6 @@ use serde_json::Value;
 
 use super::pandoc::PandocExt;
 use super::prettyprint::print_value;
-use super::system::System;
 use super::utility::{Flatten, OneOrMany};
 
 /// Holds information about a specific derivation
@@ -27,7 +26,7 @@ pub enum FlakeEntry {
         attribute_name: String,
         name: String,
         version: String,
-        platforms: Vec<System>,
+        platforms: Vec<String>,
         outputs: Vec<String>,
         default_output: String,
         description: Option<String>,
@@ -37,7 +36,7 @@ pub enum FlakeEntry {
     App {
         bin: Option<PathBuf>,
         attribute_name: String,
-        platforms: Vec<System>,
+        platforms: Vec<String>,
         app_type: Option<String>,
     },
     /// an option defined in a module of a flake
@@ -189,7 +188,9 @@ pub struct Meta {
     pub license: Option<OneOrMany<StringOrStruct<License>>>,
     pub maintainers: Option<Flatten<Maintainer>>,
     pub homepage: Option<OneOrMany<String>>,
-    pub platforms: Option<Flatten<System>>,
+    pub platforms: Option<Flatten<String>>,
+    #[serde(rename = "badPlatforms")]
+    pub bad_platforms: Option<Flatten<String>>,
     pub position: Option<String>,
     pub description: Option<String>,
     #[serde(rename = "longDescription")]
