@@ -909,7 +909,6 @@ makeRequestBody query from size maybeBuckets sort =
         "package_attr_name"
         [ ( "package_attr_name", 9.0 )
         , ( "package_pname", 6.0 )
-        , ( "package_attr_name_query", 4.0 )
         , ( "package_description", 1.3 )
         , ( "package_longDescription", 1.0 )
         , ( "flake_name", 0.5 )

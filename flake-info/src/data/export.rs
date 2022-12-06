@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use super::{
     import::{self, DocString, DocValue, ModulePath, NixOption},
     pandoc::PandocExt,
-    utility::{AttributeQuery, Flatten, OneOrMany},
+    utility::{Flatten, OneOrMany},
 };
 
 type Flake = super::Flake;
@@ -57,7 +57,6 @@ pub enum Derivation {
     #[allow(non_snake_case)]
     Package {
         package_attr_name: String,
-        package_attr_name_query: AttributeQuery,
         package_attr_set: String,
         package_pname: String,
         package_pversion: String,
@@ -88,7 +87,6 @@ pub enum Derivation {
     Option {
         option_source: Option<String>,
         option_name: String,
-        option_name_query: AttributeQuery,
 
         option_description: Option<DocString>,
 
@@ -142,7 +140,6 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                 let maintainer: Maintainer = f.into();
 
                 Derivation::Package {
-                    package_attr_name_query: AttributeQuery::new(&attribute_name),
                     package_attr_name: attribute_name.clone(),
                     package_attr_set,
                     package_pname: name.clone(),
@@ -251,7 +248,6 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
 
                 Derivation::Package {
                     package_attr_name: attribute.clone(),
-                    package_attr_name_query: AttributeQuery::new(&attribute),
                     package_attr_set,
                     package_pname: package.pname.clone(),
                     package_pversion: package.version,
@@ -295,7 +291,6 @@ impl TryFrom<import::NixOption> for Derivation {
         Ok(Derivation::Option {
             option_source: declarations.get(0).map(Clone::clone),
             option_name: name.clone(),
-            option_name_query: AttributeQuery::new(&name),
             option_description: description,
             option_default: default,
             option_example: example,

@@ -67,10 +67,6 @@ lazy_static! {
                     "type": "keyword",
                     "fields": {"edge": {"type": "text", "analyzer": "edge"}},
                 },
-                "package_attr_name_query": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
                 "package_attr_set": {
                     "type": "keyword",
                     "fields": {"edge": {"type": "text", "analyzer": "edge"}},
