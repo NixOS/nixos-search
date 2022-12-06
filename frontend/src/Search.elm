@@ -307,9 +307,14 @@ init args defaultNixOSChannel nixosChannels maybeModel =
       , query =
             args.query
                 |> Maybe.andThen Route.SearchQuery.searchQueryToString
-                |> \ x -> case x of
-                    Just q -> Just q
-                    Nothing -> args.show
+                |> (\x ->
+                        case x of
+                            Just q ->
+                                Just q
+
+                            Nothing ->
+                                args.show
+                   )
       , result = getField .result RemoteData.NotAsked
       , show = args.show
       , from =
@@ -1225,52 +1230,28 @@ searchFields :
     -> List (List ( String, Json.Encode.Value ))
 searchFields query mainField fields =
     let
-        queryVariations q =
-            case ( List.head q, List.tail q ) of
-                ( Just h, Just t ) ->
-                    let
-                        tail : List (List String)
-                        tail =
-                            queryVariations t
-                    in
-                    List.append
-                        (List.map (\x -> List.append [ h ] x) tail)
-                        (List.map (\x -> List.append [ String.reverse h ] x) tail)
-                        |> Set.fromList
-                        |> Set.toList
-
-                ( Just h, Nothing ) ->
-                    [ [ h ], [ String.reverse h ] ]
-
-                ( _, _ ) ->
-                    [ [], [] ]
-
-        reverseFields =
-            List.map (\( field, score ) -> ( field ++ "_reverse", score * 0.8 )) fields
-
         allFields =
-            List.append fields reverseFields
+            fields
                 |> List.map (\( field, score ) -> [ field ++ "^" ++ String.fromFloat score, field ++ ".edge^" ++ String.fromFloat score ])
                 |> List.concat
+
+        queryWords =
+            String.words (String.toLower query)
     in
     List.append
-        (List.map
-            (\queryWords ->
-                [ ( "multi_match"
-                  , Json.Encode.object
-                        [ ( "type", Json.Encode.string "cross_fields" )
-                        , ( "query", Json.Encode.string <| String.join " " queryWords )
-                        , ( "analyzer", Json.Encode.string "whitespace" )
-                        , ( "auto_generate_synonyms_phrase_query", Json.Encode.bool False )
-                        , ( "operator", Json.Encode.string "and" )
-                        , ( "_name", Json.Encode.string <| "multi_match_" ++ String.join "_" queryWords )
-                        , ( "fields", Json.Encode.list Json.Encode.string allFields )
-                        ]
-                  )
+        [ [ ( "multi_match"
+            , Json.Encode.object
+                [ ( "type", Json.Encode.string "cross_fields" )
+                , ( "query", Json.Encode.string <| String.join " " queryWords )
+                , ( "analyzer", Json.Encode.string "whitespace" )
+                , ( "auto_generate_synonyms_phrase_query", Json.Encode.bool False )
+                , ( "operator", Json.Encode.string "and" )
+                , ( "_name", Json.Encode.string <| "multi_match_" ++ String.join "_" queryWords )
+                , ( "fields", Json.Encode.list Json.Encode.string allFields )
                 ]
             )
-            (queryVariations (String.words (String.toLower query)))
-        )
+          ]
+        ]
         (List.map
             (\queryWord ->
                 [ ( "wildcard"
@@ -1285,7 +1266,7 @@ searchFields query mainField fields =
                   )
                 ]
             )
-            (String.words query)
+            queryWords
         )
 
 
