@@ -1232,7 +1232,7 @@ searchFields query mainField fields =
     let
         allFields =
             fields
-                |> List.map (\( field, score ) -> [ field ++ "^" ++ String.fromFloat score, field ++ ".edge^" ++ String.fromFloat score ])
+                |> List.map (\( field, score ) -> [ field ++ "^" ++ String.fromFloat score, field ++ ".*^" ++ String.fromFloat score ])
                 |> List.concat
 
         queryWords =
