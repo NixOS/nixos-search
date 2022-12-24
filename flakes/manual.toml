@@ -128,3 +128,9 @@ repo = "geomyidae-flake"
 type = "github"
 owner = "matthewcroughan"
 repo = "filestash-nix"
+
+
+[[sources]]
+type = "github"
+owner = "dgollings"
+repo = "nix-cockroachdb-bin"
