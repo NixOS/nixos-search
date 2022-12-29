@@ -1,15 +1,8 @@
-use std::{borrow::Borrow, collections::HashMap};
+use std::collections::HashMap;
 
 use clap::arg_enum;
 pub use elasticsearch::http::transport::Transport;
-use elasticsearch::{
-    http::response::{self, Response},
-    indices::{
-        IndicesCreateParts, IndicesDeleteAliasParts, IndicesDeleteParts, IndicesExistsParts,
-        IndicesGetAliasParts, IndicesPutAliasParts, IndicesUpdateAliasesParts,
-    },
-    BulkOperation, Elasticsearch as Client,
-};
+use elasticsearch::{http::response, indices::*, BulkOperation, Elasticsearch as Client};
 use lazy_static::lazy_static;
 use log::{info, warn};
 use serde_json::{json, Value};
@@ -72,33 +65,17 @@ lazy_static! {
                 },
                 "package_attr_name": {
                     "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "package_attr_name_reverse": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "package_attr_name_query": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "package_attr_name_query_reverse": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+                    "fields": {
+                        "edge": {"type": "text", "analyzer": "edge"},
+                        "attr_path": {"type": "text", "analyzer": "attr_path"},
+                        "attr_path_reverse": {"type": "text", "analyzer": "attr_path_reverse"}
+                    },
                 },
                 "package_attr_set": {
                     "type": "keyword",
                     "fields": {"edge": {"type": "text", "analyzer": "edge"}},
                 },
-                "package_attr_set_reverse": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
                 "package_pname": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "package_pname_reverse": {
                     "type": "keyword",
                     "fields": {"edge": {"type": "text", "analyzer": "edge"}},
                 },
@@ -125,17 +102,7 @@ lazy_static! {
                     "analyzer": "english",
                     "fields": {"edge": {"type": "text", "analyzer": "edge"}},
                 },
-                "package_description_reverse": {
-                    "type": "text",
-                    "analyzer": "english",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
                 "package_longDescription": {
-                    "type": "text",
-                    "analyzer": "english",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "package_longDescription_reverse": {
                     "type": "text",
                     "analyzer": "english",
                     "fields": {"edge": {"type": "text", "analyzer": "edge"}},
@@ -162,26 +129,13 @@ lazy_static! {
                 // Options fields
                 "option_name": {
                     "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "option_name_reverse": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "option_name": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "option_name_reverse": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+                    "fields": {
+                        "edge": {"type": "text", "analyzer": "edge"},
+                        "attr_path": {"type": "text", "analyzer": "attr_path"},
+                        "attr_path_reverse": {"type": "text", "analyzer": "attr_path_reverse"}
+                    },
                 },
                 "option_description": {
-                    "type": "text",
-                    "analyzer": "english",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "option_description_reverse": {
                     "type": "text",
                     "analyzer": "english",
                     "fields": {"edge": {"type": "text", "analyzer": "edge"}},
@@ -205,14 +159,26 @@ lazy_static! {
                         "token_chars": [
                             "letter",
                             "digit",
-                            // Either we use them or we would need to strip them before that.
                             "punctuation",
-                            "symbol",
+                            "custom",
                         ],
+                        // Exclude XML characters < and > from "symbol"
+                        "custom_token_chars": "+=~",
+                    },
+                    "attr_path": {
+                        "type": "path_hierarchy",
+                        "delimiter": ".",
+                    },
+                    "attr_path_reverse": {
+                        "type": "path_hierarchy",
+                        "delimiter": ".",
+                        "reverse": true,
                     },
                 },
                 "analyzer": {
                     "edge": {"tokenizer": "edge", "filter": ["lowercase"]},
+                    "attr_path": {"tokenizer": "attr_path", "filter": ["lowercase"]},
+                    "attr_path_reverse": {"tokenizer": "attr_path_reverse", "filter": ["lowercase"]},
                     "lowercase": {
                         "type": "custom",
                         "tokenizer": "keyword",
@@ -380,7 +346,7 @@ impl Elasticsearch {
 
     pub async fn write_alias(
         &self,
-        config: &Config<'_>,
+        _config: &Config<'_>,
         index: &str,
         alias: &str,
     ) -> Result<(), ElasticsearchError> {
@@ -499,7 +465,7 @@ mod tests {
         let exports = sources
             .iter()
             .flat_map(|s| process_flake(s, &Kind::All, false, &[]))
-            .map(|(info, exports)| exports)
+            .map(|(_info, exports)| exports)
             .flatten()
             .collect::<Vec<Export>>();
         println!("{}", serde_json::to_string(&exports[1]).unwrap());

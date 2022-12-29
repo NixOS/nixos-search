@@ -84,8 +84,8 @@ url = "git+https://git.sr.ht/~kerstin/sway-timetracker?ref=main"
 
 [[sources]]
 type = "github"
-owner = "PolyMC"
-repo = "PolyMC"
+owner = "PrismLauncher"
+repo = "PrismLauncher"
 
 [[sources]]
 type = "gitlab"
@@ -111,5 +111,25 @@ repo = "nix-security"
 
 [[sources]]
 type = "github"
+owner = "astro"
+repo = "microvm.nix"
+
+[[sources]]
+type = "github"
 owner = "lnbits"
 repo = "lnbits-legend"
+
+[[sources]]
+type = "github"
+owner = "input-output-hk"
+repo = "haskell.nix"
+
+[[sources]]
+type = "sourcehut"
+owner = "~munksgaard"
+repo = "geomyidae-flake"
+
+[[sources]]
+type = "github"
+owner = "matthewcroughan"
+repo = "filestash-nix"

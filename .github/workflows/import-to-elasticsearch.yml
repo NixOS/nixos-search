@@ -20,6 +20,7 @@ jobs:
     - name: Setup
       uses: ./.github/actions/common-setup
       with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
     - name: NixOS Channels
@@ -41,7 +42,7 @@ jobs:
     env:
       RUST_LOG: debug
       FI_ES_EXISTS_STRATEGY: abort
-      FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL }}
+      FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL2 }}
 
     steps:
     - name: Checking out the repository
@@ -50,6 +51,7 @@ jobs:
     - name: Setup
       uses: ./.github/actions/common-setup
       with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
     - name: Import ${{ matrix.channel }} channel
@@ -62,7 +64,7 @@ jobs:
     - name: Warmup ${{ matrix.channel }} channel
       run: |
         for (( i = 0; i < 3; i++ )) do
-          curl -sS ${{ secrets.ELASTICSEARCH_URL }}/latest-$(< VERSION)-nixos-${{ matrix.channel }}/_search | jq -c '.took // .'
+          curl -sS ${{ secrets.ELASTICSEARCH_URL2 }}/latest-$(< VERSION)-nixos-${{ matrix.channel }}/_search | jq -c '.took // .'
         done
       if: github.repository_owner == 'NixOS'
 
@@ -79,7 +81,7 @@ jobs:
     env:
       RUST_LOG: debug
       FI_ES_EXISTS_STRATEGY: recreate
-      FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL }}
+      FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL2 }}
 
     steps:
 
@@ -89,6 +91,7 @@ jobs:
     - name: Setup
       uses: ./.github/actions/common-setup
       with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
     - name: Import ${{ matrix.group }} group
@@ -99,6 +102,6 @@ jobs:
     - name: Warmup ${{ matrix.group }} group
       run: |
         for (( i = 0; i < 3; i++ )) do
-          curl -sS ${{ secrets.ELASTICSEARCH_URL }}/latest-$(< VERSION)-group-${{ matrix.group }}/_search | jq -c '.took // .'
+          curl -sS ${{ secrets.ELASTICSEARCH_URL2 }}/latest-$(< VERSION)-group-${{ matrix.group }}/_search | jq -c '.took // .'
         done
       if: github.repository_owner == 'NixOS'

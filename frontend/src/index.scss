@@ -2,18 +2,14 @@
 /* -- Utils ---------------------------------------------------------------- */
 /* ------------------------------------------------------------------------- */
 
-.terminal() {
+@mixin terminal() {
   background: #333;
   color: #fff;
   margin: 0;
-
-  &:before {
-    content: "$ "
-  }
 }
 
 
-.search-result-item() {
+@mixin search-result-item() {
   .result-item-show-more-wrapper {
       text-align: center;
   }
@@ -65,6 +61,10 @@ body {
 .code-block {
   display: block;
   cursor: text;
+}
+
+.shell-command:before {
+  content: "$ ";
 }
 
 #content {
@@ -358,7 +358,7 @@ header .navbar.navbar-static-top {
           }
 
           &.package {
-            .search-result-item();
+            @include search-result-item;
 
             // Description
             & > :nth-child(2) {
@@ -388,8 +388,13 @@ header .navbar.navbar-static-top {
               margin: 2em 0 1em 1em;
               text-align: left;
 
-              // how to install a package
+              // long description of a package
               & > :nth-child(1) {
+                margin-top: 1em;
+              }
+
+              // how to install a package
+              & > :nth-child(2) {
 
                 h4 {
                   font-size: 1.2em;
@@ -412,14 +417,9 @@ header .navbar.navbar-static-top {
                 }
 
                 pre {
-                  .terminal();
+                  @include terminal;
                 }
 
-              }
-
-              // long description of a package
-              & > :nth-child(2) {
-                margin-top: 1em;
               }
 
               // maintainers and platforms
@@ -531,18 +531,6 @@ header .navbar.navbar-static-top {
 }
 .loader:after {
   left: 1.5em;
-}
-@-webkit-keyframes load1 {
-  0%,
-  80%,
-  100% {
-    box-shadow: 0 0;
-    height: 4em;
-  }
-  40% {
-    box-shadow: 0 -2em;
-    height: 5em;
-  }
 }
 @keyframes load1 {
   0%,

@@ -1,19 +1,15 @@
 use anyhow::{Context, Result};
-use commands::run_gc;
 use flake_info::commands::NixCheckError;
-use flake_info::data::import::{Kind, NixOption};
-use flake_info::data::{self, Export, Nixpkgs, Source};
-use flake_info::elastic::{ElasticsearchError, ExistsStrategy};
-use flake_info::{commands, elastic};
+use flake_info::data::import::Kind;
+use flake_info::data::{self, Export, Source};
+use flake_info::elastic::{self, ElasticsearchError, ExistsStrategy};
 use lazy_static::lazy_static;
-use log::{debug, error, info, warn};
-use semver::VersionReq;
+use log::{error, info, warn};
 use serde::Deserialize;
 use sha2::Digest;
-use std::path::{Path, PathBuf};
-use std::ptr::hash;
+use std::io;
+use std::path::PathBuf;
 use std::str::FromStr;
-use std::{fs, io};
 use structopt::{clap::ArgGroup, StructOpt};
 use thiserror::Error;
 use tokio::fs::File;
@@ -58,9 +54,6 @@ enum Command {
             help = "Whether to use a temporary store or not. Located at /tmp/flake-info-store"
         )]
         temp_store: bool,
-
-        #[structopt(long, help = "Whether to gc the store after info or not")]
-        gc: bool,
     },
     #[structopt(about = "Import official nixpkgs channel")]
     Nixpkgs {
@@ -95,9 +88,6 @@ enum Command {
         )]
         temp_store: bool,
 
-        #[structopt(long, help = "Whether to gc the store after info or not")]
-        gc: bool,
-
         #[structopt(long, help = "Whether write an error report about failed packages")]
         report: bool,
     },
@@ -115,22 +105,21 @@ struct ElasticOpts {
     )]
     enable: bool,
 
-    #[structopt(
-        long,
-        short = "u",
-        env = "FI_ES_USER",
-        help = "Elasticsearch username (unimplemented)"
-    )]
-    elastic_user: Option<String>,
+    // #[structopt(
+    //     long,
+    //     short = "u",
+    //     env = "FI_ES_USER",
+    //     help = "Elasticsearch username (unimplemented)"
+    // )]
+    // elastic_user: Option<String>,
 
-    #[structopt(
-        long,
-        short = "p",
-        env = "FI_ES_PASSWORD",
-        help = "Elasticsearch password (unimplemented)"
-    )]
-    elastic_pw: Option<String>,
-
+    // #[structopt(
+    //     long,
+    //     short = "p",
+    //     env = "FI_ES_PASSWORD",
+    //     help = "Elasticsearch password (unimplemented)"
+    // )]
+    // elastic_pw: Option<String>,
     #[structopt(
         long,
         env = "FI_ES_URL",
@@ -222,11 +211,7 @@ async fn run_command(
     flake_info::commands::check_nix_version(env!("MIN_NIX_VERSION"))?;
 
     match command {
-        Command::Flake {
-            flake,
-            temp_store,
-            gc,
-        } => {
+        Command::Flake { flake, temp_store } => {
             let source = Source::Git { url: flake };
             let (info, exports) = flake_info::process_flake(&source, &kind, temp_store, extra)
                 .map_err(FlakeInfoError::Flake)?;
@@ -271,7 +256,6 @@ async fn run_command(
         Command::Group {
             targets,
             temp_store,
-            gc,
             name,
             report,
         } => {

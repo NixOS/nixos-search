@@ -24,6 +24,7 @@ jobs:
     - name: Setup
       uses: ./.github/actions/common-setup
       with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
     - name: Try importing all custom flakes

@@ -1,4 +1,10 @@
-module Utils exposing (toggleList)
+module Utils exposing
+    ( showHtml
+    , toggleList
+    )
+
+import Html.Parser
+import Html.Parser.Util
 
 
 toggleList :
@@ -11,3 +17,12 @@ toggleList list item =
 
     else
         List.append list [ item ]
+
+
+showHtml value =
+    case Html.Parser.run <| String.trim value of
+        Ok [ Html.Parser.Element "rendered-html" _ nodes ] ->
+            Just <| Html.Parser.Util.toVirtualDom nodes
+
+        _ ->
+            Nothing

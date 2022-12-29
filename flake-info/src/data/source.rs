@@ -1,8 +1,8 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::{
     ffi::OsStr,
-    fs::{self, File},
+    fs::File,
     io::{self, Read},
     path::Path,
 };
@@ -11,7 +11,7 @@ pub type Hash = String;
 pub type FlakeRef = String;
 
 /// Information about the flake origin
-/// Supports (local/raw) Git, GitHub and Gitlab repos
+/// Supports (local/raw) Git, GitHub, SourceHut and Gitlab repos
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Source {
@@ -23,6 +23,11 @@ pub enum Source {
         git_ref: Option<Hash>,
     },
     Gitlab {
+        owner: String,
+        repo: String,
+        git_ref: Option<Hash>,
+    },
+    SourceHut {
         owner: String,
         repo: String,
         git_ref: Option<Hash>,
@@ -60,6 +65,18 @@ impl Source {
                 git_ref,
             } => format!(
                 "gitlab:{}/{}{}",
+                owner,
+                repo,
+                git_ref
+                    .as_ref()
+                    .map_or("".to_string(), |f| format!("?ref={}", f))
+            ),
+            Source::SourceHut {
+                owner,
+                repo,
+                git_ref,
+            } => format!(
+                "sourcehut:{}/{}{}",
                 owner,
                 repo,
                 git_ref
