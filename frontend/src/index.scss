@@ -320,8 +320,9 @@ header .navbar.navbar-static-top {
         }
 
         // Text that displays number of results
-        & > div:nth-child(2) {
+        & > h2:nth-child(2) {
           font-size: 1.7em;
+          font-weight: normal;
           line-height: 1.3em;
 
           & > p {
