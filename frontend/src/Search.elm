@@ -1056,7 +1056,7 @@ viewResults nixosChannels model result viewSuccess _ outMsg categoryName =
     in
     [ div []
         [ Html.map outMsg <| viewSortSelection model
-        , div []
+        , h2 []
             (List.append
                 [ text "Showing results "
                 , text from
