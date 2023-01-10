@@ -432,7 +432,7 @@ viewNavigation route =
         :: List.map
             (viewNavigationItem route)
             [ ( toRoute Route.Packages, text "Packages" )
-            , ( toRoute Route.Options, text "NixOS Options" )
+            , ( toRoute Route.Options, text "NixOS options" )
             , ( toRoute Route.Flakes, span [] [ text "Flakes", sup [] [ span [ class "label label-info" ] [ small [] [ text "Experimental" ] ] ] ] )
             ]
 
