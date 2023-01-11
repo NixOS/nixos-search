@@ -30,6 +30,11 @@ repo = "weblate"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "fenix"
+
+[[sources]]
+type = "github"
 owner = "fort-nix"
 repo = "nix-bitcoin"
 
