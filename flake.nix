@@ -96,6 +96,7 @@
             ];
             extraPackages = [
               pkgs.rustfmt
+              pkgs.yarn
             ];
             extraShellHook = ''
               export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
@@ -115,6 +116,7 @@
 
           devShells.frontend = mkDevShell {
             inputsFrom = [packages.frontend] ;
+            extraPackages = [pkgs.rustfmt pkgs.yarn];
             extraShellHook = ''
               export PATH=$PWD/frontend/node_modules/.bin:$PATH
               rm -rf frontend/node_modules

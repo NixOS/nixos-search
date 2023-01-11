@@ -121,6 +121,11 @@ repo = "microvm.nix"
 
 [[sources]]
 type = "github"
+owner = "lnbits"
+repo = "lnbits-legend"
+
+[[sources]]
+type = "github"
 owner = "input-output-hk"
 repo = "haskell.nix"
 
