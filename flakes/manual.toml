@@ -138,3 +138,8 @@ repo = "geomyidae-flake"
 type = "github"
 owner = "matthewcroughan"
 repo = "filestash-nix"
+
+[[sources]]
+type = "github"
+owner = "SeineEloquenz"
+repo = "java-mission-control-nix"
