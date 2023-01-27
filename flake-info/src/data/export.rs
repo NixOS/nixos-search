@@ -202,19 +202,11 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     .map(|l: &License| l.fullName.to_owned())
                     .collect();
 
-                let platforms: HashSet<String> = package
-                    .meta
-                    .platforms
-                    .map_or(Default::default(), Flatten::flatten)
-                    .into_iter()
-                    .collect();
+                let platforms: HashSet<String> =
+                    package.meta.platforms.unwrap_or_default().collect();
 
-                let bad_platforms: HashSet<String> = package
-                    .meta
-                    .bad_platforms
-                    .map_or(Default::default(), Flatten::flatten)
-                    .into_iter()
-                    .collect();
+                let bad_platforms: HashSet<String> =
+                    package.meta.bad_platforms.unwrap_or_default().collect();
 
                 let platforms: Vec<String> =
                     platforms.difference(&bad_platforms).cloned().collect();

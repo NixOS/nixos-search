@@ -188,9 +188,9 @@ pub struct Meta {
     pub license: Option<OneOrMany<StringOrStruct<License>>>,
     pub maintainers: Option<Flatten<Maintainer>>,
     pub homepage: Option<OneOrMany<String>>,
-    pub platforms: Option<Flatten<String>>,
+    pub platforms: Option<Platforms>,
     #[serde(rename = "badPlatforms")]
-    pub bad_platforms: Option<Flatten<String>>,
+    pub bad_platforms: Option<Platforms>,
     pub position: Option<String>,
     pub description: Option<String>,
     #[serde(rename = "longDescription")]
@@ -249,6 +249,36 @@ where
         D: Deserializer<'de>,
     {
         Ok(StringOrStruct(string_or_struct(deserializer)?))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Platform {
+    System(String),
+    Pattern {}, // TODO how should those be displayed?
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct Platforms(Flatten<Platform>);
+
+impl Platforms {
+    // A bit of abstract nonsense: what we really want is
+    //   into_iter : Platforms → ∃ (I : Iterator<String>). I
+    // however Rust makes this annoying to write: we would either have to pick a
+    // concrete iterator type or use something like Box<dyn Iterator<Item = String>>.
+    // Instead, we can use the dual Church-encoded form of that existential type:
+    //   ? : Platforms → ∀ B. (∀ (I : Iterator<String>). I → B) → B
+    // ...which is exactly the type of collect! (think about what FromIterator means)
+    pub fn collect<B: std::iter::FromIterator<String>>(self) -> B {
+        self.0
+            .flatten()
+            .into_iter()
+            .flat_map(|p| match p {
+                Platform::System(s) => Some(s),
+                _ => None,
+            })
+            .collect()
     }
 }
 
@@ -388,7 +418,8 @@ mod tests {
                   "powerpc64-linux",
                   "powerpc64le-linux",
                   "riscv32-linux",
-                  "riscv64-linux"
+                  "riscv64-linux",
+                  {}
                 ],
                 "position": "/nix/store/97lxf2n6zip41j5flbv6b0928mxv9za8-nixpkgs-unstable-21.03pre268853.d9c6f13e13f/nixpkgs-unstable/pkgs/games/0verkill/default.nix:34",
                 "unfree": false,
