@@ -39,6 +39,12 @@ impl<T: Clone> Flatten<T> {
     }
 }
 
+impl<T> Default for Flatten<T> {
+    fn default() -> Self {
+        Flatten::Deep(Vec::new())
+    }
+}
+
 // TODO: use this or a to_ist function?
 /// Serialization helper that serializes single elements as a list with a single
 /// item

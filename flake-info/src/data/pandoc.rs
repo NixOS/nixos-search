@@ -10,8 +10,7 @@ lazy_static! {
         Path::new(FILTERS_PATH).join("docbook-reader/citerefentry-to-rst-role.lua");
     static ref MARKDOWN_ROLES_FILTER: PathBuf =
         Path::new(FILTERS_PATH).join("myst-reader/roles.lua");
-    static ref MANPAGE_LINK_FILTER: PathBuf =
-        Path::new(FILTERS_PATH).join("link-unix-man-references.lua");
+    static ref MANPAGE_LINK_FILTER: PathBuf = PathBuf::from(env!("LINK_MANPAGES_PANDOC_FILTER"));
     static ref XREF_FILTER: PathBuf = crate::DATADIR.join("data/fix-xrefs.lua");
 }
 
