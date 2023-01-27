@@ -85,7 +85,7 @@
         in rec {
 
           packages.default = packages.flake-info;
-          packages.flake-info = import ./flake-info { inherit pkgs nixosChannels; };
+          packages.flake-info = import ./flake-info { inherit pkgs; };
           packages.frontend = import ./frontend { inherit pkgs nixosChannels version; };
           packages.nixosChannels = nixosChannelsFile;
 
@@ -96,10 +96,12 @@
             ];
             extraPackages = [
               pkgs.rustfmt
+              pkgs.yarn
             ];
             extraShellHook = ''
               export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
               export NIXPKGS_PANDOC_FILTERS_PATH="${packages.flake-info.NIXPKGS_PANDOC_FILTERS_PATH}";
+              export LINK_MANPAGES_PANDOC_FILTER="${packages.flake-info.LINK_MANPAGES_PANDOC_FILTER}";
               export PATH=$PWD/frontend/node_modules/.bin:$PATH
             '';
           };
@@ -110,11 +112,13 @@
             extraShellHook = ''
               export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
               export NIXPKGS_PANDOC_FILTERS_PATH="${packages.flake-info.NIXPKGS_PANDOC_FILTERS_PATH}";
+              export LINK_MANPAGES_PANDOC_FILTER="${packages.flake-info.LINK_MANPAGES_PANDOC_FILTER}";
             '';
           };
 
           devShells.frontend = mkDevShell {
             inputsFrom = [packages.frontend] ;
+            extraPackages = [pkgs.rustfmt pkgs.yarn];
             extraShellHook = ''
               export PATH=$PWD/frontend/node_modules/.bin:$PATH
               rm -rf frontend/node_modules

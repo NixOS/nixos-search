@@ -1,5 +1,4 @@
 { pkgs ? import <nixpkgs> {}
-, nixosChannels ? {}
 }:
 pkgs.rustPlatform.buildRustPackage rec {
   name = "flake-info";
@@ -24,7 +23,8 @@ pkgs.rustPlatform.buildRustPackage rec {
   checkInputs = with pkgs; [ pandoc ];
 
   ROOTDIR = builtins.placeholder "out";
-  NIXPKGS_PANDOC_FILTERS_PATH = "${pkgs.path + "/doc/build-aux/pandoc-filters"}";
+  NIXPKGS_PANDOC_FILTERS_PATH = pkgs.path + "/doc/build-aux/pandoc-filters";
+  LINK_MANPAGES_PANDOC_FILTER = import (pkgs.path + "/doc/build-aux/pandoc-filters/link-manpages.nix") { inherit pkgs; };
 
   checkFlags = [
     "--skip elastic::tests"
@@ -34,7 +34,6 @@ pkgs.rustPlatform.buildRustPackage rec {
     cp -rt "$out" assets
 
     wrapProgram $out/bin/flake-info \
-      --set NIXOS_CHANNELS '${builtins.toJSON nixosChannels}' \
       --prefix PATH : ${pkgs.pandoc}/bin
   '';
 }

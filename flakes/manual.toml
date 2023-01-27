@@ -30,6 +30,11 @@ repo = "weblate"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "fenix"
+
+[[sources]]
+type = "github"
 owner = "fort-nix"
 repo = "nix-bitcoin"
 
@@ -116,6 +121,11 @@ repo = "microvm.nix"
 
 [[sources]]
 type = "github"
+owner = "lnbits"
+repo = "lnbits-legend"
+
+[[sources]]
+type = "github"
 owner = "input-output-hk"
 repo = "haskell.nix"
 
@@ -128,3 +138,8 @@ repo = "geomyidae-flake"
 type = "github"
 owner = "matthewcroughan"
 repo = "filestash-nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-vscode-extensions"

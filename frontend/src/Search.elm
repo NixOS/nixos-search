@@ -1056,7 +1056,7 @@ viewResults nixosChannels model result viewSuccess _ outMsg categoryName =
     in
     [ div []
         [ Html.map outMsg <| viewSortSelection model
-        , div []
+        , h2 []
             (List.append
                 [ text "Showing results "
                 , text from
@@ -1232,7 +1232,7 @@ searchFields query mainField fields =
     let
         allFields =
             fields
-                |> List.map (\( field, score ) -> [ field ++ "^" ++ String.fromFloat score, field ++ ".edge^" ++ String.fromFloat score ])
+                |> List.map (\( field, score ) -> [ field ++ "^" ++ String.fromFloat score, field ++ ".*^" ++ String.fromFloat score ])
                 |> List.concat
 
         queryWords =

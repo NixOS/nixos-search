@@ -413,27 +413,28 @@ view model =
 viewNavigation : Route.Route -> List (Html Msg)
 viewNavigation route =
     let
-        toRoute f =
-            case route of
-                -- Preserve arguments
-                Route.Packages searchArgs ->
-                    f searchArgs
+        -- Preserve most arguments
+        searchArgs =
+            (\args -> { args | from = Nothing, buckets = Nothing }) <|
+                case route of
+                    Route.Packages args ->
+                        args
 
-                Route.Options searchArgs ->
-                    f searchArgs
+                    Route.Options args ->
+                        args
 
-                Route.Flakes searchArgs ->
-                    f searchArgs
+                    Route.Flakes args ->
+                        args
 
-                _ ->
-                    f <| Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+                    _ ->
+                        Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
     in
     li [] [ a [ href "https://nixos.org" ] [ text "Back to nixos.org" ] ]
         :: List.map
             (viewNavigationItem route)
-            [ ( toRoute Route.Packages, text "Packages" )
-            , ( toRoute Route.Options, text "Options" )
-            , ( toRoute Route.Flakes, span [] [ text "Flakes", sup [] [ span [ class "label label-info" ] [ small [] [ text "Experimental" ] ] ] ] )
+            [ ( Route.Packages searchArgs, text "Packages" )
+            , ( Route.Options searchArgs, text "Options" )
+            , ( Route.Flakes searchArgs, span [] [ text "Flakes", sup [] [ span [ class "label label-info" ] [ small [] [ text "Experimental" ] ] ] ] )
             ]
 
 
