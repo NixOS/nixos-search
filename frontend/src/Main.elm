@@ -433,7 +433,7 @@ viewNavigation route =
         :: List.map
             (viewNavigationItem route)
             [ ( Route.Packages searchArgs, text "Packages" )
-            , ( Route.Options searchArgs, text "Options" )
+            , ( Route.Options searchArgs, text "NixOS options" )
             , ( Route.Flakes searchArgs, span [] [ text "Flakes", sup [] [ span [ class "label label-info" ] [ small [] [ text "Experimental" ] ] ] ] )
             ]
 
