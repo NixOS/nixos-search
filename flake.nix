@@ -85,7 +85,7 @@
         in rec {
 
           packages.default = packages.flake-info;
-          packages.flake-info = import ./flake-info { inherit pkgs nixosChannels; };
+          packages.flake-info = import ./flake-info { inherit pkgs; };
           packages.frontend = import ./frontend { inherit pkgs nixosChannels version; };
           packages.nixosChannels = nixosChannelsFile;
 
