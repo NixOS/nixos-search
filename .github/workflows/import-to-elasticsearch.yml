@@ -5,6 +5,10 @@ on:
   schedule:
   - cron: '0 * * * *'
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
 
   nixos-channels:
@@ -68,6 +72,16 @@ jobs:
         done
       if: github.repository_owner == 'NixOS'
 
+    - name: Create issue if failed
+      if: failure()
+      uses: JasonEtco/create-an-issue@v2
+      with:
+        filename: .github/failing-import-issue.md
+        search_existing: open
+        update_existing: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CHANNEL: ${{ matrix.channel }}
 
   import-flakes:
     runs-on: ubuntu-latest
