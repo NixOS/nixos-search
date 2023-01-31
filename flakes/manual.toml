@@ -143,3 +143,8 @@ repo = "filestash-nix"
 type = "github"
 owner = "nix-community"
 repo = "nix-vscode-extensions"
+
+[[sources]]
+type = "github"
+owner = "hyprwm"
+repo = "hyprland"
