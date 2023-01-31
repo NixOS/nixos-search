@@ -29,8 +29,9 @@ let
         # paths = builtins.listToAttrs ( map (output: {name = output; value = drv.${output};}) drv.outputs );
         default_output = drv.outputName;
       }
-      // lib.optionalAttrs (drv ? meta && drv.meta ? description) { inherit (drv.meta) description; }
-      // lib.optionalAttrs (drv ? meta && drv.meta ? license) { inherit (drv.meta) license; }
+      // lib.optionalAttrs (drv ? meta.description) { inherit (drv.meta) description; }
+      // lib.optionalAttrs (drv ? meta.longDescription) { inherit (drv.meta) longDescription; }
+      // lib.optionalAttrs (drv ? meta.license) { inherit (drv.meta) license; }
     )
   ) (validPkgs drvs);
   readApps = system: apps: lib.mapAttrsToList (
