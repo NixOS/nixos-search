@@ -63,6 +63,7 @@ pub enum Derivation {
         package_platforms: Vec<String>,
         package_outputs: Vec<String>,
         package_default_output: Option<String>,
+        package_programs: Vec<String>,
         package_license: Vec<License>,
         package_license_set: Vec<String>,
         package_maintainers: Vec<Maintainer>,
@@ -147,6 +148,7 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                     package_platforms: platforms,
                     package_outputs: outputs,
                     package_default_output: Some(default_output),
+                    package_programs: Vec::new(),
                     package_license,
                     package_license_set,
                     package_description: description.clone(),
@@ -180,7 +182,11 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
 
     fn try_from(entry: import::NixpkgsEntry) -> Result<Self, Self::Error> {
         Ok(match entry {
-            import::NixpkgsEntry::Derivation { attribute, package } => {
+            import::NixpkgsEntry::Derivation {
+                attribute,
+                package,
+                programs,
+            } => {
                 let package_attr_set: Vec<_> = attribute.split(".").collect();
                 let package_attr_set: String = (if package_attr_set.len() > 1 {
                     package_attr_set[0]
@@ -246,6 +252,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     package_platforms: platforms,
                     package_outputs: package.outputs.into_keys().collect(),
                     package_default_output: package.default_output,
+                    package_programs: programs,
                     package_license,
                     package_license_set,
                     package_maintainers,
