@@ -72,6 +72,7 @@ type alias ResultItemSource =
     , pversion : String
     , outputs : List String
     , default_output : Maybe String
+    , programs : List String
     , description : Maybe String
     , longDescription : Maybe String
     , licenses : List ResultPackageLicense
@@ -476,7 +477,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                     li [] [ text platform ]
 
         maintainersAndPlatforms =
-            [ div []
+            div []
                 [ div []
                     (List.append [ h4 [] [ text "Maintainers" ] ]
                         (if List.isEmpty item.source.maintainers then
@@ -500,7 +501,16 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                         )
                     )
                 ]
-            ]
+
+        programs =
+            div []
+                [ h4 [] [ text "Programs in ", code [] [ text "/bin" ] ]
+                , if List.isEmpty item.source.programs then
+                    p [] [ text "This package provides no programs." ]
+
+                  else
+                    p [] (List.intersperse (text " ") (List.map (\p -> code [] [ text p ]) item.source.programs))
+                ]
 
         longerPackageDetails =
             optionals (Just item.source.attr_name == show)
@@ -722,6 +732,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         Maybe.map Tuple.first item.source.flakeUrl
                             ]
                         :: maintainersAndPlatforms
+                        :: programs
+                        :: []
                     )
                 ]
 
@@ -947,6 +959,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.required "package_pversion" Json.Decode.string
         |> Json.Decode.Pipeline.required "package_outputs" (Json.Decode.list Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_default_output" (Json.Decode.nullable Json.Decode.string)
+        |> Json.Decode.Pipeline.required "package_programs" (Json.Decode.list Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_description" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_longDescription" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_license" (Json.Decode.list decodeResultPackageLicense)
