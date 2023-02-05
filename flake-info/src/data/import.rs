@@ -30,6 +30,8 @@ pub enum FlakeEntry {
         outputs: Vec<String>,
         default_output: String,
         description: Option<String>,
+        #[serde(rename = "longDescription")]
+        long_description: Option<String>,
         license: Option<OneOrMany<StringOrStruct<License>>>,
     },
     /// An "application" that can be called using nix run <..>

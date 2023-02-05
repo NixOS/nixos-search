@@ -115,6 +115,7 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                 outputs,
                 default_output,
                 description,
+                long_description,
                 license,
             } => {
                 let package_attr_set: Vec<_> = attribute_name.split(".").collect();
@@ -124,6 +125,8 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                     "No package set"
                 })
                 .into();
+
+                let long_description = long_description.map(|s| s.render_markdown()).transpose()?;
 
                 let package_license: Vec<License> = license
                     .map(OneOrMany::into_list)
@@ -152,7 +155,7 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                     package_description: description.clone(),
                     package_maintainers: vec![maintainer.clone()],
                     package_maintainers_set: maintainer.name.map_or(vec![], |n| vec![n]),
-                    package_longDescription: None,
+                    package_longDescription: long_description,
                     package_hydra: (),
                     package_system: String::new(),
                     package_homepage: Vec::new(),
@@ -251,7 +254,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     package_maintainers,
                     package_maintainers_set,
                     package_description: package.meta.description.clone(),
-                    package_longDescription: long_description.clone(),
+                    package_longDescription: long_description,
                     package_hydra: (),
                     package_system: package.system,
                     package_homepage: package
