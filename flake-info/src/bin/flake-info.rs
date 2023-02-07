@@ -153,10 +153,12 @@ struct ElasticOpts {
     #[structopt(
         long,
         help = "Whether to disable `latest` alias creation",
-        env = "FI_ES_VERSION"
+        env = "FI_ES_NO_ALIAS"
     )]
     no_alias: bool,
 }
+
+type LazyExports = Box<dyn FnOnce() -> Result<Vec<Export>, FlakeInfoError>>;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -164,20 +166,17 @@ async fn main() -> Result<()> {
 
     let args = Args::from_args();
 
-    let command_result = run_command(args.command, args.kind, &args.extra).await;
+    anyhow::ensure!(
+        args.elastic.enable || args.elastic.json,
+        "at least one of --push or --json must be specified"
+    );
 
-    if let Err(error) = command_result {
-        return Err(error.into());
-    }
-
-    let (successes, ident) = command_result.unwrap();
+    let (exports, ident) = run_command(args.command, args.kind, &args.extra).await?;
 
     if args.elastic.enable {
-        push_to_elastic(&args.elastic, &successes, ident).await?;
-    }
-
-    if args.elastic.json {
-        println!("{}", serde_json::to_string(&successes)?);
+        push_to_elastic(&args.elastic, exports, ident).await?;
+    } else if args.elastic.json {
+        println!("{}", serde_json::to_string(&exports()?)?);
     }
     Ok(())
 }
@@ -201,7 +200,7 @@ async fn run_command(
     command: Command,
     kind: Kind,
     extra: &[String],
-) -> Result<(Vec<Export>, (String, String, String)), FlakeInfoError> {
+) -> Result<(LazyExports, (String, String, String)), FlakeInfoError> {
     flake_info::commands::check_nix_version(env!("MIN_NIX_VERSION"))?;
 
     match command {
@@ -216,7 +215,7 @@ async fn run_command(
                 info.revision.unwrap_or("latest".into()),
             );
 
-            Ok((exports, ident))
+            Ok((Box::new(|| Ok(exports)), ident))
         }
         Command::Nixpkgs { channel } => {
             let nixpkgs = Source::nixpkgs(channel)
@@ -227,10 +226,14 @@ async fn run_command(
                 nixpkgs.channel.to_owned(),
                 nixpkgs.git_ref.to_owned(),
             );
-            let exports = flake_info::process_nixpkgs(&Source::Nixpkgs(nixpkgs), &kind)
-                .map_err(FlakeInfoError::Nixpkgs)?;
 
-            Ok((exports, ident))
+            Ok((
+                Box::new(move || {
+                    flake_info::process_nixpkgs(&Source::Nixpkgs(nixpkgs), &kind)
+                        .map_err(FlakeInfoError::Nixpkgs)
+                }),
+                ident,
+            ))
         }
         Command::NixpkgsArchive { source, channel } => {
             let ident = (
@@ -238,10 +241,14 @@ async fn run_command(
                 channel.to_owned(),
                 "latest".to_string(),
             );
-            let exports = flake_info::process_nixpkgs(&Source::Git { url: source }, &kind)
-                .map_err(FlakeInfoError::Nixpkgs)?;
 
-            Ok((exports, ident))
+            Ok((
+                Box::new(move || {
+                    flake_info::process_nixpkgs(&Source::Git { url: source }, &kind)
+                        .map_err(FlakeInfoError::Nixpkgs)
+                }),
+                ident,
+            ))
         }
         Command::Group {
             targets,
@@ -314,14 +321,14 @@ async fn run_command(
 
             let ident = ("group".to_owned(), name, hash);
 
-            Ok((exports, ident))
+            Ok((Box::new(|| Ok(exports)), ident))
         }
     }
 }
 
 async fn push_to_elastic(
     elastic: &ElasticOpts,
-    successes: &[Export],
+    exports: LazyExports,
     ident: (String, String, String),
 ) -> Result<()> {
     let (index, alias) = elastic
@@ -354,7 +361,6 @@ async fn push_to_elastic(
         })
         .unwrap();
 
-    info!("Pushing to elastic");
     let es = elastic::Elasticsearch::new(elastic.elastic_url.as_str())?;
     let config = elastic::Config {
         index: &index,
@@ -371,7 +377,10 @@ async fn push_to_elastic(
         ensure?;
     }
 
-    es.push_exports(&config, successes)
+    let successes = exports()?;
+
+    info!("Pushing to elastic");
+    es.push_exports(&config, &successes)
         .await
         .with_context(|| "Failed to push results to elasticsearch".to_string())?;
 
