@@ -179,7 +179,11 @@ pub struct Package {
 /// Name and Package definition are combined using this struct
 #[derive(Debug, Clone)]
 pub enum NixpkgsEntry {
-    Derivation { attribute: String, package: Package },
+    Derivation {
+        attribute: String,
+        package: Package,
+        programs: Vec<String>,
+    },
     Option(NixOption),
 }
 
@@ -435,7 +439,11 @@ mod tests {
 
         let _: Vec<NixpkgsEntry> = map
             .into_iter()
-            .map(|(attribute, package)| NixpkgsEntry::Derivation { attribute, package })
+            .map(|(attribute, package)| NixpkgsEntry::Derivation {
+                attribute,
+                package,
+                programs: Vec::new(),
+            })
             .collect();
     }
 
