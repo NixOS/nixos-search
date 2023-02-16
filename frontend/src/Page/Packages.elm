@@ -504,7 +504,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
 
         programs =
             div []
-                [ h4 [] [ text "Programs in ", code [] [ text "/bin" ] ]
+                [ h4 [] [ text "Programs provided" ]
                 , if List.isEmpty item.source.programs then
                     p [] [ text "This package provides no programs." ]
 
@@ -733,8 +733,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                     <|
                                         Maybe.map Tuple.first item.source.flakeUrl
                             ]
-                        :: maintainersAndPlatforms
                         :: programs
+                        :: maintainersAndPlatforms
                         :: []
                     )
                 ]

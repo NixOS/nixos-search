@@ -423,8 +423,12 @@ header .navbar.navbar-static-top {
 
               }
 
-              // maintainers and platforms
+              // programs
               & > :nth-child(3) {
+              }
+
+              // maintainers and platforms
+              & > :nth-child(4) {
                 margin-top: 1em;
                 display: grid;
                 grid-template-columns: auto auto;
