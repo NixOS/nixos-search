@@ -603,16 +603,14 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         ]
                                         [ p []
                                             [ strong [] [ text "Warning:" ]
-                                            , text """
-                                            Using nix-env permanently modifies a
-                                            local profile of installed packages.
-                                            This must be cleaned up, updated and
-                                            maintained by the user, in the same
-                                            way as a traditional package
-                                            manager. Using nix-shell or a NixOS
-                                            configuration is recommended
-                                            instead.
-                                          """
+                                            , text "Using", code [] [ text "nix-env" ], text """
+                                            permanently modifies a local profile of installed packages.
+                                            This must be updated and maintained by the user in the same
+                                            way as with a traditional package manager, foregoing many
+                                            of the benefits that make Nix uniquely powerful. Using
+                                            """, code [] [ text "nix-shell" ], text """
+                                            or a NixOS configuration is recommended instead.
+                                            """
                                             ]
                                         ]
                                     , div
