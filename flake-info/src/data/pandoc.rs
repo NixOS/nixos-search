@@ -63,6 +63,7 @@ impl<T: AsRef<str>> PandocExt for T {
             InputFormat::Commonmark,
             [
                 MarkdownExtension::Attributes,
+                MarkdownExtension::AutolinkBareUris,
                 MarkdownExtension::BracketedSpans,
                 MarkdownExtension::DefinitionLists,
                 MarkdownExtension::FencedDivs,
