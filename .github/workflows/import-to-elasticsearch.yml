@@ -62,7 +62,9 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        nix run .#flake-info -- --push --elastic-schema-version=$(< VERSION) nixpkgs ${{ matrix.channel }}
+        nix run .#flake-info -- --json nixpkgs ${{ matrix.channel }} > result.json
+        jq . result.json
+        jq . result.json | grep -C5 'environment.systemPackages'
       if: github.repository_owner == 'NixOS'
 
     - name: Warmup ${{ matrix.channel }} channel
