@@ -65,7 +65,6 @@ impl<T: AsRef<str>> PandocExt for T {
                 MarkdownExtension::Attributes,
                 MarkdownExtension::AutolinkBareUris,
                 MarkdownExtension::BracketedSpans,
-                MarkdownExtension::DefinitionLists,
                 MarkdownExtension::FencedDivs,
                 MarkdownExtension::PipeTables,
                 MarkdownExtension::RawAttribute,
