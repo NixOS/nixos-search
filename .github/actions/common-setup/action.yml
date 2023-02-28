@@ -13,6 +13,7 @@ runs:
     - name: Installing Nix
       uses: cachix/install-nix-action@v18
       with:
+        install_url: https://releases.nixos.org/nix/nix-2.13.3/install
         nix_path: nixpkgs=channel:nixpkgs-unstable
         extra_nix_config: |
           access-tokens = github.com=${{ inputs.GITHUB_TOKEN }}
