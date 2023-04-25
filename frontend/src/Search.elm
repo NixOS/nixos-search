@@ -1240,6 +1240,11 @@ searchFields query mainField fields =
                     )
                 |> List.concat
 
+        queryWordsWildCard =
+            (String.replace "_" "-" query :: String.replace "-" "_" query :: queryWords)
+                |> Set.fromList
+                |> Set.toList
+
         queryWords =
             String.words (String.toLower query)
     in
@@ -1271,7 +1276,7 @@ searchFields query mainField fields =
                   )
                 ]
             )
-            queryWords
+            queryWordsWildCard
         )
 
 
