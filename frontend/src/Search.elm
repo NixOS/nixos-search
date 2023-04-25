@@ -1242,15 +1242,8 @@ searchFields query mainField fields =
 
         queryWordsWildCard =
             (String.replace "_" "-" query :: String.replace "-" "_" query :: queryWords)
-                |> List.foldl
-                    (\acc uniques ->
-                        if List.member acc uniques then
-                            uniques
-
-                        else
-                            uniques ++ [ acc ]
-                    )
-                    []
+                |> Set.fromList
+                |> Set.toList
 
         queryWords =
             String.words (String.toLower query)
