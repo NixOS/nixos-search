@@ -17,14 +17,7 @@ import Html
         , text
         , ul
         )
-import Html.Attributes
-    exposing
-        ( class
-        , classList
-        , href
-        , id
-        , src
-        )
+import Html.Attributes exposing (alt, class, classList, href, id, src)
 import Json.Decode
 import Page.Flakes exposing (Model(..))
 import Page.Home
@@ -375,7 +368,7 @@ view model =
                     [ div [ class "navbar-inner" ]
                         [ div [ class "container" ]
                             [ a [ class "brand", href "https://nixos.org" ]
-                                [ img [ src "https://nixos.org/logo/nix-wiki.png", class "logo" ] []
+                                [ img [ alt "NixOS brand logo" ,src "https://nixos.org/logo/nix-wiki.png", class "logo" ] []
                                 ]
                             , div []
                                 [ ul [ class "nav pull-left" ]
