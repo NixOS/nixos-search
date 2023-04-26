@@ -56,18 +56,7 @@ import Html
         , text
         , ul
         )
-import Html.Attributes
-    exposing
-        ( attribute
-        , autofocus
-        , class
-        , classList
-        , href
-        , id
-        , placeholder
-        , type_
-        , value
-        )
+import Html.Attributes exposing (attribute, autofocus, class, classList, disabled, href, id, placeholder, type_, value)
 import Html.Events
     exposing
         ( onClick
@@ -1138,9 +1127,11 @@ viewPager :
 viewPager model total =
     div []
         [ ul [ class "pager" ]
-            [ li [ classList [ ( "disabled", model.from == 0 ) ] ]
-                [ a
-                    [ onClick <|
+            [ li []
+                [ button
+                    [ class "btn"
+                    , disabled (model.from == 0)
+                    , onClick <|
                         if model.from == 0 then
                             NoOp
 
@@ -1149,9 +1140,11 @@ viewPager model total =
                     ]
                     [ text "First" ]
                 ]
-            , li [ classList [ ( "disabled", model.from == 0 ) ] ]
-                [ a
-                    [ onClick <|
+            , li []
+                [ button
+                    [ class "btn"
+                    , disabled (model.from == 0)
+                    , onClick <|
                         if model.from - model.size < 0 then
                             NoOp
 
@@ -1160,9 +1153,11 @@ viewPager model total =
                     ]
                     [ text "Previous" ]
                 ]
-            , li [ classList [ ( "disabled", model.from + model.size >= total ) ] ]
-                [ a
-                    [ onClick <|
+            , li []
+                [ button
+                    [ class "btn"
+                    , disabled (model.from + model.size >= total)
+                    , onClick <|
                         if model.from + model.size >= total then
                             NoOp
 
@@ -1171,9 +1166,11 @@ viewPager model total =
                     ]
                     [ text "Next" ]
                 ]
-            , li [ classList [ ( "disabled", model.from + model.size >= total ) ] ]
-                [ a
-                    [ onClick <|
+            , li []
+                [ button
+                    [ class "btn"
+                    , disabled (model.from + model.size >= total)
+                    , onClick <|
                         if model.from + model.size >= total then
                             NoOp
 

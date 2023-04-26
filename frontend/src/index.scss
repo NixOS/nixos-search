@@ -549,3 +549,23 @@ header .navbar.navbar-static-top {
     height: 5em;
   }
 }
+
+/* ------------------------------------------------------------------------- */
+/* -- Accessibility overrides ---------------------------------------------- */
+/* ------------------------------------------------------------------------- */
+.label-info {
+  background: #007dbb;
+}
+
+a {
+  color: #007dbb;
+}
+
+.pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 20em;
+  margin: 0 auto;
+  padding: 20px 0;
+}
