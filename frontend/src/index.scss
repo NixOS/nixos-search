@@ -151,11 +151,12 @@ header .navbar.navbar-static-top {
       margin-bottom: 0.5em;
 
       // "Channels: " label
-      & > div > h4 {
+      & > div > h2 {
         display: inline;
         vertical-align: middle;
         font-size: 1.2em;
         margin-left: 0.2em;
+        line-height: 20px
       }
     }
   }

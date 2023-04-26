@@ -977,7 +977,7 @@ viewChannels nixosChannels outMsg selectedChannel =
     in
     List.append
         [ div []
-            [ h4 [] [ text "Channel: " ]
+            [ h2 [] [ text "Channel: " ]
             , div
                 [ class "btn-group"
                 , attribute "data-toggle" "buttons-radio"
