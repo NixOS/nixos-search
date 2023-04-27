@@ -56,7 +56,19 @@ import Html
         , text
         , ul
         )
-import Html.Attributes exposing (attribute, autofocus, class, classList, disabled, href, id, placeholder, type_, value)
+import Html.Attributes
+    exposing
+        ( attribute
+        , autofocus
+        , class
+        , classList
+        , disabled
+        , href
+        , id
+        , placeholder
+        , type_
+        , value
+        )
 import Html.Events
     exposing
         ( onClick

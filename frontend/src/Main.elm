@@ -17,7 +17,15 @@ import Html
         , text
         , ul
         )
-import Html.Attributes exposing (alt, class, classList, href, id, src)
+import Html.Attributes
+    exposing
+        ( alt
+        , class
+        , classList
+        , href
+        , id
+        , src
+        )
 import Json.Decode
 import Page.Flakes exposing (Model(..))
 import Page.Home
