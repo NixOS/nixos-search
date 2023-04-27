@@ -151,11 +151,12 @@ header .navbar.navbar-static-top {
       margin-bottom: 0.5em;
 
       // "Channels: " label
-      & > div > h4 {
+      & > div > h2 {
         display: inline;
         vertical-align: middle;
         font-size: 1.2em;
         margin-left: 0.2em;
+        line-height: 20px
       }
     }
   }
@@ -548,4 +549,28 @@ header .navbar.navbar-static-top {
     box-shadow: 0 -2em;
     height: 5em;
   }
+}
+
+/* ------------------------------------------------------------------------- */
+/* -- Accessibility overrides ---------------------------------------------- */
+/* ------------------------------------------------------------------------- */
+.label-info {
+  background: #007dbb;
+}
+
+a {
+  color: #007dbb;
+}
+
+.pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 20em;
+  margin: 0 auto;
+  padding: 20px 0;
+}
+
+.badge {
+  background-color: #757575
 }

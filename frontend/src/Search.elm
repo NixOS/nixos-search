@@ -62,6 +62,7 @@ import Html.Attributes
         , autofocus
         , class
         , classList
+        , disabled
         , href
         , id
         , placeholder
@@ -988,7 +989,7 @@ viewChannels nixosChannels outMsg selectedChannel =
     in
     List.append
         [ div []
-            [ h4 [] [ text "Channel: " ]
+            [ h2 [] [ text "Channel: " ]
             , div
                 [ class "btn-group"
                 , attribute "data-toggle" "buttons-radio"
@@ -1138,9 +1139,11 @@ viewPager :
 viewPager model total =
     div []
         [ ul [ class "pager" ]
-            [ li [ classList [ ( "disabled", model.from == 0 ) ] ]
-                [ a
-                    [ onClick <|
+            [ li []
+                [ button
+                    [ class "btn"
+                    , disabled (model.from == 0)
+                    , onClick <|
                         if model.from == 0 then
                             NoOp
 
@@ -1149,9 +1152,11 @@ viewPager model total =
                     ]
                     [ text "First" ]
                 ]
-            , li [ classList [ ( "disabled", model.from == 0 ) ] ]
-                [ a
-                    [ onClick <|
+            , li []
+                [ button
+                    [ class "btn"
+                    , disabled (model.from == 0)
+                    , onClick <|
                         if model.from - model.size < 0 then
                             NoOp
 
@@ -1160,9 +1165,11 @@ viewPager model total =
                     ]
                     [ text "Previous" ]
                 ]
-            , li [ classList [ ( "disabled", model.from + model.size >= total ) ] ]
-                [ a
-                    [ onClick <|
+            , li []
+                [ button
+                    [ class "btn"
+                    , disabled (model.from + model.size >= total)
+                    , onClick <|
                         if model.from + model.size >= total then
                             NoOp
 
@@ -1171,9 +1178,11 @@ viewPager model total =
                     ]
                     [ text "Next" ]
                 ]
-            , li [ classList [ ( "disabled", model.from + model.size >= total ) ] ]
-                [ a
-                    [ onClick <|
+            , li []
+                [ button
+                    [ class "btn"
+                    , disabled (model.from + model.size >= total)
+                    , onClick <|
                         if model.from + model.size >= total then
                             NoOp
 

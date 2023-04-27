@@ -19,7 +19,8 @@ import Html
         )
 import Html.Attributes
     exposing
-        ( class
+        ( alt
+        , class
         , classList
         , href
         , id
@@ -375,7 +376,7 @@ view model =
                     [ div [ class "navbar-inner" ]
                         [ div [ class "container" ]
                             [ a [ class "brand", href "https://nixos.org" ]
-                                [ img [ src "https://nixos.org/logo/nix-wiki.png", class "logo" ] []
+                                [ img [ alt "NixOS logo", src "https://nixos.org/logo/nix-wiki.png", class "logo" ] []
                                 ]
                             , div []
                                 [ ul [ class "nav pull-left" ]
