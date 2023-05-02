@@ -3,9 +3,7 @@ module Page.Packages exposing
     , Msg(..)
     , decodeResultAggregations
     , decodeResultItemSource
-    , encodeBuckets
     , init
-    , initBuckets
     , makeRequest
     , makeRequestBody
     , update
@@ -46,12 +44,11 @@ import Json.Decode.Pipeline
 import Json.Encode
 import Maybe
 import Regex
-import Route exposing (Route(..), SearchType)
+import Route exposing (SearchType)
 import Search
     exposing
-        ( Details(..)
+        ( Details
         , NixOSChannel
-        , decodeResolvedFlake
         , viewBucket
         )
 import Utils
