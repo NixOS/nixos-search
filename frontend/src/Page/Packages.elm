@@ -14,7 +14,6 @@ module Page.Packages exposing
     , viewSuccess
     )
 
-import Browser.Events exposing (Visibility(..))
 import Browser.Navigation
 import Html
     exposing

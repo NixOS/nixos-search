@@ -36,7 +36,6 @@ module Search exposing
 
 import Base64
 import Browser.Dom
-import Browser.Events exposing (Visibility(..))
 import Browser.Navigation
 import Html
     exposing
