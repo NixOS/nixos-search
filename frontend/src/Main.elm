@@ -28,15 +28,13 @@ import Html.Attributes
         )
 import Json.Decode
 import Page.Flakes exposing (Model(..))
-import Page.Home
 import Page.Options
 import Page.Packages
 import RemoteData exposing (RemoteData(..))
 import Route exposing (SearchType(..))
 import Search
     exposing
-        ( Msg(..)
-        , NixOSChannel
+        ( NixOSChannel
         , decodeNixOSChannels
         , defaultFlakeId
         )
@@ -68,7 +66,6 @@ type alias Model =
 
 type Page
     = NotFound
-    | Home Page.Home.Model
     | Packages Page.Packages.Model
     | Options Page.Options.Model
     | Flakes Page.Flakes.Model
@@ -113,7 +110,6 @@ init flags url navKey =
 type Msg
     = ChangedUrl Url.Url
     | ClickedLink Browser.UrlRequest
-    | HomeMsg Page.Home.Msg
     | PackagesMsg Page.Packages.Msg
     | OptionsMsg Page.Options.Msg
     | FlakesMsg Page.Flakes.Msg
@@ -197,9 +193,6 @@ pageMatch : Page -> Page -> Bool
 pageMatch m1 m2 =
     case ( m1, m2 ) of
         ( NotFound, NotFound ) ->
-            True
-
-        ( Home _, Home _ ) ->
             True
 
         ( Packages model_a, Packages model_b ) ->
@@ -321,10 +314,6 @@ update msg model =
         ( ChangedUrl url, _ ) ->
             changeRouteTo model url
 
-        ( HomeMsg subMsg, Home subModel ) ->
-            Page.Home.update subMsg subModel model.nixosChannels
-                |> updateWith Home HomeMsg model
-
         ( PackagesMsg subMsg, Packages subModel ) ->
             Page.Packages.update model.navKey subMsg subModel model.nixosChannels
                 |> updateWith Packages PackagesMsg model
@@ -337,7 +326,7 @@ update msg model =
             Page.Flakes.update model.navKey subMsg subModel model.nixosChannels
                 |> updateWith Flakes FlakesMsg model
 
-        ( _, _ ) ->
+        _ ->
             -- Disregard messages that arrived for the wrong page.
             ( model, Cmd.none )
 
@@ -454,9 +443,6 @@ viewPage model =
     case model.page of
         NotFound ->
             div [] [ text "Not Found" ]
-
-        Home _ ->
-            div [] [ text "Welcome" ]
 
         Packages packagesModel ->
             Html.map (\m -> PackagesMsg m) <| Page.Packages.view model.nixosChannels packagesModel

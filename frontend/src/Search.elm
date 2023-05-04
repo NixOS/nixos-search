@@ -11,14 +11,11 @@ module Search exposing
     , ResultItem
     , SearchResult
     , Sort(..)
-    , closeButton
     , decodeAggregation
     , decodeNixOSChannels
     , decodeResolvedFlake
-    , decodeResult
     , defaultFlakeId
     , elementId
-    , fromSortId
     , init
     , makeRequest
     , makeRequestBody
@@ -36,7 +33,6 @@ module Search exposing
 
 import Base64
 import Browser.Dom
-import Browser.Events exposing (Visibility(..))
 import Browser.Navigation
 import Html
     exposing
@@ -379,7 +375,6 @@ type Msg a b
     | ToggleSort
     | BucketsChange String
     | ChannelChange String
-    | FlakeChange String
     | SubjectChange SearchType
     | QueryInput String
     | QueryInputSubmit
@@ -457,16 +452,6 @@ update toRoute navKey msg model nixosChannels =
         ChannelChange channel ->
             { model
                 | channel = channel
-                , show = Nothing
-                , buckets = Nothing
-                , from = 0
-            }
-                |> ensureLoading nixosChannels
-                |> pushUrl toRoute navKey
-
-        FlakeChange flake ->
-            { model
-                | channel = flake
                 , show = Nothing
                 , buckets = Nothing
                 , from = 0
