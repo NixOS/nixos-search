@@ -156,3 +156,8 @@ repo = "micropython-builder"
 type = "github"
 owner = "hellwolf"
 repo = "solc.nix"
+
+[[sources]]
+type = "github"
+owner = "anpandey"
+repo = "numen-nix"
