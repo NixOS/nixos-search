@@ -32,8 +32,8 @@ jobs:
       run: |
         nix build -L .#nixosChannels
         channels="{\"channel\": $(< ./result)}"
-        echo $channels
-        echo "::set-output name=matrix::$channels"
+        echo "$channels"
+        echo "matrix=$channels" >> "$GITHUB_OUTPUT"
 
   import-nixpkgs:
     needs: nixos-channels
