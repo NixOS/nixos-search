@@ -1,4 +1,11 @@
 [[redirects]]
+  # Use a proxy because bonsai doesn't support IPv6.
+  from = "/backend/*"
+  to = "https://nixos-search-7-1733963800.us-east-1.bonsaisearch.net/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
