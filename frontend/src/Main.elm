@@ -349,7 +349,11 @@ view model =
                     ""
 
                 Just q ->
-                    " - " ++ q
+                    if String.isEmpty q then
+                        ""
+
+                    else
+                        " - " ++ q
 
         maybeFlakeQuery m =
             case m of
