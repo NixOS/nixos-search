@@ -343,16 +343,32 @@ view :
         }
 view model =
     let
+        maybeQuery m =
+            case m.query of
+                Nothing ->
+                    ""
+
+                Just q ->
+                    " - " ++ q
+
+        maybeFlakeQuery m =
+            case m of
+                OptionModel m_ ->
+                    maybeQuery m_
+
+                PackagesModel m_ ->
+                    maybeQuery m_
+
         title =
             case model.page of
-                Packages _ ->
-                    "NixOS Search - Packages"
+                Packages m ->
+                    "NixOS Search - Packages" ++ maybeQuery m
 
-                Options _ ->
-                    "NixOS Search - Options"
+                Options m ->
+                    "NixOS Search - Options" ++ maybeQuery m
 
-                Flakes _ ->
-                    "NixOS Search - Flakes (Experimental)"
+                Flakes m ->
+                    "NixOS Search - Flakes (Experimental)" ++ maybeFlakeQuery m
 
                 _ ->
                     "NixOS Search"
