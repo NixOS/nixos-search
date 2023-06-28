@@ -156,7 +156,10 @@ rec {
   all = packages ++ apps ++ options;
 
   # nixpkgs-specific, doesn't use the flake argument
-  nixos-options = lib.mapAttrsToList (name: option: option // { inherit name; })
-    (builtins.fromJSON (builtins.unsafeDiscardStringContext (builtins.readFile
-      "${(import <nixpkgs/nixos/release.nix> {}).options}/share/doc/nixos/options.json")));
+  nixos-options = readNixOSOptions {
+    module = import <nixpkgs/nixos/modules/module-list.nix> ++ [
+      <nixpkgs/nixos/modules/virtualisation/qemu-vm.nix>
+      { nixpkgs.hostPlatform = "x86_64-linux"; }
+    ];
+  };
 }

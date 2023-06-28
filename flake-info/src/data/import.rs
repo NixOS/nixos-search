@@ -117,18 +117,11 @@ impl Serialize for DocString {
         S: Serializer,
     {
         match self {
-            DocString::String(db) => {
-                serializer.serialize_str(&db.render_docbook().unwrap_or_else(|e| {
-                    warn!("Could not render DocBook content: {}", e);
-                    db.to_owned()
-                }))
-            }
-            DocString::DocFormat(DocFormat::MarkdownDoc(md)) => {
-                serializer.serialize_str(&md.render_markdown().unwrap_or_else(|e| {
+            DocString::String(md) | DocString::DocFormat(DocFormat::MarkdownDoc(md)) => serializer
+                .serialize_str(&md.render_markdown().unwrap_or_else(|e| {
                     warn!("Could not render Markdown content: {}", e);
                     md.to_owned()
-                }))
-            }
+                })),
         }
     }
 }
