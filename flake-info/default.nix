@@ -24,7 +24,7 @@ pkgs.rustPlatform.buildRustPackage rec {
 
   ROOTDIR = builtins.placeholder "out";
   NIXPKGS_PANDOC_FILTERS_PATH = pkgs.path + "/doc/build-aux/pandoc-filters";
-  LINK_MANPAGES_PANDOC_FILTER = import (pkgs.path + "/doc/build-aux/pandoc-filters/link-manpages.nix") { inherit pkgs; };
+  LINK_MANPAGES_PANDOC_FILTER = import src/data/link-manpages.nix { inherit pkgs; };
 
   checkFlags = [
     "--skip elastic::tests"
