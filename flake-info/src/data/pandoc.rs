@@ -1,15 +1,12 @@
 use lazy_static::lazy_static;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use pandoc::*;
 
-const FILTERS_PATH: &str = env!("NIXPKGS_PANDOC_FILTERS_PATH");
-
 lazy_static! {
     static ref DOCBOOK_ROLES_FILTER: PathBuf =
-        Path::new(FILTERS_PATH).join("docbook-reader/citerefentry-to-rst-role.lua");
-    static ref MARKDOWN_ROLES_FILTER: PathBuf =
-        Path::new(FILTERS_PATH).join("myst-reader/roles.lua");
+        crate::DATADIR.join("data/docbook-reader/citerefentry-to-rst-role.lua");
+    static ref MARKDOWN_ROLES_FILTER: PathBuf = crate::DATADIR.join("data/myst-reader/roles.lua");
     static ref MANPAGE_LINK_FILTER: PathBuf = PathBuf::from(env!("LINK_MANPAGES_PANDOC_FILTER"));
     static ref XREF_FILTER: PathBuf = crate::DATADIR.join("data/fix-xrefs.lua");
 }

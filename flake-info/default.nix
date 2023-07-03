@@ -23,7 +23,6 @@ pkgs.rustPlatform.buildRustPackage rec {
   checkInputs = with pkgs; [ pandoc ];
 
   ROOTDIR = builtins.placeholder "out";
-  NIXPKGS_PANDOC_FILTERS_PATH = pkgs.path + "/doc/build-aux/pandoc-filters";
   LINK_MANPAGES_PANDOC_FILTER = import src/data/link-manpages.nix { inherit pkgs; };
 
   checkFlags = [
