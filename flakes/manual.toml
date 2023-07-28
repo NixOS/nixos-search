@@ -87,6 +87,11 @@ repo = "nix-security"
 
 [[sources]]
 type = "github"
+owner = "astro"
+repo = "skyflake"
+
+[[sources]]
+type = "github"
 owner = "lnbits"
 repo = "lnbits-legend"
 
@@ -114,3 +119,13 @@ repo = "nix-vscode-extensions"
 type = "github"
 owner = "hyprwm"
 repo = "hyprland"
+
+[[sources]]
+type = "github"
+owner = "chayleaf"
+repo = "notnft"
+
+[[sources]]
+type = "github"
+owner = "chayleaf"
+repo = "nixos-router"
