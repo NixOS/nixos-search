@@ -163,8 +163,3 @@ repo = "notnft"
 type = "github"
 owner = "chayleaf"
 repo = "nixos-router"
-
-[[sources]]
-type = "github"
-owner = "kirelagin"
-repo = "dns"
