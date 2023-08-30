@@ -5,6 +5,7 @@ module Utils exposing
 
 import Html.Parser
 import Html.Parser.Util
+import Html.Styled exposing (Html, fromUnstyled)
 
 
 toggleList :
@@ -19,10 +20,11 @@ toggleList list item =
         List.append list [ item ]
 
 
+showHtml : String -> Maybe (List (Html msg))
 showHtml value =
     case Html.Parser.run <| String.trim value of
         Ok [ Html.Parser.Element "rendered-html" _ nodes ] ->
-            Just <| Html.Parser.Util.toVirtualDom nodes
+            Just <| (Html.Parser.Util.toVirtualDom nodes |> List.map fromUnstyled)
 
         _ ->
             Nothing

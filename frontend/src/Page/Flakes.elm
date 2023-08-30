@@ -8,7 +8,7 @@ module Page.Flakes exposing
     )
 
 import Browser.Navigation
-import Html
+import Html.Styled
     exposing
         ( Html
         , a
@@ -17,12 +17,12 @@ import Html
         , strong
         , text
         )
-import Html.Attributes
+import Html.Styled.Attributes
     exposing
         ( class
         , href
         )
-import Html.Events exposing (onClick)
+import Html.Styled.Events exposing (onClick)
 import Http exposing (Body)
 import Page.Options exposing (Msg(..))
 import Page.Packages exposing (Msg(..))
@@ -197,10 +197,10 @@ view nixosChannels model =
         body =
             case model of
                 OptionModel model_ ->
-                    Html.map OptionsMsg <| mkBody "Options" model_ Page.Options.viewSuccess Page.Options.viewBuckets Page.Options.SearchMsg
+                    Html.Styled.map OptionsMsg <| mkBody "Options" model_ Page.Options.viewSuccess Page.Options.viewBuckets Page.Options.SearchMsg
 
                 PackagesModel model_ ->
-                    Html.map PackagesMsg <| mkBody "Packages" model_ Page.Packages.viewSuccess Page.Packages.viewBuckets Page.Packages.SearchMsg
+                    Html.Styled.map PackagesMsg <| mkBody "Packages" model_ Page.Packages.viewSuccess Page.Packages.viewBuckets Page.Packages.SearchMsg
     in
     body
 

@@ -15,7 +15,7 @@ module Page.Options exposing
     )
 
 import Browser.Navigation
-import Html
+import Html.Styled
     exposing
         ( Html
         , a
@@ -28,14 +28,14 @@ import Html
         , text
         , ul
         )
-import Html.Attributes
+import Html.Styled.Attributes
     exposing
         ( class
         , classList
         , href
         , target
         )
-import Html.Events
+import Html.Styled.Events
     exposing
         ( onClick
         )
@@ -193,7 +193,7 @@ viewResultItem nixosChannels channel _ show item =
         showDetails =
             if Just item.source.name == show then
                 Just <|
-                    div [ Html.Attributes.map SearchMsg Search.trapClick ] <|
+                    div [ Html.Styled.Attributes.map SearchMsg Search.trapClick ] <|
                         [ div [] [ text "Name" ]
                         , div [] [ asPreCode item.source.name ]
                         ]

@@ -10,8 +10,8 @@ module Route exposing
     , searchTypeToTitle
     )
 
-import Html
-import Html.Attributes
+import Html.Styled
+import Html.Styled.Attributes
 import Route.SearchQuery exposing (SearchQuery)
 import Url
 import Url.Builder exposing (QueryParameter)
@@ -156,9 +156,9 @@ parser url =
 -- PUBLIC HELPERS
 
 
-href : Route -> Html.Attribute msg
+href : Route -> Html.Styled.Attribute msg
 href targetRoute =
-    Html.Attributes.href (routeToString targetRoute)
+    Html.Styled.Attributes.href (routeToString targetRoute)
 
 
 fromUrl : Url.Url -> Maybe Route

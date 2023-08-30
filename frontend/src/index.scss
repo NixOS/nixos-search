@@ -161,14 +161,6 @@ header .navbar.navbar-static-top {
     }
   }
 
-  // Loader during loading the search results
-  & > .loader-wrapper > h2 {
-    position: absolute;
-    top: 3em;
-    width: 100%;
-    text-align: center;
-  }
-
   & > .search-no-results {
     padding: 2em 1em;
     text-align: center;
@@ -491,63 +483,6 @@ header .navbar.navbar-static-top {
         }
       }
     }
-  }
-}
-
-/* ------------------------------------------------------------------------- */
-/* -- Loader --------------------------------------------------------------- */
-/* ------------------------------------------------------------------------- */
-
-.loader-wrapper {
-  height: 200px;
-  overflow: hidden;
-  position: relative;
-}
-.loader,
-.loader:before,
-.loader:after {
-  background: transparent;
-  -webkit-animation: load1 1s infinite ease-in-out;
-  animation: load1 1s infinite ease-in-out;
-  width: 1em;
-  height: 4em;
-}
-.loader {
-  color: #000000;
-  text-indent: -9999em;
-  margin: 88px auto;
-  position: relative;
-  font-size: 11px;
-  -webkit-transform: translateZ(0);
-  -ms-transform: translateZ(0);
-  transform: translateZ(0);
-  -webkit-animation-delay: -0.16s;
-  animation-delay: -0.16s;
-}
-.loader:before,
-.loader:after {
-  position: absolute;
-  top: 0;
-  content: '';
-}
-.loader:before {
-  left: -1.5em;
-  -webkit-animation-delay: -0.32s;
-  animation-delay: -0.32s;
-}
-.loader:after {
-  left: 1.5em;
-}
-@keyframes load1 {
-  0%,
-  80%,
-  100% {
-    box-shadow: 0 0;
-    height: 4em;
-  }
-  40% {
-    box-shadow: 0 -2em;
-    height: 5em;
   }
 }
 

@@ -2,22 +2,9 @@ module Main exposing (main)
 
 import Browser
 import Browser.Navigation
-import Html
-    exposing
-        ( Html
-        , a
-        , div
-        , footer
-        , header
-        , img
-        , li
-        , small
-        , span
-        , sup
-        , text
-        , ul
-        )
-import Html.Attributes
+import Html as ElmHtml
+import Html.Styled exposing (Html, a, div, footer, header, img, li, small, span, sup, text, toUnstyled, ul)
+import Html.Styled.Attributes
     exposing
         ( alt
         , class
@@ -339,7 +326,7 @@ view :
     Model
     ->
         { title : String
-        , body : List (Html Msg)
+        , body : List (ElmHtml.Html Msg)
         }
 view model =
     let
@@ -416,6 +403,7 @@ view model =
                     ]
                 ]
             ]
+            |> toUnstyled
         ]
     }
 
@@ -465,13 +453,13 @@ viewPage model =
             div [] [ text "Not Found" ]
 
         Packages packagesModel ->
-            Html.map (\m -> PackagesMsg m) <| Page.Packages.view model.nixosChannels packagesModel
+            Html.Styled.map (\m -> PackagesMsg m) <| Page.Packages.view model.nixosChannels packagesModel
 
         Options optionsModel ->
-            Html.map (\m -> OptionsMsg m) <| Page.Options.view model.nixosChannels optionsModel
+            Html.Styled.map (\m -> OptionsMsg m) <| Page.Options.view model.nixosChannels optionsModel
 
         Flakes flakesModel ->
-            Html.map (\m -> FlakesMsg m) <| Page.Flakes.view model.nixosChannels flakesModel
+            Html.Styled.map (\m -> FlakesMsg m) <| Page.Flakes.view model.nixosChannels flakesModel
 
 
 

@@ -16,6 +16,7 @@
       "elm/url": "1.0.0",
       "hecrj/html-parser": "2.3.4",
       "krisajenkins/remotedata": "6.0.1",
+      "rtfeldman/elm-css": "18.0.0",
       "truqu/elm-base64": "2.0.4"
     },
     "indirect": {
@@ -24,6 +25,7 @@
       "elm/parser": "1.1.0",
       "elm/time": "1.0.0",
       "elm/virtual-dom": "1.0.2",
+      "robinheghan/murmur3": "1.0.0",
       "rtfeldman/elm-hex": "1.0.0"
     }
   },

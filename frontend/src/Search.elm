@@ -34,7 +34,7 @@ module Search exposing
 import Base64
 import Browser.Dom
 import Browser.Navigation
-import Html
+import Html.Styled
     exposing
         ( Html
         , a
@@ -52,12 +52,13 @@ import Html
         , text
         , ul
         )
-import Html.Attributes
+import Html.Styled.Attributes
     exposing
         ( attribute
         , autofocus
         , class
         , classList
+        , css
         , disabled
         , href
         , id
@@ -65,7 +66,7 @@ import Html.Attributes
         , type_
         , value
         )
-import Html.Events
+import Html.Styled.Events
     exposing
         ( onClick
         , onInput
@@ -84,6 +85,7 @@ import Route
         )
 import Route.SearchQuery
 import Set
+import Style exposing (loading)
 import Task
 
 
@@ -358,9 +360,9 @@ ensureLoading nixosChannels model =
         model
 
 
-elementId : String -> Html.Attribute msg
+elementId : String -> Html.Styled.Attribute msg
 elementId str =
-    Html.Attributes.id <| "result-" ++ str
+    Html.Styled.Attributes.id <| "result-" ++ str
 
 
 
@@ -803,10 +805,10 @@ viewResult nixosChannels outMsg toRoute categoryName model viewSuccess viewBucke
             div [] []
 
         RemoteData.Loading ->
-            div [ class "loader-wrapper" ]
+            div [ css [ loading.wrapper ] ]
                 [ ul [ class "search-sidebar" ] searchBuckets
-                , div [ class "loader" ] [ text "Loading..." ]
-                , h2 [] [ text "Searching..." ]
+                , div [ css [ loading.loader ] ] [ text "Loading..." ]
+                , h2 [ css [ loading.headline ] ] [ text "Searching..." ]
                 ]
 
         RemoteData.Success result ->
@@ -869,7 +871,7 @@ viewNoResults categoryName =
     div [ class "search-no-results" ]
         [ h2 [] [ text <| "No " ++ categoryName ++ " found!" ]
         , text "You might want to "
-        , Html.a [ href "https://nixos.org/manual/nixpkgs/stable/#chap-quick-start" ] [ text "add a package" ]
+        , a [ href "https://nixos.org/manual/nixpkgs/stable/#chap-quick-start" ] [ text "add a package" ]
         , text " or "
         , a [ href "https://github.com/NixOS/nixpkgs/issues/new?assignees=&labels=0.kind%3A+packaging+request&template=packaging_request.md&title=Package+request%3A+PACKAGENAME" ] [ text "make a packaging request" ]
         , text "."
@@ -1041,7 +1043,7 @@ viewResults nixosChannels model result viewSuccess _ outMsg categoryName =
             String.fromInt result.hits.total.value
     in
     [ div []
-        [ Html.map outMsg <| viewSortSelection model
+        [ Html.Styled.map outMsg <| viewSortSelection model
         , h2 []
             (List.append
                 [ text "Showing results "
@@ -1067,7 +1069,7 @@ viewResults nixosChannels model result viewSuccess _ outMsg categoryName =
             )
         ]
     , viewSuccess nixosChannels model.channel model.showInstallDetails model.show result.hits.hits
-    , Html.map outMsg <| viewPager model result.hits.total.value
+    , Html.Styled.map outMsg <| viewPager model result.hits.total.value
     ]
 
 
@@ -1465,9 +1467,9 @@ showMoreButton toggle isOpen =
 -- Html Event Helpers
 
 
-onClickStop : msg -> Html.Attribute msg
+onClickStop : msg -> Html.Styled.Attribute msg
 onClickStop message =
-    Html.Events.custom "click" <|
+    Html.Styled.Events.custom "click" <|
         Json.Decode.succeed
             { message = message
             , stopPropagation = True
@@ -1475,7 +1477,7 @@ onClickStop message =
             }
 
 
-trapClick : Html.Attribute (Msg a b)
+trapClick : Html.Styled.Attribute (Msg a b)
 trapClick =
-    Html.Events.stopPropagationOn "click" <|
+    Html.Styled.Events.stopPropagationOn "click" <|
         Json.Decode.succeed ( NoOp, True )
