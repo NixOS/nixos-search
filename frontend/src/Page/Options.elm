@@ -28,13 +28,7 @@ import Html.Styled
         , text
         , ul
         )
-import Html.Styled.Attributes
-    exposing
-        ( class
-        , classList
-        , href
-        , target
-        )
+import Html.Styled.Attributes exposing (class, classList, css, href, target)
 import Html.Styled.Events
     exposing
         ( onClick
@@ -49,6 +43,7 @@ import Search
         , NixOSChannel
         , decodeResolvedFlake
         )
+import Style
 import Utils
 
 
@@ -185,10 +180,10 @@ viewResultItem :
 viewResultItem nixosChannels channel _ show item =
     let
         asPre value =
-            pre [] [ text value ]
+            pre [ css [ Style.pre.base ] ] [ text value ]
 
         asPreCode value =
-            div [] [ pre [] [ code [ class "code-block" ] [ text value ] ] ]
+            pre [ css [ Style.pre.base, Style.pre.code ] ] [ text value ]
 
         showDetails =
             if Just item.source.name == show then

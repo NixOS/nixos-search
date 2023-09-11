@@ -3,7 +3,7 @@ module Main exposing (main)
 import Browser
 import Browser.Navigation
 import Html as ElmHtml
-import Html.Styled exposing (Html, a, div, footer, header, img, li, small, span, sup, text, toUnstyled, ul)
+import Html.Styled exposing (Html, a, div, footer, header, img, li, small, span, sup, text, ul)
 import Html.Styled.Attributes
     exposing
         ( alt
@@ -25,6 +25,7 @@ import Search
         , decodeNixOSChannels
         , defaultFlakeId
         )
+import Style exposing (withStyled)
 import Url
 
 
@@ -366,45 +367,43 @@ view model =
     in
     { title = title
     , body =
-        [ div []
-            [ header []
-                [ div [ class "navbar navbar-static-top" ]
-                    [ div [ class "navbar-inner" ]
-                        [ div [ class "container" ]
-                            [ a [ class "brand", href "https://nixos.org" ]
-                                [ img [ alt "NixOS logo", src "https://nixos.org/logo/nix-wiki.png", class "logo" ] []
-                                ]
-                            , div []
-                                [ ul [ class "nav pull-left" ]
-                                    (viewNavigation model.route)
-                                ]
+        [ header []
+            [ div [ class "navbar navbar-static-top" ]
+                [ div [ class "navbar-inner" ]
+                    [ div [ class "container" ]
+                        [ a [ class "brand", href "https://nixos.org" ]
+                            [ img [ alt "NixOS logo", src "https://nixos.org/logo/nix-wiki.png", class "logo" ] []
                             ]
-                        ]
-                    ]
-                ]
-            , div [ class "container main" ]
-                [ div [ id "content" ] [ viewPage model ]
-                , footer
-                    [ class "container text-center" ]
-                    [ div []
-                        [ span [] [ text "Please help us improve the search by " ]
-                        , a
-                            [ href "https://github.com/NixOS/nixos-search/issues"
+                        , div []
+                            [ ul [ class "nav pull-left" ]
+                                (viewNavigation model.route)
                             ]
-                            [ text "reporting issues" ]
-                        , span [] [ text "." ]
-                        ]
-                    , div []
-                        [ span [] [ text "❤️  " ]
-                        , span [] [ text "Elasticsearch instance graciously provided by " ]
-                        , a [ href "https://bonsai.io" ] [ text "Bonsai" ]
-                        , span [] [ text ". Thank you! ❤️ " ]
                         ]
                     ]
                 ]
             ]
-            |> toUnstyled
+        , div [ class "container main" ]
+            [ div [ id "content" ] [ viewPage model ]
+            , footer
+                [ class "container text-center" ]
+                [ div []
+                    [ span [] [ text "Please help us improve the search by " ]
+                    , a
+                        [ href "https://github.com/NixOS/nixos-search/issues"
+                        ]
+                        [ text "reporting issues" ]
+                    , span [] [ text "." ]
+                    ]
+                , div []
+                    [ span [] [ text "❤️  " ]
+                    , span [] [ text "Elasticsearch instance graciously provided by " ]
+                    , a [ href "https://bonsai.io" ] [ text "Bonsai" ]
+                    , span [] [ text ". Thank you! ❤️ " ]
+                    ]
+                ]
+            ]
         ]
+            |> withStyled
     }
 
 

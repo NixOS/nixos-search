@@ -753,19 +753,15 @@ viewFlakes :
     -> SearchType
     -> List (Html msg)
 viewFlakes outMsg _ selectedCategory =
-    [ li []
-        [ ul []
+    [ li [ css [ Style.bucket.container ] ]
+        [ ul [ css [ Style.bucket.list ] ]
             (List.map
                 (\category ->
-                    li []
+                    li [ css [ Style.bucket.listItem ] ]
                         [ a
                             [ href "#"
                             , onClick <| outMsg (SubjectChange category)
-                            , classList
-                                [ ( "selected"
-                                  , category == selectedCategory
-                                  )
-                                ]
+                            , css [ Style.bucket.item, Style.bucket.selected (category == selectedCategory) ]
                             ]
                             [ span [] [ text <| searchTypeToTitle category ]
                             , closeButton
@@ -805,10 +801,10 @@ viewResult nixosChannels outMsg toRoute categoryName model viewSuccess viewBucke
             div [] []
 
         RemoteData.Loading ->
-            div [ css [ loading.wrapper ] ]
-                [ ul [ class "search-sidebar" ] searchBuckets
-                , div [ css [ loading.loader ] ] [ text "Loading..." ]
-                , h2 [ css [ loading.headline ] ] [ text "Searching..." ]
+            div [ css [ Style.loading.wrapper ] ]
+                [ ul [ css [ Style.layout.sidebar ] ] searchBuckets
+                , div [ css [ Style.loading.loader ] ] [ text "Loading..." ]
+                , h2 [ css [ Style.loading.headline ] ] [ text "Searching..." ]
                 ]
 
         RemoteData.Success result ->
@@ -818,20 +814,20 @@ viewResult nixosChannels outMsg toRoute categoryName model viewSuccess viewBucke
             in
             if result.hits.total.value == 0 && List.length buckets == 0 then
                 div [ class "search-results" ]
-                    [ ul [ class "search-sidebar" ] searchBuckets
+                    [ ul [ css [ Style.layout.sidebar ] ] searchBuckets
                     , viewNoResults categoryName
                     ]
 
             else if List.length buckets > 0 then
                 div [ class "search-results" ]
-                    [ ul [ class "search-sidebar" ] <| List.append searchBuckets buckets
+                    [ ul [ css [ Style.layout.sidebar ] ] <| List.append searchBuckets buckets
                     , div []
                         (viewResults nixosChannels model result viewSuccess toRoute outMsg categoryName)
                     ]
 
             else
                 div [ class "search-results" ]
-                    [ ul [ class "search-sidebar" ] searchBuckets
+                    [ ul [ css [ Style.layout.sidebar ] ] searchBuckets
                     , div []
                         (viewResults nixosChannels model result viewSuccess toRoute outMsg categoryName)
                     ]
@@ -857,7 +853,7 @@ viewResult nixosChannels outMsg toRoute categoryName model viewSuccess viewBucke
             in
             div []
                 [ div [ class "alert alert-error" ]
-                    [ ul [ class "search-sidebar" ] searchBuckets
+                    [ ul [ css [ Style.layout.sidebar ] ] searchBuckets
                     , h4 [] [ text errorTitle ]
                     , text errorMessage
                     ]
@@ -897,20 +893,19 @@ viewBucket title buckets searchMsgFor selectedBucket sets =
             []
 
          else
-            [ li []
-                [ ul []
+            [ li [ css [ Style.bucket.container ] ]
+                [ ul [ css [ Style.bucket.list ] ]
                     (List.append
-                        [ li [ class "header" ] [ text title ] ]
+                        [ li [ css [ Style.bucket.header ] ] [ text title ] ]
                         (List.map
                             (\bucket ->
-                                li []
+                                li [ css [ Style.bucket.listItem ] ]
                                     [ a
                                         [ href "#"
                                         , onClick <| searchMsgFor bucket.key
-                                        , classList
-                                            [ ( "selected"
-                                              , List.member bucket.key selectedBucket
-                                              )
+                                        , css
+                                            [ Style.bucket.item
+                                            , Style.bucket.selected (List.member bucket.key selectedBucket)
                                             ]
                                         ]
                                         [ span [] [ text bucket.key ]

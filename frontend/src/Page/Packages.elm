@@ -29,14 +29,7 @@ import Html.Styled
         , text
         , ul
         )
-import Html.Styled.Attributes
-    exposing
-        ( class
-        , classList
-        , href
-        , id
-        , target
-        )
+import Html.Styled.Attributes exposing (class, classList, css, href, id, target)
 import Html.Styled.Events exposing (onClick)
 import Http exposing (Body)
 import Json.Decode
@@ -51,6 +44,7 @@ import Search
         , NixOSChannel
         , viewBucket
         )
+import Style
 import Utils
 
 
@@ -629,7 +623,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         , class "tab-pane"
                                         , id "package-details-nixpkgs"
                                         ]
-                                        [ pre [ class "code-block shell-command" ]
+                                        [ pre [ css [ Style.pre.code, Style.pre.shell ] ]
                                             [ text "nix-env -iA nixos."
                                             , strong [] [ text item.source.attr_name ]
                                             ]
@@ -651,7 +645,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         , class "tab-pane"
                                         , id "package-details-nixpkgs"
                                         ]
-                                        [ pre [ class "code-block shell-command" ]
+                                        [ pre [ css [ Style.pre.code, Style.pre.shell ] ]
                                             [ text "nix-env -iA nixpkgs."
                                             , strong [] [ text item.source.attr_name ]
                                             ]
@@ -674,7 +668,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         , class "tab-pane"
                                         , id "package-details-nixpkgs"
                                         ]
-                                        [ pre [ class "code-block" ]
+                                        [ pre [ css [ Style.pre.code ] ]
                                             [ text <| "  environment.systemPackages = [\n    pkgs."
                                             , strong [] [ text item.source.attr_name ]
                                             , text <| "\n  ];"
@@ -702,7 +696,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                             , ( "active", List.member showInstallDetails [ Search.Unset, Search.ViaNixShell, Search.FromFlake ] )
                                             ]
                                         ]
-                                        [ pre [ class "code-block shell-command" ]
+                                        [ pre [ css [ Style.pre.code, Style.pre.shell ] ]
                                             [ text "nix-shell -p "
                                             , strong [] [ text item.source.attr_name ]
                                             ]
@@ -717,7 +711,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                                     , ( "active", True )
                                                     ]
                                                 ]
-                                                [ pre [ class "code-block shell-command" ]
+                                                [ pre [ css [ Style.pre.code, Style.pre.shell ] ]
                                                     [ text "nix build "
                                                     , strong [] [ text url ]
                                                     , text "#"
