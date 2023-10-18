@@ -24,8 +24,11 @@ const dev = {
                 res.json({result: "You reached the dev server"});
             });
 
+        },
+        proxy: {
+        '/backend': {target:'http://search.nixos.org/', changeOrigin:true},
         }
-    },
+    }
 };
 
 module.exports = env => {
