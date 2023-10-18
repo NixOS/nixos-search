@@ -552,20 +552,6 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                             ]
                                             [ text "NixOS Configuration" ]
                                         ]
-                                    , li
-                                        [ classList
-                                            [ ( "active", showInstallDetails == Search.ViaNixEnv )
-                                            , ( "pull-right", True )
-                                            ]
-                                        ]
-                                        [ a
-                                            [ href "#"
-                                            , Search.onClickStop <|
-                                                SearchMsg <|
-                                                    Search.ShowInstallDetails Search.ViaNixEnv
-                                            ]
-                                            [ text "nix-env" ]
-                                        ]
                                     ]
                                 <|
                                     Maybe.map
@@ -592,71 +578,6 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                               <|
                                 Maybe.withDefault
                                     [ div
-                                        [ classList
-                                            [ ( "tab-pane", True )
-                                            , ( "active", showInstallDetails == Search.ViaNixEnv )
-                                            ]
-                                        ]
-                                        [ p []
-                                            [ strong [] [ text "Warning:" ]
-                                            , text " Using "
-                                            , code [] [ text "nix-env" ]
-                                            , text """
-                                            permanently modifies a local profile of installed packages.
-                                            This must be updated and maintained by the user in the same
-                                            way as with a traditional package manager, foregoing many
-                                            of the benefits that make Nix uniquely powerful. Using
-                                            """
-                                            , code [] [ text "nix-shell" ]
-                                            , text """
-                                            or a NixOS configuration is recommended instead.
-                                            """
-                                            ]
-                                        ]
-                                    , div
-                                        [ classList
-                                            [ ( "active", showInstallDetails == Search.ViaNixEnv )
-                                            ]
-                                        , class "tab-pane"
-                                        ]
-                                        [ p []
-                                            [ strong [] [ text "On NixOS:" ] ]
-                                        ]
-                                    , div
-                                        [ classList
-                                            [ ( "active", showInstallDetails == Search.ViaNixEnv )
-                                            ]
-                                        , class "tab-pane"
-                                        , id "package-details-nixpkgs"
-                                        ]
-                                        [ pre [ class "code-block shell-command" ]
-                                            [ text "nix-env -iA nixos."
-                                            , strong [] [ text item.source.attr_name ]
-                                            ]
-                                        ]
-                                    , div [] [ p [] [] ]
-                                    , div
-                                        [ classList
-                                            [ ( "active", showInstallDetails == Search.ViaNixEnv )
-                                            ]
-                                        , class "tab-pane"
-                                        ]
-                                        [ p []
-                                            [ strong [] [ text "On Non NixOS:" ] ]
-                                        ]
-                                    , div
-                                        [ classList
-                                            [ ( "active", showInstallDetails == Search.ViaNixEnv )
-                                            ]
-                                        , class "tab-pane"
-                                        , id "package-details-nixpkgs"
-                                        ]
-                                        [ pre [ class "code-block shell-command" ]
-                                            [ text "nix-env -iA nixpkgs."
-                                            , strong [] [ text item.source.attr_name ]
-                                            ]
-                                        ]
-                                    , div
                                         [ classList
                                             [ ( "tab-pane", True )
                                             , ( "active", showInstallDetails == Search.ViaNixOS )
