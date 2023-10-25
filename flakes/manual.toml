@@ -114,3 +114,8 @@ repo = "nix-vscode-extensions"
 type = "github"
 owner = "hyprwm"
 repo = "hyprland"
+
+[[sources]]
+type = "sourcehut"
+owner = "~dblsaiko"
+repo = "nix-extras"
