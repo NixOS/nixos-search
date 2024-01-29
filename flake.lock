@@ -18,11 +18,11 @@
     "nixos-org-configurations": {
       "flake": false,
       "locked": {
-        "lastModified": 1701287284,
-        "narHash": "sha256-tu30FJa7e8eZCZg0CmQuAGimFQ/RVPooTFl59SiELxY=",
+        "lastModified": 1706459371,
+        "narHash": "sha256-RWUCCiZ09M76IIvOd/NrWjsmbqfHhqWH8CzLqIh1nZU=",
         "owner": "NixOS",
         "repo": "nixos-org-configurations",
-        "rev": "33bc481f102213c0c4e41cd356e7bcf1aea28107",
+        "rev": "003ee5cad66f22b84dcedc9c037903993014f0fe",
         "type": "github"
       },
       "original": {
