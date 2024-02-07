@@ -114,3 +114,8 @@ repo = "nix-vscode-extensions"
 type = "github"
 owner = "hyprwm"
 repo = "hyprland"
+
+[[sources]]
+type = "github"
+owner = "haqq-network"
+repo = "haqq"
