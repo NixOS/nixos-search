@@ -1,10 +1,46 @@
+:root {
+  --text-color: #333;
+  --background-color: #fff;
+  --terminal-background: #333;
+  --terminal-color: #fff;
+  --result-item-show-more-background: #fff;
+  --result-item-show-more-color: #666;
+  --search-sidebar-container-border-color: #ccc;
+  --search-sidebar-link-color: var(--text-color);
+  --search-sidebar-hovered-link-background: #eee;
+  --search-sidebar-selected-link-background: #0081c2;
+  --search-sidebar-selected-link-color: #fff;
+  /* Divider between search results */
+  --search-result-divider-line-color: #ccc;
+  /* Gets overwritten by bootstrap; has no effect */
+  --search-result-title-color: #08c;
+  /* Text color for the details in a search result (like name, version, outputs...) */
+  --search-result-short-details-color: #666;
+  /* When search results are expanded, they show tabbed help for installing the result. This is the border color for that tabbed thing.
+     It is only half of the border, the other half is styled by bootstrap. */
+  --search-result-expanded-tab-border: #ccc;
+  /* Color of the animation above the `Loading` text that is shown when searching */
+  --loader-color: #000;
+  /* Background color of the experimental badge next to the flakes search */
+  --info-label-background: #007dbb;
+  /* Text color for links. Probably overwritten by bootstrap */
+  --link-color: #007dbb;
+  /* Background color for the small badges with number in the sidebar */
+  --badge-background: #757575;
+}
+
+body {
+  color: var(--text-color);
+  background: var(--background-color);
+}
+
 /* ------------------------------------------------------------------------- */
 /* -- Utils ---------------------------------------------------------------- */
 /* ------------------------------------------------------------------------- */
 
 @mixin terminal() {
-  background: #333;
-  color: #fff;
+  background: var(--terminal-background);
+  color: var(--terminal-color);
   margin: 0;
 }
 
@@ -21,8 +57,8 @@
     text-align: center;
     text-decoration: none;
     line-height: 1.5em;
-    color: #666;
-    background: #FFF;
+    color: var(--result-item-show-more-color);
+    background: var(--result-item-show-more-background);
     padding: 0 1em;
     position: relative;
     top: 0.75em;
@@ -208,7 +244,7 @@ header .navbar.navbar-static-top {
 
       & > li {
         margin-bottom: 1em;
-        border: 1px solid #ccc;
+        border: 1px solid var(--search-sidebar-container-border-color);
         padding: 1em;
         border-radius: 4px;
 
@@ -228,13 +264,13 @@ header .navbar.navbar-static-top {
             & > a {
               display: grid;
               grid-template-columns: auto max-content;
-              color: #333;
+              color: var(--search-sidebar-link-color);
               padding: 0.5em 0.5em 0.5em 1em;
               text-decoration: none;
 
               &:hover {
                 text-decoration: none;
-                background: #eee;
+                background: var(--search-sidebar-hovered-link-background);
                 border-radius: 4px;
               }
 
@@ -247,8 +283,8 @@ header .navbar.navbar-static-top {
               }
 
               &.selected {
-                background: #0081c2;
-                color: #FFF;
+                background: var(--search-sidebar-selected-link-background);
+                color: var(--search-sidebar-selected-link-color);
                 border-radius: 4px;
                 position: relative;
                   & > span:last-child {
@@ -339,7 +375,7 @@ header .navbar.navbar-static-top {
 
         // Result item
         & > li {
-          border-bottom: 1px solid #ccc;
+          border-bottom: 1px solid var(--search-result-divider-line-color);
           padding-bottom: 2em;
           margin-bottom: 2em;
 
@@ -352,7 +388,7 @@ header .navbar.navbar-static-top {
             background: inherit;
             border: 0;
             padding: 0;
-            color: #08c;
+            color: var(--search-result-title-color);
             font-size: 1.5em;
             margin-bottom: 0.5em;
             text-align: left;
@@ -371,7 +407,7 @@ header .navbar.navbar-static-top {
 
             // short details of a pacakge
             & > :nth-child(3) {
-              color: #666;
+              color: var(--search-result-short-details-color);
               list-style: none;
               text-align: left;
               margin: 0;
@@ -414,7 +450,7 @@ header .navbar.navbar-static-top {
 
                 div.tab-content {
                   padding: 1em;
-                  border: 1px solid #ddd;
+                  border: 1px solid var(--search-result-expanded-tab-border);
                   border-top: 0;
                 }
 
@@ -424,9 +460,9 @@ header .navbar.navbar-static-top {
 
               }
 
-              // programs
-              & > :nth-child(3) {
-              }
+              // // programs
+              // & > :nth-child(3) {
+              // }
 
               // maintainers and platforms
               & > :nth-child(4) {
@@ -469,8 +505,7 @@ header .navbar.navbar-static-top {
                 }
 
                 pre code {
-                  background: #333;
-                  color: #fff;
+                  @include terminal;
                   padding: 0.5em
                 }
               }
@@ -513,7 +548,7 @@ header .navbar.navbar-static-top {
   height: 4em;
 }
 .loader {
-  color: #000000;
+  color: var(--loader-color);
   text-indent: -9999em;
   margin: 88px auto;
   position: relative;
@@ -555,11 +590,11 @@ header .navbar.navbar-static-top {
 /* -- Accessibility overrides ---------------------------------------------- */
 /* ------------------------------------------------------------------------- */
 .label-info {
-  background: #007dbb;
+  background: var(--info-label-background);
 }
 
 a {
-  color: #007dbb;
+  color: var(--link-color);
 }
 
 .pager {
@@ -572,5 +607,5 @@ a {
 }
 
 .badge {
-  background-color: #757575
+  background-color: var(--badge-background)
 }
