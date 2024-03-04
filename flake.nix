@@ -8,14 +8,14 @@
   inputs.flake-utils.url = "github:numtide/flake-utils";
   inputs.npmlock2nix.url = "github:nix-community/npmlock2nix";
   inputs.npmlock2nix.flake = false;
-  inputs.nixos-org-configurations.url = "github:NixOS/nixos-org-configurations";
-  inputs.nixos-org-configurations.flake = false;
+  inputs.nixos-infra.url = "github:NixOS/infra";
+  inputs.nixos-infra.flake = false;
 
   outputs = { self
             , nixpkgs
             , flake-utils
             , npmlock2nix
-            , nixos-org-configurations
+            , nixos-infra
             }:
     flake-utils.lib.eachDefaultSystem
       (system:
@@ -33,7 +33,7 @@
           version = lib.fileContents ./VERSION;
           nixosChannels =
             let
-              allChannels = (import "${nixos-org-configurations}/channels.nix").channels;
+              allChannels = (import "${nixos-infra}/channels.nix").channels;
               filteredChannels =
                 lib.filterAttrs
                   (n: v:
