@@ -50,7 +50,7 @@
     --terminal-color: var(--text-color);
     --line-color: #ffffff26; // Color for separating lines
     --dark-blue: #5277C3; // Blue background
-    --light-blue: #7ebae4; // nix light blue (#7EBAE4) with slightly increased lightness
+    --light-blue: #7ebae4;
 
     --result-item-show-more-background: var(--background-color);
     --result-item-show-more-color: var(--text-color);
@@ -62,7 +62,7 @@
     /* Divider between search results */
     --search-result-divider-line-color: var(--line-color);
     /* Color of the search results */
-    --search-result-title-color: #6fc5fe; // nix light blue with increased chroma and lightness
+    --search-result-title-color: var(--light-blue);
     /* Text color for the details in a search result (like name, version, outputs...) */
     --search-result-short-details-color: var(--text-color-light); // #666;
     /* When search results are expanded, they show tabbed help for installing the result. This is the border color for that tabbed thing.
