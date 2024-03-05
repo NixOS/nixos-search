@@ -37,7 +37,7 @@
 
   // Define darkmode colors
   :root {
-    --text-color: #ffffff;
+    --text-color: rgba(255, 255, 255, 0.85);
     --text-color-light: rgba(255, 255, 255, 0.5);
     --text-color-warning: #f8e45c;
     --background-color: #242424;
@@ -786,10 +786,6 @@ header .navbar.navbar-static-top {
                 }
 
               }
-
-              // // programs
-              // & > :nth-child(3) {
-              // }
 
               // maintainers and platforms
               & > :nth-child(4) {
