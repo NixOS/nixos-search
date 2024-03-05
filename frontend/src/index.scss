@@ -921,9 +921,20 @@ header .navbar.navbar-static-top {
   background: var(--info-label-background);
 }
 
-a {
+// Use the same color for focused and hovered links, as they are underlined anyway
+a,
+a:focus,
+a:hover,
+a:focus-visible {
   color: var(--link-color);
 }
+
+// // Alternative: Use a slightly more contrasty color
+// a:focus,
+// a:hover,
+// a:focus-visible {
+//   color: color-mix(in srgb, var(--link-color) 80%, var(--text-color) 20%)
+// }
 
 .pager {
   display: flex;
