@@ -37,7 +37,7 @@
 
   // Define darkmode colors
   :root {
-    --text-color: #ffffff;
+    --text-color: rgba(255, 255, 255, 0.85);
     --text-color-light: rgba(255, 255, 255, 0.5);
     --text-color-warning: #f8e45c;
     --background-color: #242424;
@@ -50,7 +50,7 @@
     --terminal-color: var(--text-color);
     --line-color: #ffffff26; // Color for separating lines
     --dark-blue: #5277C3; // Blue background
-    --light-blue: #7EBAE4; // Blue text
+    --light-blue: #7ebae4;
 
     --result-item-show-more-background: var(--background-color);
     --result-item-show-more-color: var(--text-color);
@@ -61,8 +61,8 @@
     --search-sidebar-selected-link-color: var(--text-color);
     /* Divider between search results */
     --search-result-divider-line-color: var(--line-color);
-    /* Gets overwritten by bootstrap; has no effect */
-    --search-result-title-color: var(--text-color); // #08c;
+    /* Color of the search results */
+    --search-result-title-color: var(--light-blue);
     /* Text color for the details in a search result (like name, version, outputs...) */
     --search-result-short-details-color: var(--text-color-light); // #666;
     /* When search results are expanded, they show tabbed help for installing the result. This is the border color for that tabbed thing.
@@ -82,8 +82,7 @@
     --color-active-hover-tab: #404040;
 
     /* Headerbar background color */
-    --headerbar-background-color: var(--background-color);
-    // --headerbar-background-color: #303030;
+    --headerbar-background-color: #303030;
   }
 
   // Override bootstrap styles for some common things.
@@ -161,34 +160,36 @@
   // Override bootstrap colors for the sort dropdown
   .search-results {
     .dropdown {
-      &.open {
-        background: var(--button-background);
-      }
-
-      button.btn:hover {
-        background: var(--hover-background);
-      }
+      border-radius: 4px;
 
       .caret {
         border-top-color: var(--text-color) !important;
       }
 
-      background: var(--background-color);
-      transition: background 0.2s;
-      border-radius: 4px;
+      &.open>button.btn {
+        background: var(--button-active-background);
 
-      button.btn {
+        &:hover {
+          background: var(--button-active-hover-background);
+        }
+      }
+
+      &>button.btn {
+        background: var(--button-background);
+
+        &:hover {
+          background: var(--button-hover-background);
+        }
+
         &:focus:not(:focus-visible) {
           outline: none !important;
         }
 
         border-radius: 4px;
-        background: inherit;
         color: var(--text-color);
         border: none;
         text-shadow: none;
         box-shadow: none;
-        transition: background 0.2s;
       }
     }
 
@@ -204,6 +205,7 @@
         margin: 4px;
 
         a {
+          border-radius: 4px;
           color: var(--text-color);
           background: inherit;
           transition: background 0.2s;
@@ -212,8 +214,6 @@
         a::before {
           content: none !important;
         }
-
-        overflow: hidden;
       }
 
       .header,
@@ -787,10 +787,6 @@ header .navbar.navbar-static-top {
 
               }
 
-              // // programs
-              // & > :nth-child(3) {
-              // }
-
               // maintainers and platforms
               & > :nth-child(4) {
                 margin-top: 1em;
@@ -921,9 +917,20 @@ header .navbar.navbar-static-top {
   background: var(--info-label-background);
 }
 
-a {
+// Use the same color for focused and hovered links, as they are underlined anyway
+a,
+a:focus,
+a:hover,
+a:focus-visible {
   color: var(--link-color);
 }
+
+// // Alternative: Use a slightly more contrasty color
+// a:focus,
+// a:hover,
+// a:focus-visible {
+//   color: color-mix(in srgb, var(--link-color) 80%, var(--text-color) 20%)
+// }
 
 .pager {
   display: flex;
