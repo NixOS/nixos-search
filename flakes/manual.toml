@@ -148,3 +148,8 @@ repo = "nix-vscode-extensions"
 type = "github"
 owner = "hyprwm"
 repo = "hyprland"
+
+[[sources]]
+type = "github"
+owner = "hellwolf"
+repo = "solc.nix"
