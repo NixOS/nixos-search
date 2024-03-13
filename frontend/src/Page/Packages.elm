@@ -652,7 +652,9 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         , id "package-details-nixpkgs"
                                         ]
                                         [ pre [ class "code-block shell-command" ]
-                                            [ text "nix-env -iA nixpkgs."
+                                            [ text "# without flakes:\nnix-env -iA nixpkgs."
+                                            , strong [] [ text item.source.attr_name ]
+                                            , text "# with flakes:\nnix profile install nixpkgs#"
                                             , strong [] [ text item.source.attr_name ]
                                             ]
                                         ]
