@@ -7,7 +7,7 @@ import Test.Html.Query as Query
 import Test.Html.Selector exposing (tag, text)
 
 
-{-| See <https://github.com/elm-community/elm-test>
+{-| See <https://github.com/elm-explorations/test>
 -}
 unitTest : Test
 unitTest =
@@ -21,7 +21,7 @@ unitTest =
         ]
 
 
-{-| See <https://github.com/elm-community/elm-test>
+{-| See <https://github.com/elm-explorations/test>
 -}
 fuzzTest : Test
 fuzzTest =
