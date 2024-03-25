@@ -148,3 +148,13 @@ repo = "nix-vscode-extensions"
 type = "github"
 owner = "hyprwm"
 repo = "hyprland"
+
+[[sources]]
+type = "github"
+owner = "mirrexagon"
+repo = "nixpkgs-esp-dev"
+
+[[sources]]
+type = "github"
+owner = "jonahbron"
+repo = "micropython-builder"
