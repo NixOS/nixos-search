@@ -44,6 +44,14 @@ fn print_value_indent(value: Value, indent: Indent) -> String {
             if a.is_empty() {
                 return "[ ]".to_owned();
             }
+            if a.len() == 1 {
+                // Return early if the wrapped value fits on one line
+                let val = print_value(a.first().unwrap().clone());
+                if !val.contains("\n") {
+                    return format!("[ {} ]", val);
+                }
+            }
+
             let items = a
                 .into_iter()
                 .map(|v| print_value_indent(v, indent.next()))
@@ -62,6 +70,13 @@ fn print_value_indent(value: Value, indent: Indent) -> String {
         Value::Object(o) => {
             if o.is_empty() {
                 return "{ }".to_owned();
+            }
+            if o.len() == 1 {
+                // Return early if the wrapped value fits on one line
+                let val = print_value(o.values().next().unwrap().clone());
+                if !val.contains("\n") {
+                    return format!("{{ {} = {}; }}", o.keys().next().unwrap(), val);
+                }
             }
             let items = o
                 .into_iter()
@@ -129,6 +144,26 @@ World
     }
 
     #[test]
+    fn test_list_one_item() {
+        let json = json!([1]);
+        assert_eq!(print_value(json), "[ 1 ]");
+    }
+
+    #[test]
+    fn test_list_one_multiline_item() {
+        let json = json!(["first line\nsecond line"]);
+        assert_eq!(
+            print_value(json),
+            r#"[
+  ''
+    first line
+    second line
+  ''
+]"#
+        );
+    }
+
+    #[test]
     fn test_filled_list() {
         let json = json!([1, "hello", true, null]);
         assert_eq!(
@@ -149,11 +184,32 @@ World
     }
 
     #[test]
-    fn test_filled_set() {
-        let json = json!({"hello": "world"});
+    fn test_set_one_item() {
+        let json = json!({ "hello": "world" });
+        assert_eq!(print_value(json), "{ hello = \"world\"; }");
+    }
+
+    #[test]
+    fn test_set_one_multiline_item() {
+        let json = json!({ "hello": "pretty\nworld" });
         assert_eq!(
             print_value(json),
             "{
+  hello = ''
+    pretty
+    world
+  '';
+}"
+        );
+    }
+
+    #[test]
+    fn test_filled_set() {
+        let json = json!({"hello": "world", "another": "test"});
+        assert_eq!(
+            print_value(json),
+            "{
+  another = \"test\";
   hello = \"world\";
 }"
         );
