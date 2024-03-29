@@ -19,6 +19,19 @@ pub fn print_value(value: Value) -> String {
     print_value_indent(value, Indent(0))
 }
 
+/// Formats an attrset key by adding quotes when necessary
+fn format_attrset_key(key: &str) -> String {
+    if key.contains("/")
+        || key.contains(" ")
+        || key.is_empty()
+        || (b'0'..=b'9').contains(&key.as_bytes()[0])
+    {
+        format!("{:?}", key)
+    } else {
+        key.to_string()
+    }
+}
+
 fn print_value_indent(value: Value, indent: Indent) -> String {
     match value {
         Value::Null => "null".to_owned(),
@@ -75,12 +88,22 @@ fn print_value_indent(value: Value, indent: Indent) -> String {
                 // Return early if the wrapped value fits on one line
                 let val = print_value(o.values().next().unwrap().clone());
                 if !val.contains("\n") {
-                    return format!("{{ {} = {}; }}", o.keys().next().unwrap(), val);
+                    return format!(
+                        "{{ {} = {}; }}",
+                        format_attrset_key(o.keys().next().unwrap()),
+                        val
+                    );
                 }
             }
             let items = o
                 .into_iter()
-                .map(|(k, v)| format!("{} = {}", k, print_value_indent(v, indent.next())))
+                .map(|(k, v)| {
+                    format!(
+                        "{} = {}",
+                        format_attrset_key(&k),
+                        print_value_indent(v, indent.next())
+                    )
+                })
                 .collect::<Vec<_>>()
                 .join(&format!(";\n{}", indent.next()));
 
@@ -187,6 +210,12 @@ World
     fn test_set_one_item() {
         let json = json!({ "hello": "world" });
         assert_eq!(print_value(json), "{ hello = \"world\"; }");
+    }
+
+    #[test]
+    fn test_set_number_key() {
+        let json = json!({ "1hello": "world" });
+        assert_eq!(print_value(json), "{ \"1hello\" = \"world\"; }");
     }
 
     #[test]
