@@ -493,7 +493,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                             [ p [] [ text "This package is not available on any platform." ] ]
 
                          else
-                            [ ul [] (List.map showPlatform item.source.platforms) ]
+                            [ ul [] (List.map showPlatform (List.sort item.source.platforms)) ]
                         )
                     )
                 ]
