@@ -145,7 +145,7 @@ impl Serialize for DocValue {
                     md.to_owned()
                 }))
             }
-            DocValue::Value(v) => serializer.serialize_str(&print_value(v.to_owned())),
+            DocValue::Value(v) => serializer.serialize_str(&print_value(v)),
         }
     }
 }
