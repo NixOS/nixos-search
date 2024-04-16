@@ -226,7 +226,7 @@ view :
 view nixosChannels model =
     Search.view { toRoute = Route.Packages, categoryName = "packages" }
         [ text "Search more than "
-        , strong [] [ text "80 000 packages" ]
+        , strong [] [ text "100 000 packages" ]
         ]
         nixosChannels
         model
