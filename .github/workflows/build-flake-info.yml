@@ -27,4 +27,4 @@ jobs:
 
     - name: Building flake-info
       run: |
-        nix -vL build .#flake-info
+        nix --accept-flake-config -vL build .#flake-info
