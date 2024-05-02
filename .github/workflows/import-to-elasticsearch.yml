@@ -30,7 +30,7 @@ jobs:
     - name: NixOS Channels
       id: nixos-channels
       run: |
-        nix build -L .#nixosChannels
+        nix build --accept-flake-config -L .#nixosChannels
         channels="{\"channel\": $(< ./result)}"
         echo "$channels"
         echo "matrix=$channels" >> "$GITHUB_OUTPUT"
@@ -62,7 +62,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        nix run .#flake-info -- --push --elastic-schema-version=$(< VERSION) nixpkgs ${{ matrix.channel }}
+        nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(< VERSION) nixpkgs ${{ matrix.channel }}
       if: github.repository_owner == 'NixOS'
 
     - name: Warmup ${{ matrix.channel }} channel
@@ -110,7 +110,7 @@ jobs:
 
     - name: Import ${{ matrix.group }} group
       run: |
-        nix run .#flake-info -- --push --elastic-schema-version=$(< ./VERSION) group ./flakes/${{ matrix.group }}.toml ${{ matrix.group }}
+        nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(< ./VERSION) group ./flakes/${{ matrix.group }}.toml ${{ matrix.group }}
       if: github.repository_owner == 'NixOS'
 
     - name: Warmup ${{ matrix.group }} group
