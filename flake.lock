@@ -49,6 +49,21 @@
         "type": "indirect"
       }
     },
+    "nixpkgs-npmlock2nix": {
+      "locked": {
+        "lastModified": 1636623366,
+        "narHash": "sha256-jOQMlv9qFSj0U66HB+ujZoapty0UbewmSNbX8+3ujUQ=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "c5ed8beb478a8ca035f033f659b60c89500a3034",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "rev": "c5ed8beb478a8ca035f033f659b60c89500a3034",
+        "type": "indirect"
+      }
+    },
     "npmlock2nix": {
       "flake": false,
       "locked": {
@@ -70,6 +85,7 @@
         "flake-utils": "flake-utils",
         "nixos-infra": "nixos-infra",
         "nixpkgs": "nixpkgs",
+        "nixpkgs-npmlock2nix": "nixpkgs-npmlock2nix",
         "npmlock2nix": "npmlock2nix"
       }
     },
