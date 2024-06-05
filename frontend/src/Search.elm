@@ -845,7 +845,7 @@ viewResult nixosChannels outMsg toRoute categoryName model viewSuccess viewBucke
                             ( "Timeout!", "Request to the server timeout." )
 
                         Http.NetworkError ->
-                            ( "Network Error!", "A network request bonsaisearch.net domain failed. This is either due to a content blocker or a networking issue." )
+                            ( "Network Error!", "A network request to the search backend failed. This is either due to a content blocker or a networking issue." )
 
                         Http.BadStatus code ->
                             ( "Bad Status", "Server returned " ++ String.fromInt code )
