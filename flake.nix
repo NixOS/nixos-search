@@ -129,7 +129,7 @@
             extraShellHook = ''
               export PATH=$PWD/frontend/node_modules/.bin:$PATH
               rm -rf frontend/node_modules
-              ln -sf ${packages.frontend.yarnPkg}/libexec/${(builtins.parseDrvName packages.frontend.name).name}/node_modules frontend/
+              ln -sf ${packages.frontend.node_modules}/node_modules frontend/
               echo "========================================================"
               echo "= To develop the frontend run: cd frontend && yarn dev ="
               echo "========================================================"
