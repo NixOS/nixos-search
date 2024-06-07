@@ -92,11 +92,6 @@ repo = "nix-security"
 
 [[sources]]
 type = "github"
-owner = "astro"
-repo = "microvm.nix"
-
-[[sources]]
-type = "github"
 owner = "lnbits"
 repo = "lnbits-legend"
 
