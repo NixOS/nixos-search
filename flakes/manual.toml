@@ -78,11 +78,6 @@ owner = "PrismLauncher"
 repo = "PrismLauncher"
 
 [[sources]]
-type = "gitlab"
-owner = "simple-nixos-mailserver"
-repo = "nixos-mailserver"
-
-[[sources]]
 type = "git"
 url = "git+https://codeberg.org/wolfangaukang/stream-alert-bot?ref=main"
 
