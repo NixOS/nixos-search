@@ -490,7 +490,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                 , div []
                     (List.append [ h4 [] [ text "Platforms" ] ]
                         (if List.isEmpty item.source.platforms then
-                            [ p [] [ text "This package is not available on any platform." ] ]
+                            [ p [] [ text "This package does not list its available platforms." ] ]
 
                          else
                             [ ul [] (List.map showPlatform (List.sort item.source.platforms)) ]
