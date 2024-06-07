@@ -226,7 +226,7 @@ view :
 view nixosChannels model =
     Search.view { toRoute = Route.Packages, categoryName = "packages" }
         [ text "Search more than "
-        , strong [] [ text "80 000 packages" ]
+        , strong [] [ text "100 000 packages" ]
         ]
         nixosChannels
         model
@@ -490,10 +490,10 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                 , div []
                     (List.append [ h4 [] [ text "Platforms" ] ]
                         (if List.isEmpty item.source.platforms then
-                            [ p [] [ text "This package is not available on any platform." ] ]
+                            [ p [] [ text "This package does not list its available platforms." ] ]
 
                          else
-                            [ ul [] (List.map showPlatform item.source.platforms) ]
+                            [ ul [] (List.map showPlatform (List.sort item.source.platforms)) ]
                         )
                     )
                 ]

@@ -21,8 +21,3 @@ runs:
       with:
         name: nixos-search
         signingKey: '${{ inputs.CACHIX_SIGNING_KEY }}'
-
-    - name: Installing jq
-      shell: bash
-      run: |
-        nix-env -f '<nixpkgs>' -iA jq

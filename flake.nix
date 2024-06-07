@@ -6,21 +6,25 @@
 
   inputs.nixpkgs.url = "nixpkgs/nixos-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
+  # https://github.com/nix-community/npmlock2nix/blob/master/nix/sources.json
+  inputs.nixpkgs-npmlock2nix.url = "nixpkgs/c5ed8beb478a8ca035f033f659b60c89500a3034";
   inputs.npmlock2nix.url = "github:nix-community/npmlock2nix";
   inputs.npmlock2nix.flake = false;
-  inputs.nixos-org-configurations.url = "github:NixOS/nixos-org-configurations";
-  inputs.nixos-org-configurations.flake = false;
+  inputs.nixos-infra.url = "github:NixOS/infra";
+  inputs.nixos-infra.flake = false;
 
   outputs = { self
             , nixpkgs
+            , nixpkgs-npmlock2nix
             , flake-utils
             , npmlock2nix
-            , nixos-org-configurations
+            , nixos-infra
             }:
     flake-utils.lib.eachDefaultSystem
       (system:
         let
-          pkgs = import nixpkgs {
+          pkgs = import nixpkgs { inherit system; };
+          pkgsNpmlock2nix = import nixpkgs-npmlock2nix {
             inherit system;
             overlays = [
               (self: super: {
@@ -33,7 +37,7 @@
           version = lib.fileContents ./VERSION;
           nixosChannels =
             let
-              allChannels = (import "${nixos-org-configurations}/channels.nix").channels;
+              allChannels = (import "${nixos-infra}/channels.nix").channels;
               filteredChannels =
                 lib.filterAttrs
                   (n: v:
@@ -86,7 +90,12 @@
 
           packages.default = packages.flake-info;
           packages.flake-info = import ./flake-info { inherit pkgs; };
-          packages.frontend = import ./frontend { inherit pkgs nixosChannels version; };
+          packages.frontend = import ./frontend {
+            pkgs = pkgs // {
+              inherit (pkgsNpmlock2nix) npmlock2nix;
+            };
+            inherit nixosChannels version;
+          };
           packages.nixosChannels = nixosChannelsFile;
 
           devShells.default = mkDevShell {
@@ -120,7 +129,7 @@
             extraShellHook = ''
               export PATH=$PWD/frontend/node_modules/.bin:$PATH
               rm -rf frontend/node_modules
-              ln -sf ${packages.frontend.yarnPkg}/libexec/${(builtins.parseDrvName packages.frontend.name).name}/node_modules frontend/
+              ln -sf ${packages.frontend.node_modules}/node_modules frontend/
               echo "========================================================"
               echo "= To develop the frontend run: cd frontend && yarn dev ="
               echo "========================================================"
