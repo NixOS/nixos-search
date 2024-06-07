@@ -718,7 +718,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                                     ]
                                                 ]
                                                 [ pre [ class "code-block shell-command" ]
-                                                    [ text "nix build "
+                                                    [ text "nix profile install "
                                                     , strong [] [ text url ]
                                                     , text "#"
                                                     , em [] [ text item.source.attr_name ]
