@@ -127,7 +127,7 @@ An example `targets.json` file can look like the following
 ```
 
 ```
-$ flake-info group ./targets.json small-group
+$ flake-info --json group ./targets.json small-group
 ```
 
 ### Elasticsearch

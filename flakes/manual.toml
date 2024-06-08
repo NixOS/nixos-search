@@ -45,16 +45,6 @@ repo = "neuropil"
 
 [[sources]]
 type = "github"
-owner = "tweag"
-repo = "nickel"
-
-[[sources]]
-type = "github"
-owner = "pinpox"
-repo = "nixos"
-
-[[sources]]
-type = "github"
 owner = "Mic92"
 repo = "sops-nix"
 
@@ -79,11 +69,6 @@ owner = "yusdacra"
 repo = "rust-nix-templater"
 
 [[sources]]
-type = "github"
-owner = "srid"
-repo = "emanote"
-
-[[sources]]
 type = "git"
 url = "git+https://git.sr.ht/~kerstin/sway-timetracker?ref=main"
 
@@ -91,15 +76,6 @@ url = "git+https://git.sr.ht/~kerstin/sway-timetracker?ref=main"
 type = "github"
 owner = "PrismLauncher"
 repo = "PrismLauncher"
-
-[[sources]]
-type = "gitlab"
-owner = "simple-nixos-mailserver"
-repo = "nixos-mailserver"
-
-[[sources]]
-type = "git"
-url = "git+https://codeberg.org/wolfangaukang/stream-alert-bot?ref=main"
 
 [[sources]]
 type = "git"
@@ -113,11 +89,6 @@ url = "git+https://codeberg.org/wolfangaukang/multifirefox?ref=main"
 type = "github"
 owner = "juliosueiras-nix"
 repo = "nix-security"
-
-[[sources]]
-type = "github"
-owner = "astro"
-repo = "microvm.nix"
 
 [[sources]]
 type = "github"
