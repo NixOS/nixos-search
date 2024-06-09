@@ -1,6 +1,7 @@
 module Main exposing (main)
 
 import Browser
+import Browser.Dom
 import Browser.Navigation
 import Html
     exposing
@@ -38,6 +39,8 @@ import Search
         , decodeNixOSChannels
         , defaultFlakeId
         )
+import Shortcut
+import Task
 import Url
 
 
@@ -113,6 +116,8 @@ type Msg
     | PackagesMsg Page.Packages.Msg
     | OptionsMsg Page.Options.Msg
     | FlakesMsg Page.Flakes.Msg
+    | CtrlKRegistered
+    | SearchFocusResult (Result Browser.Dom.Error ())
 
 
 updateWith :
@@ -326,6 +331,9 @@ update msg model =
             Page.Flakes.update model.navKey subMsg subModel model.nixosChannels
                 |> updateWith Flakes FlakesMsg model
 
+        ( CtrlKRegistered, _ ) ->
+            ( model, Browser.Dom.focus "search-query-input" |> Task.attempt SearchFocusResult )
+
         _ ->
             -- Disregard messages that arrived for the wrong page.
             ( model, Cmd.none )
@@ -379,39 +387,52 @@ view model =
     in
     { title = title
     , body =
-        [ div []
-            [ header []
-                [ div [ class "navbar navbar-static-top" ]
-                    [ div [ class "navbar-inner" ]
-                        [ div [ class "container" ]
-                            [ a [ class "brand", href "https://nixos.org" ]
-                                [ img [ alt "NixOS logo", src "/images/nix-logo.png", class "logo" ] []
-                                ]
-                            , div []
-                                [ ul [ class "nav pull-left" ]
-                                    (viewNavigation model.route)
+        [ Shortcut.shortcutElement
+            [ { msg = CtrlKRegistered
+              , keyCombination =
+                  { baseKey = Shortcut.Regular "K"
+                  , shift = Nothing
+                  , alt = Nothing
+                  , meta = Nothing
+                  , ctrl = Just True
+                  }
+                },
+            Shortcut.simpleShortcut (Shortcut.Regular "/") <| CtrlKRegistered ]
+            []
+            [ div []
+                [ header []
+                    [ div [ class "navbar navbar-static-top" ]
+                        [ div [ class "navbar-inner" ]
+                            [ div [ class "container" ]
+                                [ a [ class "brand", href "https://nixos.org" ]
+                                    [ img [ alt "NixOS logo", src "/images/nix-logo.png", class "logo" ] []
+                                    ]
+                                , div []
+                                    [ ul [ class "nav pull-left" ]
+                                        (viewNavigation model.route)
+                                    ]
                                 ]
                             ]
                         ]
                     ]
-                ]
-            , div [ class "container main" ]
-                [ div [ id "content" ] [ viewPage model ]
-                , footer
-                    [ class "container text-center" ]
-                    [ div []
-                        [ span [] [ text "Please help us improve the search by " ]
-                        , a
-                            [ href "https://github.com/NixOS/nixos-search/issues"
+                , div [ class "container main" ]
+                    [ div [ id "content" ] [ viewPage model ]
+                    , footer
+                        [ class "container text-center" ]
+                        [ div []
+                            [ span [] [ text "Please help us improve the search by " ]
+                            , a
+                                [ href "https://github.com/NixOS/nixos-search/issues"
+                                ]
+                                [ text "reporting issues" ]
+                            , span [] [ text "." ]
                             ]
-                            [ text "reporting issues" ]
-                        , span [] [ text "." ]
-                        ]
-                    , div []
-                        [ span [] [ text "❤️  " ]
-                        , span [] [ text "Elasticsearch instance graciously provided by " ]
-                        , a [ href "https://bonsai.io" ] [ text "Bonsai" ]
-                        , span [] [ text ". Thank you! ❤️ " ]
+                        , div []
+                            [ span [] [ text "❤️  " ]
+                            , span [] [ text "Elasticsearch instance graciously provided by " ]
+                            , a [ href "https://bonsai.io" ] [ text "Bonsai" ]
+                            , span [] [ text ". Thank you! ❤️ " ]
+                            ]
                         ]
                     ]
                 ]
