@@ -1,6 +1,7 @@
 'use strict';
 
 require("./index.scss");
+require("elm-keyboard-shortcut")
 
 const {Elm} = require('./Main');
 
