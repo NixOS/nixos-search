@@ -1079,7 +1079,7 @@ viewResults nixosChannels model result viewSuccess _ outMsg categoryName =
                   [
                     text "Data from nixpkgs "
                     , a [ href ("https://github.com/NixOS/nixpkgs/commit/" ++ commit) ]
-                    [ (code [] [ text (String.slice 0 12 commit) ]) ]
+                    [ (code [] [ text (String.slice 0 8 commit) ]) ]
                     , text "."
                   ]
           )
