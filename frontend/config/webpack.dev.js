@@ -29,5 +29,5 @@ const dev = {
 
 module.exports = env => {
     const withDebug = !env.nodebug;
-    return merge(common(withDebug), dev);
+    return merge(common(withDebug, false), dev);
 }

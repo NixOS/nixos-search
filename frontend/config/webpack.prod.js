@@ -61,4 +61,4 @@ const prod = {
 
 };
 
-module.exports = merge(common(false), prod);
+module.exports = merge(common(false, true), prod);
