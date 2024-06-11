@@ -471,14 +471,14 @@ header .navbar.navbar-static-top {
     &:before {
       content: "\2315";
       display: inline-block;
-      font-size: 1.5em;
+      font-size: 2em;
       margin-right: 0.2em;
       -moz-transform: scale(-1, 1);
       -webkit-transform: scale(-1, 1);
       -o-transform: scale(-1, 1);
       -ms-transform: scale(-1, 1);
-      transform: scale(-1,  1);
-      vertical-align: text-bottom;
+      transform: translateY(0.15em) scaleX(-1);
+      font-family: monospace;
     }
   }
 
