@@ -107,6 +107,11 @@ repo = "filestash-nix"
 
 [[sources]]
 type = "github"
+owner = "nixified-ai"
+repo = "flake"
+
+[[sources]]
+type = "github"
 owner = "nix-community"
 repo = "nix-vscode-extensions"
 
