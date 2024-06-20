@@ -18,3 +18,4 @@ repl-temp-*
 result
 src-url
 .direnv/
+.sl
