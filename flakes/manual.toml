@@ -114,3 +114,10 @@ repo = "nix-vscode-extensions"
 type = "github"
 owner = "hyprwm"
 repo = "hyprland"
+
+[[sources]]
+# Please open upstream issue when removing:
+# https://github.com/astro/microvm.nix/issues/new
+type = "github"
+owner = "astro"
+repo = "microvm.nix"
