@@ -1,0 +1,9 @@
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "fenix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-vscode-extensions"

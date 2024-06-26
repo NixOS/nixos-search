@@ -110,6 +110,7 @@ jobs:
 
     - name: Import ${{ matrix.group }} group
       run: |
+        cat $(find ./flakes/${{ matrix.group }}/ -type f -name '*.toml') > ./flakes/${{ matrix.group }}.toml
         nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(< ./VERSION) group ./flakes/${{ matrix.group }}.toml ${{ matrix.group }}
       if: github.repository_owner == 'NixOS'
 

@@ -1,0 +1,19 @@
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "offen"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "lightmeter"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "openpgp-ca"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "weblate"
