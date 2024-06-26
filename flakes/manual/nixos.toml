@@ -1,0 +1,4 @@
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "hydra"

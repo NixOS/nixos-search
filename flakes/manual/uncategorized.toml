@@ -1,35 +1,5 @@
 [[sources]]
 type = "github"
-owner = "NixOS"
-repo = "hydra"
-
-[[sources]]
-type = "github"
-owner = "ngi-nix"
-repo = "offen"
-
-[[sources]]
-type = "github"
-owner = "ngi-nix"
-repo = "lightmeter"
-
-[[sources]]
-type = "github"
-owner = "ngi-nix"
-repo = "openpgp-ca"
-
-[[sources]]
-type = "github"
-owner = "ngi-nix"
-repo = "weblate"
-
-[[sources]]
-type = "github"
-owner = "nix-community"
-repo = "fenix"
-
-[[sources]]
-type = "github"
 owner = "fort-nix"
 repo = "nix-bitcoin"
 
@@ -119,11 +89,6 @@ repo = "nix-software-center"
 type = "github"
 owner = "snowfallorg"
 repo = "nixos-conf-editor"
-
-[[sources]]
-type = "github"
-owner = "nix-community"
-repo = "nix-vscode-extensions"
 
 [[sources]]
 type = "github"
