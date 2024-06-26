@@ -45,6 +45,11 @@ repo = "sops-nix"
 
 [[sources]]
 type = "github"
+owner = "ryantm"
+repo = "agenix"
+
+[[sources]]
+type = "github"
 owner = "PaddiM8"
 repo = "kalker"
 
