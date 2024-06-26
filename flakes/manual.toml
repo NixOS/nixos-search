@@ -121,3 +121,8 @@ repo = "hyprland"
 type = "github"
 owner = "astro"
 repo = "microvm.nix"
+
+[[sources]]
+type = "github"
+owner = "Svenum"
+repo = "Solaar-Flake"
