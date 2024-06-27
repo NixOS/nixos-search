@@ -1,4 +1,4 @@
-module Page.Packages exposing
+port module Page.Packages exposing
     ( Model
     , Msg(..)
     , decodeResultAggregations
@@ -17,6 +17,7 @@ import Html
     exposing
         ( Html
         , a
+        , button
         , code
         , div
         , em
@@ -35,6 +36,7 @@ import Html.Attributes
         , classList
         , href
         , id
+        , style
         , target
         )
 import Html.Events exposing (onClick)
@@ -52,6 +54,9 @@ import Search
         , viewBucket
         )
 import Utils
+
+
+port copyToClipboard : String -> Cmd msg
 
 
 
@@ -192,6 +197,7 @@ platforms =
 
 type Msg
     = SearchMsg (Search.Msg ResultItemSource ResultAggregations)
+    | CopyToClipboard String
 
 
 update :
@@ -213,6 +219,9 @@ update navKey msg model nixosChannels =
                         nixosChannels
             in
             ( newModel, Cmd.map SearchMsg newCmd )
+
+        CopyToClipboard text ->
+            ( model, copyToClipboard text )
 
 
 
@@ -651,7 +660,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         , class "tab-pane"
                                         , id "package-details-nixpkgs"
                                         ]
-                                        [ pre [ class "code-block shell-command" ]
+                                        [ pre [ class "code-block shell-command", style "display" "block" ]
                                             [ text "# without flakes:\nnix-env -iA nixpkgs."
                                             , strong [] [ text item.source.attr_name ]
                                             , text "\n# with flakes:\nnix profile install nixpkgs#"
@@ -677,9 +686,23 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         , id "package-details-nixpkgs"
                                         ]
                                         [ pre [ class "code-block" ]
-                                            [ text <| "  environment.systemPackages = [\n    pkgs."
-                                            , strong [] [ text item.source.attr_name ]
-                                            , text <| "\n  ];"
+                                            [ div []
+                                                [ text <| "  environment.systemPackages = [\n    pkgs."
+                                                , strong [] [ text item.source.attr_name ]
+                                                , text <| "\n  ];"
+                                                ]
+                                            , button
+                                                [ class "copy-to-clipboard-button"
+                                                , onClick <|
+                                                    CopyToClipboard
+                                                        ("  environment.systemPackages = [\n    pkgs."
+                                                            ++ item.source.attr_name
+                                                            ++ "\n  ];"
+                                                        )
+                                                ]
+                                                [ text
+                                                    "📋"
+                                                ]
                                             ]
                                         ]
                                     , div
@@ -707,6 +730,10 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         [ pre [ class "code-block shell-command" ]
                                             [ text "nix-shell -p "
                                             , strong [] [ text item.source.attr_name ]
+                                            , button [ class "copy-to-clipboard-button", onClick <| CopyToClipboard ("nix-shell -p " ++ item.source.attr_name) ]
+                                                [ text
+                                                    "📋"
+                                                ]
                                             ]
                                         ]
                                     ]
