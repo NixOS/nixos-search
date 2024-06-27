@@ -141,3 +141,13 @@ repo = "microvm.nix"
 type = "github"
 owner = "Svenum"
 repo = "Solaar-Flake"
+
+[[sources]]
+type = "github"
+owner = "mirrexagon"
+repo = "nixpkgs-esp-dev"
+
+[[sources]]
+type = "github"
+owner = "jonahbron"
+repo = "micropython-builder"
