@@ -151,3 +151,8 @@ repo = "nixpkgs-esp-dev"
 type = "github"
 owner = "jonahbron"
 repo = "micropython-builder"
+
+[[sources]]
+type = "github"
+owner = "hellwolf"
+repo = "solc.nix"
