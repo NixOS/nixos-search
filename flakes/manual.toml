@@ -161,3 +161,8 @@ repo = "solc.nix"
 type = "github"
 owner = "anpandey"
 repo = "numen-nix"
+
+[[sources]]
+type = "github"
+owner = "StardustXR"
+repo = "telescope"
