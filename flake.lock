@@ -21,11 +21,11 @@
     "nixos-infra": {
       "flake": false,
       "locked": {
-        "lastModified": 1719011374,
-        "narHash": "sha256-U+gvR9PpPkVo3o/JrgdYmdg4lWFxF8u5tNp2HkTGrUQ=",
+        "lastModified": 1719512984,
+        "narHash": "sha256-Mp16JvE5A9RxMh1vFuwUroInbzM0ZZZ+x/GFVQYt6PQ=",
         "owner": "NixOS",
         "repo": "infra",
-        "rev": "e890dcb72509b86c1285817a24b54c62ee0e43da",
+        "rev": "8ff24cb2648f7f08749d5891aa9b0bacb638fe84",
         "type": "github"
       },
       "original": {
@@ -36,11 +36,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1718895438,
-        "narHash": "sha256-k3JqJrkdoYwE3fHE6xGDY676AYmyh4U2Zw+0Bwe5DLU=",
+        "lastModified": 1719506693,
+        "narHash": "sha256-C8e9S7RzshSdHB7L+v9I51af1gDM5unhJ2xO1ywxNH8=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "d603719ec6e294f034936c0d0dc06f689d91b6c3",
+        "rev": "b2852eb9365c6de48ffb0dc2c9562591f652242a",
         "type": "github"
       },
       "original": {
