@@ -166,3 +166,7 @@ repo = "numen-nix"
 type = "github"
 owner = "StardustXR"
 repo = "telescope"
+
+[[sources]]
+type = "git"
+url = "git+https://gitlab.freedesktop.org/monado/monado.git?ref=main"
