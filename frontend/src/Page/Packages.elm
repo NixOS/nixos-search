@@ -477,7 +477,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                 [ div []
                     (List.append [ h4 [] [ text "Maintainers" ] ]
                         (if List.isEmpty item.source.maintainers then
-                            [ p [] [ text "This package has no maintainers." ] ]
+                            [ p [] [ text "This package has no maintainers. If you find it useful, please consider becoming a maintainer!" ] ]
 
                          else
                             [ ul []
