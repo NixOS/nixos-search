@@ -166,3 +166,8 @@ repo = "numen-nix"
 type = "github"
 owner = "StardustXR"
 repo = "telescope"
+
+[[sources]]
+type = "github"
+owner = "nilp0inter"
+repo = "autofirma-nix"
