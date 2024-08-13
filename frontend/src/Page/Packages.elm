@@ -505,7 +505,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                     p [] [ text "This package provides no programs." ]
 
                   else
-                    p [] (List.intersperse (text " ") (List.map (\p -> code [] [ text p ]) item.source.programs))
+                    p [] (List.intersperse (text " ") (List.map (\p -> code [] [ text p ]) (List.sort item.source.programs)))
                 ]
 
         longerPackageDetails =
