@@ -122,6 +122,11 @@ repo = "weblate"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "authentik-nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "autofirma-nix"
 
 [[sources]]
