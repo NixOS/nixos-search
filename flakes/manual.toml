@@ -159,6 +159,11 @@ repo = "solc.nix"
 
 [[sources]]
 type = "github"
+owner = "daeuniverse"
+repo = "flake.nix"
+
+[[sources]]
+type = "github"
 owner = "anpandey"
 repo = "numen-nix"
 
