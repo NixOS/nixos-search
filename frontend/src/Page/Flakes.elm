@@ -1,4 +1,4 @@
-module Page.Flakes exposing
+port module Page.Flakes exposing
     ( Model(..)
     , Msg(..)
     , init
@@ -39,6 +39,9 @@ import Search
         , viewResult
         , viewSearchInput
         )
+
+
+port copyToClipboard : String -> Cmd msg
 
 
 
@@ -139,6 +142,9 @@ update navKey msg model nixosChannels =
                                 nixosChannels
                     in
                     ( newModel, Cmd.map Page.Packages.SearchMsg newCmd ) |> Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg)
+
+                CopyToClipboard text ->
+                    ( model, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
