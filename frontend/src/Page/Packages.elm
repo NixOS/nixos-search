@@ -76,6 +76,7 @@ type alias ResultItemSource =
     , platforms : List String
     , position : Maybe String
     , homepage : List String
+    , repository : List String
     , system : String
     , hydra : Maybe (List ResultPackageHydra)
     , flakeName : Maybe String
@@ -379,6 +380,12 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         )
                                     |> Maybe.withDefault []
                                )
+                            -- ++ (item.source.repository
+                            --         |> List.head
+                            --         |> Maybe.map
+                            --         (\x -> [ li [ trapClick ] [ createShortDetailsItem "Repo" x ] ])
+                            --              |> Maybe.withDefault []
+                            --    )
                             ++ renderSource item nixosChannels channel trapClick createShortDetailsItem createGithubUrl
                             ++ (let
                                     licenses =
@@ -967,6 +974,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.required "package_platforms" (Json.Decode.map filterPlatforms (Json.Decode.list Json.Decode.string))
         |> Json.Decode.Pipeline.required "package_position" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_homepage" decodeHomepage
+        |> Json.Decode.Pipeline.required "package_repository" decodeHomepage
         |> Json.Decode.Pipeline.required "package_system" Json.Decode.string
         |> Json.Decode.Pipeline.required "package_hydra" (Json.Decode.nullable (Json.Decode.list decodeResultPackageHydra))
         |> Json.Decode.Pipeline.optional "flake_name" (Json.Decode.map Just Json.Decode.string) Nothing
