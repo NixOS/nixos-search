@@ -84,7 +84,7 @@ $ flake-info flake github:ngi-nix/offen
 
 nixpkgs currently have to be imported in a different way. This is what the `nixpkgs` subcommand exists for.
 
-It takes any valid git reference to the upstream [`nixos/nixpkgs`](https://github.com/iixos/nixpkgs/) repo as an argument and produces a complete output.
+It takes any valid git reference to the upstream [`nixos/nixpkgs`](https://github.com/nixos/nixpkgs/) repo as an argument and produces a complete output.
 
 **This operation may take a short while and produces lots of output**
 
