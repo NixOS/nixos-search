@@ -871,7 +871,7 @@ viewNoResults categoryName =
     div [ class "search-no-results" ]
         [ h2 [] [ text <| "No " ++ categoryName ++ " found!" ]
         , text "You might want to "
-        , Html.a [ href "https://nixos.org/manual/nixpkgs/stable/#chap-quick-start" ] [ text "add a package" ]
+        , Html.a [ href "https://github.com/NixOS/nixpkgs/blob/master/pkgs/README.md#quick-start-to-adding-a-package" ] [ text "add a package" ]
         , text " or "
         , a [ href "https://github.com/NixOS/nixpkgs/issues/new?assignees=&labels=0.kind%3A+packaging+request&template=packaging_request.md&title=Package+request%3A+PACKAGENAME" ] [ text "make a packaging request" ]
         , text "."
