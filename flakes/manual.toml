@@ -171,3 +171,8 @@ repo = "telescope"
 type = "github"
 owner = "nilp0inter"
 repo = "autofirma-nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "authentik-nix"
