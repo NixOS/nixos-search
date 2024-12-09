@@ -61,7 +61,7 @@ application.
 
 ## Adding flakes
 
-To add your own flakes to the search index edit [./flakes/manual.toml](./flakes/manual.toml).
+To add your own flakes to the search index, add a file under `./flakes/manual`.
 
 Possible types are `github`, `gitlab`, `sourcehut`, and `git` (which is the fallback for any kind of git repository but requires to set a revision key manually as of now).
 

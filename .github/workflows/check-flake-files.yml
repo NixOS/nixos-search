@@ -20,6 +20,8 @@ jobs:
 
     - name: Checking out the repository
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Setup
       uses: ./.github/actions/common-setup
@@ -33,11 +35,13 @@ jobs:
 
         had_error=0
 
-        for flake_group in flakes/**/*.toml
-        do
-          echo "::group::Group \"$(basename $flake_group .toml)\""
+        for folder in flakes/*/; do
+          flake_group=$(basename "$folder")
+          echo "::group::Group \""$flake_group"\""
 
-         nix run --accept-flake-config .#flake-info -- --json group "$flake_group" "$(basename "$flake_group" .toml)" --report
+          flake_toml=flakes/"$flake_group".toml
+          cat $(git diff --name-only HEAD~1 -- "$folder"/*.toml) > "$flake_toml"
+          nix run --accept-flake-config .#flake-info -- --json group "$flake_toml" "$flake_group" --report
 
           if [[ -f "./report.txt" ]]
           then
@@ -50,7 +54,7 @@ jobs:
             report="${report//$'\n'/'%0A'}"
             report="${report//$'\r'/'%0D'}"
 
-            echo "::error file=$flake_group::$report"
+            echo "::error file=$flake_toml::$report"
           fi
 
           echo ::endgroup::
