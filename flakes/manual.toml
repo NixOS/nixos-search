@@ -4,6 +4,14 @@ owner = "NixOS"
 repo = "hydra"
 
 [[sources]]
+type = "git"
+url = "git+https://github.com/hannesgith/rquickshare?ref=flake"
+
+[[sources]]
+type = "git"
+url = "git+https://github.com/hannesgith/neohtop?ref=nixify"
+
+[[sources]]
 type = "github"
 owner = "ngi-nix"
 repo = "offen"
