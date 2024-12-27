@@ -169,5 +169,5 @@ repo = "telescope"
 
 [[sources]]
 type = "github"
-owner = "nilp0inter"
+owner = "nix-community"
 repo = "autofirma-nix"
