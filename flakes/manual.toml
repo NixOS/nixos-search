@@ -171,3 +171,8 @@ repo = "telescope"
 type = "github"
 owner = "nix-community"
 repo = "autofirma-nix"
+
+[[sources]]
+type = "github"
+owner = "kashw2"
+repo = "bitbucket-runner-nix"
