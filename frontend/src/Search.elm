@@ -873,7 +873,7 @@ viewNoResults categoryName =
         , text "You might want to "
         , Html.a [ href "https://github.com/NixOS/nixpkgs/blob/master/pkgs/README.md#quick-start-to-adding-a-package" ] [ text "add a package" ]
         , text " or "
-        , a [ href "https://github.com/NixOS/nixpkgs/issues/new?assignees=&labels=0.kind%3A+packaging+request&template=packaging_request.md&title=Package+request%3A+PACKAGENAME" ] [ text "make a packaging request" ]
+        , a [ href "https://github.com/NixOS/nixpkgs/issues/new?template=05_package_request.yml" ] [ text "make a packaging request" ]
         , text "."
         ]
 
