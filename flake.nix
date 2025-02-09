@@ -4,7 +4,7 @@
   nixConfig.extra-substituters = [ "https://nixos-search.cachix.org" ];
   nixConfig.extra-trusted-public-keys = [ "nixos-search.cachix.org-1:1HV3YF8az4fywnH+pAd+CXFEdpTXtv9WpoivPi+H70o=" ];
 
-  inputs.nixpkgs.url = "nixpkgs/nixos-unstable";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs?rev=e3652e0735fbec227f342712f180f4f21f0594f2";
   inputs.flake-utils.url = "github:numtide/flake-utils";
   # https://github.com/nix-community/npmlock2nix/blob/master/nix/sources.json
   inputs.nixpkgs-npmlock2nix.url = "nixpkgs/c5ed8beb478a8ca035f033f659b60c89500a3034";

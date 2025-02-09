@@ -187,6 +187,7 @@ pub struct Meta {
     pub license: Option<OneOrMany<StringOrStruct<License>>>,
     pub maintainers: Option<Flatten<Maintainer>>,
     pub homepage: Option<OneOrMany<String>>,
+    pub repository: Option<OneOrMany<String>>,
     pub platforms: Option<Platforms>,
     #[serde(rename = "badPlatforms")]
     pub bad_platforms: Option<Platforms>,
