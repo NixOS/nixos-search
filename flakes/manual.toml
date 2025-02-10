@@ -173,6 +173,5 @@ owner = "nix-community"
 repo = "autofirma-nix"
 
 [[sources]]
-type = "github"
-owner = "kashw2"
-repo = "bitbucket-runner-nix"
+type = "git"
+url = "git+https://github.com/kashw2/bitbucket-runner-nix"
