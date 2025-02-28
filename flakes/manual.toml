@@ -184,3 +184,8 @@ url = "git+https://github.com/TamtamHero/fw-fanctrl?ref=packaging/nix"
 [[sources]]
 type = "git"
 url = "git+https://github.com/kashw2/bitbucket-runner-nix"
+
+[[sources]]
+type = "github"
+owner = "CertainLach"
+repo = "fleet"
