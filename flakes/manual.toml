@@ -177,3 +177,6 @@ type = "github"
 owner = "bobvanderlinden"
 repo = "nixpkgs-ruby"
 
+[[sources]]
+type = "git"
+url = "git+https://github.com/TamtamHero/fw-fanctrl?ref=packaging/nix"
