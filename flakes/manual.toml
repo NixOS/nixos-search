@@ -92,6 +92,11 @@ repo = "nix-security"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "home-manager"
+
+[[sources]]
+type = "github"
 owner = "lnbits"
 repo = "lnbits-legend"
 
