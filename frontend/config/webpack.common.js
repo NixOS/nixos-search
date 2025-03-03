@@ -6,7 +6,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const {CleanWebpackPlugin} = require('clean-webpack-plugin');
 
 
-module.exports = (withDebug) => {
+module.exports = (withDebug, optimize) => {
     return {
         entry: './src/index.js',
         output: {
@@ -45,7 +45,7 @@ module.exports = (withDebug) => {
                             options: {
                                 // add Elm's debug overlay to output
                                 debug: withDebug,
-                                optimize: false
+                                optimize: optimize,
                             }
                         }
                     ]
