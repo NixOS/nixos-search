@@ -194,3 +194,8 @@ url = "git+https://github.com/kashw2/bitbucket-runner-nix"
 type = "github"
 owner = "CertainLach"
 repo = "fleet"
+
+[[sources]]
+type = "github"
+owner = "TraceMachina"
+repo = "nativelink"
