@@ -415,8 +415,14 @@ body {
 }
 
 .code-block {
-  display: block;
+  display: flex;
   cursor: text;
+  align-items: center;
+}
+
+.copy-to-clipboard-button {
+  height: max-content;
+  margin-left: auto;
 }
 
 .shell-command:before {
