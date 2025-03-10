@@ -83,3 +83,4 @@ We generally try to include a wide range of flakes that could be of interest to 
 * Lack of relevance
 * Programs that are already part of nixpkgs (we prefer you help maintain them there)
 * Outdated package or packaging
+* Flakes that require `allow-import-from-derivation`
