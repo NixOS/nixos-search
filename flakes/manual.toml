@@ -181,6 +181,11 @@ repo = "telescope"
 
 [[sources]]
 type = "github"
+owner = "surrealdb"
+repo = "surrealdb"
+
+[[sources]]
+type = "github"
 owner = "Svenum"
 repo = "Solaar-Flake"
 
