@@ -46,6 +46,11 @@ repo = "fleet"
 
 [[sources]]
 type = "github"
+owner = "dgollings"
+repo = "nix-atlas"
+
+[[sources]]
+type = "github"
 owner = "fort-nix"
 repo = "nix-bitcoin"
 
