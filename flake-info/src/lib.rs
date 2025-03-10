@@ -41,13 +41,13 @@ pub fn process_flake(
 
 pub fn process_nixpkgs(nixpkgs: &Source, kind: &Kind) -> Result<Vec<Export>, anyhow::Error> {
     let drvs = if matches!(kind, Kind::All | Kind::Package) {
-        commands::get_nixpkgs_info(nixpkgs.to_flake_ref())?
+        commands::get_nixpkgs_info(nixpkgs)?
     } else {
         Vec::new()
     };
 
     let mut options = if matches!(kind, Kind::All | Kind::Option) {
-        commands::get_nixpkgs_options(nixpkgs.to_flake_ref())?
+        commands::get_nixpkgs_options(nixpkgs)?
     } else {
         Vec::new()
     };

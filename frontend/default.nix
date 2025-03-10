@@ -2,7 +2,7 @@
 , nixosChannels
 , version
 }:
-pkgs.npmlock2nix.build {
+pkgs.npmlock2nix.v1.build {
   src = ./.;
   installPhase = ''
     mkdir $out

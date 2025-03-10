@@ -3,13 +3,10 @@ use flake_info::commands::NixCheckError;
 use flake_info::data::import::Kind;
 use flake_info::data::{self, Export, Source};
 use flake_info::elastic::{self, ElasticsearchError, ExistsStrategy};
-use lazy_static::lazy_static;
 use log::{error, info, warn};
-use serde::Deserialize;
 use sha2::Digest;
 use std::io;
 use std::path::PathBuf;
-use std::str::FromStr;
 use structopt::{clap::ArgGroup, StructOpt};
 use thiserror::Error;
 use tokio::fs::File;
@@ -156,10 +153,12 @@ struct ElasticOpts {
     #[structopt(
         long,
         help = "Whether to disable `latest` alias creation",
-        env = "FI_ES_VERSION"
+        env = "FI_ES_NO_ALIAS"
     )]
     no_alias: bool,
 }
+
+type LazyExports = Box<dyn FnOnce() -> Result<Vec<Export>, FlakeInfoError>>;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -167,20 +166,17 @@ async fn main() -> Result<()> {
 
     let args = Args::from_args();
 
-    let command_result = run_command(args.command, args.kind, &args.extra).await;
+    anyhow::ensure!(
+        args.elastic.enable || args.elastic.json,
+        "at least one of --push or --json must be specified"
+    );
 
-    if let Err(error) = command_result {
-        return Err(error.into());
-    }
-
-    let (successes, ident) = command_result.unwrap();
+    let (exports, ident) = run_command(args.command, args.kind, &args.extra).await?;
 
     if args.elastic.enable {
-        push_to_elastic(&args.elastic, &successes, ident).await?;
-    }
-
-    if args.elastic.json {
-        println!("{}", serde_json::to_string(&successes)?);
+        push_to_elastic(&args.elastic, exports, ident).await?;
+    } else if args.elastic.json {
+        println!("{}", serde_json::to_string(&exports()?)?);
     }
     Ok(())
 }
@@ -189,9 +185,6 @@ async fn main() -> Result<()> {
 enum FlakeInfoError {
     #[error("Nix check failed: {0}")]
     NixCheck(#[from] NixCheckError),
-
-    #[error("Nixos Channel `{0}` not among the allowed Channels set by NIXOS_CHANNELS ({:?}", .1.channels)]
-    UnknownNixOSChannel(String, NixosChannels),
 
     #[error("Getting flake info caused an error: {0:?}")]
     Flake(anyhow::Error),
@@ -207,7 +200,7 @@ async fn run_command(
     command: Command,
     kind: Kind,
     extra: &[String],
-) -> Result<(Vec<Export>, (String, String, String)), FlakeInfoError> {
+) -> Result<(LazyExports, (String, String, String)), FlakeInfoError> {
     flake_info::commands::check_nix_version(env!("MIN_NIX_VERSION"))?;
 
     match command {
@@ -222,11 +215,9 @@ async fn run_command(
                 info.revision.unwrap_or("latest".into()),
             );
 
-            Ok((exports, ident))
+            Ok((Box::new(|| Ok(exports)), ident))
         }
         Command::Nixpkgs { channel } => {
-            NIXOS_CHANNELS.check_channel(&channel)?;
-
             let nixpkgs = Source::nixpkgs(channel)
                 .await
                 .map_err(FlakeInfoError::Nixpkgs)?;
@@ -235,23 +226,29 @@ async fn run_command(
                 nixpkgs.channel.to_owned(),
                 nixpkgs.git_ref.to_owned(),
             );
-            let exports = flake_info::process_nixpkgs(&Source::Nixpkgs(nixpkgs), &kind)
-                .map_err(FlakeInfoError::Nixpkgs)?;
 
-            Ok((exports, ident))
+            Ok((
+                Box::new(move || {
+                    flake_info::process_nixpkgs(&Source::Nixpkgs(nixpkgs), &kind)
+                        .map_err(FlakeInfoError::Nixpkgs)
+                }),
+                ident,
+            ))
         }
         Command::NixpkgsArchive { source, channel } => {
-            NIXOS_CHANNELS.check_channel(&channel)?;
-
             let ident = (
                 "nixos".to_string(),
                 channel.to_owned(),
                 "latest".to_string(),
             );
-            let exports = flake_info::process_nixpkgs(&Source::Git { url: source }, &kind)
-                .map_err(FlakeInfoError::Nixpkgs)?;
 
-            Ok((exports, ident))
+            Ok((
+                Box::new(move || {
+                    flake_info::process_nixpkgs(&Source::Git { url: source }, &kind)
+                        .map_err(FlakeInfoError::Nixpkgs)
+                }),
+                ident,
+            ))
         }
         Command::Group {
             targets,
@@ -324,14 +321,14 @@ async fn run_command(
 
             let ident = ("group".to_owned(), name, hash);
 
-            Ok((exports, ident))
+            Ok((Box::new(|| Ok(exports)), ident))
         }
     }
 }
 
 async fn push_to_elastic(
     elastic: &ElasticOpts,
-    successes: &[Export],
+    exports: LazyExports,
     ident: (String, String, String),
 ) -> Result<()> {
     let (index, alias) = elastic
@@ -364,7 +361,6 @@ async fn push_to_elastic(
         })
         .unwrap();
 
-    info!("Pushing to elastic");
     let es = elastic::Elasticsearch::new(elastic.elastic_url.as_str())?;
     let config = elastic::Config {
         index: &index,
@@ -381,7 +377,10 @@ async fn push_to_elastic(
         ensure?;
     }
 
-    es.push_exports(&config, successes)
+    let successes = exports()?;
+
+    info!("Pushing to elastic");
+    es.push_exports(&config, &successes)
         .await
         .with_context(|| "Failed to push results to elasticsearch".to_string())?;
 
@@ -396,49 +395,4 @@ async fn push_to_elastic(
     }
 
     Ok(())
-}
-
-/// Information about allowed and default nixos channels.
-/// Typyically passed by environment variable NIXOS_CHANNELS.
-/// Used to filter the input arguments for `flake-info nixpkgs` and `flake-info nixpkgs-archive`
-#[derive(Clone, Debug, Deserialize)]
-struct NixosChannels {
-    channels: Vec<Channel>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-struct Channel {
-    branch: String,
-}
-
-impl NixosChannels {
-    fn check_channel(&self, channel: &String) -> Result<(), FlakeInfoError> {
-        self.channels
-            .iter()
-            .find(|c| &c.branch == channel)
-            .map_or_else(
-                || Ok(()),
-                |_| {
-                    Err(FlakeInfoError::UnknownNixOSChannel(
-                        channel.clone(),
-                        self.clone(),
-                    ))
-                },
-            )
-    }
-}
-
-impl FromStr for NixosChannels {
-    type Err = serde_json::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        serde_json::from_str(s)
-    }
-}
-
-lazy_static! {
-    static ref NIXOS_CHANNELS: NixosChannels = std::env::var("NIXOS_CHANNELS")
-        .unwrap_or("".to_string())
-        .parse()
-        .unwrap();
 }

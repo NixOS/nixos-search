@@ -30,6 +30,8 @@ pub enum FlakeEntry {
         outputs: Vec<String>,
         default_output: String,
         description: Option<String>,
+        #[serde(rename = "longDescription")]
+        long_description: Option<String>,
         license: Option<OneOrMany<StringOrStruct<License>>>,
     },
     /// An "application" that can be called using nix run <..>
@@ -115,18 +117,11 @@ impl Serialize for DocString {
         S: Serializer,
     {
         match self {
-            DocString::String(db) => {
-                serializer.serialize_str(&db.render_docbook().unwrap_or_else(|e| {
-                    warn!("Could not render DocBook content: {}", e);
-                    db.to_owned()
-                }))
-            }
-            DocString::DocFormat(DocFormat::MarkdownDoc(md)) => {
-                serializer.serialize_str(&md.render_markdown().unwrap_or_else(|e| {
+            DocString::String(md) | DocString::DocFormat(DocFormat::MarkdownDoc(md)) => serializer
+                .serialize_str(&md.render_markdown().unwrap_or_else(|e| {
                     warn!("Could not render Markdown content: {}", e);
                     md.to_owned()
-                }))
-            }
+                })),
         }
     }
 }
@@ -150,7 +145,7 @@ impl Serialize for DocValue {
                     md.to_owned()
                 }))
             }
-            DocValue::Value(v) => serializer.serialize_str(&print_value(v.to_owned())),
+            DocValue::Value(v) => serializer.serialize_str(&print_value(v)),
         }
     }
 }
@@ -177,7 +172,11 @@ pub struct Package {
 /// Name and Package definition are combined using this struct
 #[derive(Debug, Clone)]
 pub enum NixpkgsEntry {
-    Derivation { attribute: String, package: Package },
+    Derivation {
+        attribute: String,
+        package: Package,
+        programs: Vec<String>,
+    },
     Option(NixOption),
 }
 
@@ -188,9 +187,9 @@ pub struct Meta {
     pub license: Option<OneOrMany<StringOrStruct<License>>>,
     pub maintainers: Option<Flatten<Maintainer>>,
     pub homepage: Option<OneOrMany<String>>,
-    pub platforms: Option<Flatten<String>>,
+    pub platforms: Option<Platforms>,
     #[serde(rename = "badPlatforms")]
-    pub bad_platforms: Option<Flatten<String>>,
+    pub bad_platforms: Option<Platforms>,
     pub position: Option<String>,
     pub description: Option<String>,
     #[serde(rename = "longDescription")]
@@ -249,6 +248,36 @@ where
         D: Deserializer<'de>,
     {
         Ok(StringOrStruct(string_or_struct(deserializer)?))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Platform {
+    System(String),
+    Pattern {}, // TODO how should those be displayed?
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct Platforms(Flatten<Platform>);
+
+impl Platforms {
+    // A bit of abstract nonsense: what we really want is
+    //   into_iter : Platforms → ∃ (I : Iterator<String>). I
+    // however Rust makes this annoying to write: we would either have to pick a
+    // concrete iterator type or use something like Box<dyn Iterator<Item = String>>.
+    // Instead, we can use the dual Church-encoded form of that existential type:
+    //   ? : Platforms → ∀ B. (∀ (I : Iterator<String>). I → B) → B
+    // ...which is exactly the type of collect! (think about what FromIterator means)
+    pub fn collect<B: std::iter::FromIterator<String>>(self) -> B {
+        self.0
+            .flatten()
+            .into_iter()
+            .flat_map(|p| match p {
+                Platform::System(s) => Some(s),
+                _ => None,
+            })
+            .collect()
     }
 }
 
@@ -388,7 +417,8 @@ mod tests {
                   "powerpc64-linux",
                   "powerpc64le-linux",
                   "riscv32-linux",
-                  "riscv64-linux"
+                  "riscv64-linux",
+                  {}
                 ],
                 "position": "/nix/store/97lxf2n6zip41j5flbv6b0928mxv9za8-nixpkgs-unstable-21.03pre268853.d9c6f13e13f/nixpkgs-unstable/pkgs/games/0verkill/default.nix:34",
                 "unfree": false,
@@ -402,7 +432,11 @@ mod tests {
 
         let _: Vec<NixpkgsEntry> = map
             .into_iter()
-            .map(|(attribute, package)| NixpkgsEntry::Derivation { attribute, package })
+            .map(|(attribute, package)| NixpkgsEntry::Derivation {
+                attribute,
+                package,
+                programs: Vec::new(),
+            })
             .collect();
     }
 

@@ -97,6 +97,9 @@ lazy_static! {
                 "package_default_output": {
                     "type": "keyword"
                 },
+                "package_programs": {
+                    "type": "keyword"
+                },
                 "package_description": {
                     "type": "text",
                     "analyzer": "english",

@@ -1,14 +1,13 @@
 module Example exposing (fuzzTest, unitTest, viewTest)
 
-import Expect exposing (Expectation)
-import Fuzz exposing (Fuzzer, int, list, string)
-import Main exposing (..)
+import Expect
+import Fuzz exposing (int)
 import Test exposing (..)
 import Test.Html.Query as Query
 import Test.Html.Selector exposing (tag, text)
 
 
-{-| See <https://github.com/elm-community/elm-test>
+{-| See <https://github.com/elm-explorations/test>
 -}
 unitTest : Test
 unitTest =
@@ -22,7 +21,7 @@ unitTest =
         ]
 
 
-{-| See <https://github.com/elm-community/elm-test>
+{-| See <https://github.com/elm-explorations/test>
 -}
 fuzzTest : Test
 fuzzTest =

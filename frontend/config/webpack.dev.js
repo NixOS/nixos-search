@@ -17,18 +17,17 @@ const dev = {
             stats: "errors-only"
         },
         historyApiFallback: true,
-        // feel free to delete this section if you don't need anything like this
-        onBeforeSetupMiddleware: function (devServer) {
-            // on port 3000
-            devServer.app.get("/test", function (req, res) {
-                res.json({result: "You reached the dev server"});
-            });
-
-        }
+        proxy: {
+            '/backend': {
+                target: 'https://nixos-search-7-1733963800.us-east-1.bonsaisearch.net/',
+                pathRewrite: {'^/backend' : ''},
+                changeOrigin: true
+            },
+        },
     },
 };
 
 module.exports = env => {
     const withDebug = !env.nodebug;
-    return merge(common(withDebug), dev);
+    return merge(common(withDebug, false), dev);
 }
