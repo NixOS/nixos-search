@@ -196,6 +196,11 @@ repo = "Solaar-Flake"
 
 [[sources]]
 type = "github"
+owner = "TraceMachina"
+repo = "nativelink"
+
+[[sources]]
+type = "github"
 owner = "Wazzaps"
 repo = "fingerpaint"
 
@@ -218,4 +223,3 @@ repo = "neuropil"
 type = "sourcehut"
 owner = "~munksgaard"
 repo = "geomyidae-flake"
-
