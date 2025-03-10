@@ -226,7 +226,7 @@ view :
 view nixosChannels model =
     Search.view { toRoute = Route.Packages, categoryName = "packages" }
         [ text "Search more than "
-        , strong [] [ text "100 000 packages" ]
+        , strong [] [ text "120 000 packages" ]
         ]
         nixosChannels
         model
@@ -477,7 +477,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                 [ div []
                     (List.append [ h4 [] [ text "Maintainers" ] ]
                         (if List.isEmpty item.source.maintainers then
-                            [ p [] [ text "This package has no maintainers." ] ]
+                            [ p [] [ text "This package has no maintainers. If you find it useful, please consider becoming a maintainer!" ] ]
 
                          else
                             [ ul []
@@ -505,7 +505,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                     p [] [ text "This package provides no programs." ]
 
                   else
-                    p [] (List.intersperse (text " ") (List.map (\p -> code [] [ text p ]) item.source.programs))
+                    p [] (List.intersperse (text " ") (List.map (\p -> code [] [ text p ]) (List.sort item.source.programs)))
                 ]
 
         longerPackageDetails =
