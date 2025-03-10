@@ -3,11 +3,8 @@ use anyhow::{Context, Result};
 use command_run::{Command, LogTo};
 use serde_json::Deserializer;
 use std::fmt::Display;
-use std::fs::File;
-use std::io::Write;
 use std::path::PathBuf;
 
-const SCRIPT: &str = include_str!("flake_info.nix");
 const ARGS: [&str; 4] = [
     "eval",
     "--json",
@@ -23,13 +20,9 @@ pub fn get_derivation_info<T: AsRef<str> + Display>(
     temp_store: bool,
     extra: &[String],
 ) -> Result<Vec<FlakeEntry>> {
-    let script_dir = tempfile::tempdir()?;
-    let script_path = script_dir.path().join("extract.nix");
-    writeln!(File::create(&script_path)?, "{}", SCRIPT)?;
-
     let mut command = Command::with_args("nix", ARGS.iter());
-    command.add_arg_pair("-f", script_path.as_os_str());
-    command.add_arg_pair("-I", "nixpkgs=channel:nixpkgs-unstable");
+    command.add_arg_pair("-f", super::EXTRACT_SCRIPT.clone());
+    command.add_arg_pair("-I", "nixpkgs=https://github.com/NixOS/nixpkgs/archive/refs/heads/nixpkgs-unstable.tar.gz");
     command.add_args(["--override-flake", "input-flake", flake_ref.as_ref()].iter());
     command.add_args(["--argstr", "flake", flake_ref.as_ref()].iter());
     command.add_arg(kind.as_ref());

@@ -1,0 +1,947 @@
+:root {
+  --text-color: #333;
+  --background-color: #fff;
+  --terminal-background: #333;
+  --terminal-color: #fff;
+  --result-item-show-more-background: #fff;
+  --result-item-show-more-color: #666;
+  --search-sidebar-container-border-color: #ccc;
+  --search-sidebar-link-color: var(--text-color);
+  --search-sidebar-hovered-link-background: #eee;
+  --search-sidebar-selected-link-background: #0081c2;
+  --search-sidebar-selected-link-color: #fff;
+  /* Divider between search results */
+  --search-result-divider-line-color: #ccc;
+  /* Gets overwritten by bootstrap; has no effect */
+  --search-result-title-color: #08c;
+  /* Text color for the details in a search result (like name, version, outputs...) */
+  --search-result-short-details-color: #666;
+  /* When search results are expanded, they show tabbed help for installing the result. This is the border color for that tabbed thing.
+       It is only half of the border, the other half is styled by bootstrap. */
+  --search-result-expanded-tab-border: #ccc;
+  /* Color of the animation above the `Loading` text that is shown when searching */
+  --loader-color: #000;
+  /* Background color of the experimental badge next to the flakes search */
+  --info-label-background: #007dbb;
+  /* Text color for links. Probably overwritten by bootstrap */
+  --link-color: #007dbb;
+  /* Background color for the small badges with number in the sidebar */
+  --badge-background: #757575;
+}
+
+/* ------------------------------------------------------------------------- */
+/* -- Darkmode specific styles --------------------------------------------- */
+/* ------------------------------------------------------------------------- */
+
+@media (prefers-color-scheme: dark) {
+
+  // Define darkmode colors
+  :root {
+    --text-color: rgba(255, 255, 255, 0.85);
+    --text-color-light: rgba(255, 255, 255, 0.5);
+    --text-color-warning: #f8e45c;
+    --background-color: #242424;
+    --hover-background: #ffffff13;
+    --button-background: #393939;
+    --button-hover-background: #454545;
+    --button-active-background: #656565;
+    --button-active-hover-background: #707070;
+    --terminal-background: #353535;
+    --terminal-color: var(--text-color);
+    --line-color: #ffffff26; // Color for separating lines
+    --dark-blue: #5277C3; // Blue background
+    --light-blue: #7ebae4;
+
+    --result-item-show-more-background: var(--background-color);
+    --result-item-show-more-color: var(--text-color);
+    --search-sidebar-container-border-color: var(--line-color);
+    --search-sidebar-link-color: var(--text-color);
+    --search-sidebar-hovered-link-background: var(--hover-background);
+    --search-sidebar-selected-link-background: var(--dark-blue); // #0081c2;
+    --search-sidebar-selected-link-color: var(--text-color);
+    /* Divider between search results */
+    --search-result-divider-line-color: var(--line-color);
+    /* Color of the search results */
+    --search-result-title-color: var(--light-blue);
+    /* Text color for the details in a search result (like name, version, outputs...) */
+    --search-result-short-details-color: var(--text-color-light); // #666;
+    /* When search results are expanded, they show tabbed help for installing the result. This is the border color for that tabbed thing.
+       It is only half of the border, the other half is styled by bootstrap. */
+    --search-result-expanded-tab-border: var(--line-color);
+    /* Color of the animation above the `Loading` text that is shown when searching */
+    --loader-color: var(--text-color);
+    /* Background color of the experimental badge next to the flakes search */
+    --info-label-background: var(--dark-blue); // #007dbb;
+    /* Text color for links. Probably overwritten by bootstrap */
+    --link-color: var(--light-blue); // #007dbb;
+    /* Background color for the small badges with number in the sidebar */
+    --badge-background: var(--button-active-hover-background);
+
+    --color-hover-tab: var(--hover-background);
+    --color-active-tab: #393939;
+    --color-active-hover-tab: #404040;
+
+    /* Headerbar background color */
+    --headerbar-background-color: #303030;
+  }
+
+  // Override bootstrap styles for some common things.
+  code {
+    background-color: var(--terminal-background);
+    color: var(--terminal-color);
+    border: none;
+    padding: 4px;
+  }
+
+  pre {
+    color: var(--text-color);
+  }
+
+  * {
+    transition: background 0.2s;
+  }
+
+  @mixin outline-visible() {
+    border-radius: 4px !important;
+    outline-color: var(--light-blue) !important;
+    outline-style: solid !important;
+    outline-width: 2px !important;
+    outline-offset: -2px !important;
+  }
+
+  *:focus {
+    outline-width: 0 !important;
+  }
+
+  *:focus-visible {
+    @include outline-visible;
+  }
+
+  a:focus-visible {
+    outline-offset: 0 !important;
+  }
+
+  .label-warning {
+    background: transparent;
+    color: var(--text-color-warning);
+    text-shadow: none;
+  }
+
+  button.btn.btn {
+    margin: 0;
+    border-left: none;
+    border-right: none;
+    background: var(--button-background);
+    box-shadow: none;
+    text-shadow: none;
+    border-bottom: none;
+    color: var(--text-color);
+    transition: background 0.2s;
+    font-weight: bold;
+
+    &.active {
+      background: var(--button-active-background);
+
+      &:hover {
+        background: var(--button-active-hover-background);
+      }
+    }
+
+    &:hover {
+      background: var(--button-hover-background)
+    }
+
+    &:disabled {
+      background: var(--button-background);
+      color: var(--text-color-light);
+    }
+  }
+
+  // Override bootstrap colors for the sort dropdown
+  .search-results {
+    .dropdown {
+      border-radius: 4px;
+
+      .caret {
+        border-top-color: var(--text-color) !important;
+      }
+
+      &.open>button.btn {
+        background: var(--button-active-background);
+
+        &:hover {
+          background: var(--button-active-hover-background);
+        }
+      }
+
+      &>button.btn {
+        background: var(--button-background);
+
+        &:hover {
+          background: var(--button-hover-background);
+        }
+
+        &:focus:not(:focus-visible) {
+          outline: none !important;
+        }
+
+        border-radius: 4px;
+        color: var(--text-color);
+        border: none;
+        text-shadow: none;
+        box-shadow: none;
+      }
+    }
+
+    ul.dropdown-menu {
+      background: var(--button-background);
+      padding: 0;
+      margin-top: 4px;
+
+      li {
+        border-radius: 4px;
+        border-top-right-radius: 4px;
+        border-top-left-radius: 4px;
+        margin: 4px;
+
+        a {
+          border-radius: 4px;
+          color: var(--text-color);
+          background: inherit;
+          transition: background 0.2s;
+        }
+
+        a::before {
+          content: none !important;
+        }
+      }
+
+      .header,
+      .divider {
+        display: none;
+      }
+
+      li:hover {
+        a {
+          background: var(--hover-background);
+        }
+      }
+
+      li.selected {
+        background: var(--button-active-background);
+      }
+    }
+  }
+
+  // Override bootstrap styles for the search box
+  .search-input {
+    >div:first-child:first-child:first-child {
+      display: flex;
+      gap: 2rem;
+
+      div {
+        flex-grow: 1;
+      }
+
+      input {
+        background: var(--button-background);
+        box-shadow: none;
+        border: 1px solid transparent;
+        color: var(--text-color);
+
+        &::placeholder {
+          font-weight: bold;
+          opacity: 1;
+          color: var(--text-color-light);
+        }
+      }
+
+    }
+
+    .btn-group {
+      border: none;
+      border-radius: 4px;
+      background: inherit;
+
+      button+button {
+        border-left: 1px solid var(--line-color);
+      }
+    }
+  }
+
+  // Override bootstrap styles for the header bar
+  // Very navbar to boost specificity
+  .navbar.navbar.navbar.navbar.navbar.navbar {
+    &>.navbar-inner {
+      background: var(--headerbar-background-color);
+      border-bottom: none;
+
+      li>a {
+        color: var(--text-color);
+        background: var(--headerbar-background-color);
+        transition: background 0.2s;
+        text-shadow: none;
+        box-shadow: none;
+        border-radius: 4px;
+        margin: 4px;
+        padding: 6px 12px;
+
+        &:hover,
+        &:focus,
+        &:focus-visible,
+        &:active,
+        &.active {
+          color: var(--text-color);
+        }
+
+        &:hover {
+          background: var(--color-hover-tab);
+        }
+      }
+
+      li.active>a {
+        background: var(--color-active-tab);
+
+        &:hover {
+          background: var(--color-active-hover-tab);
+        }
+
+      }
+    }
+  }
+
+  // Style the tabs in expanded package search results
+  .nav-tabs {
+    border-bottom: 1px solid var(--line-color);
+    border-radius: 4px;
+
+    li {
+      background: transparent !important;
+      border-color: none !important;
+
+      &:hover,
+      &:focus {
+        background: transparent !important;
+        border-color: none !important;
+      }
+
+      a {
+        // border: none;
+        background: transparent;
+        color: var(--text-color);
+      }
+
+      a:hover,
+      a:focus {
+        border-color: transparent;
+        background: transparent !important;
+        color: var(--text-color) !important;
+      }
+
+      &.active {
+
+        a,
+        a:hover,
+        a:focus {
+          border: 1px solid var(--line-color);
+          border-bottom-color: transparent;
+          background: var(--background-color) !important;
+          color: var(--text-color);
+        }
+      }
+    }
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* -- Utils ---------------------------------------------------------------- */
+/* ------------------------------------------------------------------------- */
+
+@mixin terminal() {
+  background: var(--terminal-background);
+  color: var(--terminal-color);
+  margin: 0;
+}
+
+@mixin search-result-item() {
+  .result-item-show-more-wrapper {
+      text-align: center;
+  }
+
+  // show longer details link
+  .result-item-show-more {
+    margin: 0 auto;
+    display: none;
+    text-align: center;
+    text-decoration: none;
+    line-height: 1.5em;
+    color: var(--result-item-show-more-color);
+    background: var(--result-item-show-more-background);
+    padding: 0 1em;
+    position: relative;
+    top: 0.75em;
+    outline: none;
+  }
+  &.opened,
+  &:hover {
+    padding-bottom: 0;
+
+    .result-item-show-more {
+      display: inline-block;
+      padding-top: 0.5em;
+    }
+  }
+}
+
+.package-name {
+  user-select: all;
+}
+
+/* ------------------------------------------------------------------------- */
+/* -- Layout --------------------------------------------------------------- */
+/* ------------------------------------------------------------------------- */
+
+body {
+  background: var(--background-color);
+  color: var(--text-color);
+  position: relative;
+  min-height: 100vh;
+  overflow-y: auto;
+
+  & > div:first-child {
+    position: relative;
+    min-height: 100vh;
+  }
+}
+
+.code-block {
+  display: block;
+  cursor: text;
+}
+
+.shell-command:before {
+  content: "$ ";
+}
+
+#content {
+  padding-bottom: 4rem;
+}
+
+footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 4rem;
+}
+
+header .navbar.navbar-static-top {
+  .brand {
+    padding-bottom: 0;
+  }
+  img.logo {
+    margin-top: -5px;
+    padding-right: 5px;
+    line-height: 25px;
+    height: 25px;
+  }
+  ul.nav > li {
+    line-height: 20px;
+    sup {
+      margin-left: 0.5em;
+    }
+  }
+}
+
+// Search seatch
+.search-page {
+
+  &.not-asked {
+
+    & > h1 {
+      margin-top: 2.5em;
+      margin-bottom: 0.8em;
+    }
+  }
+
+  // Search section title title
+  & > h1 {
+    font-weight: normal;
+    font-size: 2.3em;
+
+    &:before {
+      content: "\2315";
+      display: inline-block;
+      font-size: 2em;
+      margin-right: 0.2em;
+      -moz-transform: scale(-1, 1);
+      -webkit-transform: scale(-1, 1);
+      -o-transform: scale(-1, 1);
+      -ms-transform: scale(-1, 1);
+      transform: translateY(0.15em) scaleX(-1);
+      font-family: monospace;
+    }
+  }
+
+  // Search input section
+  & > .search-input {
+
+    // Search Input and Button
+    & > div:nth-child(1) {
+      display: grid;
+      grid-template-columns: auto 8em;
+
+      & > div > input {
+        font-size: 18px;
+        height: 40px;
+        width: 100%;
+      }
+
+      & > button {
+        font-size: 24px;
+        height: 50px;
+        min-width: 4em;
+      }
+    }
+
+    // List of channels
+    & > div:nth-child(2) {
+      margin-bottom: 0.5em;
+
+      // "Channels: " label
+      & > div > h2 {
+        display: inline;
+        vertical-align: middle;
+        font-size: 1.2em;
+        margin-left: 0.2em;
+        line-height: 20px
+      }
+    }
+  }
+
+  // Loader during loading the search results
+  & > .loader-wrapper > h2 {
+    position: absolute;
+    top: 3em;
+    width: 100%;
+    text-align: center;
+  }
+
+  & > .search-no-results {
+    padding: 2em 1em;
+    text-align: center;
+    margin-bottom: 2em;
+
+     & > h2 {
+       margin-top: 0;
+     }
+  }
+
+
+  .search-result-button {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    & > li {
+      display: inline-block;
+
+      &:first-child:not(:last-child):after {
+        content: "→";
+        margin: 0 0.2em;
+      }
+
+      & > a:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+
+ // Buckets
+    ul.search-sidebar {
+      width: 25em;
+
+      list-style: none;
+      margin: 0 1em 0 0;
+
+      & > li {
+        margin-bottom: 1em;
+        border: 1px solid var(--search-sidebar-container-border-color);
+        padding: 1em;
+        border-radius: 4px;
+
+        & > ul {
+          list-style: none;
+          margin: 0;
+
+          & > li {
+            margin-bottom: 0.2em;
+
+            &.header {
+              font-size: 1.2em;
+              font-weight: bold;
+              margin-bottom: 0.5em;
+            }
+
+            & > a {
+              display: grid;
+              grid-template-columns: auto max-content;
+              color: var(--search-sidebar-link-color);
+              padding: 0.5em 0.5em 0.5em 1em;
+              text-decoration: none;
+              border-radius: 4px;
+
+              &:hover {
+                text-decoration: none;
+                background: var(--search-sidebar-hovered-link-background);
+              }
+
+              & > span:first-child {
+                overflow: hidden;
+              }
+              & > span:last-child {
+                text-align: right;
+                margin-left: 0.3em;
+              }
+
+              &.selected {
+                background: var(--search-sidebar-selected-link-background);
+                color: var(--search-sidebar-selected-link-color);
+                position: relative;
+                  & > span:last-child {
+                  display: none;
+
+                  }
+              }
+
+              & .close {
+                opacity: 1;
+                text-shadow: none;
+                color: inherit;
+                font-size: inherit;
+                padding-left: .5em;
+                padding-right: .5em;
+              }
+            }
+          }
+        }
+      }
+    }
+
+
+  & > .search-results {
+    display: flex;
+    flex-direction: row;
+
+    // Results section
+    & > div {
+      width: 100%;
+
+      // Search results header
+      & > :nth-child(1) {
+
+        // Dropdown to show sorting options
+        & > div:nth-child(1) {
+
+          & > button {
+            & > .selected {
+              margin-right: 0.5em;
+            }
+          }
+
+          & > ul > li {
+
+            & > a {
+              padding: 3px 10px;
+            }
+
+            & > a:before {
+              display: inline-block;
+              content: " ";
+              width: 24.5px;
+            }
+
+            &.selected > a:before {
+              content: "\2714";
+            }
+          }
+
+          & > ul > li.header {
+            font-weight: bold;
+            padding: 3px 10px 0 10px;
+          }
+
+          & > ul > li.header:before,
+          & > ul > li.divider:before {
+            display: none;
+          }
+        }
+
+        // Text that displays number of results
+        & > h2:nth-child(2) {
+          font-size: 1.7em;
+          font-weight: normal;
+          line-height: 1.3em;
+
+          & > p {
+            font-size: 0.7em;
+          }
+        }
+      }
+
+      // Search results list
+      & > :nth-child(2) {
+        list-style: none;
+        margin: 2em 0 0 0;
+
+        // Result item
+        & > li {
+          border-bottom: 1px solid var(--search-result-divider-line-color);
+          padding-bottom: 2em;
+          margin-bottom: 2em;
+
+          &:last-child {
+            border-bottom: 0;
+          }
+
+          // Attribute name or option name
+          & > :nth-child(1) {
+            background: inherit;
+            border: 0;
+            padding: 0;
+            color: var(--search-result-title-color) !important;
+            font-size: 1.5em;
+            margin-bottom: 0.5em;
+            text-align: left;
+            display: block;
+            a {
+              color: inherit !important;
+            }
+          }
+
+          &.package {
+            @include search-result-item;
+
+            // Description
+            & > :nth-child(2) {
+              font-size: 1.2em;
+              margin-bottom: 0.5em;
+              text-align: left;
+            }
+
+            // short details of a pacakge
+            & > :nth-child(3) {
+              color: var(--search-result-short-details-color);
+              list-style: none;
+              text-align: left;
+              margin: 0;
+
+              & > li {
+                display: inline-block;
+                margin-right: 1em;
+              }
+              & > li:last-child {
+                margin-right: 0;
+              }
+            }
+
+            // longer details of a pacakge
+            & > :nth-child(5) {
+              margin: 2em 0 1em 1em;
+              text-align: left;
+
+              // long description of a package
+              & > :nth-child(1) {
+                margin-top: 1em;
+
+                pre {
+                  @include terminal;
+                }
+              }
+
+              // how to install a package
+              & > :nth-child(2) {
+
+                h4 {
+                  font-size: 1.2em;
+                  line-height: 1em;
+                  float: left;
+                }
+
+                ul.nav-tabs {
+                  margin: 0;
+
+                  & > li > a {
+                    margin-right: 0;
+                  }
+                }
+
+                div.tab-content {
+                  padding: 1em;
+                  border: 1px solid var(--search-result-expanded-tab-border);
+                  border-top: 0;
+                  border-radius: 4px 0 4px 4px;
+                }
+
+                pre {
+                  @include terminal;
+                }
+
+              }
+
+              // maintainers and platforms
+              & > :nth-child(4) {
+                margin-top: 1em;
+                display: grid;
+                grid-template-columns: auto auto;
+              }
+            }
+          }
+
+          &.option {
+            margin: 0;
+            padding: 0;
+
+            & > :nth-child(1) {
+              padding: 0.5em 0;
+            }
+
+            // short details of a pacakge
+            & > :nth-child(2) {
+              margin: 2em 0 1em 1em;
+              display: grid;
+              grid-template-columns: 100px 1fr;
+              column-gap: 1em;
+              row-gap: 0.5em;
+
+              & > div:nth-child(2n+1) {
+                font-weight: bold;
+                text-align: right;
+              }
+
+              & > div:nth-child(2n) {
+                pre {
+                  background: transparent;
+                  color: var(--text-color);
+                  margin: 0;
+                  padding: 0;
+                  border: 0;
+                  vertical-align: inherit;
+                  display: inline;
+                }
+
+                pre code {
+                  @include terminal;
+                  padding: 0.5em
+                }
+              }
+
+            }
+          }
+        }
+
+      }
+
+      // Search results footer
+      & > :nth-child(3) {
+        margin-top: 1em;
+
+        & > ul > li > a {
+          cursor: pointer;
+          margin: 0 2px;
+        }
+      }
+    }
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* -- Loader --------------------------------------------------------------- */
+/* ------------------------------------------------------------------------- */
+
+.loader-wrapper {
+  height: 200px;
+  overflow: hidden;
+  position: relative;
+}
+.loader,
+.loader:before,
+.loader:after {
+  background: transparent;
+  -webkit-animation: load1 1s infinite ease-in-out;
+  animation: load1 1s infinite ease-in-out;
+  width: 1em;
+  height: 4em;
+}
+.loader {
+  color: var(--loader-color);
+  text-indent: -9999em;
+  margin: 88px auto;
+  position: relative;
+  font-size: 11px;
+  -webkit-transform: translateZ(0);
+  -ms-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-animation-delay: -0.16s;
+  animation-delay: -0.16s;
+}
+.loader:before,
+.loader:after {
+  position: absolute;
+  top: 0;
+  content: '';
+}
+.loader:before {
+  left: -1.5em;
+  -webkit-animation-delay: -0.32s;
+  animation-delay: -0.32s;
+}
+.loader:after {
+  left: 1.5em;
+}
+@keyframes load1 {
+  0%,
+  80%,
+  100% {
+    box-shadow: 0 0;
+    height: 4em;
+  }
+  40% {
+    box-shadow: 0 -2em;
+    height: 5em;
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* -- Accessibility overrides ---------------------------------------------- */
+/* ------------------------------------------------------------------------- */
+.label-info {
+  background: var(--info-label-background);
+}
+
+// Use the same color for focused and hovered links, as they are underlined anyway
+a,
+a:focus,
+a:hover,
+a:focus-visible {
+  color: var(--link-color);
+}
+
+// // Alternative: Use a slightly more contrasty color
+// a:focus,
+// a:hover,
+// a:focus-visible {
+//   color: color-mix(in srgb, var(--link-color) 80%, var(--text-color) 20%)
+// }
+
+.pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 20em;
+  margin: 0 auto;
+  padding: 20px 0;
+}
+
+.badge {
+  background-color: var(--badge-background)
+}

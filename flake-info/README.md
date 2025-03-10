@@ -84,7 +84,7 @@ $ flake-info flake github:ngi-nix/offen
 
 nixpkgs currently have to be imported in a different way. This is what the `nixpkgs` subcommand exists for.
 
-It takes any valid git reference to the upstream [`nixos/nixpkgs`](https://github.com/iixos/nixpkgs/) repo as an argument and produces a complete output.
+It takes any valid git reference to the upstream [`nixos/nixpkgs`](https://github.com/nixos/nixpkgs/) repo as an argument and produces a complete output.
 
 **This operation may take a short while and produces lots of output**
 
@@ -127,7 +127,7 @@ An example `targets.json` file can look like the following
 ```
 
 ```
-$ flake-info group ./targets.json small-group
+$ flake-info --json group ./targets.json small-group
 ```
 
 ### Elasticsearch
@@ -170,7 +170,7 @@ $ flake-info --push \
 This tool requires your system to have Nix installed!
 
 You can install nix using this installer: https://nixos.org/guides/install-nix.html
-Also, see https://nixos.wiki/wiki/Nix_Installation_Guide if your system is ✨special✨.
+Also, see https://wiki.nixos.org/wiki/Nix_Installation_Guide if your system is ✨special✨.
 
 ### Preparations (Docker)
 

@@ -11,14 +11,11 @@ module Search exposing
     , ResultItem
     , SearchResult
     , Sort(..)
-    , closeButton
     , decodeAggregation
     , decodeNixOSChannels
     , decodeResolvedFlake
-    , decodeResult
     , defaultFlakeId
     , elementId
-    , fromSortId
     , init
     , makeRequest
     , makeRequestBody
@@ -34,15 +31,16 @@ module Search exposing
     , viewSearchInput
     )
 
+import Array
 import Base64
 import Browser.Dom
-import Browser.Events exposing (Visibility(..))
 import Browser.Navigation
 import Html
     exposing
         ( Html
         , a
         , button
+        , code
         , div
         , form
         , h1
@@ -62,6 +60,7 @@ import Html.Attributes
         , autofocus
         , class
         , classList
+        , disabled
         , href
         , id
         , placeholder
@@ -299,12 +298,6 @@ init args defaultNixOSChannel nixosChannels maybeModel =
 
         modelChannel =
             getField .channel defaultNixOSChannel
-
-        modelFrom =
-            getField .from 0
-
-        modelSize =
-            getField .size 50
     in
     ( { channel =
             args.channel
@@ -313,14 +306,22 @@ init args defaultNixOSChannel nixosChannels maybeModel =
       , query =
             args.query
                 |> Maybe.andThen Route.SearchQuery.searchQueryToString
+                |> (\x ->
+                        case x of
+                            Just q ->
+                                Just q
+
+                            Nothing ->
+                                args.show
+                   )
       , result = getField .result RemoteData.NotAsked
       , show = args.show
       , from =
             args.from
-                |> Maybe.withDefault modelFrom
+                |> Maybe.withDefault 0
       , size =
             args.size
-                |> Maybe.withDefault modelSize
+                |> Maybe.withDefault 50
       , buckets = args.buckets
       , sort =
             args.sort
@@ -376,7 +377,6 @@ type Msg a b
     | ToggleSort
     | BucketsChange String
     | ChannelChange String
-    | FlakeChange String
     | SubjectChange SearchType
     | QueryInput String
     | QueryInputSubmit
@@ -454,16 +454,6 @@ update toRoute navKey msg model nixosChannels =
         ChannelChange channel ->
             { model
                 | channel = channel
-                , show = Nothing
-                , buckets = Nothing
-                , from = 0
-            }
-                |> ensureLoading nixosChannels
-                |> pushUrl toRoute navKey
-
-        FlakeChange flake ->
-            { model
-                | channel = flake
                 , show = Nothing
                 , buckets = Nothing
                 , from = 0
@@ -857,7 +847,7 @@ viewResult nixosChannels outMsg toRoute categoryName model viewSuccess viewBucke
                             ( "Timeout!", "Request to the server timeout." )
 
                         Http.NetworkError ->
-                            ( "Network Error!", "A network request bonsaisearch.net domain failed. This is either due to a content blocker or a networking issue." )
+                            ( "Network Error!", "A network request to the search backend failed. This is either due to a content blocker or a networking issue." )
 
                         Http.BadStatus code ->
                             ( "Bad Status", "Server returned " ++ String.fromInt code )
@@ -881,9 +871,9 @@ viewNoResults categoryName =
     div [ class "search-no-results" ]
         [ h2 [] [ text <| "No " ++ categoryName ++ " found!" ]
         , text "You might want to "
-        , Html.a [ href "https://nixos.org/manual/nixpkgs/stable/#chap-quick-start" ] [ text "add a package" ]
+        , Html.a [ href "https://github.com/NixOS/nixpkgs/blob/master/pkgs/README.md#quick-start-to-adding-a-package" ] [ text "add a package" ]
         , text " or "
-        , a [ href "https://github.com/NixOS/nixpkgs/issues/new?assignees=&labels=0.kind%3A+packaging+request&template=packaging_request.md&title=" ] [ text "make a packaging request" ]
+        , a [ href "https://github.com/NixOS/nixpkgs/issues/new?template=05_package_request.yml" ] [ text "make a packaging request" ]
         , text "."
         ]
 
@@ -986,7 +976,7 @@ viewChannels nixosChannels outMsg selectedChannel =
     in
     List.append
         [ div []
-            [ h4 [] [ text "Channel: " ]
+            [ h2 [] [ text "Channel: " ]
             , div
                 [ class "btn-group"
                 , attribute "data-toggle" "buttons-radio"
@@ -1051,33 +1041,49 @@ viewResults nixosChannels model result viewSuccess _ outMsg categoryName =
 
         total =
             String.fromInt result.hits.total.value
+
     in
     [ div []
-        [ Html.map outMsg <| viewSortSelection model
-        , div []
-            (List.append
-                [ text "Showing results "
-                , text from
-                , text "-"
-                , text to
-                , text " of "
-                ]
-                (if result.hits.total.value == 10000 then
-                    [ text "more than 10000."
-                    , p [] [ text "Please provide more precise search terms." ]
-                    ]
+        (List.append
+          [ Html.map outMsg <| viewSortSelection model
+          , h2 []
+              (List.append
+                  [ text "Showing results "
+                  , text from
+                  , text "-"
+                  , text to
+                  , text " of "
+                  ]
+                  (if result.hits.total.value == 10000 then
+                      [ text "more than 10000."
+                      , p [] [ text "Please provide more precise search terms." ]
+                      ]
 
-                 else
-                    [ strong []
-                        [ text total
-                        , text " "
-                        , text categoryName
-                        ]
+                   else
+                      [ strong []
+                          [ text total
+                          , text " "
+                          , text categoryName
+                          ]
+                      , text "."
+                      ]
+                  )
+              )
+          ]
+          (case List.head result.hits.hits of
+            Nothing -> []
+            Just elem ->
+              case Array.get 3 (Array.fromList (String.split "-" elem.index)) of
+                Nothing -> []
+                Just commit ->
+                  [
+                    text "Data from nixpkgs "
+                    , a [ href ("https://github.com/NixOS/nixpkgs/tree/" ++ commit) ]
+                    [ (code [] [ text (String.slice 0 8 commit) ]) ]
                     , text "."
-                    ]
-                )
-            )
-        ]
+                  ]
+          )
+        )
     , viewSuccess nixosChannels model.channel model.showInstallDetails model.show result.hits.hits
     , Html.map outMsg <| viewPager model result.hits.total.value
     ]
@@ -1136,9 +1142,11 @@ viewPager :
 viewPager model total =
     div []
         [ ul [ class "pager" ]
-            [ li [ classList [ ( "disabled", model.from == 0 ) ] ]
-                [ a
-                    [ onClick <|
+            [ li []
+                [ button
+                    [ class "btn"
+                    , disabled (model.from == 0)
+                    , onClick <|
                         if model.from == 0 then
                             NoOp
 
@@ -1147,9 +1155,11 @@ viewPager model total =
                     ]
                     [ text "First" ]
                 ]
-            , li [ classList [ ( "disabled", model.from == 0 ) ] ]
-                [ a
-                    [ onClick <|
+            , li []
+                [ button
+                    [ class "btn"
+                    , disabled (model.from == 0)
+                    , onClick <|
                         if model.from - model.size < 0 then
                             NoOp
 
@@ -1158,9 +1168,11 @@ viewPager model total =
                     ]
                     [ text "Previous" ]
                 ]
-            , li [ classList [ ( "disabled", model.from + model.size >= total ) ] ]
-                [ a
-                    [ onClick <|
+            , li []
+                [ button
+                    [ class "btn"
+                    , disabled (model.from + model.size >= total)
+                    , onClick <|
                         if model.from + model.size >= total then
                             NoOp
 
@@ -1169,9 +1181,11 @@ viewPager model total =
                     ]
                     [ text "Next" ]
                 ]
-            , li [ classList [ ( "disabled", model.from + model.size >= total ) ] ]
-                [ a
-                    [ onClick <|
+            , li []
+                [ button
+                    [ class "btn"
+                    , disabled (model.from + model.size >= total)
+                    , onClick <|
                         if model.from + model.size >= total then
                             NoOp
 
@@ -1228,52 +1242,38 @@ searchFields :
     -> List (List ( String, Json.Encode.Value ))
 searchFields query mainField fields =
     let
-        queryVariations q =
-            case ( List.head q, List.tail q ) of
-                ( Just h, Just t ) ->
-                    let
-                        tail : List (List String)
-                        tail =
-                            queryVariations t
-                    in
-                    List.append
-                        (List.map (\x -> List.append [ h ] x) tail)
-                        (List.map (\x -> List.append [ String.reverse h ] x) tail)
-                        |> Set.fromList
-                        |> Set.toList
-
-                ( Just h, Nothing ) ->
-                    [ [ h ], [ String.reverse h ] ]
-
-                ( _, _ ) ->
-                    [ [], [] ]
-
-        reverseFields =
-            List.map (\( field, score ) -> ( field ++ "_reverse", score * 0.8 )) fields
-
         allFields =
-            List.append fields reverseFields
-                |> List.map (\( field, score ) -> [ field ++ "^" ++ String.fromFloat score, field ++ ".edge^" ++ String.fromFloat score ])
+            fields
+                |> List.map
+                    (\( field, score ) ->
+                        [ field ++ "^" ++ String.fromFloat score
+                        , field ++ ".*^" ++ String.fromFloat (score * 0.6)
+                        ]
+                    )
                 |> List.concat
+
+        queryWordsWildCard =
+            (String.replace "_" "-" query :: String.replace "-" "_" query :: queryWords)
+                |> Set.fromList
+                |> Set.toList
+
+        queryWords =
+            String.words (String.toLower query)
     in
     List.append
-        (List.map
-            (\queryWords ->
-                [ ( "multi_match"
-                  , Json.Encode.object
-                        [ ( "type", Json.Encode.string "cross_fields" )
-                        , ( "query", Json.Encode.string <| String.join " " queryWords )
-                        , ( "analyzer", Json.Encode.string "whitespace" )
-                        , ( "auto_generate_synonyms_phrase_query", Json.Encode.bool False )
-                        , ( "operator", Json.Encode.string "and" )
-                        , ( "_name", Json.Encode.string <| "multi_match_" ++ String.join "_" queryWords )
-                        , ( "fields", Json.Encode.list Json.Encode.string allFields )
-                        ]
-                  )
+        [ [ ( "multi_match"
+            , Json.Encode.object
+                [ ( "type", Json.Encode.string "cross_fields" )
+                , ( "query", Json.Encode.string <| String.join " " queryWords )
+                , ( "analyzer", Json.Encode.string "whitespace" )
+                , ( "auto_generate_synonyms_phrase_query", Json.Encode.bool False )
+                , ( "operator", Json.Encode.string "and" )
+                , ( "_name", Json.Encode.string <| "multi_match_" ++ String.join "_" queryWords )
+                , ( "fields", Json.Encode.list Json.Encode.string allFields )
                 ]
             )
-            (queryVariations (String.words (String.toLower query)))
-        )
+          ]
+        ]
         (List.map
             (\queryWord ->
                 [ ( "wildcard"
@@ -1281,13 +1281,14 @@ searchFields query mainField fields =
                         [ ( mainField
                           , Json.Encode.object
                                 [ ( "value", Json.Encode.string ("*" ++ queryWord ++ "*") )
+                                , ( "case_insensitive", Json.Encode.bool True )
                                 ]
                           )
                         ]
                   )
                 ]
             )
-            (String.words (String.toLower query))
+            queryWordsWildCard
         )
 
 

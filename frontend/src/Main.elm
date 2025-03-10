@@ -1,6 +1,7 @@
 module Main exposing (main)
 
 import Browser
+import Browser.Dom
 import Browser.Navigation
 import Html
     exposing
@@ -19,7 +20,8 @@ import Html
         )
 import Html.Attributes
     exposing
-        ( class
+        ( alt
+        , class
         , classList
         , href
         , id
@@ -27,18 +29,18 @@ import Html.Attributes
         )
 import Json.Decode
 import Page.Flakes exposing (Model(..))
-import Page.Home
 import Page.Options
 import Page.Packages
 import RemoteData exposing (RemoteData(..))
 import Route exposing (SearchType(..))
 import Search
     exposing
-        ( Msg(..)
-        , NixOSChannel
+        ( NixOSChannel
         , decodeNixOSChannels
         , defaultFlakeId
         )
+import Shortcut
+import Task
 import Url
 
 
@@ -67,7 +69,6 @@ type alias Model =
 
 type Page
     = NotFound
-    | Home Page.Home.Model
     | Packages Page.Packages.Model
     | Options Page.Options.Model
     | Flakes Page.Flakes.Model
@@ -112,10 +113,11 @@ init flags url navKey =
 type Msg
     = ChangedUrl Url.Url
     | ClickedLink Browser.UrlRequest
-    | HomeMsg Page.Home.Msg
     | PackagesMsg Page.Packages.Msg
     | OptionsMsg Page.Options.Msg
     | FlakesMsg Page.Flakes.Msg
+    | CtrlKRegistered
+    | SearchFocusResult (Result Browser.Dom.Error ())
 
 
 updateWith :
@@ -196,9 +198,6 @@ pageMatch : Page -> Page -> Bool
 pageMatch m1 m2 =
     case ( m1, m2 ) of
         ( NotFound, NotFound ) ->
-            True
-
-        ( Home _, Home _ ) ->
             True
 
         ( Packages model_a, Packages model_b ) ->
@@ -320,10 +319,6 @@ update msg model =
         ( ChangedUrl url, _ ) ->
             changeRouteTo model url
 
-        ( HomeMsg subMsg, Home subModel ) ->
-            Page.Home.update subMsg subModel model.nixosChannels
-                |> updateWith Home HomeMsg model
-
         ( PackagesMsg subMsg, Packages subModel ) ->
             Page.Packages.update model.navKey subMsg subModel model.nixosChannels
                 |> updateWith Packages PackagesMsg model
@@ -336,7 +331,10 @@ update msg model =
             Page.Flakes.update model.navKey subMsg subModel model.nixosChannels
                 |> updateWith Flakes FlakesMsg model
 
-        ( _, _ ) ->
+        ( CtrlKRegistered, _ ) ->
+            ( model, Browser.Dom.focus "search-query-input" |> Task.attempt SearchFocusResult )
+
+        _ ->
             -- Disregard messages that arrived for the wrong page.
             ( model, Cmd.none )
 
@@ -353,55 +351,88 @@ view :
         }
 view model =
     let
+        maybeQuery m =
+            case m.query of
+                Nothing ->
+                    ""
+
+                Just q ->
+                    if String.isEmpty q then
+                        ""
+
+                    else
+                        " - " ++ q
+
+        maybeFlakeQuery m =
+            case m of
+                OptionModel m_ ->
+                    maybeQuery m_
+
+                PackagesModel m_ ->
+                    maybeQuery m_
+
         title =
             case model.page of
-                Packages _ ->
-                    "NixOS Search - Packages"
+                Packages m ->
+                    "NixOS Search - Packages" ++ maybeQuery m
 
-                Options _ ->
-                    "NixOS Search - Options"
+                Options m ->
+                    "NixOS Search - Options" ++ maybeQuery m
 
-                Flakes _ ->
-                    "NixOS Search - Flakes (Experimental)"
+                Flakes m ->
+                    "NixOS Search - Flakes (Experimental)" ++ maybeFlakeQuery m
 
                 _ ->
                     "NixOS Search"
     in
     { title = title
     , body =
-        [ div []
-            [ header []
-                [ div [ class "navbar navbar-static-top" ]
-                    [ div [ class "navbar-inner" ]
-                        [ div [ class "container" ]
-                            [ a [ class "brand", href "https://nixos.org" ]
-                                [ img [ src "https://nixos.org/logo/nix-wiki.png", class "logo" ] []
-                                ]
-                            , div []
-                                [ ul [ class "nav pull-left" ]
-                                    (viewNavigation model.route)
+        [ Shortcut.shortcutElement
+            [ { msg = CtrlKRegistered
+              , keyCombination =
+                  { baseKey = Shortcut.Regular "K"
+                  , shift = Nothing
+                  , alt = Nothing
+                  , meta = Nothing
+                  , ctrl = Just True
+                  }
+                },
+            Shortcut.simpleShortcut (Shortcut.Regular "/") <| CtrlKRegistered ]
+            []
+            [ div []
+                [ header []
+                    [ div [ class "navbar navbar-static-top" ]
+                        [ div [ class "navbar-inner" ]
+                            [ div [ class "container" ]
+                                [ a [ class "brand", href "https://nixos.org" ]
+                                    [ img [ alt "NixOS logo", src "/images/nix-logo.png", class "logo" ] []
+                                    ]
+                                , div []
+                                    [ ul [ class "nav pull-left" ]
+                                        (viewNavigation model.route)
+                                    ]
                                 ]
                             ]
                         ]
                     ]
-                ]
-            , div [ class "container main" ]
-                [ div [ id "content" ] [ viewPage model ]
-                , footer
-                    [ class "container text-center" ]
-                    [ div []
-                        [ span [] [ text "Please help us improve the search by " ]
-                        , a
-                            [ href "https://github.com/NixOS/nixos-search/issues"
+                , div [ class "container main" ]
+                    [ div [ id "content" ] [ viewPage model ]
+                    , footer
+                        [ class "container text-center" ]
+                        [ div []
+                            [ span [] [ text "Please help us improve the search by " ]
+                            , a
+                                [ href "https://github.com/NixOS/nixos-search/issues"
+                                ]
+                                [ text "reporting issues" ]
+                            , span [] [ text "." ]
                             ]
-                            [ text "reporting issues" ]
-                        , span [] [ text "." ]
-                        ]
-                    , div []
-                        [ span [] [ text "❤️  " ]
-                        , span [] [ text "Elasticsearch instance graciously provided by " ]
-                        , a [ href "https://bonsai.io" ] [ text "Bonsai" ]
-                        , span [] [ text ". Thank you! ❤️ " ]
+                        , div []
+                            [ span [] [ text "❤️  " ]
+                            , span [] [ text "Elasticsearch instance graciously provided by " ]
+                            , a [ href "https://bonsai.io" ] [ text "Bonsai" ]
+                            , span [] [ text ". Thank you! ❤️ " ]
+                            ]
                         ]
                     ]
                 ]
@@ -413,27 +444,28 @@ view model =
 viewNavigation : Route.Route -> List (Html Msg)
 viewNavigation route =
     let
-        toRoute f =
-            case route of
-                -- Preserve arguments
-                Route.Packages searchArgs ->
-                    f searchArgs
+        -- Preserve most arguments
+        searchArgs =
+            (\args -> { args | from = Nothing, buckets = Nothing }) <|
+                case route of
+                    Route.Packages args ->
+                        args
 
-                Route.Options searchArgs ->
-                    f searchArgs
+                    Route.Options args ->
+                        args
 
-                Route.Flakes searchArgs ->
-                    f searchArgs
+                    Route.Flakes args ->
+                        args
 
-                _ ->
-                    f <| Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+                    _ ->
+                        Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
     in
     li [] [ a [ href "https://nixos.org" ] [ text "Back to nixos.org" ] ]
         :: List.map
             (viewNavigationItem route)
-            [ ( toRoute Route.Packages, text "Packages" )
-            , ( toRoute Route.Options, text "Options" )
-            , ( toRoute Route.Flakes, span [] [ text "Flakes", sup [] [ span [ class "label label-info" ] [ small [] [ text "Experimental" ] ] ] ] )
+            [ ( Route.Packages searchArgs, text "Packages" )
+            , ( Route.Options searchArgs, text "NixOS options" )
+            , ( Route.Flakes searchArgs, span [] [ text "Flakes", sup [] [ span [ class "label label-info" ] [ small [] [ text "Experimental" ] ] ] ] )
             ]
 
 
@@ -452,9 +484,6 @@ viewPage model =
     case model.page of
         NotFound ->
             div [] [ text "Not Found" ]
-
-        Home _ ->
-            div [] [ text "Welcome" ]
 
         Packages packagesModel ->
             Html.map (\m -> PackagesMsg m) <| Page.Packages.view model.nixosChannels packagesModel

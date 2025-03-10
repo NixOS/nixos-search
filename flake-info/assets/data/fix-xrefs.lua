@@ -12,8 +12,8 @@ function Link(elem)
 
     elem.target = 'https://search.nixos.org/options?channel=unstable&show=' .. option_name .. '&query=' .. option_name
 
-    if #elem.content == 1 and elem.content[1].tag == 'Str' and elem.content[1].text == '???' then
-      elem.content[1].text = option_name
+    if #elem.content == 0 or (#elem.content == 1 and elem.content[1].tag == 'Str' and elem.content[1].text == '???') then
+      elem.content = option_name
     end
 
     return elem

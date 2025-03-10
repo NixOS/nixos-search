@@ -3,9 +3,7 @@ module Page.Packages exposing
     , Msg(..)
     , decodeResultAggregations
     , decodeResultItemSource
-    , encodeBuckets
     , init
-    , initBuckets
     , makeRequest
     , makeRequestBody
     , update
@@ -14,7 +12,6 @@ module Page.Packages exposing
     , viewSuccess
     )
 
-import Browser.Events exposing (Visibility(..))
 import Browser.Navigation
 import Html
     exposing
@@ -47,12 +44,11 @@ import Json.Decode.Pipeline
 import Json.Encode
 import Maybe
 import Regex
-import Route exposing (Route(..), SearchType)
+import Route exposing (SearchType)
 import Search
     exposing
-        ( Details(..)
+        ( Details
         , NixOSChannel
-        , decodeResolvedFlake
         , viewBucket
         )
 import Utils
@@ -72,6 +68,7 @@ type alias ResultItemSource =
     , pversion : String
     , outputs : List String
     , default_output : Maybe String
+    , programs : List String
     , description : Maybe String
     , longDescription : Maybe String
     , licenses : List ResultPackageLicense
@@ -229,7 +226,7 @@ view :
 view nixosChannels model =
     Search.view { toRoute = Route.Packages, categoryName = "packages" }
         [ text "Search more than "
-        , strong [] [ text "80 000 packages" ]
+        , strong [] [ text "120 000 packages" ]
         ]
         nixosChannels
         model
@@ -476,11 +473,11 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                     li [] [ text platform ]
 
         maintainersAndPlatforms =
-            [ div []
+            div []
                 [ div []
                     (List.append [ h4 [] [ text "Maintainers" ] ]
                         (if List.isEmpty item.source.maintainers then
-                            [ p [] [ text "This package has no maintainers." ] ]
+                            [ p [] [ text "This package has no maintainers. If you find it useful, please consider becoming a maintainer!" ] ]
 
                          else
                             [ ul []
@@ -493,235 +490,250 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                 , div []
                     (List.append [ h4 [] [ text "Platforms" ] ]
                         (if List.isEmpty item.source.platforms then
-                            [ p [] [ text "This package is not available on any platform." ] ]
+                            [ p [] [ text "This package does not list its available platforms." ] ]
 
                          else
-                            [ ul [] (List.map showPlatform item.source.platforms) ]
+                            [ ul [] (List.map showPlatform (List.sort item.source.platforms)) ]
                         )
                     )
                 ]
-            ]
+
+        programs =
+            div []
+                [ h4 [] [ text "Programs provided" ]
+                , if List.isEmpty item.source.programs then
+                    p [] [ text "This package provides no programs." ]
+
+                  else
+                    p [] (List.intersperse (text " ") (List.map (\p -> code [] [ text p ]) (List.sort item.source.programs)))
+                ]
 
         longerPackageDetails =
             optionals (Just item.source.attr_name == show)
                 [ div [ trapClick ]
                     (div []
                         (item.source.longDescription
-                            |> Maybe.map (\desc -> [ p [] [ text desc ] ])
+                            |> Maybe.andThen Utils.showHtml
                             |> Maybe.withDefault []
                         )
-                    :: div []
-                        [ h4 []
-                            [ text "How to install "
-                            , em [] [ text item.source.attr_name ]
-                            , text "?"
-                            ]
-                        , ul [ class "nav nav-tabs" ] <|
-                            Maybe.withDefault
-                                [ li
-                                    [ classList
-                                        [ ( "active", List.member showInstallDetails [ Search.Unset, Search.ViaNixShell, Search.FromFlake ] )
-                                        , ( "pull-right", True )
-                                        ]
-                                    ]
-                                    [ a
-                                        [ href "#"
-                                        , Search.onClickStop <|
-                                            SearchMsg <|
-                                                Search.ShowInstallDetails Search.ViaNixShell
-                                        ]
-                                        [ text "nix-shell" ]
-                                    ]
-                                , li
-                                    [ classList
-                                        [ ( "active", showInstallDetails == Search.ViaNixOS )
-                                        , ( "pull-right", True )
-                                        ]
-                                    ]
-                                    [ a
-                                        [ href "#"
-                                        , Search.onClickStop <|
-                                            SearchMsg <|
-                                                Search.ShowInstallDetails Search.ViaNixOS
-                                        ]
-                                        [ text "NixOS Configuration" ]
-                                    ]
-                                , li
-                                    [ classList
-                                        [ ( "active", showInstallDetails == Search.ViaNixEnv )
-                                        , ( "pull-right", True )
-                                        ]
-                                    ]
-                                    [ a
-                                        [ href "#"
-                                        , Search.onClickStop <|
-                                            SearchMsg <|
-                                                Search.ShowInstallDetails Search.ViaNixEnv
-                                        ]
-                                        [ text "nix-env" ]
-                                    ]
+                        :: div []
+                            [ h4 []
+                                [ text "How to install "
+                                , em [] [ text item.source.attr_name ]
+                                , text "?"
                                 ]
-                            <|
-                                Maybe.map
-                                    (\_ ->
-                                        [ li
-                                            [ classList
-                                                [ ( "active", True )
-                                                , ( "pull-right", True )
-                                                ]
-                                            ]
-                                            [ a
-                                                [ href "#"
-                                                , Search.onClickStop <|
-                                                    SearchMsg <|
-                                                        Search.ShowInstallDetails Search.FromFlake
-                                                ]
-                                                [ text "Install from flake" ]
+                            , ul [ class "nav nav-tabs" ] <|
+                                Maybe.withDefault
+                                    [ li
+                                        [ classList
+                                            [ ( "active", List.member showInstallDetails [ Search.Unset, Search.ViaNixShell, Search.FromFlake ] )
+                                            , ( "pull-right", True )
                                             ]
                                         ]
-                                    )
-                                    item.source.flakeUrl
-                        , div
-                            [ class "tab-content" ]
-                          <|
-                            Maybe.withDefault
-                                [ div
-                                    [ classList
-                                        [ ( "tab-pane", True )
-                                        , ( "active", showInstallDetails == Search.ViaNixEnv )
+                                        [ a
+                                            [ href "#"
+                                            , Search.onClickStop <|
+                                                SearchMsg <|
+                                                    Search.ShowInstallDetails Search.ViaNixShell
+                                            ]
+                                            [ text "nix-shell" ]
+                                        ]
+                                    , li
+                                        [ classList
+                                            [ ( "active", showInstallDetails == Search.ViaNixOS )
+                                            , ( "pull-right", True )
+                                            ]
+                                        ]
+                                        [ a
+                                            [ href "#"
+                                            , Search.onClickStop <|
+                                                SearchMsg <|
+                                                    Search.ShowInstallDetails Search.ViaNixOS
+                                            ]
+                                            [ text "NixOS Configuration" ]
+                                        ]
+                                    , li
+                                        [ classList
+                                            [ ( "active", showInstallDetails == Search.ViaNixEnv )
+                                            , ( "pull-right", True )
+                                            ]
+                                        ]
+                                        [ a
+                                            [ href "#"
+                                            , Search.onClickStop <|
+                                                SearchMsg <|
+                                                    Search.ShowInstallDetails Search.ViaNixEnv
+                                            ]
+                                            [ text "nix-env" ]
                                         ]
                                     ]
-                                    [ p []
-                                        [ strong [] [ text "Warning:" ]
-                                        , text """
-                                            Using nix-env permanently modifies a
-                                            local profile of installed packages.
-                                            This must be cleaned up, updated and
-                                            maintained by the user, in the same
-                                            way as a traditional package
-                                            manager. Using nix-shell or a NixOS
-                                            configuration is recommended
-                                            instead.
-                                          """
+                                <|
+                                    Maybe.map
+                                        (\_ ->
+                                            [ li
+                                                [ classList
+                                                    [ ( "active", True )
+                                                    , ( "pull-right", True )
+                                                    ]
+                                                ]
+                                                [ a
+                                                    [ href "#"
+                                                    , Search.onClickStop <|
+                                                        SearchMsg <|
+                                                            Search.ShowInstallDetails Search.FromFlake
+                                                    ]
+                                                    [ text "Install from flake" ]
+                                                ]
+                                            ]
+                                        )
+                                        item.source.flakeUrl
+                            , div
+                                [ class "tab-content" ]
+                              <|
+                                Maybe.withDefault
+                                    [ div
+                                        [ classList
+                                            [ ( "tab-pane", True )
+                                            , ( "active", showInstallDetails == Search.ViaNixEnv )
+                                            ]
                                         ]
-                                    ]
-                                , div
-                                    [ classList
-                                        [ ( "active", showInstallDetails == Search.ViaNixEnv )
+                                        [ p []
+                                            [ strong [] [ text "Warning:" ]
+                                            , text " Using "
+                                            , code [] [ text "nix-env" ]
+                                            , text """
+                                            permanently modifies a local profile of installed packages.
+                                            This must be updated and maintained by the user in the same
+                                            way as with a traditional package manager, foregoing many
+                                            of the benefits that make Nix uniquely powerful. Using
+                                            """
+                                            , code [] [ text "nix-shell" ]
+                                            , text """
+                                            or a NixOS configuration is recommended instead.
+                                            """
+                                            ]
                                         ]
-                                    , class "tab-pane"
-                                    ]
-                                    [ p []
-                                        [ strong [] [ text "On NixOS:" ] ]
-                                    ]
-                                , div
-                                    [ classList
-                                        [ ( "active", showInstallDetails == Search.ViaNixEnv )
+                                    , div
+                                        [ classList
+                                            [ ( "active", showInstallDetails == Search.ViaNixEnv )
+                                            ]
+                                        , class "tab-pane"
                                         ]
-                                    , class "tab-pane"
-                                    , id "package-details-nixpkgs"
-                                    ]
-                                    [ pre [ class "code-block shell-command" ]
-                                        [ text "nix-env -iA nixos."
-                                        , strong [] [ text item.source.attr_name ]
+                                        [ p []
+                                            [ strong [] [ text "On NixOS:" ] ]
                                         ]
-                                    ]
-                                , div [] [ p [] [] ]
-                                , div
-                                    [ classList
-                                        [ ( "active", showInstallDetails == Search.ViaNixEnv )
+                                    , div
+                                        [ classList
+                                            [ ( "active", showInstallDetails == Search.ViaNixEnv )
+                                            ]
+                                        , class "tab-pane"
+                                        , id "package-details-nixpkgs"
                                         ]
-                                    , class "tab-pane"
-                                    ]
-                                    [ p []
-                                        [ strong [] [ text "On Non NixOS:" ] ]
-                                    ]
-                                , div
-                                    [ classList
-                                        [ ( "active", showInstallDetails == Search.ViaNixEnv )
+                                        [ pre [ class "code-block shell-command" ]
+                                            [ text "nix-env -iA nixos."
+                                            , strong [] [ text item.source.attr_name ]
+                                            ]
                                         ]
-                                    , class "tab-pane"
-                                    , id "package-details-nixpkgs"
-                                    ]
-                                    [ pre [ class "code-block shell-command" ]
-                                        [ text "nix-env -iA nixpkgs."
-                                        , strong [] [ text item.source.attr_name ]
+                                    , div [] [ p [] [] ]
+                                    , div
+                                        [ classList
+                                            [ ( "active", showInstallDetails == Search.ViaNixEnv )
+                                            ]
+                                        , class "tab-pane"
                                         ]
-                                    ]
-                                , div
-                                    [ classList
-                                        [ ( "tab-pane", True )
-                                        , ( "active", showInstallDetails == Search.ViaNixOS )
+                                        [ p []
+                                            [ strong [] [ text "On Non NixOS:" ] ]
                                         ]
-                                    ]
-                                    [ p []
-                                        [ text "Add the following Nix code to your NixOS Configuration, usually located in "
-                                        , strong [] [ text "/etc/nixos/configuration.nix" ]
+                                    , div
+                                        [ classList
+                                            [ ( "active", showInstallDetails == Search.ViaNixEnv )
+                                            ]
+                                        , class "tab-pane"
+                                        , id "package-details-nixpkgs"
                                         ]
-                                    ]
-                                , div
-                                    [ classList
-                                        [ ( "active", showInstallDetails == Search.ViaNixOS )
+                                        [ pre [ class "code-block shell-command" ]
+                                            [ text "# without flakes:\nnix-env -iA nixpkgs."
+                                            , strong [] [ text item.source.attr_name ]
+                                            , text "\n# with flakes:\nnix profile install nixpkgs#"
+                                            , strong [] [ text item.source.attr_name ]
+                                            ]
                                         ]
-                                    , class "tab-pane"
-                                    , id "package-details-nixpkgs"
-                                    ]
-                                    [ pre [ class "code-block" ]
-                                        [ text <| "  environment.systemPackages = [\n    pkgs."
-                                        , strong [] [ text item.source.attr_name ]
-                                        , text <| "\n  ];"
+                                    , div
+                                        [ classList
+                                            [ ( "tab-pane", True )
+                                            , ( "active", showInstallDetails == Search.ViaNixOS )
+                                            ]
                                         ]
-                                    ]
-                                , div
-                                    [ classList
-                                        [ ( "tab-pane", True )
-                                        , ( "active", List.member showInstallDetails [ Search.Unset, Search.ViaNixShell, Search.FromFlake ] )
+                                        [ p []
+                                            [ text "Add the following Nix code to your NixOS Configuration, usually located in "
+                                            , strong [] [ text "/etc/nixos/configuration.nix" ]
+                                            ]
                                         ]
-                                    ]
-                                    [ p []
-                                        [ text """
+                                    , div
+                                        [ classList
+                                            [ ( "active", showInstallDetails == Search.ViaNixOS )
+                                            ]
+                                        , class "tab-pane"
+                                        , id "package-details-nixpkgs"
+                                        ]
+                                        [ pre [ class "code-block" ]
+                                            [ text <| "  environment.systemPackages = [\n    pkgs."
+                                            , strong [] [ text item.source.attr_name ]
+                                            , text <| "\n  ];"
+                                            ]
+                                        ]
+                                    , div
+                                        [ classList
+                                            [ ( "tab-pane", True )
+                                            , ( "active", List.member showInstallDetails [ Search.Unset, Search.ViaNixShell, Search.FromFlake ] )
+                                            ]
+                                        ]
+                                        [ p []
+                                            [ text """
                                             A nix-shell will temporarily modify
                                             your $PATH environment variable.
                                             This can be used to try a piece of
                                             software before deciding to
                                             permanently install it.
                                           """
-                                        ]
-                                    ]
-                                , div
-                                    [ classList
-                                        [ ( "tab-pane", True )
-                                        , ( "active", List.member showInstallDetails [ Search.Unset, Search.ViaNixShell, Search.FromFlake ] )
-                                        ]
-                                    ]
-                                    [ pre [ class "code-block shell-command" ]
-                                        [ text "nix-shell -p "
-                                        , strong [] [ text item.source.attr_name ]
-                                        ]
-                                    ]
-                                ]
-                            <|
-                                Maybe.map
-                                    (\url ->
-                                        [ div
-                                            [ classList
-                                                [ ( "tab-pane", True )
-                                                , ( "active", True )
-                                                ]
-                                            ]
-                                            [ pre [ class "code-block shell-command" ]
-                                                [ text "nix build "
-                                                , strong [] [ text url ]
-                                                , text "#"
-                                                , em [] [ text item.source.attr_name ]
-                                                ]
                                             ]
                                         ]
-                                    )
+                                    , div
+                                        [ classList
+                                            [ ( "tab-pane", True )
+                                            , ( "active", List.member showInstallDetails [ Search.Unset, Search.ViaNixShell, Search.FromFlake ] )
+                                            ]
+                                        ]
+                                        [ pre [ class "code-block shell-command" ]
+                                            [ text "nix-shell -p "
+                                            , strong [] [ text item.source.attr_name ]
+                                            ]
+                                        ]
+                                    ]
                                 <|
-                                    Maybe.map Tuple.first item.source.flakeUrl
-                        ]
+                                    Maybe.map
+                                        (\url ->
+                                            [ div
+                                                [ classList
+                                                    [ ( "tab-pane", True )
+                                                    , ( "active", True )
+                                                    ]
+                                                ]
+                                                [ pre [ class "code-block shell-command" ]
+                                                    [ text "nix profile install "
+                                                    , strong [] [ text url ]
+                                                    , text "#"
+                                                    , em [] [ text item.source.attr_name ]
+                                                    ]
+                                                ]
+                                            ]
+                                        )
+                                    <|
+                                        Maybe.map Tuple.first item.source.flakeUrl
+                            ]
+                        :: programs
                         :: maintainersAndPlatforms
+                        :: []
                     )
                 ]
 
@@ -908,8 +920,8 @@ makeRequestBody query from size maybeBuckets sort =
         filterByBuckets
         "package_attr_name"
         [ ( "package_attr_name", 9.0 )
+        , ( "package_programs", 9.0 )
         , ( "package_pname", 6.0 )
-        , ( "package_attr_name_query", 4.0 )
         , ( "package_description", 1.3 )
         , ( "package_longDescription", 1.0 )
         , ( "flake_name", 0.5 )
@@ -947,6 +959,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.required "package_pversion" Json.Decode.string
         |> Json.Decode.Pipeline.required "package_outputs" (Json.Decode.list Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_default_output" (Json.Decode.nullable Json.Decode.string)
+        |> Json.Decode.Pipeline.required "package_programs" (Json.Decode.list Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_description" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_longDescription" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_license" (Json.Decode.list decodeResultPackageLicense)

@@ -2,30 +2,18 @@
 /// Additionally, we implement converseions from the two possible input formats, i.e.
 /// Flakes, or Nixpkgs.
 use std::{
+    collections::HashSet,
     convert::{TryFrom, TryInto},
     path::PathBuf,
 };
 
-use super::{
-    import::{DocValue, ModulePath},
-    pandoc::PandocExt,
-};
-use crate::data::import::NixOption;
-use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    import,
-    system::System,
-    utility::{AttributeQuery, Flatten, OneOrMany, Reverse},
+    import::{self, DocString, DocValue, ModulePath, NixOption},
+    pandoc::PandocExt,
+    utility::{Flatten, OneOrMany},
 };
-use lazy_static::lazy_static;
-
-lazy_static! {
-    static ref FILTERS_PATH: PathBuf = std::env::var("NIXPKGS_PANDOC_FILTERS_PATH")
-        .unwrap_or("".into())
-        .into();
-}
 
 type Flake = super::Flake;
 
@@ -42,16 +30,19 @@ impl From<import::License> for License {
         match license {
             import::License::None { .. } => License {
                 url: None,
-                fullName: "No License Specified".to_string(),
+                fullName: "no license specified".to_string(),
             },
             import::License::Simple { license } => License {
                 url: None,
                 fullName: license,
             },
-            import::License::Full { fullName, url, .. } => License { url, fullName },
-            import::License::Url { url } => License {
-                url: Some(url),
-                fullName: "No Name".into(),
+            import::License::Full {
+                fullName,
+                shortName,
+                url,
+            } => License {
+                url,
+                fullName: fullName.unwrap_or(shortName.unwrap_or("custom".into())),
             },
         }
     }
@@ -66,25 +57,19 @@ pub enum Derivation {
     #[allow(non_snake_case)]
     Package {
         package_attr_name: String,
-        package_attr_name_reverse: Reverse<String>,
-        package_attr_name_query: AttributeQuery,
-        package_attr_name_query_reverse: Reverse<AttributeQuery>,
         package_attr_set: String,
-        package_attr_set_reverse: Reverse<String>,
         package_pname: String,
-        package_pname_reverse: Reverse<String>,
         package_pversion: String,
-        package_platforms: Vec<System>,
+        package_platforms: Vec<String>,
         package_outputs: Vec<String>,
         package_default_output: Option<String>,
+        package_programs: Vec<String>,
         package_license: Vec<License>,
         package_license_set: Vec<String>,
         package_maintainers: Vec<Maintainer>,
         package_maintainers_set: Vec<String>,
         package_description: Option<String>,
-        package_description_reverse: Option<Reverse<String>>,
         package_longDescription: Option<String>,
-        package_longDescription_reverse: Option<Reverse<String>>,
         package_hydra: (),
         package_system: String,
         package_homepage: Vec<String>,
@@ -93,7 +78,7 @@ pub enum Derivation {
     #[serde(rename = "app")]
     App {
         app_attr_name: String,
-        app_platforms: Vec<System>,
+        app_platforms: Vec<String>,
 
         app_type: Option<String>,
 
@@ -103,12 +88,8 @@ pub enum Derivation {
     Option {
         option_source: Option<String>,
         option_name: String,
-        option_name_reverse: Reverse<String>,
-        option_name_query: AttributeQuery,
-        option_name_query_reverse: Reverse<AttributeQuery>,
 
-        option_description: Option<String>,
-        option_description_reverse: Option<Reverse<String>>,
+        option_description: Option<DocString>,
 
         option_type: Option<String>,
 
@@ -135,6 +116,7 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                 outputs,
                 default_output,
                 description,
+                long_description,
                 license,
             } => {
                 let package_attr_set: Vec<_> = attribute_name.split(".").collect();
@@ -145,9 +127,14 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                 })
                 .into();
 
-                let package_attr_set_reverse = Reverse(package_attr_set.clone());
+                let long_description = long_description.map(|s| s.render_markdown()).transpose()?;
 
-                let package_license: Vec<License> = vec![license.into()];
+                let package_license: Vec<License> = license
+                    .map(OneOrMany::into_list)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|sos| sos.0.into())
+                    .collect();
                 let package_license_set: Vec<String> = package_license
                     .iter()
                     .clone()
@@ -157,26 +144,20 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                 let maintainer: Maintainer = f.into();
 
                 Derivation::Package {
-                    package_attr_name_query: AttributeQuery::new(&attribute_name),
-                    package_attr_name_query_reverse: Reverse(AttributeQuery::new(&attribute_name)),
                     package_attr_name: attribute_name.clone(),
-                    package_attr_name_reverse: Reverse(attribute_name),
                     package_attr_set,
-                    package_attr_set_reverse,
                     package_pname: name.clone(),
-                    package_pname_reverse: Reverse(name),
                     package_pversion: version,
                     package_platforms: platforms,
                     package_outputs: outputs,
                     package_default_output: Some(default_output),
+                    package_programs: Vec::new(),
                     package_license,
                     package_license_set,
                     package_description: description.clone(),
                     package_maintainers: vec![maintainer.clone()],
                     package_maintainers_set: maintainer.name.map_or(vec![], |n| vec![n]),
-                    package_description_reverse: description.map(Reverse),
-                    package_longDescription: None,
-                    package_longDescription_reverse: None,
+                    package_longDescription: long_description,
                     package_hydra: (),
                     package_system: String::new(),
                     package_homepage: Vec::new(),
@@ -204,7 +185,11 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
 
     fn try_from(entry: import::NixpkgsEntry) -> Result<Self, Self::Error> {
         Ok(match entry {
-            import::NixpkgsEntry::Derivation { attribute, package } => {
+            import::NixpkgsEntry::Derivation {
+                attribute,
+                package,
+                programs,
+            } => {
                 let package_attr_set: Vec<_> = attribute.split(".").collect();
                 let package_attr_set: String = (if package_attr_set.len() > 1 {
                     package_attr_set[0]
@@ -213,13 +198,10 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                 })
                 .into();
 
-                let package_attr_set_reverse = Reverse(package_attr_set.clone());
-
-                let package_license: Vec<_> = package
+                let package_license: Vec<License> = package
                     .meta
                     .license
-                    .map(OneOrMany::into_list)
-                    .unwrap_or_default()
+                    .map_or(Default::default(), OneOrMany::into_list)
                     .into_iter()
                     .map(|sos| sos.0.into())
                     .collect();
@@ -228,6 +210,15 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     .iter()
                     .map(|l: &License| l.fullName.to_owned())
                     .collect();
+
+                let platforms: HashSet<String> =
+                    package.meta.platforms.unwrap_or_default().collect();
+
+                let bad_platforms: HashSet<String> =
+                    package.meta.bad_platforms.unwrap_or_default().collect();
+
+                let platforms: Vec<String> =
+                    platforms.difference(&bad_platforms).cloned().collect();
 
                 let package_maintainers: Vec<Maintainer> = package
                     .meta
@@ -242,6 +233,12 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     .flat_map(|m| m.name.to_owned())
                     .collect();
 
+                let long_description = package
+                    .meta
+                    .long_description
+                    .map(|s| s.render_markdown())
+                    .transpose()?;
+
                 let position: Option<String> = package.meta.position.map(|p| {
                     if p.starts_with("/nix/store") {
                         p.split("/").skip(4).collect::<Vec<&str>>().join("/")
@@ -252,29 +249,19 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
 
                 Derivation::Package {
                     package_attr_name: attribute.clone(),
-                    package_attr_name_reverse: Reverse(attribute.clone()),
-                    package_attr_name_query: AttributeQuery::new(&attribute),
-                    package_attr_name_query_reverse: Reverse(AttributeQuery::new(&attribute)),
                     package_attr_set,
-                    package_attr_set_reverse,
                     package_pname: package.pname.clone(),
-                    package_pname_reverse: Reverse(package.pname),
                     package_pversion: package.version,
-                    package_platforms: package
-                        .meta
-                        .platforms
-                        .map(Flatten::flatten)
-                        .unwrap_or_default(),
+                    package_platforms: platforms,
                     package_outputs: package.outputs.into_keys().collect(),
                     package_default_output: package.default_output,
+                    package_programs: programs,
                     package_license,
                     package_license_set,
                     package_maintainers,
                     package_maintainers_set,
                     package_description: package.meta.description.clone(),
-                    package_description_reverse: package.meta.description.map(Reverse),
-                    package_longDescription: package.meta.long_description.clone(),
-                    package_longDescription_reverse: package.meta.long_description.map(Reverse),
+                    package_longDescription: long_description,
                     package_hydra: (),
                     package_system: package.system,
                     package_homepage: package
@@ -303,36 +290,14 @@ impl TryFrom<import::NixOption> for Derivation {
             flake,
         }: import::NixOption,
     ) -> Result<Self, Self::Error> {
-        let description = description
-            .as_ref()
-            .map(PandocExt::render)
-            .transpose()
-            .with_context(|| format!("While rendering the description for option `{}`", name))?;
-        let option_default = default;
-        // .map(TryInto::try_into)
-        // .transpose()
-        // .with_context(|| format!("While rendering the default for option `{}`", name))?;
-        let option_example = example;
-        // .map(TryInto::try_into)
-        // .transpose()
-        // .with_context(|| format!("While rendering the example for option `{}`", name))?;
-        let option_type = option_type;
-        // .map(TryInto::try_into)
-        // .transpose()
-        // .with_context(|| format!("While rendering the type for option `{}`", name))?;
-
         Ok(Derivation::Option {
             option_source: declarations.get(0).map(Clone::clone),
             option_name: name.clone(),
-            option_name_reverse: Reverse(name.clone()),
-            option_description: description.clone(),
-            option_description_reverse: description.map(Reverse),
-            option_default,
-            option_example,
+            option_description: description,
+            option_default: default,
+            option_example: example,
             option_flake: flake,
             option_type,
-            option_name_query: AttributeQuery::new(&name),
-            option_name_query_reverse: Reverse(AttributeQuery::new(&name)),
         })
     }
 }

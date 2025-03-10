@@ -15,15 +15,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checking out the repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup
       uses: ./.github/actions/common-setup
       with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
 
 
     - name: Building flake-info
       run: |
-        nix -vL build .#flake-info
+        nix --accept-flake-config -vL build .#flake-info

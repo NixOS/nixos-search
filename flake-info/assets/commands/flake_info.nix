@@ -19,6 +19,7 @@ let
   readPackages = system: drvs: lib.mapAttrsToList (
     attribute_name: drv: (
       {
+        entry_type = "package";
         attribute_name = attribute_name;
         system = system;
         name = drv.name;
@@ -28,13 +29,15 @@ let
         # paths = builtins.listToAttrs ( map (output: {name = output; value = drv.${output};}) drv.outputs );
         default_output = drv.outputName;
       }
-      // lib.optionalAttrs (drv ? meta && drv.meta ? description) { inherit (drv.meta) description; }
-      // lib.optionalAttrs (drv ? meta && drv.meta ? license) { inherit (drv.meta) license; }
+      // lib.optionalAttrs (drv ? meta.description) { inherit (drv.meta) description; }
+      // lib.optionalAttrs (drv ? meta.longDescription) { inherit (drv.meta) longDescription; }
+      // lib.optionalAttrs (drv ? meta.license) { inherit (drv.meta) license; }
     )
   ) (validPkgs drvs);
   readApps = system: apps: lib.mapAttrsToList (
     attribute_name: app: (
       {
+        entry_type = "app";
         attribute_name = attribute_name;
         system = system;
       }
@@ -86,6 +89,7 @@ let
              x;
       in
         opt
+        // { entry_type = "option"; }
         // applyOnAttr "default" substFunction
         // applyOnAttr "example" substFunction # (_: { __type = "function"; })
         // applyOnAttr "type" substFunction
@@ -152,7 +156,10 @@ rec {
   all = packages ++ apps ++ options;
 
   # nixpkgs-specific, doesn't use the flake argument
-  nixos-options = lib.mapAttrsToList (name: option: option // { inherit name; })
-    (builtins.fromJSON (builtins.unsafeDiscardStringContext (builtins.readFile
-      "${(import <nixpkgs/nixos/release.nix> {}).options}/share/doc/nixos/options.json")));
+  nixos-options = readNixOSOptions {
+    module = import <nixpkgs/nixos/modules/module-list.nix> ++ [
+      <nixpkgs/nixos/modules/virtualisation/qemu-vm.nix>
+      { nixpkgs.hostPlatform = "x86_64-linux"; }
+    ];
+  };
 }

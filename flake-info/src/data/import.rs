@@ -11,12 +11,11 @@ use serde_json::Value;
 
 use super::pandoc::PandocExt;
 use super::prettyprint::print_value;
-use super::system::System;
 use super::utility::{Flatten, OneOrMany};
 
 /// Holds information about a specific derivation
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(untagged)]
+#[serde(tag = "entry_type", rename_all = "lowercase")]
 pub enum FlakeEntry {
     /// A package as it may be defined in a flake
     ///
@@ -27,18 +26,19 @@ pub enum FlakeEntry {
         attribute_name: String,
         name: String,
         version: String,
-        platforms: Vec<System>,
+        platforms: Vec<String>,
         outputs: Vec<String>,
         default_output: String,
         description: Option<String>,
-        #[serde(deserialize_with = "string_or_struct", default)]
-        license: License,
+        #[serde(rename = "longDescription")]
+        long_description: Option<String>,
+        license: Option<OneOrMany<StringOrStruct<License>>>,
     },
     /// An "application" that can be called using nix run <..>
     App {
         bin: Option<PathBuf>,
         attribute_name: String,
-        platforms: Vec<System>,
+        platforms: Vec<String>,
         app_type: Option<String>,
     },
     /// an option defined in a module of a flake
@@ -52,7 +52,7 @@ pub struct NixOption {
     /// Location of the defining module(s)
     pub declarations: Vec<String>,
 
-    pub description: Option<String>,
+    pub description: Option<DocString>,
     pub name: String,
 
     #[serde(rename = "type")]
@@ -81,6 +81,20 @@ pub enum ModulePath {
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(untagged)]
+pub enum DocString {
+    DocFormat(DocFormat),
+    String(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(tag = "_type", content = "text")]
+pub enum DocFormat {
+    #[serde(rename = "mdDoc")]
+    MarkdownDoc(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(untagged)]
 pub enum DocValue {
     Literal(Literal),
     Value(Value),
@@ -89,12 +103,27 @@ pub enum DocValue {
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(tag = "_type", content = "text")]
 pub enum Literal {
-    #[serde(rename = "literalExpression")]
+    #[serde(rename = "literalExpression", alias = "literalExample")]
     LiteralExpression(String),
-    #[serde(rename = "literalExample")]
-    LiteralExample(String),
     #[serde(rename = "literalDocBook")]
     LiteralDocBook(String),
+    #[serde(rename = "literalMD")]
+    LiteralMarkdown(String),
+}
+
+impl Serialize for DocString {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            DocString::String(md) | DocString::DocFormat(DocFormat::MarkdownDoc(md)) => serializer
+                .serialize_str(&md.render_markdown().unwrap_or_else(|e| {
+                    warn!("Could not render Markdown content: {}", e);
+                    md.to_owned()
+                })),
+        }
+    }
 }
 
 impl Serialize for DocValue {
@@ -103,16 +132,20 @@ impl Serialize for DocValue {
         S: Serializer,
     {
         match self {
-            DocValue::Literal(Literal::LiteralExample(s) | Literal::LiteralExpression(s)) => {
-                return serializer.serialize_str(&s);
+            DocValue::Literal(Literal::LiteralExpression(s)) => serializer.serialize_str(&s),
+            DocValue::Literal(Literal::LiteralDocBook(db)) => {
+                serializer.serialize_str(&db.render_docbook().unwrap_or_else(|e| {
+                    warn!("Could not render DocBook content: {}", e);
+                    db.to_owned()
+                }))
             }
-            DocValue::Literal(Literal::LiteralDocBook(doc_book)) => {
-                return serializer.serialize_str(&doc_book.render().unwrap_or_else(|e| {
-                    warn!("Could not render docbook content: {}", e);
-                    doc_book.to_owned()
-                }));
+            DocValue::Literal(Literal::LiteralMarkdown(md)) => {
+                serializer.serialize_str(&md.render_markdown().unwrap_or_else(|e| {
+                    warn!("Could not render Markdown content: {}", e);
+                    md.to_owned()
+                }))
             }
-            DocValue::Value(v) => serializer.serialize_str(&print_value(v.to_owned())),
+            DocValue::Value(v) => serializer.serialize_str(&print_value(v)),
         }
     }
 }
@@ -139,7 +172,11 @@ pub struct Package {
 /// Name and Package definition are combined using this struct
 #[derive(Debug, Clone)]
 pub enum NixpkgsEntry {
-    Derivation { attribute: String, package: Package },
+    Derivation {
+        attribute: String,
+        package: Package,
+        programs: Vec<String>,
+    },
     Option(NixOption),
 }
 
@@ -150,7 +187,9 @@ pub struct Meta {
     pub license: Option<OneOrMany<StringOrStruct<License>>>,
     pub maintainers: Option<Flatten<Maintainer>>,
     pub homepage: Option<OneOrMany<String>>,
-    pub platforms: Option<Flatten<System>>,
+    pub platforms: Option<Platforms>,
+    #[serde(rename = "badPlatforms")]
+    pub bad_platforms: Option<Platforms>,
     pub position: Option<String>,
     pub description: Option<String>,
     #[serde(rename = "longDescription")]
@@ -212,6 +251,36 @@ where
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Platform {
+    System(String),
+    Pattern {}, // TODO how should those be displayed?
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct Platforms(Flatten<Platform>);
+
+impl Platforms {
+    // A bit of abstract nonsense: what we really want is
+    //   into_iter : Platforms → ∃ (I : Iterator<String>). I
+    // however Rust makes this annoying to write: we would either have to pick a
+    // concrete iterator type or use something like Box<dyn Iterator<Item = String>>.
+    // Instead, we can use the dual Church-encoded form of that existential type:
+    //   ? : Platforms → ∀ B. (∀ (I : Iterator<String>). I → B) → B
+    // ...which is exactly the type of collect! (think about what FromIterator means)
+    pub fn collect<B: std::iter::FromIterator<String>>(self) -> B {
+        self.0
+            .flatten()
+            .into_iter()
+            .flat_map(|p| match p {
+                Platform::System(s) => Some(s),
+                _ => None,
+            })
+            .collect()
+    }
+}
+
 /// Different representations of the licence attribute
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -225,12 +294,9 @@ pub enum License {
     },
     #[allow(non_snake_case)]
     Full {
-        fullName: String,
-        // shortName: String,
+        fullName: Option<String>,
+        shortName: Option<String>,
         url: Option<String>,
-    },
-    Url {
-        url: String,
     },
 }
 
@@ -351,7 +417,8 @@ mod tests {
                   "powerpc64-linux",
                   "powerpc64le-linux",
                   "riscv32-linux",
-                  "riscv64-linux"
+                  "riscv64-linux",
+                  {}
                 ],
                 "position": "/nix/store/97lxf2n6zip41j5flbv6b0928mxv9za8-nixpkgs-unstable-21.03pre268853.d9c6f13e13f/nixpkgs-unstable/pkgs/games/0verkill/default.nix:34",
                 "unfree": false,
@@ -365,7 +432,11 @@ mod tests {
 
         let _: Vec<NixpkgsEntry> = map
             .into_iter()
-            .map(|(attribute, package)| NixpkgsEntry::Derivation { attribute, package })
+            .map(|(attribute, package)| NixpkgsEntry::Derivation {
+                attribute,
+                package,
+                programs: Vec::new(),
+            })
             .collect();
     }
 

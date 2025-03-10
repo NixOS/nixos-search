@@ -26,11 +26,10 @@ import Html.Events exposing (onClick)
 import Http exposing (Body)
 import Page.Options exposing (Msg(..))
 import Page.Packages exposing (Msg(..))
-import RemoteData exposing (RemoteData(..))
+import RemoteData
 import Route
     exposing
-        ( Route(..)
-        , SearchType(..)
+        ( SearchType(..)
         )
 import Search
     exposing
