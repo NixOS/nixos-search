@@ -46,6 +46,11 @@ repo = "fleet"
 
 [[sources]]
 type = "github"
+owner = "daeuniverse"
+repo = "flake.nix"
+
+[[sources]]
+type = "github"
 owner = "dgollings"
 repo = "nix-atlas"
 
