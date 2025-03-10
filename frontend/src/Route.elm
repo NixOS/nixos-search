@@ -6,13 +6,10 @@ module Route exposing
     , allTypes
     , fromUrl
     , href
-    , replaceUrl
     , routeToString
-    , searchTypeToString
     , searchTypeToTitle
     )
 
-import Browser.Navigation
 import Html
 import Html.Attributes
 import Route.SearchQuery exposing (SearchQuery)
@@ -162,11 +159,6 @@ parser url =
 href : Route -> Html.Attribute msg
 href targetRoute =
     Html.Attributes.href (routeToString targetRoute)
-
-
-replaceUrl : Browser.Navigation.Key -> Route -> Cmd msg
-replaceUrl navKey route =
-    Browser.Navigation.replaceUrl navKey (routeToString route)
 
 
 fromUrl : Url.Url -> Maybe Route

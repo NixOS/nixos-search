@@ -65,33 +65,17 @@ lazy_static! {
                 },
                 "package_attr_name": {
                     "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "package_attr_name_reverse": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "package_attr_name_query": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "package_attr_name_query_reverse": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+                    "fields": {
+                        "edge": {"type": "text", "analyzer": "edge"},
+                        "attr_path": {"type": "text", "analyzer": "attr_path"},
+                        "attr_path_reverse": {"type": "text", "analyzer": "attr_path_reverse"}
+                    },
                 },
                 "package_attr_set": {
                     "type": "keyword",
                     "fields": {"edge": {"type": "text", "analyzer": "edge"}},
                 },
-                "package_attr_set_reverse": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
                 "package_pname": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "package_pname_reverse": {
                     "type": "keyword",
                     "fields": {"edge": {"type": "text", "analyzer": "edge"}},
                 },
@@ -113,22 +97,15 @@ lazy_static! {
                 "package_default_output": {
                     "type": "keyword"
                 },
+                "package_programs": {
+                    "type": "keyword"
+                },
                 "package_description": {
                     "type": "text",
                     "analyzer": "english",
                     "fields": {"edge": {"type": "text", "analyzer": "edge"}},
                 },
-                "package_description_reverse": {
-                    "type": "text",
-                    "analyzer": "english",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
                 "package_longDescription": {
-                    "type": "text",
-                    "analyzer": "english",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "package_longDescription_reverse": {
                     "type": "text",
                     "analyzer": "english",
                     "fields": {"edge": {"type": "text", "analyzer": "edge"}},
@@ -155,26 +132,13 @@ lazy_static! {
                 // Options fields
                 "option_name": {
                     "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "option_name_reverse": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "option_name": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "option_name_reverse": {
-                    "type": "keyword",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+                    "fields": {
+                        "edge": {"type": "text", "analyzer": "edge"},
+                        "attr_path": {"type": "text", "analyzer": "attr_path"},
+                        "attr_path_reverse": {"type": "text", "analyzer": "attr_path_reverse"}
+                    },
                 },
                 "option_description": {
-                    "type": "text",
-                    "analyzer": "english",
-                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
-                },
-                "option_description_reverse": {
                     "type": "text",
                     "analyzer": "english",
                     "fields": {"edge": {"type": "text", "analyzer": "edge"}},
@@ -198,14 +162,26 @@ lazy_static! {
                         "token_chars": [
                             "letter",
                             "digit",
-                            // Either we use them or we would need to strip them before that.
                             "punctuation",
-                            "symbol",
+                            "custom",
                         ],
+                        // Exclude XML characters < and > from "symbol"
+                        "custom_token_chars": "+=~",
+                    },
+                    "attr_path": {
+                        "type": "path_hierarchy",
+                        "delimiter": ".",
+                    },
+                    "attr_path_reverse": {
+                        "type": "path_hierarchy",
+                        "delimiter": ".",
+                        "reverse": true,
                     },
                 },
                 "analyzer": {
                     "edge": {"tokenizer": "edge", "filter": ["lowercase"]},
+                    "attr_path": {"tokenizer": "attr_path", "filter": ["lowercase"]},
+                    "attr_path_reverse": {"tokenizer": "attr_path_reverse", "filter": ["lowercase"]},
                     "lowercase": {
                         "type": "custom",
                         "tokenizer": "keyword",

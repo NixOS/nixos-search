@@ -14,7 +14,6 @@ ignore
 logs
 node_modules
 npm-debug.log*
-package-lock.json
 repl-temp-*
 result
 src-url

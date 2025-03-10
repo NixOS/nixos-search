@@ -1,5 +1,6 @@
 name: "Frontend: Build & Deploy to Netlify"
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "flake.nix"
@@ -16,11 +17,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checking out the repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup
       uses: ./.github/actions/common-setup
       with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
 
@@ -32,7 +34,7 @@ jobs:
         cp -RL ./result/* ./dist/
 
     - name: Deploy to Netlify
-      uses: nwtgck/actions-netlify@v1.2
+      uses: nwtgck/actions-netlify@v3.0
       env:
         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}

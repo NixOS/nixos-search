@@ -2,44 +2,59 @@
   "name": "nixos-search",
   "version": "1.0.0",
   "description": "Search NixOS packages and options.",
-  "main": "index.js",
-  "repository": "https://github.com/NixOS/nixos-search",
   "author": "Rok Garbas <rok@garbas.si>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NixOS/nixos-search"
+  },
+  "main": "index.js",
   "scripts": {
-    "test": "elm-test",
-    "dev": "webpack-dev-server --hot --colors --port 3000",
+    "analyse": "elm-analyse -s -p 3001 -o",
     "build": "webpack",
-    "prod": "webpack -p",
-    "analyse": "elm-analyse -s -p 3001 -o"
+    "dev": "webpack serve --port 3000 --config config/webpack.dev.js",
+    "nodebug": "webpack serve --port 3000 --config config/webpack.dev.js --env nodebug",
+    "prod": "NODE_ENV=production webpack --config config/webpack.prod.js",
+    "start": "npm run dev",
+    "test": "elm-test"
   },
   "devDependencies": {
-    "@babel/core": "^7.7.2",
-    "@babel/preset-env": "^7.7.1",
-    "babel-loader": "^8.0.6",
-    "clean-webpack-plugin": "^3.0.0",
-    "closure-webpack-plugin": "^2.0.1",
-    "copy-webpack-plugin": "^5.0.5",
-    "css-loader": "^3.2.0",
-    "elm-analyse": "^0.16.5",
-    "elm-hot-webpack-loader": "^1.1.6",
-    "elm-test": "^0.19.1-1",
-    "elm-webpack-loader": "^6.0.1",
-    "file-loader": "^6.0.0",
-    "google-closure-compiler": "^20200224.0.0",
-    "html-webpack-plugin": "^4.0.2",
-    "less": "^3.12.2",
-    "less-loader": "^7.0.0",
-    "mini-css-extract-plugin": "^0.9.0",
-    "resolve-url-loader": "^3.1.0",
-    "style-loader": "^1.0.0",
-    "url-loader": "^4.0.0",
-    "webpack": "^4.41.2",
-    "webpack-cli": "^3.3.10",
-    "webpack-dev-server": "^3.9.0",
-    "webpack-merge": "^4.2.2"
+    "@babel/core": "^7.16.5",
+    "@babel/preset-env": "^7.16.5",
+    "autoprefixer": "^10.4.0",
+    "babel-loader": "^8.2.3",
+    "clean-webpack-plugin": "^4.0.0",
+    "copy-webpack-plugin": "^10.2.0",
+    "css-loader": "^4.3.0",
+    "css-minimizer-webpack-plugin": "^3.3.1",
+    "elm": "^0.19.1-5",
+    "elm-reloader": "^1.0.0",
+    "elm-test": "^0.19.1-revision9",
+    "elm-webpack-loader": "^8.0.0",
+    "file-loader": "^6.2.0",
+    "html-webpack-plugin": "^5.5.0",
+    "mini-css-extract-plugin": "^2.4.5",
+    "postcss": "^8.4.4",
+    "postcss-cli": "^9.0.2",
+    "postcss-loader": "^6.2.1",
+    "resolve-url-loader": "^4.0.0",
+    "sass": "^1.43.5",
+    "sass-loader": "^12.3.0",
+    "style-loader": "^3.3.1",
+    "terser-webpack-plugin": "^5.3.0",
+    "url-loader": "^4.1.1",
+    "webpack": "^5.64.4",
+    "webpack-cli": "^4.9.1",
+    "webpack-dev-server": "^4.6.0",
+    "webpack-merge": "^5.8.0"
+  },
+  "engines": {
+    "node": ">=12"
+  },
+  "prettier": {
+    "tabWidth": 4
   },
   "dependencies": {
-    "purecss": "^1.0.1"
+    "elm-keyboard-shortcut": "^1.0.1"
   }
 }

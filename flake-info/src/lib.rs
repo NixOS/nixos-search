@@ -2,6 +2,8 @@
 
 use anyhow::Result;
 use data::{import::Kind, Export, Flake, Source};
+use lazy_static::lazy_static;
+use std::path::{Path, PathBuf};
 
 pub mod commands;
 pub mod data;
@@ -11,6 +13,11 @@ pub mod elastic;
 
 pub use commands::get_flake_info;
 use log::trace;
+
+lazy_static! {
+    static ref DATADIR: PathBuf =
+        Path::new(option_env!("ROOTDIR").unwrap_or(env!("CARGO_MANIFEST_DIR"))).join("assets");
+}
 
 pub fn process_flake(
     source: &Source,
@@ -34,13 +41,13 @@ pub fn process_flake(
 
 pub fn process_nixpkgs(nixpkgs: &Source, kind: &Kind) -> Result<Vec<Export>, anyhow::Error> {
     let drvs = if matches!(kind, Kind::All | Kind::Package) {
-        commands::get_nixpkgs_info(nixpkgs.to_flake_ref())?
+        commands::get_nixpkgs_info(nixpkgs)?
     } else {
         Vec::new()
     };
 
     let mut options = if matches!(kind, Kind::All | Kind::Option) {
-        commands::get_nixpkgs_options(nixpkgs.to_flake_ref())?
+        commands::get_nixpkgs_options(nixpkgs)?
     } else {
         Vec::new()
     };

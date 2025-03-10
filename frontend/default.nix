@@ -2,82 +2,44 @@
 , nixosChannels
 , version
 }:
-let
-  package = builtins.fromJSON (builtins.readFile ./package.json);
-  yarnPkg = pkgs.yarn2nix-moretea.mkYarnPackage rec {
-    name = "${package.name}-yarn-${package.version}";
-    src = null;
-    dontUnpack = true;
-    packageJSON = ./package.json;
-    yarnLock = ./yarn.lock;
-    preConfigure = ''
-      mkdir ${package.name}
-      cd ${package.name}
-      ln -s ${packageJSON} ./package.json
-      ln -s ${yarnLock} ./yarn.lock
-    '';
-    yarnPreBuild = ''
-      mkdir -p $HOME/.node-gyp/${pkgs.nodejs.version}
-      echo 9 > $HOME/.node-gyp/${pkgs.nodejs.version}/installVersion
-      ln -sfv ${pkgs.nodejs}/include $HOME/.node-gyp/${pkgs.nodejs.version}
-    '';
-    publishBinsFor =
-      [
-        "webpack"
-        "webpack-dev-server"
-      ];
+pkgs.npmlock2nix.v1.build {
+  src = ./.;
+  installPhase = ''
+    mkdir $out
+    cp -R dist/* $out/
+    cp netlify.toml $out/
+  '';
+  postConfigure = pkgs.elmPackages.fetchElmDeps {
+    elmPackages = import ./elm-srcs.nix;
+    elmVersion = pkgs.elmPackages.elm.version;
+    registryDat = ./registry.dat;
   };
-in
-pkgs.stdenv.mkDerivation {
-  name = "${package.name}-${package.version}";
-  src = pkgs.lib.cleanSource ./.;
-
-  preferLocalBuild = true;
-
-  buildInputs =
-    [
-      yarnPkg
-    ] ++
+  ELASTICSEARCH_MAPPING_SCHEMA_VERSION = version;
+  NIXOS_CHANNELS = builtins.toJSON nixosChannels;
+  buildCommands = [
+    "HOME=$PWD npm run prod"
+  ];
+  buildInputs = 
     (with pkgs; [
       nodejs
       elm2nix
-    ]) ++
-    (with pkgs.nodePackages; [
-      yarn
     ]) ++
     (with pkgs.elmPackages; [
       elm
       elm-format
       elm-language-server
       elm-test
-      elm-analyse
     ]);
-
-  ELASTICSEARCH_MAPPING_SCHEMA_VERSION = version;
-  NIXOS_CHANNELS = builtins.toJSON nixosChannels;
-
-  configurePhase = pkgs.elmPackages.fetchElmDeps {
-    elmPackages = import ./elm-srcs.nix;
-    elmVersion = pkgs.elmPackages.elm.version;
-    registryDat = ./registry.dat;
+  node_modules_attrs = {
+    sourceOverrides = {
+      elm = sourceIngo: drv: drv.overrideAttrs (old: {
+        postPatch = ''
+          sed -i -e "s|download(|//download(|" install.js
+          sed -i -e "s|request(|//request(|" download.js
+          sed -i -e "s|var version|return; var version|" download.js
+          cp ${pkgs.elmPackages.elm}/bin/elm bin/elm
+        '';
+      });
+    };
   };
-
-  patchPhase = ''
-    rm -rf node_modules
-    ln -sf ${yarnPkg}/libexec/${package.name}/node_modules .
-  '';
-
-  buildPhase = ''
-    # Yarn writes cache directories etc to $HOME.
-    export HOME=$PWD/yarn_home
-    yarn prod
-  '';
-
-  installPhase = ''
-    mkdir -p $out
-    cp -R ./dist/* $out/
-    cp netlify.toml $out/
-  '';
-
-  passthru.yarnPkg = yarnPkg;
 }
