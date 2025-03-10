@@ -70,3 +70,16 @@ To test whether your flake is compatible with nix flake-info you can try running
 ```
 $ nix run github:nixos/nixos-search#flake-info -- flake <your flake handle>
 ```
+
+### Criteria for inclusion
+
+Inclusion in the search does not imply endorsement by the Nix project or anyone else.
+
+We generally try to include a wide range of flakes that could be of interest to Nix users, but reserve the right to refuse or remove flakes for reasons such as:
+
+* Flakes that do not actually work
+* Malicious packages
+* Flakes with incorrect or incomplete license metadata
+* Lack of relevance
+* Programs that are already part of nixpkgs (we prefer you help maintain them there)
+* Outdated package or packaging
