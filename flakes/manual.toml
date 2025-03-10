@@ -191,6 +191,11 @@ repo = "Solaar-Flake"
 
 [[sources]]
 type = "github"
+owner = "Wazzaps"
+repo = "fingerpaint"
+
+[[sources]]
+type = "github"
 owner = "yusdacra"
 repo = "nix-cargo-integration"
 
