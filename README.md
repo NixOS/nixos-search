@@ -41,6 +41,12 @@ better queries which in turn will produce better results.
 To start developing open a terminal and run:
 
 ```
+env --chdir=frontend nix develop -c yarn install
+```
+
+... and then:
+
+```
 env --chdir=frontend nix develop -c yarn dev
 ```
 
