@@ -46,6 +46,11 @@ repo = "fleet"
 
 [[sources]]
 type = "github"
+owner = "chaotic-cx"
+repo = "nyx"
+
+[[sources]]
+type = "github"
 owner = "dgollings"
 repo = "nix-atlas"
 
@@ -223,3 +228,4 @@ repo = "neuropil"
 type = "sourcehut"
 owner = "~munksgaard"
 repo = "geomyidae-flake"
+
