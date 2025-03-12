@@ -51,6 +51,11 @@ repo = "fleet"
 
 [[sources]]
 type = "github"
+owner = "chaotic-cx"
+repo = "nyx"
+
+[[sources]]
+type = "github"
 owner = "chayleaf"
 repo = "notnft"
 
@@ -208,6 +213,11 @@ repo = "surrealdb"
 type = "github"
 owner = "Svenum"
 repo = "Solaar-Flake"
+
+[[sources]]
+type = "github"
+owner = "TraceMachina"
+repo = "nativelink"
 
 [[sources]]
 type = "github"
