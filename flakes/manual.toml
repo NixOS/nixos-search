@@ -46,6 +46,11 @@ repo = "fleet"
 
 [[sources]]
 type = "github"
+owner = "dgollings"
+repo = "nix-atlas"
+
+[[sources]]
+type = "github"
 owner = "fort-nix"
 repo = "nix-bitcoin"
 
@@ -186,8 +191,23 @@ repo = "telescope"
 
 [[sources]]
 type = "github"
+owner = "surrealdb"
+repo = "surrealdb"
+
+[[sources]]
+type = "github"
 owner = "Svenum"
 repo = "Solaar-Flake"
+
+[[sources]]
+type = "github"
+owner = "TraceMachina"
+repo = "nativelink"
+
+[[sources]]
+type = "github"
+owner = "Wazzaps"
+repo = "fingerpaint"
 
 [[sources]]
 type = "github"
@@ -208,4 +228,3 @@ repo = "neuropil"
 type = "sourcehut"
 owner = "~munksgaard"
 repo = "geomyidae-flake"
-
