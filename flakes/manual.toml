@@ -226,6 +226,11 @@ repo = "neuropil"
 
 [[sources]]
 type = "sourcehut"
+owner = "~dblsaiko"
+repo = "nix-extras"
+
+[[sources]]
+type = "sourcehut"
 owner = "~munksgaard"
 repo = "geomyidae-flake"
 
