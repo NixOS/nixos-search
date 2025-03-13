@@ -61,6 +61,11 @@ repo = "nix-bitcoin"
 
 [[sources]]
 type = "github"
+owner = "haqq-network"
+repo = "haqq"
+
+[[sources]]
+type = "github"
 owner = "hellwolf"
 repo = "solc.nix"
 
@@ -228,4 +233,3 @@ repo = "neuropil"
 type = "sourcehut"
 owner = "~munksgaard"
 repo = "geomyidae-flake"
-
