@@ -22,12 +22,12 @@ module.exports = (withDebug, optimize) => {
                 template: "./src/index.html"
             }),
             new CleanWebpackPlugin(),
-            new webpack.EnvironmentPlugin([
-                "ELASTICSEARCH_MAPPING_SCHEMA_VERSION",
-                "NIXOS_CHANNELS"
-            ]),
-            new webpack.DefinePlugin({
-                'process.env': JSON.stringify(process.env)
+            new webpack.EnvironmentPlugin({
+                ELASTICSEARCH_MAPPING_SCHEMA_VERSION: undefined,
+                ELASTICSEARCH_URL: null,
+                ELASTICSEARCH_USERNAME: null,
+                ELASTICSEARCH_PASSWORD: null,
+                NIXOS_CHANNELS: undefined
             }),
         ],
         optimization: {
