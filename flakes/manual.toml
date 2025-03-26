@@ -36,6 +36,11 @@ repo = "microvm.nix"
 
 [[sources]]
 type = "github"
+owner = "astro"
+repo = "skyflake"
+
+[[sources]]
+type = "github"
 owner = "bobvanderlinden"
 repo = "nixpkgs-ruby"
 
@@ -48,6 +53,16 @@ repo = "fleet"
 type = "github"
 owner = "chaotic-cx"
 repo = "nyx"
+
+[[sources]]
+type = "github"
+owner = "chayleaf"
+repo = "notnft"
+
+[[sources]]
+type = "github"
+owner = "chayleaf"
+repo = "nixos-router"
 
 [[sources]]
 type = "github"
