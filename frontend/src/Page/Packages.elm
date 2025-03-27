@@ -447,6 +447,21 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                        )
                 )
 
+        linkAllMaintainers maintainers =
+            let
+                ghHandles =
+                    List.filterMap (\m -> (Maybe.map (String.append "@") m.github)) maintainers
+            in
+            optionals (List.length ghHandles > 1)
+                [ li []
+                    (
+                        [ text "Maintainer Github handles: " ]
+                        ++ [ code []
+                            [ text (String.join " " ghHandles) ]
+                        ]
+                    )
+                ]
+
         mailtoAllMaintainers maintainers =
             let
                 maintainerMails =
@@ -483,6 +498,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                             [ ul []
                                 (List.map showMaintainer item.source.maintainers
                                     ++ mailtoAllMaintainers item.source.maintainers
+                                    ++ linkAllMaintainers item.source.maintainers
                                 )
                             ]
                         )

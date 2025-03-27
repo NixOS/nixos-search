@@ -793,6 +793,14 @@ header .navbar.navbar-static-top {
                 margin-top: 1em;
                 display: grid;
                 grid-template-columns: auto auto;
+
+                // make it easy to copy only the list of Github handles
+                & > :first-child > ul > :last-child {
+                  user-select: none;
+                }
+                & > :first-child > ul > :last-child > code {
+                  user-select: text;
+                }
               }
             }
           }
