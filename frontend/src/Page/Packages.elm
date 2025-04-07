@@ -452,7 +452,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                 ghHandles =
                     List.filterMap (\m -> (Maybe.map (String.append "@") m.github)) maintainers
             in
-            optionals (List.length ghHandles > 1)
+            optionals (not (List.isEmpty ghHandles))
                 [ li []
                     (
                         [ text "Maintainer Github handles: " ]
