@@ -55,6 +55,11 @@
         version = "1.0.1";
       };
 
+      "pablohirafuji/elm-syntax-highlight" = {
+        sha256 = "0yadpqbq9nbmhzaasvcdcn4c1yak1v0xalx4126akvffic531gq9";
+        version = "3.6.0";
+      };
+
       "truqu/elm-base64" = {
         sha256 = "12w68b4idbs2vn0gm0lj354pm745jb7n0fj69408mpvh5r1z4m1b";
         version = "2.0.4";
