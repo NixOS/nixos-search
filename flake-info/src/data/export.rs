@@ -68,6 +68,8 @@ pub enum Derivation {
         package_license_set: Vec<String>,
         package_maintainers: Vec<Maintainer>,
         package_maintainers_set: Vec<String>,
+        package_teams: Vec<Team>,
+        package_teams_set: Vec<String>,
         package_description: Option<String>,
         package_longDescription: Option<String>,
         package_hydra: (),
@@ -157,6 +159,8 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                     package_description: description.clone(),
                     package_maintainers: vec![maintainer.clone()],
                     package_maintainers_set: maintainer.name.map_or(vec![], |n| vec![n]),
+                    package_teams: Vec::new(),
+                    package_teams_set: Vec::new(),
                     package_longDescription: long_description,
                     package_hydra: (),
                     package_system: String::new(),
@@ -233,6 +237,19 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     .flat_map(|m| m.name.to_owned())
                     .collect();
 
+                let package_teams: Vec<Team> = package
+                    .meta
+                    .teams
+                    .map_or(Default::default(), Flatten::flatten)
+                    .into_iter()
+                    .map(Into::into)
+                    .collect();
+
+                let package_teams_set = package_teams
+                    .iter()
+                    .flat_map(|m| m.shortName.to_owned())
+                    .collect();
+
                 let long_description = package
                     .meta
                     .long_description
@@ -260,6 +277,8 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     package_license_set,
                     package_maintainers,
                     package_maintainers_set,
+                    package_teams,
+                    package_teams_set,
                     package_description: package.meta.description.clone(),
                     package_longDescription: long_description,
                     package_hydra: (),
@@ -344,6 +363,40 @@ impl From<super::Flake> for Maintainer {
             github: Some(github),
             email: None,
             name: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[allow(non_snake_case)]
+pub struct Team {
+    members: Option<OneOrMany<Maintainer>>,
+    scope: Option<String>,
+    shortName: Option<String>,
+    githubTeams: Option<OneOrMany<String>>,
+}
+
+impl From<import::Team> for Team {
+    fn from(import: import::Team) -> Self {
+        match import {
+            import::Team::Full {
+                members,
+                scope,
+                shortName,
+                githubTeams,
+            } => Team {
+                members: members.map(|m| m.map(Maintainer::from)),
+                scope,
+                shortName,
+                githubTeams,
+            },
+            #[allow(non_snake_case)]
+            import::Team::Simple(shortName) => Team {
+                shortName: Some(shortName),
+                scope: None,
+                members: None,
+                githubTeams: None,
+            },
         }
     }
 }
