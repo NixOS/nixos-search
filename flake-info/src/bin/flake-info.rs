@@ -205,7 +205,17 @@ async fn run_command(
 
     match command {
         Command::Flake { flake, temp_store } => {
-            let source = Source::Git { url: flake };
+            let source =
+                if flake.starts_with("github:") {
+                    let mut s = flake.split(":").skip(1).next().unwrap().split("/");
+                    Source::Github {
+                        owner: s.next().expect("github owner").to_string(),
+                        repo: s.next().expect("github repo").to_string(),
+                        git_ref: None,
+                        description: None
+                    }
+                }
+                else { Source::Git { url: flake } };
             let (info, exports) = flake_info::process_flake(&source, &kind, temp_store, extra)
                 .map_err(FlakeInfoError::Flake)?;
 
