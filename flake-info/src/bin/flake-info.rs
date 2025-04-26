@@ -56,6 +56,11 @@ enum Command {
     Nixpkgs {
         #[structopt(help = "Nixpkgs channel to import")]
         channel: String,
+
+        #[structopt(
+            help = "Restrict to importing a single attribute",
+        )]
+        attribute: Option<String>,
     },
 
     #[structopt(about = "Import nixpkgs channel from archive or local git path")]
@@ -68,6 +73,11 @@ enum Command {
             default_value = "unstable"
         )]
         channel: String,
+
+        #[structopt(
+            help = "Restrict to importing a single attribute",
+        )]
+        attribute: Option<String>,
     },
 
     #[structopt(about = "Load and import a group of flakes from a file")]
@@ -217,7 +227,7 @@ async fn run_command(
 
             Ok((Box::new(|| Ok(exports)), ident))
         }
-        Command::Nixpkgs { channel } => {
+        Command::Nixpkgs { channel, attribute } => {
             let nixpkgs = Source::nixpkgs(channel)
                 .await
                 .map_err(FlakeInfoError::Nixpkgs)?;
@@ -229,13 +239,13 @@ async fn run_command(
 
             Ok((
                 Box::new(move || {
-                    flake_info::process_nixpkgs(&Source::Nixpkgs(nixpkgs), &kind)
+                    flake_info::process_nixpkgs(&Source::Nixpkgs(nixpkgs), &kind, &attribute)
                         .map_err(FlakeInfoError::Nixpkgs)
                 }),
                 ident,
             ))
         }
-        Command::NixpkgsArchive { source, channel } => {
+        Command::NixpkgsArchive { source, channel, attribute } => {
             let ident = (
                 "nixos".to_string(),
                 channel.to_owned(),
@@ -244,7 +254,7 @@ async fn run_command(
 
             Ok((
                 Box::new(move || {
-                    flake_info::process_nixpkgs(&Source::Git { url: source }, &kind)
+                    flake_info::process_nixpkgs(&Source::Git { url: source }, &kind, &attribute)
                         .map_err(FlakeInfoError::Nixpkgs)
                 }),
                 ident,
@@ -265,7 +275,7 @@ async fn run_command(
             let (exports_and_hashes, errors) = sources
                 .iter()
                 .map(|source| match source {
-                    Source::Nixpkgs(nixpkgs) => flake_info::process_nixpkgs(source, &kind)
+                    Source::Nixpkgs(nixpkgs) => flake_info::process_nixpkgs(source, &kind, &None)
                         .with_context(|| {
                             format!("While processing nixpkgs archive {}", source.to_flake_ref())
                         })
