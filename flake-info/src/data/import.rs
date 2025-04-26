@@ -9,7 +9,7 @@ use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
 
-use super::pandoc::PandocExt;
+//use super::pandoc::PandocExt;
 use super::prettyprint::print_value;
 use super::utility::{Flatten, OneOrMany};
 
@@ -118,10 +118,7 @@ impl Serialize for DocString {
     {
         match self {
             DocString::String(md) | DocString::DocFormat(DocFormat::MarkdownDoc(md)) => serializer
-                .serialize_str(&md.render_markdown().unwrap_or_else(|e| {
-                    warn!("Could not render Markdown content: {}", e);
-                    md.to_owned()
-                })),
+                .serialize_str("ok"),
         }
     }
 }
@@ -134,16 +131,10 @@ impl Serialize for DocValue {
         match self {
             DocValue::Literal(Literal::LiteralExpression(s)) => serializer.serialize_str(&s),
             DocValue::Literal(Literal::LiteralDocBook(db)) => {
-                serializer.serialize_str(&db.render_docbook().unwrap_or_else(|e| {
-                    warn!("Could not render DocBook content: {}", e);
-                    db.to_owned()
-                }))
+                serializer.serialize_str("ok")
             }
             DocValue::Literal(Literal::LiteralMarkdown(md)) => {
-                serializer.serialize_str(&md.render_markdown().unwrap_or_else(|e| {
-                    warn!("Could not render Markdown content: {}", e);
-                    md.to_owned()
-                }))
+                serializer.serialize_str("ok")
             }
             DocValue::Value(v) => serializer.serialize_str(&print_value(v)),
         }
