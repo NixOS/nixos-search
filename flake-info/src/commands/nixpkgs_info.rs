@@ -8,7 +8,7 @@ use crate::data::import::{NixOption, NixpkgsEntry, Package};
 use crate::data::Nixpkgs;
 use crate::Source;
 
-pub fn get_nixpkgs_info(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
+pub fn get_nixpkgs_info(nixpkgs: &Source, attribute: &Option<String>) -> Result<Vec<NixpkgsEntry>> {
     let mut command = Command::new("nix-env");
     command.add_args(&[
         "--json",
@@ -20,8 +20,12 @@ pub fn get_nixpkgs_info(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
         "config",
         "import <nixpkgs/pkgs/top-level/packages-config.nix>",
         "-qa",
-        "--meta",
     ]);
+    match attribute {
+        Some(attr) => { command.add_arg(attr); },
+        None => {},
+    }
+    command.add_arg("--meta");
 
     command.enable_capture();
     command.log_to = LogTo::Log;
