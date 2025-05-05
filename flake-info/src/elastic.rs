@@ -129,7 +129,14 @@ lazy_static! {
                 "package_teams": {
                     "type": "nested",
                     "properties": {
-                        "members": {"type": "keyword"},
+                        "members": {
+                            "type": "nested",
+                            "properties": {
+                                "name": {"type": "text"},
+                                "email": {"type": "text"},
+                                "github": {"type": "text"},
+                            },
+                        },
                         "githubTeams": {"type": "keyword"},
                     },
                 },
