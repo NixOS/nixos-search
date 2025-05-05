@@ -819,7 +819,7 @@ viewResult nixosChannels outMsg toRoute categoryName model viewSuccess viewBucke
             if result.hits.total.value == 0 && List.length buckets == 0 then
                 div [ class "search-results" ]
                     [ ul [ class "search-sidebar" ] searchBuckets
-                    , viewNoResults categoryName
+                    , viewNoResults categoryName (Maybe.withDefault "" model.query)
                     ]
 
             else if List.length buckets > 0 then
@@ -866,12 +866,15 @@ viewResult nixosChannels outMsg toRoute categoryName model viewSuccess viewBucke
 
 viewNoResults :
     String
+    -> String
     -> Html c
-viewNoResults categoryName =
+viewNoResults categoryName query =
     div [ class "search-no-results" ]
         [ h2 [] [ text <| "No " ++ categoryName ++ " found!" ]
         , text "You might want to "
         , Html.a [ href "https://github.com/NixOS/nixpkgs/blob/master/pkgs/README.md#quick-start-to-adding-a-package" ] [ text "add a package" ]
+        , text " or "
+        , Html.a [ href ("https://github.com/NixOS/nixpkgs/issues?q=" ++ query) ] [ text "search nixpkgs issues" ]
         , text "."
         ]
 
