@@ -101,7 +101,7 @@ type alias ResultPackageMaintainer =
 type alias ResultPackageTeam =
     { members : Maybe (List ResultPackageMaintainer)
     , scope : Maybe String
-    , shortName: Maybe String
+    , shortName: String
     , githubTeams : Maybe (List String)
     }
 
@@ -489,7 +489,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                   (a [ href ((String.append "https://github.com/orgs/NixOS/teams/") githubTeam) ] [ text githubTeam ])
           in
           li []
-              (List.map showTeamEntry (maybe team.githubTeams []))
+              ([ text team.shortName ] ++ (List.map showTeamEntry (maybe team.githubTeams [])))
 
         mailtoAllMaintainers maintainers =
             let
@@ -1138,7 +1138,7 @@ decodeResultPackageTeam =
     Json.Decode.map4 ResultPackageTeam
         (Json.Decode.field "members" (Json.Decode.nullable (Json.Decode.list decodeResultPackageMaintainer)))
         (Json.Decode.field "scope" (Json.Decode.nullable Json.Decode.string))
-        (Json.Decode.field "shortName" (Json.Decode.nullable Json.Decode.string))
+        (Json.Decode.field "shortName" Json.Decode.string)
         (Json.Decode.field "githubTeams" (Json.Decode.nullable (Json.Decode.list Json.Decode.string)))
 
 
