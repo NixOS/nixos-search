@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     import::{self, DocString, DocValue, ModulePath, NixOption},
-    pandoc::PandocExt,
+    //pandoc::PandocExt,
     utility::{Flatten, OneOrMany},
 };
 
@@ -127,7 +127,7 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                 })
                 .into();
 
-                let long_description = long_description.map(|s| s.render_markdown()).transpose()?;
+                let long_description = Some(String::new()); //long_description.map(|s| s.render_markdown()).transpose()?;
 
                 let package_license: Vec<License> = license
                     .map(OneOrMany::into_list)
@@ -233,11 +233,11 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     .flat_map(|m| m.name.to_owned())
                     .collect();
 
-                let long_description = package
-                    .meta
-                    .long_description
-                    .map(|s| s.render_markdown())
-                    .transpose()?;
+                let long_description = Some(String::new()); //package
+                    //.meta
+                    //.long_description
+                    //.map(|s| s.render_markdown())
+                    //.transpose()?;
 
                 let position: Option<String> = package.meta.position.map(|p| {
                     if p.starts_with("/nix/store") {
