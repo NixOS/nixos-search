@@ -73,6 +73,7 @@ type alias ResultItemSource =
     , longDescription : Maybe String
     , licenses : List ResultPackageLicense
     , maintainers : List ResultPackageMaintainer
+    , teams: List ResultPackageTeam
     , platforms : List String
     , position : Maybe String
     , homepage : List String
@@ -94,6 +95,14 @@ type alias ResultPackageMaintainer =
     { name : Maybe String
     , email : Maybe String
     , github : Maybe String
+    }
+
+
+type alias ResultPackageTeam =
+    { members : Maybe (List ResultPackageMaintainer)
+    , scope : Maybe String
+    , shortName: String
+    , githubTeams : Maybe (List String)
     }
 
 
@@ -120,6 +129,7 @@ type alias ResultAggregations =
     , package_platforms : Search.Aggregation
     , package_attr_set : Search.Aggregation
     , package_maintainers_set : Search.Aggregation
+    , package_teams_set : Search.Aggregation
     , package_license_set : Search.Aggregation
     }
 
@@ -129,6 +139,7 @@ type alias Aggregations =
     , package_platforms : Search.Aggregation
     , package_attr_set : Search.Aggregation
     , package_maintainers_set : Search.Aggregation
+    , package_teams_set : Search.Aggregation
     , package_license_set : Search.Aggregation
     }
 
@@ -137,6 +148,7 @@ type alias Buckets =
     { packageSets : List String
     , licenses : List String
     , maintainers : List String
+    , teams : List String
     , platforms : List String
     }
 
@@ -146,6 +158,7 @@ emptyBuckets =
     { packageSets = []
     , licenses = []
     , maintainers = []
+    , teams = []
     , platforms = []
     }
 
@@ -278,6 +291,11 @@ viewBuckets bucketsAsString result =
             (result.aggregations.package_maintainers_set.buckets |> sortBuckets)
             (createBucketsMsg .maintainers (\s v -> { s | maintainers = v }))
             selectedBucket.maintainers
+        |> viewBucket
+            "Teams"
+            (result.aggregations.package_teams_set.buckets |> sortBuckets)
+            (createBucketsMsg .teams (\s v -> { s | teams = v }))
+            selectedBucket.teams
         |> viewBucket
             "Platforms"
             (result.aggregations.package_platforms.buckets |> sortBuckets |> filterPlatformsBucket)
@@ -462,6 +480,17 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                     )
                 ]
 
+        showTeam team =
+          let
+              maybe m d =
+                  Maybe.withDefault d m
+
+              showTeamEntry githubTeam =
+                  (a [ href ((String.append "https://github.com/orgs/NixOS/teams/") githubTeam) ] [ text githubTeam ])
+          in
+          li []
+              ([ text team.shortName ] ++ (List.map showTeamEntry (maybe team.githubTeams [])))
+
         mailtoAllMaintainers maintainers =
             let
                 maintainerMails =
@@ -487,7 +516,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                 Nothing ->
                     li [] [ text platform ]
 
-        maintainersAndPlatforms =
+        maintainersTeamsAndPlatforms =
             div []
                 [ div []
                     (List.append [ h4 [] [ text "Maintainers" ] ]
@@ -502,6 +531,16 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                 )
                             ]
                         )
+                    )
+                , div []
+                    (if not (List.isEmpty item.source.teams) then
+                        (List.append [ h4 [] [ text "Teams" ] ]
+                            [ ul []
+                                (List.map showTeam item.source.teams)
+                            ]
+                        )
+                    else
+                        []
                     )
                 , div []
                     (List.append [ h4 [] [ text "Platforms" ] ]
@@ -748,7 +787,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         Maybe.map Tuple.first item.source.flakeUrl
                             ]
                         :: programs
-                        :: maintainersAndPlatforms
+                        :: maintainersTeamsAndPlatforms
                         :: []
                     )
                 ]
@@ -878,6 +917,7 @@ makeRequestBody query from size maybeBuckets sort =
             [ ( "package_attr_set", currentBuckets.packageSets )
             , ( "package_license_set", currentBuckets.licenses )
             , ( "package_maintainers_set", currentBuckets.maintainers )
+            , ( "package_teams_set", currentBuckets.teams )
             , ( "package_platforms", currentBuckets.platforms )
             ]
 
@@ -931,6 +971,7 @@ makeRequestBody query from size maybeBuckets sort =
         [ "package_attr_set"
         , "package_license_set"
         , "package_maintainers_set"
+        , "package_teams_set"
         , "package_platforms"
         ]
         filterByBuckets
@@ -954,16 +995,18 @@ encodeBuckets options =
         [ ( "package_attr_set", Json.Encode.list Json.Encode.string options.packageSets )
         , ( "package_license_set", Json.Encode.list Json.Encode.string options.licenses )
         , ( "package_maintainers_set", Json.Encode.list Json.Encode.string options.maintainers )
+        , ( "package_teams_set", Json.Encode.list Json.Encode.string options.teams )
         , ( "package_platforms", Json.Encode.list Json.Encode.string options.platforms )
         ]
 
 
 decodeBuckets : Json.Decode.Decoder Buckets
 decodeBuckets =
-    Json.Decode.map4 Buckets
+    Json.Decode.map5 Buckets
         (Json.Decode.field "package_attr_set" (Json.Decode.list Json.Decode.string))
         (Json.Decode.field "package_license_set" (Json.Decode.list Json.Decode.string))
         (Json.Decode.field "package_maintainers_set" (Json.Decode.list Json.Decode.string))
+        (Json.Decode.field "package_teams_set" (Json.Decode.list Json.Decode.string))
         (Json.Decode.field "package_platforms" (Json.Decode.list Json.Decode.string))
 
 
@@ -980,6 +1023,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.required "package_longDescription" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_license" (Json.Decode.list decodeResultPackageLicense)
         |> Json.Decode.Pipeline.required "package_maintainers" (Json.Decode.list decodeResultPackageMaintainer)
+        |> Json.Decode.Pipeline.required "package_teams" (Json.Decode.list decodeResultPackageTeam)
         |> Json.Decode.Pipeline.required "package_platforms" (Json.Decode.map filterPlatforms (Json.Decode.list Json.Decode.string))
         |> Json.Decode.Pipeline.required "package_position" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_homepage" decodeHomepage
@@ -1089,6 +1133,15 @@ decodeResultPackageMaintainer =
         (Json.Decode.field "github" (Json.Decode.nullable Json.Decode.string))
 
 
+decodeResultPackageTeam : Json.Decode.Decoder ResultPackageTeam
+decodeResultPackageTeam =
+    Json.Decode.map4 ResultPackageTeam
+        (Json.Decode.field "members" (Json.Decode.nullable (Json.Decode.list decodeResultPackageMaintainer)))
+        (Json.Decode.field "scope" (Json.Decode.nullable Json.Decode.string))
+        (Json.Decode.field "shortName" Json.Decode.string)
+        (Json.Decode.field "githubTeams" (Json.Decode.nullable (Json.Decode.list Json.Decode.string)))
+
+
 decodeResultPackageHydra : Json.Decode.Decoder ResultPackageHydra
 decodeResultPackageHydra =
     Json.Decode.succeed ResultPackageHydra
@@ -1111,19 +1164,21 @@ decodeResultPackageHydraPath =
 
 decodeResultAggregations : Json.Decode.Decoder ResultAggregations
 decodeResultAggregations =
-    Json.Decode.map5 ResultAggregations
+    Json.Decode.map6 ResultAggregations
         (Json.Decode.field "all" decodeAggregations)
         (Json.Decode.field "package_platforms" Search.decodeAggregation)
         (Json.Decode.field "package_attr_set" Search.decodeAggregation)
         (Json.Decode.field "package_maintainers_set" Search.decodeAggregation)
+        (Json.Decode.field "package_teams_set" Search.decodeAggregation)
         (Json.Decode.field "package_license_set" Search.decodeAggregation)
 
 
 decodeAggregations : Json.Decode.Decoder Aggregations
 decodeAggregations =
-    Json.Decode.map5 Aggregations
+    Json.Decode.map6 Aggregations
         (Json.Decode.field "doc_count" Json.Decode.int)
         (Json.Decode.field "package_platforms" Search.decodeAggregation)
         (Json.Decode.field "package_attr_set" Search.decodeAggregation)
         (Json.Decode.field "package_maintainers_set" Search.decodeAggregation)
+        (Json.Decode.field "package_teams_set" Search.decodeAggregation)
         (Json.Decode.field "package_license_set" Search.decodeAggregation)

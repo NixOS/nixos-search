@@ -126,6 +126,21 @@ lazy_static! {
                     },
                 },
                 "package_maintainers_set": {"type": "keyword"},
+                "package_teams": {
+                    "type": "nested",
+                    "properties": {
+                        "members": {
+                            "type": "nested",
+                            "properties": {
+                                "name": {"type": "text"},
+                                "email": {"type": "text"},
+                                "github": {"type": "text"},
+                            },
+                        },
+                        "githubTeams": {"type": "keyword"},
+                    },
+                },
+                "package_teams_set": {"type": "keyword"},
                 "package_homepage": {
                     "type": "keyword"
                 },

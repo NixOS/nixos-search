@@ -186,6 +186,7 @@ pub enum NixpkgsEntry {
 pub struct Meta {
     pub license: Option<OneOrMany<StringOrStruct<License>>>,
     pub maintainers: Option<Flatten<Maintainer>>,
+    pub teams: Option<Flatten<Team>>,
     pub homepage: Option<OneOrMany<String>>,
     pub platforms: Option<Platforms>,
     #[serde(rename = "badPlatforms")]
@@ -203,6 +204,19 @@ pub enum Maintainer {
         name: Option<String>,
         github: Option<String>,
         email: Option<String>,
+    },
+    Simple(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Team {
+    #[allow(non_snake_case)]
+    Full {
+        members: Option<OneOrMany<Maintainer>>,
+        scope: Option<String>,
+        shortName: Option<String>,
+        githubTeams: Option<OneOrMany<String>>,
     },
     Simple(String),
 }
