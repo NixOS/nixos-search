@@ -370,10 +370,10 @@ impl From<super::Flake> for Maintainer {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct Team {
-    members: Option<OneOrMany<Maintainer>>,
+    members: Vec<Maintainer>,
     scope: Option<String>,
     shortName: Option<String>,
-    githubTeams: Option<OneOrMany<String>>,
+    githubTeams: Vec<String>,
 }
 
 impl From<import::Team> for Team {
@@ -384,18 +384,28 @@ impl From<import::Team> for Team {
                 scope,
                 shortName,
                 githubTeams,
-            } => Team {
-                members: members.map(|m| m.map(Maintainer::from)),
-                scope,
-                shortName,
-                githubTeams,
-            },
+            } =>
+              Team {
+                  members: members
+                      .map(OneOrMany::into_list)
+                      .unwrap_or_default()
+                      .into_iter()
+                      .map(Maintainer::from)
+                      .collect(),
+                  scope,
+                  shortName,
+                  githubTeams: githubTeams
+                      .map(OneOrMany::into_list)
+                      .unwrap_or_default()
+                      .into_iter()
+                      .collect(),
+              },
             #[allow(non_snake_case)]
             import::Team::Simple(shortName) => Team {
                 shortName: Some(shortName),
                 scope: None,
-                members: None,
-                githubTeams: None,
+                members: Vec::new(),
+                githubTeams: Vec::new(),
             },
         }
     }
