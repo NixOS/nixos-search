@@ -486,10 +486,12 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                   Maybe.withDefault d m
 
               showTeamEntry githubTeam =
-                  (a [ href ((String.append "https://github.com/orgs/NixOS/teams/") githubTeam) ] [ text githubTeam ])
+                  [ (text " ") ] ++ [ (a [ href ((String.append "https://github.com/orgs/NixOS/teams/") githubTeam) ] [ text ("@NixOS/" ++ githubTeam) ]) ]
           in
           li []
-              ([ text team.shortName ] ++ (List.map showTeamEntry (maybe team.githubTeams [])))
+              ([ text (team.shortName ++ (if (maybe team.githubTeams []) /= [] then ":" else "")) ]
+              ++ (List.concatMap showTeamEntry (maybe team.githubTeams []))
+              ++ [ ul [] [ (li [] [ (em [] [ text (if (maybe team.scope "") /= "" then maybe team.scope "" else "") ]) ]) ] ])
 
         mailtoAllMaintainers maintainers =
             let
