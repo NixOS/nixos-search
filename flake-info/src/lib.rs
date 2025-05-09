@@ -39,9 +39,9 @@ pub fn process_flake(
     Ok((info, exports))
 }
 
-pub fn process_nixpkgs(nixpkgs: &Source, kind: &Kind) -> Result<Vec<Export>, anyhow::Error> {
+pub fn process_nixpkgs(nixpkgs: &Source, kind: &Kind, attribute: &Option<String>) -> Result<Vec<Export>, anyhow::Error> {
     let drvs = if matches!(kind, Kind::All | Kind::Package) {
-        commands::get_nixpkgs_info(nixpkgs)?
+        commands::get_nixpkgs_info(nixpkgs, attribute)?
     } else {
         Vec::new()
     };
