@@ -237,8 +237,14 @@ async fn run_command(
                 nixpkgs.channel.to_owned(),
                 nixpkgs.git_ref.to_owned(),
             );
-            // Force --kind package if an attribute was specified
-            let kind = if attribute.is_some() { Kind::Package } else { kind };
+            let kind = if attribute.is_some() {
+                if !matches!(kind, Kind::All | Kind::Package) {
+                    warn!("Forcing --kind package because --attr was specified");
+                }
+                Kind::Package
+            } else {
+                kind
+            };
 
             Ok((
                 Box::new(move || {
@@ -254,8 +260,14 @@ async fn run_command(
                 channel.to_owned(),
                 "latest".to_string(),
             );
-            // Force --kind package if an attribute was specified
-            let kind = if attribute.is_some() { Kind::Package } else { kind };
+            let kind = if attribute.is_some() {
+                if !matches!(kind, Kind::All | Kind::Package) {
+                    warn!("Forcing --kind package because --attr was specified");
+                }
+                Kind::Package
+            } else {
+                kind
+            };
 
             Ok((
                 Box::new(move || {
