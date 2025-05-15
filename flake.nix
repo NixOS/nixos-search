@@ -104,6 +104,7 @@
               packages.frontend
             ];
             extraPackages = [
+              pkgs.opensearch-cli
               pkgs.rustfmt
               pkgs.yarn
             ];
