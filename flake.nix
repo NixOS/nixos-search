@@ -139,6 +139,12 @@
           # XXX: for backwards compatibility
           devShell = warnToUpgradeNix devShells.default;
           defaultPackage = warnToUpgradeNix packages.default;
+
+          apps.opensearch-vm = {
+            type = "app";
+            program = "${self.nixosConfigurations.opensearch-vm.config.system.build.vm}/bin/run-nixos-vm";
+            meta.description = "Run OpenSearch on port 9200 in an ephemeral VM for local testing";
+          };
         }
       ) // {
         # Local testing VM configuration
