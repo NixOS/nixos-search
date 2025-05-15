@@ -58,7 +58,8 @@ enum Command {
         channel: String,
 
         #[structopt(
-            help = "Restrict to importing a single attribute",
+            long = "attr",
+            help = "Restrict to importing a single attribute. Implies --kind package",
         )]
         attribute: Option<String>,
     },
@@ -236,6 +237,8 @@ async fn run_command(
                 nixpkgs.channel.to_owned(),
                 nixpkgs.git_ref.to_owned(),
             );
+            // Force --kind package if an attribute was specified
+            let kind = if attribute.is_some() { Kind::Package } else { kind };
 
             Ok((
                 Box::new(move || {
@@ -251,6 +254,8 @@ async fn run_command(
                 channel.to_owned(),
                 "latest".to_string(),
             );
+            // Force --kind package if an attribute was specified
+            let kind = if attribute.is_some() { Kind::Package } else { kind };
 
             Ok((
                 Box::new(move || {
