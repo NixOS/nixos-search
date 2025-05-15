@@ -48,6 +48,23 @@ You can point your browser to `http://localhost:3000` and start developing.
 Any changes to source files (`./frontend/src`) will trigger a hot reload of an
 application.
 
+This allows testing the frontend against the 'production' package index.
+
+### End-to-end testing
+
+If you want to do a full round-trip test of importing information with
+`flake-info` and then viewing it in the frontend, you can run an ephemeral
+OpenSearch instance locally using `nixosConfigurations.opensearch-vm`. The VM
+can easily be run using `nix run .#opensearch-vm`.
+
+Then you can upload information with something like:
+
+```
+flake-info --elastic-schema-version 43 --elastic-index-name=nixos-unstable --push --elastic-exists recreate nixpkgs unstable
+```
+
+To point the frontend to the local index, `export ELASTICSEARCH_URL=http://localhost:9200` before running the frontend.
+You may need to manually edit `frontend/src/Search.elm` to use the right index.
 
 ## Deploying
 
