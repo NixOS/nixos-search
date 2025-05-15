@@ -1,6 +1,15 @@
-/// This module defines the unified putput format as expected by the elastic search
+/// This module defines the unified output format we use to store information in elastic search
 /// Additionally, we implement converseions from the two possible input formats, i.e.
 /// Flakes, or Nixpkgs.
+///
+/// The output format can be kept as simple as possible and does
+/// not need to use utilities like OneOrMany, as we can evolve 
+/// the schema and keep it as simple as possible.
+///
+/// When merging a PR that changes the schema, also update the
+/// VERSION in the root of the repo, so a fresh index will be
+/// created.
+
 use std::{
     collections::HashSet,
     convert::{TryFrom, TryInto},
