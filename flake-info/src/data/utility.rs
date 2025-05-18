@@ -18,16 +18,6 @@ impl<T> OneOrMany<T> {
             OneOrMany::Many(many) => many,
         }
     }
-
-    pub fn map<U, F>(self, f: F) -> OneOrMany<U>
-    where
-        F: Fn(T) -> U,
-    {
-        match self {
-            Self::One(x) => OneOrMany::One(f(x)),
-            Self::Many(xs) => OneOrMany::Many(xs.into_iter().map(f).collect()),
-        }
-    }
 }
 
 /// A utility type that flattens lists of lists as seen with `maintainers` and `platforms` on selected packages
