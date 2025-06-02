@@ -82,6 +82,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CHANNEL: ${{ matrix.channel }}
+        TRIGGER_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
   import-flakes:
     runs-on: ubuntu-latest
