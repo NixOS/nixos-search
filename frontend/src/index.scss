@@ -364,6 +364,8 @@
 }
 
 @mixin search-result-item() {
+  padding-bottom: 0;
+
   .result-item-show-more-wrapper {
       text-align: center;
   }
@@ -371,25 +373,16 @@
   // show longer details link
   .result-item-show-more {
     margin: 0 auto;
-    display: none;
+    display: inline-block;
     text-align: center;
     text-decoration: none;
     line-height: 1.5em;
     color: var(--result-item-show-more-color);
     background: var(--result-item-show-more-background);
-    padding: 0 1em;
+    padding-top: 0.5em;
     position: relative;
     top: 0.75em;
     outline: none;
-  }
-  &.opened,
-  &:hover {
-    padding-bottom: 0;
-
-    .result-item-show-more {
-      display: inline-block;
-      padding-top: 0.5em;
-    }
   }
 }
 
