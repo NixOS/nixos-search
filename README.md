@@ -91,7 +91,16 @@ Possible types are `github`, `gitlab`, `sourcehut`, and `git` (which is the fall
 To test whether your flake is compatible with nix flake-info you can try running `flake-info` against it
 
 ```
-$ nix run github:nixos/nixos-search#flake-info -- flake <your flake handle>
+$ nix run github:nixos/nixos-search#flake-info -- --json flake <your flake handle>
+```
+
+E.g.
+
+```
+$ nix run github:nixos/nixos-search#flake-info -- --json flake git+https://codeberg.org/wolfangaukang/python-trovo?ref=main
+$ nix run github:nixos/nixos-search#flake-info -- --json flake github:CertainLach/fleet
+$ nix run github:nixos/nixos-search#flake-info -- --json flake gitlab:pi-lar/neuropil
+$ nix run github:nixos/nixos-search#flake-info -- --json flake sourcehut:~munksgaard/geomyidae-flake
 ```
 
 ### Criteria for inclusion
