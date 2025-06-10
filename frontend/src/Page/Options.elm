@@ -50,6 +50,7 @@ import Search
         , decodeResolvedFlake
         )
 import Utils
+import SyntaxHighlight exposing (useTheme, oneDark, elm, toBlockHtml)
 
 
 
@@ -189,6 +190,15 @@ viewResultItem nixosChannels channel _ show item =
 
         asPreCode value =
             div [] [ pre [] [ code [ class "code-block" ] [ text value ] ] ]
+        
+        asHighlightPreCode value =
+            div [] 
+                [ useTheme oneDark
+                , elm value
+                    |> Result.map (toBlockHtml (Just 1))
+                    |> Result.withDefault
+                    (pre [] [ code [ class "code-block" ] [ text value ]])
+                ]
 
         showDetails =
             if Just item.source.name == show then
@@ -229,7 +239,7 @@ viewResultItem nixosChannels channel _ show item =
                                     |> Maybe.map
                                         (\example ->
                                             [ div [] [ text "Example" ]
-                                            , div [] <| Maybe.withDefault [ asPreCode example ] (Utils.showHtml example)
+                                            , div [] <| Maybe.withDefault [ asHighlightPreCode example ] (Utils.showHtml example)
                                             ]
                                         )
                                     |> Maybe.withDefault []

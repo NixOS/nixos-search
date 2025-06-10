@@ -17,6 +17,7 @@
             "hecrj/html-parser": "2.3.4",
             "krisajenkins/remotedata": "6.0.1",
             "leojpod/elm-keyboard-shortcut": "1.0.1",
+            "pablohirafuji/elm-syntax-highlight": "3.6.0",
             "truqu/elm-base64": "2.0.4"
         },
         "indirect": {
