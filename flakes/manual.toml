@@ -20,6 +20,10 @@ url = "git+https://github.com/hannesgith/neohtop?ref=nixify"
 
 [[sources]]
 type = "git"
+url = "git+https://github.com/raboof/octopin?ref=nix"
+
+[[sources]]
+type = "git"
 url = "git+https://github.com/TamtamHero/fw-fanctrl?ref=packaging/nix"
 
 [[sources]]
