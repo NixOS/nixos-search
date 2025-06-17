@@ -186,6 +186,11 @@ repo = "nix-software-center"
 
 [[sources]]
 type = "github"
+owner = "stackbuilders"
+repo = "nixpkgs-terraform"
+
+[[sources]]
+type = "github"
 owner = "StardustXR"
 repo = "telescope"
 
@@ -228,4 +233,3 @@ repo = "neuropil"
 type = "sourcehut"
 owner = "~munksgaard"
 repo = "geomyidae-flake"
-
