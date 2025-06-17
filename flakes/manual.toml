@@ -229,3 +229,7 @@ type = "sourcehut"
 owner = "~munksgaard"
 repo = "geomyidae-flake"
 
+[[sources]]
+type = "github"
+owner = "stackbuilders"
+repo = "nixpkgs-terraform"
