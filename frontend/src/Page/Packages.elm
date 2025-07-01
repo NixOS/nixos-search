@@ -597,6 +597,20 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         ]
                                     , li
                                         [ classList
+                                            [ ( "active", showInstallDetails == Search.ViaFlakeNix )
+                                            , ( "pull-right", True )
+                                            ]
+                                        ]
+                                        [ a
+                                            [ href "#"
+                                            , Search.onClickStop <|
+                                                SearchMsg <|
+                                                    Search.ShowInstallDetails Search.ViaFlakeNix
+                                            ]
+                                            [ text "flake.nix" ]
+                                        ]
+                                    , li
+                                        [ classList
                                             [ ( "active", showInstallDetails == Search.ViaNixOS )
                                             , ( "pull-right", True )
                                             ]
@@ -713,6 +727,50 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                             , strong [] [ text item.source.attr_name ]
                                             , text "\n# with flakes:\nnix profile install nixpkgs#"
                                             , strong [] [ text item.source.attr_name ]
+                                            ]
+                                        ]
+                                    , div
+                                        [ classList
+                                            [ ( "tab-pane", True )
+                                            , ( "active", showInstallDetails == Search.ViaFlakeNix )
+                                            ]
+                                        ]
+                                        [ p []
+                                            [ text "Add the following to your "
+                                            , strong [] [ text "flake.nix" ]
+                                            , text ":"
+                                            ]
+                                        ]
+                                    , div
+                                        [ classList
+                                            [ ( "active", showInstallDetails == Search.ViaFlakeNix )
+                                            ]
+                                        , class "tab-pane"
+                                        , id "package-details-flake"
+                                        ]
+                                        [ pre [ class "code-block" ]
+                                            [ text <| "{\n  inputs.nixpkgs.url = \"github:NixOS/nixpkgs/nixos-" ++ channel ++ "\";\n  outputs = { nixpkgs, ... }: {\n    packages.x86_64-linux.default = nixpkgs.legacyPackages.x86_64-linux."
+                                            , strong [] [ text item.source.attr_name ]
+                                            , text <| ";\n    devShells.x86_64-linux.default = nixpkgs.legacyPackages.x86_64-linux.mkShell {\n      packages = [ nixpkgs.legacyPackages.x86_64-linux."
+                                            , strong [] [ text item.source.attr_name ]
+                                            , text <| " ];\n    };\n  };\n}"
+                                            ]
+                                        ]
+                                    , div [] [ p [] [] ]
+                                    , div
+                                        [ classList
+                                            [ ( "active", showInstallDetails == Search.ViaFlakeNix )
+                                            ]
+                                        , class "tab-pane"
+                                        ]
+                                        [ p []
+                                            [ text "Then run "
+                                            , code [] [ text "nix build" ]
+                                            , text " to build the package, "
+                                            , code [] [ text "nix run" ]
+                                            , text " to run it directly, or "
+                                            , code [] [ text "nix develop" ]
+                                            , text " to enter a shell with the package available."
                                             ]
                                         ]
                                     , div
