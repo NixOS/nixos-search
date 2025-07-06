@@ -327,33 +327,36 @@ findSource nixosChannels channel source =
 
                 Nothing ->
                     text <| cleanPosition value
-
-        sourceFile =
-            Maybe.map asGithubLink source.source
-
-        flakeOrNixpkgs : Maybe (List (Html a))
-        flakeOrNixpkgs =
-            case ( source.flake, source.flakeUrl ) of
-                -- its a flake
-                ( Just (name :: attrs), Just flakeUrl_ ) ->
-                    let
-                        module_ =
-                            Maybe.withDefault "(default)" <| Maybe.map (\m -> "(Module: " ++ m ++ ")") <| List.head attrs
-                    in
-                    Just <|
-                        List.append
-                            (Maybe.withDefault [] <| Maybe.map (\sourceFile_ -> [ sourceFile_, span [] [ text " in " ] ]) sourceFile)
-                            [ span [] [ text "Flake: " ]
-                            , a [ href flakeUrl_ ] [ text <| name ++ module_ ]
-                            ]
-
-                ( Nothing, _ ) ->
-                    Maybe.map (\l -> [ l ]) sourceFile
-
-                _ ->
-                    Nothing
     in
-    Maybe.withDefault [ span [] [ text "Not Found" ] ] flakeOrNixpkgs
+    case ( source.flake, source.flakeUrl, source.source ) of
+        -- its a flake
+        ( Just (name :: attrs), Just flakeUrl_, _ ) ->
+            let
+                module_ : String
+                module_ =
+                    List.head attrs
+                        |> Maybe.map (\m -> "(Module: " ++ m ++ ")")
+                        |> Maybe.withDefault "(default)"
+            in
+            List.append
+                (source.source
+                    |> Maybe.map
+                        (\source_ ->
+                            [ asGithubLink source_
+                            , span [] [ text " in " ]
+                            ]
+                        )
+                    |> Maybe.withDefault []
+                )
+                [ span [] [ text "Flake: " ]
+                , a [ href flakeUrl_ ] [ text <| name ++ module_ ]
+                ]
+
+        ( Nothing, _, Just source_ ) ->
+            [ asGithubLink source_ ]
+
+        _ ->
+            [ span [] [ text "Not Found" ] ]
 
 
 
