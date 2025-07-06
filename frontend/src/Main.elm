@@ -1,4 +1,4 @@
-module Main exposing (main)
+module Main exposing (Flags, Model, Msg, Page, main)
 
 import Browser
 import Browser.Dom

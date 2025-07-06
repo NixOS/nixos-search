@@ -1,6 +1,14 @@
 module Page.Packages exposing
-    ( Model
+    ( Aggregations
+    , Model
     , Msg(..)
+    , ResultAggregations
+    , ResultItemSource
+    , ResultPackageHydra
+    , ResultPackageHydraPath
+    , ResultPackageLicense
+    , ResultPackageMaintainer
+    , ResultPackageTeam
     , decodeResultAggregations
     , decodeResultItemSource
     , init

@@ -6,8 +6,10 @@ module Search exposing
     , Msg(..)
     , NixOSChannel
     , NixOSChannelStatus
+    , NixOSChannels
     , Options
     , ResultHits
+    , ResultHitsTotal
     , ResultItem
     , SearchResult
     , Sort(..)
