@@ -34,12 +34,7 @@
         }
     },
     "test-dependencies": {
-        "direct": {
-            "elm-explorations/test": "1.2.2"
-        },
-        "indirect": {
-            "elm/random": "1.0.0",
-            "elm/svg": "1.0.1"
-        }
+        "direct": {},
+        "indirect": {}
     }
 }
