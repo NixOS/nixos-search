@@ -50,6 +50,7 @@ import Http exposing (Body)
 import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
+import List.Extra
 import Maybe
 import Regex
 import Route exposing (SearchType)
@@ -889,29 +890,26 @@ renderSource :
     -> List (Html Msg)
 renderSource item nixosChannels channel trapClick createShortDetailsItem createGithubUrl =
     let
+        makeLink : String -> String -> List (Html Msg)
         makeLink text url =
             [ li [ trapClick ] [ createShortDetailsItem text url ] ]
-
-        position =
-            item.source.position
-                |> Maybe.map
-                    (\pos ->
-                        case List.head (List.filter (\x -> x.id == channel) nixosChannels) of
-                            Nothing ->
-                                []
-
-                            Just channelDetails ->
-                                makeLink "📦 Source" (createGithubUrl channelDetails.branch pos)
-                    )
-
-        flakeDef =
-            Maybe.map2
-                (\name resolved -> makeLink ("Flake: " ++ name) resolved)
-                item.source.flakeName
-            <|
-                Maybe.map Tuple.second item.source.flakeUrl
     in
-    Maybe.withDefault (Maybe.withDefault [] flakeDef) position
+    case item.source.position of
+        Just pos ->
+            case List.Extra.find (\x -> x.id == channel) nixosChannels of
+                Just channelDetails ->
+                    makeLink "📦 Source" (createGithubUrl channelDetails.branch pos)
+
+                Nothing ->
+                    []
+
+        Nothing ->
+            case ( item.source.flakeName, item.source.flakeUrl ) of
+                ( Just flakeName, Just ( _, flakeUrl ) ) ->
+                    makeLink ("Flake: " ++ flakeName) flakeUrl
+
+                _ ->
+                    []
 
 
 
