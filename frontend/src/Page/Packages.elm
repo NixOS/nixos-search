@@ -448,21 +448,28 @@ viewResultItem nixosChannels channel showInstallDetails show item =
 
         showMaintainer maintainer =
             let
-                optionalLink url node =
+                optionalGithubLink : Maybe String -> Html msg -> Html msg
+                optionalGithubLink url node =
                     case url of
                         Just u ->
-                            a [ href u ] [ node ]
+                            a [ href ("https://github.com/" ++ u) ] [ node ]
 
                         Nothing ->
                             node
-
-                maybe m d =
-                    Maybe.withDefault d m
             in
             li []
-                (optionalLink
-                    (Maybe.map (String.append "https://github.com/") maintainer.github)
-                    (text <| maybe maintainer.name <| maybe maintainer.github "Unknown")
+                (optionalGithubLink
+                    maintainer.github
+                    (case ( maintainer.name, maintainer.github ) of
+                        ( Just name, _ ) ->
+                            text name
+
+                        ( Nothing, Just github ) ->
+                            text github
+
+                        ( Nothing, Nothing ) ->
+                            text "Unknown"
+                    )
                     :: (case maintainer.email of
                             Just email ->
                                 [ text " <"
@@ -490,42 +497,35 @@ viewResultItem nixosChannels channel showInstallDetails show item =
 
         showTeam team =
             let
-                maybe m d =
-                    Maybe.withDefault d m
-
                 showTeamEntry githubTeam =
                     [ text " "
                     , a
                         [ href (String.append "https://github.com/orgs/NixOS/teams/" githubTeam) ]
                         [ text ("@NixOS/" ++ githubTeam) ]
                     ]
-            in
-            li []
-                (text
-                    (team.shortName
-                        ++ (if not (List.isEmpty (maybe team.githubTeams [])) then
-                                ":"
 
-                            else
-                                ""
-                           )
-                    )
-                    :: List.concatMap showTeamEntry (maybe team.githubTeams [])
-                    ++ [ ul []
-                            [ li []
-                                [ em []
-                                    [ text
-                                        (if maybe team.scope "" /= "" then
-                                            maybe team.scope ""
+                scope : List (Html msg)
+                scope =
+                    case Maybe.withDefault "" team.scope of
+                        "" ->
+                            []
 
-                                         else
-                                            ""
-                                        )
-                                    ]
+                        nonEmptyScope ->
+                            [ ul []
+                                [ li []
+                                    [ em [] [ text nonEmptyScope ] ]
                                 ]
                             ]
-                       ]
-                )
+            in
+            li [] <|
+                case team.githubTeams of
+                    Just ((_ :: _) as nonEmptyList) ->
+                        text (team.shortName ++ ":")
+                            :: List.concatMap showTeamEntry nonEmptyList
+                            ++ scope
+
+                    _ ->
+                        text team.shortName :: scope
 
         mailtoAllMaintainers maintainers =
             let
