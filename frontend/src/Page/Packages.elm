@@ -1080,6 +1080,7 @@ type alias ResolvedFlake =
 decodeResolvedFlake : Json.Decode.Decoder ( String, String )
 decodeResolvedFlake =
     let
+        resolved : Json.Decode.Decoder ResolvedFlake
         resolved =
             Json.Decode.succeed ResolvedFlake
                 |> Json.Decode.Pipeline.required "type" Json.Decode.string
@@ -1090,32 +1091,41 @@ decodeResolvedFlake =
     Json.Decode.map
         (\resolved_ ->
             let
-                repoPath =
-                    case ( resolved_.owner, resolved_.repo ) of
-                        ( Just owner, Just repo ) ->
-                            Just <| owner ++ "/" ++ repo
-
-                        _ ->
-                            Nothing
-
-                result =
-                    case resolved_.type_ of
-                        "github" ->
-                            Maybe.map (\repoPath_ -> ( "github:" ++ repoPath_, "https://github.com/" ++ repoPath_ )) repoPath
-
-                        "gitlab" ->
-                            Maybe.map (\repoPath_ -> ( "gitlab:" ++ repoPath_, "https://gitlab.com/" ++ repoPath_ )) repoPath
-
-                        "sourcehut" ->
-                            Maybe.map (\repoPath_ -> ( "sourcehut:" ++ repoPath_, "https://sr.ht/" ++ repoPath_ )) repoPath
-
-                        "git" ->
-                            Maybe.map (\url -> ( url, url )) resolved_.url
-
-                        _ ->
-                            Nothing
+                invalid : String
+                invalid =
+                    "INVALID FLAKE ORIGIN"
             in
-            Maybe.withDefault ( "INVALID FLAKE ORIGIN", "INVALID FLAKE ORIGIN" ) result
+            if resolved_.type_ == "git" then
+                let
+                    url : String
+                    url =
+                        Maybe.withDefault invalid resolved_.url
+                in
+                ( url, url )
+
+            else
+                case ( resolved_.owner, resolved_.repo ) of
+                    ( Just owner, Just repo ) ->
+                        let
+                            repoPath : String
+                            repoPath =
+                                owner ++ "/" ++ repo
+                        in
+                        case resolved_.type_ of
+                            "github" ->
+                                ( "github:" ++ repoPath, "https://github.com/" ++ repoPath )
+
+                            "gitlab" ->
+                                ( "gitlab:" ++ repoPath, "https://gitlab.com/" ++ repoPath )
+
+                            "sourcehut" ->
+                                ( "sourcehut:" ++ repoPath, "https://sr.ht/" ++ repoPath )
+
+                            _ ->
+                                ( invalid, invalid )
+
+                    _ ->
+                        ( invalid, invalid )
         )
         resolved
 
