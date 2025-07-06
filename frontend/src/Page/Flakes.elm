@@ -59,37 +59,30 @@ init :
 init searchArgs defaultNixOSChannel nixosChannels model =
     let
         --  init with respective module or with packages by default
+        searchType : SearchType
         searchType =
             Maybe.withDefault PackageSearch searchArgs.type_
-
-        mapEitherModel m =
-            case ( searchType, m ) of
-                ( OptionSearch, OptionModel model_ ) ->
-                    Tuple.mapBoth OptionModel (Cmd.map OptionsMsg) <|
-                        Page.Options.init searchArgs defaultNixOSChannel nixosChannels <|
-                            Just model_
-
-                ( PackageSearch, PackagesModel model_ ) ->
-                    Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg) <|
-                        Page.Packages.init searchArgs defaultNixOSChannel nixosChannels <|
-                            Just model_
-
-                _ ->
-                    default
-
-        default =
-            case searchType of
-                PackageSearch ->
-                    Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg) <|
-                        Page.Packages.init searchArgs defaultNixOSChannel nixosChannels Nothing
-
-                OptionSearch ->
-                    Tuple.mapBoth OptionModel (Cmd.map OptionsMsg) <|
-                        Page.Options.init searchArgs defaultNixOSChannel nixosChannels Nothing
     in
-    model
-        |> Maybe.map mapEitherModel
-        |> Maybe.withDefault default
+    case searchType of
+        OptionSearch ->
+            Tuple.mapBoth OptionModel (Cmd.map OptionsMsg) <|
+                Page.Options.init searchArgs defaultNixOSChannel nixosChannels <|
+                    case model of
+                        Just (OptionModel model_) ->
+                            Just model_
+
+                        _ ->
+                            Nothing
+
+        PackageSearch ->
+            Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg) <|
+                Page.Packages.init searchArgs defaultNixOSChannel nixosChannels <|
+                    case model of
+                        Just (PackagesModel model_) ->
+                            Just model_
+
+                        _ ->
+                            Nothing
 
 
 
