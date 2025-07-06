@@ -49,8 +49,8 @@ import Search
         , NixOSChannel
         , decodeResolvedFlake
         )
+import SyntaxHighlight exposing (elm, oneDark, toBlockHtml, useTheme)
 import Utils
-import SyntaxHighlight exposing (useTheme, oneDark, elm, toBlockHtml)
 
 
 
@@ -190,14 +190,14 @@ viewResultItem nixosChannels channel _ show item =
 
         asPreCode value =
             div [] [ pre [] [ code [ class "code-block" ] [ text value ] ] ]
-        
+
         asHighlightPreCode value =
-            div [] 
+            div []
                 [ useTheme oneDark
                 , elm value
                     |> Result.map (toBlockHtml (Just 1))
                     |> Result.withDefault
-                    (pre [] [ code [ class "code-block" ] [ text value ]])
+                        (pre [] [ code [ class "code-block" ] [ text value ] ])
                 ]
 
         showDetails =

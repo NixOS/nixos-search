@@ -390,14 +390,15 @@ view model =
         [ Shortcut.shortcutElement
             [ { msg = CtrlKRegistered
               , keyCombination =
-                  { baseKey = Shortcut.Regular "K"
-                  , shift = Nothing
-                  , alt = Nothing
-                  , meta = Nothing
-                  , ctrl = Just True
-                  }
-                },
-            Shortcut.simpleShortcut (Shortcut.Regular "/") <| CtrlKRegistered ]
+                    { baseKey = Shortcut.Regular "K"
+                    , shift = Nothing
+                    , alt = Nothing
+                    , meta = Nothing
+                    , ctrl = Just True
+                    }
+              }
+            , Shortcut.simpleShortcut (Shortcut.Regular "/") <| CtrlKRegistered
+            ]
             []
             [ div []
                 [ header []
