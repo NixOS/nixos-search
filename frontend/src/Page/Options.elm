@@ -43,6 +43,7 @@ import Html.Events
 import Http exposing (Body)
 import Json.Decode
 import Json.Decode.Pipeline
+import List.Extra
 import Route exposing (SearchType)
 import Search
     exposing
@@ -317,7 +318,7 @@ findSource nixosChannels channel source =
                 value
 
         asGithubLink value =
-            case List.head (List.filter (\x -> x.id == channel) nixosChannels) of
+            case List.Extra.find (\x -> x.id == channel) nixosChannels of
                 Just channelDetails ->
                     a
                         [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L")

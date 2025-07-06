@@ -542,7 +542,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                 ]
 
         showPlatform platform =
-            case List.head (List.filter (\x -> x.id == channel) nixosChannels) of
+            case List.Extra.find (\x -> x.id == channel) nixosChannels of
                 Just channelDetails ->
                     let
                         url =
