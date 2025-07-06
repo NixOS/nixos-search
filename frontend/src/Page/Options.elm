@@ -1,5 +1,6 @@
 module Page.Options exposing
-    ( Model
+    ( AggregationsAll
+    , Model
     , Msg(..)
     , ResultAggregations
     , ResultItemSource

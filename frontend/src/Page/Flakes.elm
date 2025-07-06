@@ -190,16 +190,13 @@ view nixosChannels model =
                 , viewResult nixosChannels outMsg Route.Flakes categoryName model_ viewSuccess viewBuckets <|
                     viewFlakes outMsg model_.channel model_.searchType
                 ]
-
-        body =
-            case model of
-                OptionModel model_ ->
-                    Html.map OptionsMsg <| mkBody "Options" model_ Page.Options.viewSuccess Page.Options.viewBuckets Page.Options.SearchMsg
-
-                PackagesModel model_ ->
-                    Html.map PackagesMsg <| mkBody "Packages" model_ Page.Packages.viewSuccess Page.Packages.viewBuckets Page.Packages.SearchMsg
     in
-    body
+    case model of
+        OptionModel model_ ->
+            Html.map OptionsMsg <| mkBody "Options" model_ Page.Options.viewSuccess Page.Options.viewBuckets Page.Options.SearchMsg
+
+        PackagesModel model_ ->
+            Html.map PackagesMsg <| mkBody "Packages" model_ Page.Packages.viewSuccess Page.Packages.viewBuckets Page.Packages.SearchMsg
 
 
 
