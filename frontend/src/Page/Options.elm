@@ -266,15 +266,14 @@ viewResultItem nixosChannels channel _ show item =
             case ( item.source.flake, item.source.flakeUrl ) of
                 -- its a flake
                 ( Just (flake :: []), Just url ) ->
-                    Just
-                        [ li [] [ mkLink flake url ]
-                        ]
+                    [ li [] [ mkLink flake url ]
+                    ]
 
                 ( Just (flake :: moduleName :: []), Just url ) ->
-                    Just [ li [] [ mkLink flake url, text "#", text moduleName ] ]
+                    [ li [] [ mkLink flake url, text "#", text moduleName ] ]
 
                 _ ->
-                    Nothing
+                    []
     in
     li
         [ class "option"
@@ -286,7 +285,7 @@ viewResultItem nixosChannels channel _ show item =
             [ Just <|
                 ul [ class "search-result-button" ]
                     (List.append
-                        (flakeOrNixpkgs |> Maybe.withDefault [])
+                        flakeOrNixpkgs
                         [ li []
                             [ a
                                 [ onClick toggle
