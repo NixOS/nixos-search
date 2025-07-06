@@ -86,13 +86,10 @@ init searchArgs defaultNixOSChannel nixosChannels model =
                 OptionSearch ->
                     Tuple.mapBoth OptionModel (Cmd.map OptionsMsg) <|
                         Page.Options.init searchArgs defaultNixOSChannel nixosChannels Nothing
-
-        ( newModel, newCmd ) =
-            Maybe.withDefault default <| Maybe.map mapEitherModel model
     in
-    ( newModel
-    , newCmd
-    )
+    model
+        |> Maybe.map mapEitherModel
+        |> Maybe.withDefault default
 
 
 
@@ -221,36 +218,32 @@ makeRequest :
     -> Search.Sort
     -> Cmd Msg
 makeRequest options nixosChannels searchType index_id query from size maybeBuckets sort =
-    let
-        cmd =
-            case searchType of
-                PackageSearch ->
-                    Search.makeRequest
-                        (makeRequestBody searchType query from size maybeBuckets sort)
-                        nixosChannels
-                        index_id
-                        Page.Packages.decodeResultItemSource
-                        Page.Packages.decodeResultAggregations
-                        options
-                        Search.QueryResponse
-                        (Just "query-packages")
-                        |> Cmd.map Page.Packages.SearchMsg
-                        |> Cmd.map PackagesMsg
+    case searchType of
+        PackageSearch ->
+            Search.makeRequest
+                (makeRequestBody searchType query from size maybeBuckets sort)
+                nixosChannels
+                index_id
+                Page.Packages.decodeResultItemSource
+                Page.Packages.decodeResultAggregations
+                options
+                Search.QueryResponse
+                (Just "query-packages")
+                |> Cmd.map Page.Packages.SearchMsg
+                |> Cmd.map PackagesMsg
 
-                OptionSearch ->
-                    Search.makeRequest
-                        (makeRequestBody searchType query from size maybeBuckets sort)
-                        nixosChannels
-                        index_id
-                        Page.Options.decodeResultItemSource
-                        Page.Options.decodeResultAggregations
-                        options
-                        Search.QueryResponse
-                        (Just "query-options")
-                        |> Cmd.map Page.Options.SearchMsg
-                        |> Cmd.map OptionsMsg
-    in
-    cmd
+        OptionSearch ->
+            Search.makeRequest
+                (makeRequestBody searchType query from size maybeBuckets sort)
+                nixosChannels
+                index_id
+                Page.Options.decodeResultItemSource
+                Page.Options.decodeResultAggregations
+                options
+                Search.QueryResponse
+                (Just "query-options")
+                |> Cmd.map Page.Options.SearchMsg
+                |> Cmd.map OptionsMsg
 
 
 makeRequestBody : SearchType -> String -> Int -> Int -> Maybe String -> Search.Sort -> Body
