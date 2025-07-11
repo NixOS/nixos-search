@@ -169,7 +169,7 @@ $ flake-info --push \
 
 This tool requires your system to have Nix installed!
 
-You can install nix using this installer: https://nixos.org/guides/install-nix.html
+You can install nix using this installer: https://nixos.org/download/
 Also, see https://wiki.nixos.org/wiki/Nix_Installation_Guide if your system is ✨special✨.
 
 ### Preparations (Docker)
