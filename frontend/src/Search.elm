@@ -1042,48 +1042,50 @@ viewResults nixosChannels model result viewSuccess _ outMsg categoryName =
 
         total =
             String.fromInt result.hits.total.value
-
     in
     [ div []
         (List.append
-          [ Html.map outMsg <| viewSortSelection model
-          , h2 []
-              (List.append
-                  [ text "Showing results "
-                  , text from
-                  , text "-"
-                  , text to
-                  , text " of "
-                  ]
-                  (if result.hits.total.value == 10000 then
-                      [ text "more than 10000."
-                      , p [] [ text "Please provide more precise search terms." ]
-                      ]
+            [ Html.map outMsg <| viewSortSelection model
+            , h2 []
+                (List.append
+                    [ text "Showing results "
+                    , text from
+                    , text "-"
+                    , text to
+                    , text " of "
+                    ]
+                    (if result.hits.total.value == 10000 then
+                        [ text "more than 10000."
+                        , p [] [ text "Please provide more precise search terms." ]
+                        ]
 
-                   else
-                      [ strong []
-                          [ text total
-                          , text " "
-                          , text categoryName
-                          ]
-                      , text "."
-                      ]
-                  )
-              )
-          ]
-          (case List.head result.hits.hits of
-            Nothing -> []
-            Just elem ->
-              case Array.get 3 (Array.fromList (String.split "-" elem.index)) of
-                Nothing -> []
-                Just commit ->
-                  [
-                    text "Data from nixpkgs "
-                    , a [ href ("https://github.com/NixOS/nixpkgs/tree/" ++ commit) ]
-                    [ (code [] [ text (String.slice 0 8 commit) ]) ]
-                    , text "."
-                  ]
-          )
+                     else
+                        [ strong []
+                            [ text total
+                            , text " "
+                            , text categoryName
+                            ]
+                        , text "."
+                        ]
+                    )
+                )
+            ]
+            (case List.head result.hits.hits of
+                Nothing ->
+                    []
+
+                Just elem ->
+                    case Array.get 3 (Array.fromList (String.split "-" elem.index)) of
+                        Nothing ->
+                            []
+
+                        Just commit ->
+                            [ text "Data from nixpkgs "
+                            , a [ href ("https://github.com/NixOS/nixpkgs/tree/" ++ commit) ]
+                                [ code [] [ text (String.slice 0 8 commit) ] ]
+                            , text "."
+                            ]
+            )
         )
     , viewSuccess nixosChannels model.channel model.showInstallDetails model.show result.hits.hits
     , Html.map outMsg <| viewPager model result.hits.total.value

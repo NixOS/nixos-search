@@ -73,7 +73,7 @@ type alias ResultItemSource =
     , longDescription : Maybe String
     , licenses : List ResultPackageLicense
     , maintainers : List ResultPackageMaintainer
-    , teams: List ResultPackageTeam
+    , teams : List ResultPackageTeam
     , platforms : List String
     , position : Maybe String
     , homepage : List String
@@ -101,7 +101,7 @@ type alias ResultPackageMaintainer =
 type alias ResultPackageTeam =
     { members : Maybe (List ResultPackageMaintainer)
     , scope : Maybe String
-    , shortName: String
+    , shortName : String
     , githubTeams : Maybe (List String)
     }
 
@@ -468,30 +468,52 @@ viewResultItem nixosChannels channel showInstallDetails show item =
         linkAllMaintainers maintainers =
             let
                 ghHandles =
-                    List.filterMap (\m -> (Maybe.map (String.append "@") m.github)) maintainers
+                    List.filterMap (\m -> Maybe.map (String.append "@") m.github) maintainers
             in
             optionals (not (List.isEmpty ghHandles))
                 [ li []
-                    (
-                        [ text "Maintainer Github handles: " ]
+                    ([ text "Maintainer Github handles: " ]
                         ++ [ code []
-                            [ text (String.join " " ghHandles) ]
-                        ]
+                                [ text (String.join " " ghHandles) ]
+                           ]
                     )
                 ]
 
         showTeam team =
-          let
-              maybe m d =
-                  Maybe.withDefault d m
+            let
+                maybe m d =
+                    Maybe.withDefault d m
 
-              showTeamEntry githubTeam =
-                  [ (text " ") ] ++ [ (a [ href ((String.append "https://github.com/orgs/NixOS/teams/") githubTeam) ] [ text ("@NixOS/" ++ githubTeam) ]) ]
-          in
-          li []
-              ([ text (team.shortName ++ (if (maybe team.githubTeams []) /= [] then ":" else "")) ]
-              ++ (List.concatMap showTeamEntry (maybe team.githubTeams []))
-              ++ [ ul [] [ (li [] [ (em [] [ text (if (maybe team.scope "") /= "" then maybe team.scope "" else "") ]) ]) ] ])
+                showTeamEntry githubTeam =
+                    [ text " " ] ++ [ a [ href (String.append "https://github.com/orgs/NixOS/teams/" githubTeam) ] [ text ("@NixOS/" ++ githubTeam) ] ]
+            in
+            li []
+                ([ text
+                    (team.shortName
+                        ++ (if maybe team.githubTeams [] /= [] then
+                                ":"
+
+                            else
+                                ""
+                           )
+                    )
+                 ]
+                    ++ List.concatMap showTeamEntry (maybe team.githubTeams [])
+                    ++ [ ul []
+                            [ li []
+                                [ em []
+                                    [ text
+                                        (if maybe team.scope "" /= "" then
+                                            maybe team.scope ""
+
+                                         else
+                                            ""
+                                        )
+                                    ]
+                                ]
+                            ]
+                       ]
+                )
 
         mailtoAllMaintainers maintainers =
             let
@@ -536,12 +558,12 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                     )
                 , div []
                     (if not (List.isEmpty item.source.teams) then
-                        (List.append [ h4 [] [ text "Teams" ] ]
+                        List.append [ h4 [] [ text "Teams" ] ]
                             [ ul []
                                 (List.map showTeam item.source.teams)
                             ]
-                        )
-                    else
+
+                     else
                         []
                     )
                 , div []
