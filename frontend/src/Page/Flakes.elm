@@ -59,40 +59,30 @@ init :
 init searchArgs defaultNixOSChannel nixosChannels model =
     let
         --  init with respective module or with packages by default
+        searchType : SearchType
         searchType =
             Maybe.withDefault PackageSearch searchArgs.type_
-
-        mapEitherModel m =
-            case ( searchType, m ) of
-                ( OptionSearch, OptionModel model_ ) ->
-                    Tuple.mapBoth OptionModel (Cmd.map OptionsMsg) <|
-                        Page.Options.init searchArgs defaultNixOSChannel nixosChannels <|
-                            Just model_
-
-                ( PackageSearch, PackagesModel model_ ) ->
-                    Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg) <|
-                        Page.Packages.init searchArgs defaultNixOSChannel nixosChannels <|
-                            Just model_
-
-                _ ->
-                    default
-
-        default =
-            case searchType of
-                PackageSearch ->
-                    Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg) <|
-                        Page.Packages.init searchArgs defaultNixOSChannel nixosChannels Nothing
-
-                OptionSearch ->
-                    Tuple.mapBoth OptionModel (Cmd.map OptionsMsg) <|
-                        Page.Options.init searchArgs defaultNixOSChannel nixosChannels Nothing
-
-        ( newModel, newCmd ) =
-            Maybe.withDefault default <| Maybe.map mapEitherModel model
     in
-    ( newModel
-    , newCmd
-    )
+    case searchType of
+        OptionSearch ->
+            Tuple.mapBoth OptionModel (Cmd.map OptionsMsg) <|
+                Page.Options.init searchArgs defaultNixOSChannel nixosChannels <|
+                    case model of
+                        Just (OptionModel model_) ->
+                            Just model_
+
+                        _ ->
+                            Nothing
+
+        PackageSearch ->
+            Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg) <|
+                Page.Packages.init searchArgs defaultNixOSChannel nixosChannels <|
+                    case model of
+                        Just (PackagesModel model_) ->
+                            Just model_
+
+                        _ ->
+                            Nothing
 
 
 
@@ -193,16 +183,13 @@ view nixosChannels model =
                 , viewResult nixosChannels outMsg Route.Flakes categoryName model_ viewSuccess viewBuckets <|
                     viewFlakes outMsg model_.channel model_.searchType
                 ]
-
-        body =
-            case model of
-                OptionModel model_ ->
-                    Html.map OptionsMsg <| mkBody "Options" model_ Page.Options.viewSuccess Page.Options.viewBuckets Page.Options.SearchMsg
-
-                PackagesModel model_ ->
-                    Html.map PackagesMsg <| mkBody "Packages" model_ Page.Packages.viewSuccess Page.Packages.viewBuckets Page.Packages.SearchMsg
     in
-    body
+    case model of
+        OptionModel model_ ->
+            Html.map OptionsMsg <| mkBody "Options" model_ Page.Options.viewSuccess Page.Options.viewBuckets Page.Options.SearchMsg
+
+        PackagesModel model_ ->
+            Html.map PackagesMsg <| mkBody "Packages" model_ Page.Packages.viewSuccess Page.Packages.viewBuckets Page.Packages.SearchMsg
 
 
 
@@ -221,36 +208,32 @@ makeRequest :
     -> Search.Sort
     -> Cmd Msg
 makeRequest options nixosChannels searchType index_id query from size maybeBuckets sort =
-    let
-        cmd =
-            case searchType of
-                PackageSearch ->
-                    Search.makeRequest
-                        (makeRequestBody searchType query from size maybeBuckets sort)
-                        nixosChannels
-                        index_id
-                        Page.Packages.decodeResultItemSource
-                        Page.Packages.decodeResultAggregations
-                        options
-                        Search.QueryResponse
-                        (Just "query-packages")
-                        |> Cmd.map Page.Packages.SearchMsg
-                        |> Cmd.map PackagesMsg
+    case searchType of
+        PackageSearch ->
+            Search.makeRequest
+                (makeRequestBody searchType query from size maybeBuckets sort)
+                nixosChannels
+                index_id
+                Page.Packages.decodeResultItemSource
+                Page.Packages.decodeResultAggregations
+                options
+                Search.QueryResponse
+                (Just "query-packages")
+                |> Cmd.map Page.Packages.SearchMsg
+                |> Cmd.map PackagesMsg
 
-                OptionSearch ->
-                    Search.makeRequest
-                        (makeRequestBody searchType query from size maybeBuckets sort)
-                        nixosChannels
-                        index_id
-                        Page.Options.decodeResultItemSource
-                        Page.Options.decodeResultAggregations
-                        options
-                        Search.QueryResponse
-                        (Just "query-options")
-                        |> Cmd.map Page.Options.SearchMsg
-                        |> Cmd.map OptionsMsg
-    in
-    cmd
+        OptionSearch ->
+            Search.makeRequest
+                (makeRequestBody searchType query from size maybeBuckets sort)
+                nixosChannels
+                index_id
+                Page.Options.decodeResultItemSource
+                Page.Options.decodeResultAggregations
+                options
+                Search.QueryResponse
+                (Just "query-options")
+                |> Cmd.map Page.Options.SearchMsg
+                |> Cmd.map OptionsMsg
 
 
 makeRequestBody : SearchType -> String -> Int -> Int -> Maybe String -> Search.Sort -> Body

@@ -6,8 +6,10 @@ module Search exposing
     , Msg(..)
     , NixOSChannel
     , NixOSChannelStatus
+    , NixOSChannels
     , Options
     , ResultHits
+    , ResultHitsTotal
     , ResultItem
     , SearchResult
     , Sort(..)
@@ -258,9 +260,6 @@ decodeResolvedFlake =
                         _ ->
                             Nothing
 
-                url =
-                    resolved_.url
-
                 result =
                     case resolved_.type_ of
                         "github" ->
@@ -273,7 +272,7 @@ decodeResolvedFlake =
                             Maybe.map (\repoPath_ -> "https://sr.ht/" ++ repoPath_) repoPath
 
                         "git" ->
-                            url
+                            resolved_.url
 
                         _ ->
                             Nothing
@@ -325,12 +324,13 @@ init args defaultNixOSChannel nixosChannels maybeModel =
       , buckets = args.buckets
       , sort =
             args.sort
-                |> Maybe.withDefault ""
-                |> fromSortId
+                |> Maybe.andThen fromSortId
                 |> Maybe.withDefault Relevance
       , showSort = False
       , showInstallDetails = Unset
-      , searchType = Maybe.withDefault Route.PackageSearch args.type_
+      , searchType =
+            args.type_
+                |> Maybe.withDefault Route.PackageSearch
       }
         |> ensureLoading nixosChannels
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
@@ -519,12 +519,13 @@ pushUrl :
     -> Model a b
     -> ( Model a b, Cmd msg )
 pushUrl toRoute navKey model =
-    Tuple.pair model <|
-        if model.query == Nothing || model.query == Just "" then
-            Cmd.none
+    ( model
+    , if model.query == Nothing || model.query == Just "" then
+        Cmd.none
 
-        else
-            Browser.Navigation.pushUrl navKey <| createUrl toRoute model
+      else
+        Browser.Navigation.pushUrl navKey <| createUrl toRoute model
+    )
 
 
 createUrl :
@@ -816,15 +817,15 @@ viewResult nixosChannels outMsg toRoute categoryName model viewSuccess viewBucke
                 buckets =
                     viewBuckets model.buckets result
             in
-            if result.hits.total.value == 0 && List.length buckets == 0 then
+            if result.hits.total.value == 0 && List.isEmpty buckets then
                 div [ class "search-results" ]
                     [ ul [ class "search-sidebar" ] searchBuckets
                     , viewNoResults categoryName (Maybe.withDefault "" model.query)
                     ]
 
-            else if List.length buckets > 0 then
+            else if not (List.isEmpty buckets) then
                 div [ class "search-results" ]
-                    [ ul [ class "search-sidebar" ] <| List.append searchBuckets buckets
+                    [ ul [ class "search-sidebar" ] (searchBuckets ++ buckets)
                     , div []
                         (viewResults nixosChannels model result viewSuccess toRoute outMsg categoryName)
                     ]
@@ -992,7 +993,7 @@ viewChannels nixosChannels outMsg selectedChannel =
                                 ]
                             , onClick <| outMsg (ChannelChange channel.id)
                             ]
-                            (List.intersperse (text " ") ([ text channel.id ] ++ channelBadge channel.status))
+                            (List.intersperse (text " ") (text channel.id :: channelBadge channel.status))
                     )
                     nixosChannels
                 )
@@ -1039,9 +1040,6 @@ viewResults nixosChannels model result viewSuccess _ outMsg categoryName =
                  else
                     model.from + model.size
                 )
-
-        total =
-            String.fromInt result.hits.total.value
     in
     [ div []
         (List.append
@@ -1060,6 +1058,10 @@ viewResults nixosChannels model result viewSuccess _ outMsg categoryName =
                         ]
 
                      else
+                        let
+                            total =
+                                String.fromInt result.hits.total.value
+                        in
                         [ strong []
                             [ text total
                             , text " "
@@ -1247,13 +1249,12 @@ searchFields query mainField fields =
     let
         allFields =
             fields
-                |> List.map
+                |> List.concatMap
                     (\( field, score ) ->
                         [ field ++ "^" ++ String.fromFloat score
                         , field ++ ".*^" ++ String.fromFloat (score * 0.6)
                         ]
                     )
-                |> List.concat
 
         queryWordsWildCard =
             (String.replace "_" "-" query :: String.replace "-" "_" query :: queryWords)

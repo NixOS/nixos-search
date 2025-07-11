@@ -1,6 +1,14 @@
 module Page.Packages exposing
-    ( Model
+    ( Aggregations
+    , Model
     , Msg(..)
+    , ResultAggregations
+    , ResultItemSource
+    , ResultPackageHydra
+    , ResultPackageHydraPath
+    , ResultPackageLicense
+    , ResultPackageMaintainer
+    , ResultPackageTeam
     , decodeResultAggregations
     , decodeResultItemSource
     , init
@@ -42,6 +50,7 @@ import Http exposing (Body)
 import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
+import List.Extra
 import Maybe
 import Regex
 import Route exposing (SearchType)
@@ -339,10 +348,12 @@ viewResultItem nixosChannels channel showInstallDetails show item =
             else
                 []
 
-        cleanPosition =
+        cleanRegex =
             Regex.fromString "^[0-9a-f]+\\.tar\\.gz\\/"
                 |> Maybe.withDefault Regex.never
-                >> (\reg -> Regex.replace reg (\_ -> ""))
+
+        cleanPosition =
+            Regex.replace cleanRegex (\_ -> "")
 
         createGithubUrl branch value =
             let
@@ -417,7 +428,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                                             Just (createShortDetailsItem fullName url)
                                                 )
                                 in
-                                optionals (licenses /= [])
+                                optionals (not (List.isEmpty licenses))
                                     [ li []
                                         (text
                                             ("License"
@@ -438,21 +449,28 @@ viewResultItem nixosChannels channel showInstallDetails show item =
 
         showMaintainer maintainer =
             let
-                optionalLink url node =
+                optionalGithubLink : Maybe String -> Html msg -> Html msg
+                optionalGithubLink url node =
                     case url of
                         Just u ->
-                            a [ href u ] [ node ]
+                            a [ href ("https://github.com/" ++ u) ] [ node ]
 
                         Nothing ->
                             node
-
-                maybe m d =
-                    Maybe.withDefault d m
             in
             li []
-                (optionalLink
-                    (Maybe.map (String.append "https://github.com/") maintainer.github)
-                    (text <| maybe maintainer.name <| maybe maintainer.github "Unknown")
+                (optionalGithubLink
+                    maintainer.github
+                    (case ( maintainer.name, maintainer.github ) of
+                        ( Just name, _ ) ->
+                            text name
+
+                        ( Nothing, Just github ) ->
+                            text github
+
+                        ( Nothing, Nothing ) ->
+                            text "Unknown"
+                    )
                     :: (case maintainer.email of
                             Just email ->
                                 [ text " <"
@@ -472,48 +490,43 @@ viewResultItem nixosChannels channel showInstallDetails show item =
             in
             optionals (not (List.isEmpty ghHandles))
                 [ li []
-                    ([ text "Maintainer Github handles: " ]
-                        ++ [ code []
-                                [ text (String.join " " ghHandles) ]
-                           ]
-                    )
+                    [ text "Maintainer Github handles: "
+                    , code []
+                        [ text (String.join " " ghHandles) ]
+                    ]
                 ]
 
         showTeam team =
             let
-                maybe m d =
-                    Maybe.withDefault d m
-
                 showTeamEntry githubTeam =
-                    [ text " " ] ++ [ a [ href (String.append "https://github.com/orgs/NixOS/teams/" githubTeam) ] [ text ("@NixOS/" ++ githubTeam) ] ]
-            in
-            li []
-                ([ text
-                    (team.shortName
-                        ++ (if maybe team.githubTeams [] /= [] then
-                                ":"
+                    [ text " "
+                    , a
+                        [ href (String.append "https://github.com/orgs/NixOS/teams/" githubTeam) ]
+                        [ text ("@NixOS/" ++ githubTeam) ]
+                    ]
 
-                            else
-                                ""
-                           )
-                    )
-                 ]
-                    ++ List.concatMap showTeamEntry (maybe team.githubTeams [])
-                    ++ [ ul []
-                            [ li []
-                                [ em []
-                                    [ text
-                                        (if maybe team.scope "" /= "" then
-                                            maybe team.scope ""
+                scope : List (Html msg)
+                scope =
+                    case Maybe.withDefault "" team.scope of
+                        "" ->
+                            []
 
-                                         else
-                                            ""
-                                        )
-                                    ]
+                        nonEmptyScope ->
+                            [ ul []
+                                [ li []
+                                    [ em [] [ text nonEmptyScope ] ]
                                 ]
                             ]
-                       ]
-                )
+            in
+            li [] <|
+                case team.githubTeams of
+                    Just ((_ :: _) as nonEmptyList) ->
+                        text (team.shortName ++ ":")
+                            :: List.concatMap showTeamEntry nonEmptyList
+                            ++ scope
+
+                    _ ->
+                        text team.shortName :: scope
 
         mailtoAllMaintainers maintainers =
             let
@@ -529,7 +542,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                 ]
 
         showPlatform platform =
-            case List.head (List.filter (\x -> x.id == channel) nixosChannels) of
+            case List.Extra.find (\x -> x.id == channel) nixosChannels of
                 Just channelDetails ->
                     let
                         url =
@@ -558,10 +571,10 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                     )
                 , div []
                     (if not (List.isEmpty item.source.teams) then
-                        List.append [ h4 [] [ text "Teams" ] ]
-                            [ ul []
-                                (List.map showTeam item.source.teams)
-                            ]
+                        [ h4 [] [ text "Teams" ]
+                        , ul []
+                            (List.map showTeam item.source.teams)
+                        ]
 
                      else
                         []
@@ -590,19 +603,61 @@ viewResultItem nixosChannels channel showInstallDetails show item =
         longerPackageDetails =
             optionals (Just item.source.attr_name == show)
                 [ div [ trapClick ]
-                    (div []
+                    [ div []
                         (item.source.longDescription
                             |> Maybe.andThen Utils.showHtml
                             |> Maybe.withDefault []
                         )
-                        :: div []
-                            [ h4 []
-                                [ text "How to install "
-                                , em [] [ text item.source.attr_name ]
-                                , text "?"
+                    , case item.source.flakeUrl of
+                        Just ( flakeUrl, _ ) ->
+                            div []
+                                [ h4 []
+                                    [ text "How to install "
+                                    , em [] [ text item.source.attr_name ]
+                                    , text "?"
+                                    ]
+                                , ul [ class "nav nav-tabs" ] <|
+                                    [ li
+                                        [ classList
+                                            [ ( "active", True )
+                                            , ( "pull-right", True )
+                                            ]
+                                        ]
+                                        [ a
+                                            [ href "#"
+                                            , Search.onClickStop <|
+                                                SearchMsg <|
+                                                    Search.ShowInstallDetails Search.FromFlake
+                                            ]
+                                            [ text "Install from flake" ]
+                                        ]
+                                    ]
+                                , div
+                                    [ class "tab-content" ]
+                                    [ div
+                                        [ classList
+                                            [ ( "tab-pane", True )
+                                            , ( "active", True )
+                                            ]
+                                        ]
+                                        [ pre [ class "code-block shell-command" ]
+                                            [ text "nix profile install "
+                                            , strong [] [ text flakeUrl ]
+                                            , text "#"
+                                            , em [] [ text item.source.attr_name ]
+                                            ]
+                                        ]
+                                    ]
                                 ]
-                            , ul [ class "nav nav-tabs" ] <|
-                                Maybe.withDefault
+
+                        Nothing ->
+                            div []
+                                [ h4 []
+                                    [ text "How to install "
+                                    , em [] [ text item.source.attr_name ]
+                                    , text "?"
+                                    ]
+                                , ul [ class "nav nav-tabs" ] <|
                                     [ li
                                         [ classList
                                             [ ( "active", List.member showInstallDetails [ Search.Unset, Search.ViaNixShell, Search.FromFlake ] )
@@ -646,30 +701,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                             [ text "nix-env" ]
                                         ]
                                     ]
-                                <|
-                                    Maybe.map
-                                        (\_ ->
-                                            [ li
-                                                [ classList
-                                                    [ ( "active", True )
-                                                    , ( "pull-right", True )
-                                                    ]
-                                                ]
-                                                [ a
-                                                    [ href "#"
-                                                    , Search.onClickStop <|
-                                                        SearchMsg <|
-                                                            Search.ShowInstallDetails Search.FromFlake
-                                                    ]
-                                                    [ text "Install from flake" ]
-                                                ]
-                                            ]
-                                        )
-                                        item.source.flakeUrl
-                            , div
-                                [ class "tab-content" ]
-                              <|
-                                Maybe.withDefault
+                                , div
+                                    [ class "tab-content" ]
                                     [ div
                                         [ classList
                                             [ ( "tab-pane", True )
@@ -789,31 +822,10 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                             ]
                                         ]
                                     ]
-                                <|
-                                    Maybe.map
-                                        (\url ->
-                                            [ div
-                                                [ classList
-                                                    [ ( "tab-pane", True )
-                                                    , ( "active", True )
-                                                    ]
-                                                ]
-                                                [ pre [ class "code-block shell-command" ]
-                                                    [ text "nix profile install "
-                                                    , strong [] [ text url ]
-                                                    , text "#"
-                                                    , em [] [ text item.source.attr_name ]
-                                                    ]
-                                                ]
-                                            ]
-                                        )
-                                    <|
-                                        Maybe.map Tuple.first item.source.flakeUrl
-                            ]
-                        :: programs
-                        :: maintainersTeamsAndPlatforms
-                        :: []
-                    )
+                                ]
+                    , programs
+                    , maintainersTeamsAndPlatforms
+                    ]
                 ]
 
         toggle =
@@ -878,29 +890,26 @@ renderSource :
     -> List (Html Msg)
 renderSource item nixosChannels channel trapClick createShortDetailsItem createGithubUrl =
     let
+        makeLink : String -> String -> List (Html Msg)
         makeLink text url =
             [ li [ trapClick ] [ createShortDetailsItem text url ] ]
-
-        position =
-            item.source.position
-                |> Maybe.map
-                    (\pos ->
-                        case List.head (List.filter (\x -> x.id == channel) nixosChannels) of
-                            Nothing ->
-                                []
-
-                            Just channelDetails ->
-                                makeLink "📦 Source" (createGithubUrl channelDetails.branch pos)
-                    )
-
-        flakeDef =
-            Maybe.map2
-                (\name resolved -> makeLink ("Flake: " ++ name) resolved)
-                item.source.flakeName
-            <|
-                Maybe.map Tuple.second item.source.flakeUrl
     in
-    Maybe.withDefault (Maybe.withDefault [] flakeDef) position
+    case item.source.position of
+        Just pos ->
+            case List.Extra.find (\x -> x.id == channel) nixosChannels of
+                Just channelDetails ->
+                    makeLink "📦 Source" (createGithubUrl channelDetails.branch pos)
+
+                Nothing ->
+                    []
+
+        Nothing ->
+            case ( item.source.flakeName, item.source.flakeUrl ) of
+                ( Just flakeName, Just ( _, flakeUrl ) ) ->
+                    makeLink ("Flake: " ++ flakeName) flakeUrl
+
+                _ ->
+                    []
 
 
 
@@ -1069,6 +1078,7 @@ type alias ResolvedFlake =
 decodeResolvedFlake : Json.Decode.Decoder ( String, String )
 decodeResolvedFlake =
     let
+        resolved : Json.Decode.Decoder ResolvedFlake
         resolved =
             Json.Decode.succeed ResolvedFlake
                 |> Json.Decode.Pipeline.required "type" Json.Decode.string
@@ -1079,35 +1089,41 @@ decodeResolvedFlake =
     Json.Decode.map
         (\resolved_ ->
             let
-                repoPath =
-                    case ( resolved_.owner, resolved_.repo ) of
-                        ( Just owner, Just repo ) ->
-                            Just <| owner ++ "/" ++ repo
-
-                        _ ->
-                            Nothing
-
-                url =
-                    resolved_.url
-
-                result =
-                    case resolved_.type_ of
-                        "github" ->
-                            Maybe.map (\repoPath_ -> ( "github:" ++ repoPath_, "https://github.com/" ++ repoPath_ )) repoPath
-
-                        "gitlab" ->
-                            Maybe.map (\repoPath_ -> ( "gitlab:" ++ repoPath_, "https://gitlab.com/" ++ repoPath_ )) repoPath
-
-                        "sourcehut" ->
-                            Maybe.map (\repoPath_ -> ( "sourcehut:" ++ repoPath_, "https://sr.ht/" ++ repoPath_ )) repoPath
-
-                        "git" ->
-                            Maybe.map (\url_ -> ( url_, url_ )) url
-
-                        _ ->
-                            Nothing
+                invalid : String
+                invalid =
+                    "INVALID FLAKE ORIGIN"
             in
-            Maybe.withDefault ( "INVALID FLAKE ORIGIN", "INVALID FLAKE ORIGIN" ) result
+            if resolved_.type_ == "git" then
+                let
+                    url : String
+                    url =
+                        Maybe.withDefault invalid resolved_.url
+                in
+                ( url, url )
+
+            else
+                case ( resolved_.owner, resolved_.repo ) of
+                    ( Just owner, Just repo ) ->
+                        let
+                            repoPath : String
+                            repoPath =
+                                owner ++ "/" ++ repo
+                        in
+                        case resolved_.type_ of
+                            "github" ->
+                                ( "github:" ++ repoPath, "https://github.com/" ++ repoPath )
+
+                            "gitlab" ->
+                                ( "gitlab:" ++ repoPath, "https://gitlab.com/" ++ repoPath )
+
+                            "sourcehut" ->
+                                ( "sourcehut:" ++ repoPath, "https://sr.ht/" ++ repoPath )
+
+                            _ ->
+                                ( invalid, invalid )
+
+                    _ ->
+                        ( invalid, invalid )
         )
         resolved
 
