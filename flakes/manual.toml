@@ -41,6 +41,11 @@ repo = "nixpkgs-ruby"
 
 [[sources]]
 type = "github"
+owner = "brizzbuzz"
+repo = "opnix"
+
+[[sources]]
+type = "github"
 owner = "CertainLach"
 repo = "fleet"
 
