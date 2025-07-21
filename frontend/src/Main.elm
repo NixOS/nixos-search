@@ -406,7 +406,7 @@ view model =
                         [ div [ class "navbar-inner" ]
                             [ div [ class "container" ]
                                 [ a [ class "brand", href "https://nixos.org" ]
-                                    [ img [ alt "NixOS logo", src "/images/nix-logo-pride.png", class "logo" ] []
+                                    [ img [ alt "NixOS logo", src "/images/nix-logo.png", class "logo" ] []
                                     ]
                                 , div []
                                     [ ul [ class "nav pull-left" ]
