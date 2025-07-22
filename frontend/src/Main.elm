@@ -467,7 +467,7 @@ viewNavigation route =
             [ ( Route.Packages searchArgs, text "Packages" )
             , ( Route.Options searchArgs, text "NixOS options" )
             , ( Route.Flakes searchArgs, span [] [ text "Flakes", sup [] [ span [ class "label label-info" ] [ small [] [ text "Experimental" ] ] ] ] )
-            ]
+            ] ++ [ li [] [ a [ href "https://wiki.nixos.org" ] [ text "NixOS Wiki" ] ] ]
 
 
 viewNavigationItem :
