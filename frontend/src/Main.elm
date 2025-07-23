@@ -1,4 +1,4 @@
-module Main exposing (main)
+module Main exposing (Flags, Model, Msg, Page, main)
 
 import Browser
 import Browser.Dom
@@ -117,7 +117,7 @@ type Msg
     | OptionsMsg Page.Options.Msg
     | FlakesMsg Page.Flakes.Msg
     | CtrlKRegistered
-    | SearchFocusResult (Result Browser.Dom.Error ())
+    | SearchFocusResult
 
 
 updateWith :
@@ -332,7 +332,7 @@ update msg model =
                 |> updateWith Flakes FlakesMsg model
 
         ( CtrlKRegistered, _ ) ->
-            ( model, Browser.Dom.focus "search-query-input" |> Task.attempt SearchFocusResult )
+            ( model, Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> SearchFocusResult) )
 
         _ ->
             -- Disregard messages that arrived for the wrong page.

@@ -3,6 +3,7 @@ module Utils exposing
     , toggleList
     )
 
+import Html exposing (Html)
 import Html.Parser
 import Html.Parser.Util
 
@@ -19,6 +20,7 @@ toggleList list item =
         List.append list [ item ]
 
 
+showHtml : String -> Maybe (List (Html msg))
 showHtml value =
     case Html.Parser.run <| String.trim value of
         Ok [ Html.Parser.Element "rendered-html" _ nodes ] ->

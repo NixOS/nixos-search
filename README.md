@@ -56,6 +56,16 @@ application.
 
 This allows testing the frontend against the 'production' package index.
 
+### elm-review
+
+This project uses `elm-review` to enforce standard rules over Elm code. To use it you can run:
+
+```
+env --chdir=frontend nix develop -c yarn elm-review
+```
+
+to check the code. You can add `--fix` for automatic fixes, and `--watch` to run it in watch mode during development.
+
 ### End-to-end testing
 
 If you want to do a full round-trip test of importing information with
