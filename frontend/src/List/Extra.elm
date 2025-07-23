@@ -20,5 +20,14 @@ find p list =
 unique : List comparable -> List comparable
 unique list =
     list
-        |> Set.fromList
-        |> Set.toList
+        |> List.foldl
+            (\e ( lst, set ) ->
+                if Set.member e set then
+                    ( lst, set )
+
+                else
+                    ( e :: lst, Set.insert e set )
+            )
+            ( [], Set.empty )
+        |> Tuple.first
+        |> List.reverse
