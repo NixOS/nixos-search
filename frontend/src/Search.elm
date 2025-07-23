@@ -79,6 +79,7 @@ import Http
 import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
+import List.Extra
 import RemoteData
 import Route
     exposing
@@ -87,7 +88,6 @@ import Route
         , searchTypeToTitle
         )
 import Route.SearchQuery
-import Set
 import Task
 
 
@@ -1245,12 +1245,13 @@ filterByType type_ =
 
 
 searchFields :
-    String
+    List String
     -> String
     -> List ( String, Float )
     -> List (List ( String, Json.Encode.Value ))
-searchFields query mainField fields =
+searchFields positiveWords mainField fields =
     let
+        allFields : List String
         allFields =
             fields
                 |> List.concatMap
@@ -1260,44 +1261,28 @@ searchFields query mainField fields =
                         ]
                     )
 
+        queryWordsWildCard : List String
         queryWordsWildCard =
-            (String.replace "_" "-" query :: String.replace "-" "_" query :: queryWords)
-                |> Set.fromList
-                |> Set.toList
+            positiveWords
+                |> List.concatMap dashUnderscoreVariants
+                |> List.Extra.unique
 
-        queryWords =
-            String.words (String.toLower query)
+        multiMatch : List ( String, Json.Encode.Value )
+        multiMatch =
+            [ ( "multi_match"
+              , Json.Encode.object
+                    [ ( "type", Json.Encode.string "cross_fields" )
+                    , ( "query", Json.Encode.string (String.join " " positiveWords) )
+                    , ( "analyzer", Json.Encode.string "whitespace" )
+                    , ( "auto_generate_synonyms_phrase_query", Json.Encode.bool False )
+                    , ( "operator", Json.Encode.string "and" )
+                    , ( "_name", Json.Encode.string <| "multi_match_" ++ String.join "_" positiveWords )
+                    , ( "fields", Json.Encode.list Json.Encode.string allFields )
+                    ]
+              )
+            ]
     in
-    List.append
-        [ [ ( "multi_match"
-            , Json.Encode.object
-                [ ( "type", Json.Encode.string "cross_fields" )
-                , ( "query", Json.Encode.string <| String.join " " queryWords )
-                , ( "analyzer", Json.Encode.string "whitespace" )
-                , ( "auto_generate_synonyms_phrase_query", Json.Encode.bool False )
-                , ( "operator", Json.Encode.string "and" )
-                , ( "_name", Json.Encode.string <| "multi_match_" ++ String.join "_" queryWords )
-                , ( "fields", Json.Encode.list Json.Encode.string allFields )
-                ]
-            )
-          ]
-        ]
-        (List.map
-            (\queryWord ->
-                [ ( "wildcard"
-                  , Json.Encode.object
-                        [ ( mainField
-                          , Json.Encode.object
-                                [ ( "value", Json.Encode.string ("*" ++ queryWord ++ "*") )
-                                , ( "case_insensitive", Json.Encode.bool True )
-                                ]
-                          )
-                        ]
-                  )
-                ]
-            )
-            queryWordsWildCard
-        )
+    multiMatch :: List.map (toWildcardQuery mainField) queryWordsWildCard
 
 
 makeRequestBody :
@@ -1322,6 +1307,12 @@ makeRequestBody query from sizeRaw sort type_ sortField otherSortFields bucketsF
 
             else
                 sizeRaw
+
+        ( negativeWords, positiveWords ) =
+            String.toLower query
+                |> String.words
+                |> List.partition (String.startsWith "-")
+                |> Tuple.mapFirst (List.map (String.dropLeft 1))
     in
     Http.jsonBody
         (Json.Encode.object
@@ -1349,6 +1340,14 @@ makeRequestBody query from sizeRaw sort type_ sortField otherSortFields bucketsF
                                         )
                                     )
                               )
+                            , ( "must_not"
+                              , Json.Encode.list Json.Encode.object
+                                    (negativeWords
+                                        |> List.concatMap dashUnderscoreVariants
+                                        |> List.Extra.unique
+                                        |> List.map (toWildcardQuery mainField)
+                                    )
+                              )
                             , ( "must"
                               , Json.Encode.list Json.Encode.object
                                     [ [ ( "dis_max"
@@ -1356,7 +1355,7 @@ makeRequestBody query from sizeRaw sort type_ sortField otherSortFields bucketsF
                                             [ ( "tie_breaker", Json.Encode.float 0.7 )
                                             , ( "queries"
                                               , Json.Encode.list Json.Encode.object
-                                                    (searchFields query mainField fields)
+                                                    (searchFields positiveWords mainField fields)
                                               )
                                             ]
                                         )
@@ -1369,6 +1368,31 @@ makeRequestBody query from sizeRaw sort type_ sortField otherSortFields bucketsF
               )
             ]
         )
+
+
+{-| Given a word, returns all variants of replacing underscores and dashes with each other.
+-}
+dashUnderscoreVariants : String -> List String
+dashUnderscoreVariants word =
+    [ String.replace "_" "-" word
+    , String.replace "-" "_" word
+    , word
+    ]
+
+
+toWildcardQuery : String -> String -> List ( String, Json.Encode.Value )
+toWildcardQuery mainField queryWord =
+    [ ( "wildcard"
+      , Json.Encode.object
+            [ ( mainField
+              , Json.Encode.object
+                    [ ( "value", Json.Encode.string ("*" ++ queryWord ++ "*") )
+                    , ( "case_insensitive", Json.Encode.bool True )
+                    ]
+              )
+            ]
+      )
+    ]
 
 
 makeRequest :
