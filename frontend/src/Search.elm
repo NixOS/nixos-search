@@ -352,7 +352,7 @@ ensureLoading nixosChannels model =
         channels =
             List.map .id nixosChannels
     in
-    if model.query /= "" && List.member model.channel channels then
+    if not (String.isEmpty model.query) && List.member model.channel channels then
         { model | result = RemoteData.Loading }
 
     else
@@ -439,7 +439,7 @@ update toRoute navKey msg model nixosChannels =
         BucketsChange buckets ->
             { model
                 | buckets =
-                    if buckets == "" then
+                    if String.isEmpty buckets then
                         Nothing
 
                     else
@@ -519,7 +519,7 @@ pushUrl :
     -> ( Model a b, Cmd msg )
 pushUrl toRoute navKey model =
     ( model
-    , if model.query == "" then
+    , if String.isEmpty model.query then
         Cmd.none
 
       else
