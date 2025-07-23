@@ -94,7 +94,7 @@ import Task
 type alias Model a b =
     { channel : String
     , flake : String
-    , query : Maybe String
+    , query : String
     , result : RemoteData.WebData (SearchResult a b)
     , show : Maybe String
     , from : Int
@@ -303,16 +303,15 @@ init args defaultNixOSChannel nixosChannels maybeModel =
                 |> Maybe.withDefault modelChannel
       , flake = defaultFlakeId
       , query =
-            args.query
-                |> Maybe.andThen Route.SearchQuery.searchQueryToString
-                |> (\x ->
-                        case x of
-                            Just q ->
-                                Just q
+            case
+                args.query
+                    |> Maybe.andThen Route.SearchQuery.searchQueryToString
+            of
+                Just q ->
+                    q
 
-                            Nothing ->
-                                args.show
-                   )
+                Nothing ->
+                    args.show |> Maybe.withDefault ""
       , result = getField .result RemoteData.NotAsked
       , show = args.show
       , from =
@@ -353,7 +352,7 @@ ensureLoading nixosChannels model =
         channels =
             List.map .id nixosChannels
     in
-    if model.query /= Nothing && model.query /= Just "" && List.member model.channel channels then
+    if not (String.isEmpty model.query) && List.member model.channel channels then
         { model | result = RemoteData.Loading }
 
     else
@@ -440,7 +439,7 @@ update toRoute navKey msg model nixosChannels =
         BucketsChange buckets ->
             { model
                 | buckets =
-                    if buckets == "" then
+                    if String.isEmpty buckets then
                         Nothing
 
                     else
@@ -472,7 +471,7 @@ update toRoute navKey msg model nixosChannels =
                 |> pushUrl toRoute navKey
 
         QueryInput query ->
-            ( { model | query = Just query }
+            ( { model | query = query }
             , Cmd.none
             )
 
@@ -520,7 +519,7 @@ pushUrl :
     -> ( Model a b, Cmd msg )
 pushUrl toRoute navKey model =
     ( model
-    , if model.query == Nothing || model.query == Just "" then
+    , if String.isEmpty model.query then
         Cmd.none
 
       else
@@ -536,7 +535,12 @@ createUrl toRoute model =
     Route.routeToString <|
         toRoute
             { channel = Just model.channel
-            , query = Maybe.map Route.SearchQuery.toSearchQuery model.query
+            , query =
+                if String.isEmpty model.query then
+                    Nothing
+
+                else
+                    Just (Route.SearchQuery.toSearchQuery model.query)
             , show = model.show
             , from = Just model.from
             , size = Just model.size
@@ -820,7 +824,7 @@ viewResult nixosChannels outMsg toRoute categoryName model viewSuccess viewBucke
             if result.hits.total.value == 0 && List.isEmpty buckets then
                 div [ class "search-results" ]
                     [ ul [ class "search-sidebar" ] searchBuckets
-                    , viewNoResults categoryName (Maybe.withDefault "" model.query)
+                    , viewNoResults categoryName model.query
                     ]
 
             else if not (List.isEmpty buckets) then
@@ -937,7 +941,7 @@ viewSearchInput :
     -> (Msg a b -> c)
     -> String
     -> Maybe String
-    -> Maybe String
+    -> String
     -> Html c
 viewSearchInput nixosChannels outMsg categoryName selectedChannel searchQuery =
     form
@@ -952,7 +956,7 @@ viewSearchInput nixosChannels outMsg categoryName selectedChannel searchQuery =
                     , autofocus True
                     , placeholder <| "Search for " ++ categoryName
                     , onInput (outMsg << QueryInput)
-                    , value <| Maybe.withDefault "" searchQuery
+                    , value searchQuery
                     ]
                     []
                 ]

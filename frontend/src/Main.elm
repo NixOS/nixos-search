@@ -152,7 +152,7 @@ attemptQuery (( model, _ ) as pair) =
                                 model.nixosChannels
                                 searchModel.searchType
                                 searchModel.channel
-                                (Maybe.withDefault "" searchModel.query)
+                                searchModel.query
                                 searchModel.from
                                 searchModel.size
                                 searchModel.buckets
@@ -351,33 +351,28 @@ view :
         }
 view model =
     let
-        maybeQuery m =
-            case m.query of
-                Nothing ->
-                    ""
+        maybeQuery q =
+            if String.isEmpty q then
+                ""
 
-                Just q ->
-                    if String.isEmpty q then
-                        ""
-
-                    else
-                        " - " ++ q
+            else
+                " - " ++ q
 
         maybeFlakeQuery m =
             case m of
                 OptionModel m_ ->
-                    maybeQuery m_
+                    maybeQuery m_.query
 
                 PackagesModel m_ ->
-                    maybeQuery m_
+                    maybeQuery m_.query
 
         title =
             case model.page of
                 Packages m ->
-                    "NixOS Search - Packages" ++ maybeQuery m
+                    "NixOS Search - Packages" ++ maybeQuery m.query
 
                 Options m ->
-                    "NixOS Search - Options" ++ maybeQuery m
+                    "NixOS Search - Options" ++ maybeQuery m.query
 
                 Flakes m ->
                     "NixOS Search - Flakes (Experimental)" ++ maybeFlakeQuery m
@@ -467,7 +462,8 @@ viewNavigation route =
             [ ( Route.Packages searchArgs, text "Packages" )
             , ( Route.Options searchArgs, text "NixOS options" )
             , ( Route.Flakes searchArgs, span [] [ text "Flakes", sup [] [ span [ class "label label-info" ] [ small [] [ text "Experimental" ] ] ] ] )
-            ] ++ [ li [] [ a [ href "https://wiki.nixos.org" ] [ text "NixOS Wiki" ] ] ]
+            ]
+        ++ [ li [] [ a [ href "https://wiki.nixos.org" ] [ text "NixOS Wiki" ] ] ]
 
 
 viewNavigationItem :

@@ -377,7 +377,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                     [ text "Name: "
                     , code [ class "package-name" ] [ text item.source.pname ]
                     ]
-                    :: (optionals (item.source.pversion /= "")
+                    :: (optionals (not (String.isEmpty item.source.pversion))
                             [ li []
                                 [ text "Version: "
                                 , strong [] [ text item.source.pversion ]
@@ -414,31 +414,26 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         item.source.licenses
                                             |> List.filterMap
                                                 (\license ->
-                                                    case ( license.fullName, license.url ) of
-                                                        ( Nothing, Nothing ) ->
-                                                            Nothing
+                                                    case license.url of
+                                                        Nothing ->
+                                                            Maybe.map text license.fullName
 
-                                                        ( Just fullName, Nothing ) ->
-                                                            Just (text fullName)
-
-                                                        ( Nothing, Just url ) ->
-                                                            Just (createShortDetailsItem "Unknown" url)
-
-                                                        ( Just fullName, Just url ) ->
-                                                            Just (createShortDetailsItem fullName url)
+                                                        Just url ->
+                                                            Just
+                                                                (createShortDetailsItem
+                                                                    (Maybe.withDefault "Unknown" license.fullName)
+                                                                    url
+                                                                )
                                                 )
                                 in
                                 optionals (not (List.isEmpty licenses))
                                     [ li []
                                         (text
-                                            ("License"
-                                                ++ (if List.length licenses == 1 then
-                                                        ""
+                                            (if List.length licenses == 1 then
+                                                "License: "
 
-                                                    else
-                                                        "s"
-                                                   )
-                                                ++ ": "
+                                             else
+                                                "Licenses: "
                                             )
                                             :: List.intersperse (text " ▪ ") licenses
                                         )
@@ -510,14 +505,14 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                             ]
             in
             li [] <|
-                case team.githubTeams of
-                    Just ((_ :: _) as nonEmptyList) ->
-                        text (team.shortName ++ ":")
-                            :: List.concatMap showTeamEntry nonEmptyList
-                            ++ scope
-
-                    _ ->
+                case Maybe.withDefault [] team.githubTeams of
+                    [] ->
                         text team.shortName :: scope
+
+                    githubTeams ->
+                        text (team.shortName ++ ":")
+                            :: List.concatMap showTeamEntry githubTeams
+                            ++ scope
 
         mailtoAllMaintainers maintainers =
             let
@@ -547,38 +542,31 @@ viewResultItem nixosChannels channel showInstallDetails show item =
         maintainersTeamsAndPlatforms =
             div []
                 [ div []
-                    (List.append [ h4 [] [ text "Maintainers" ] ]
-                        (if List.isEmpty item.source.maintainers then
-                            [ p [] [ text "This package has no maintainers. If you find it useful, please consider becoming a maintainer!" ] ]
+                    [ h4 [] [ text "Maintainers" ]
+                    , if List.isEmpty item.source.maintainers then
+                        p [] [ text "This package has no maintainers. If you find it useful, please consider becoming a maintainer!" ]
 
-                         else
-                            [ ul []
-                                (List.map showMaintainer item.source.maintainers
-                                    ++ mailtoAllMaintainers item.source.maintainers
-                                    ++ linkAllMaintainers item.source.maintainers
-                                )
-                            ]
-                        )
-                    )
+                      else
+                        ul []
+                            (List.map showMaintainer item.source.maintainers
+                                ++ mailtoAllMaintainers item.source.maintainers
+                                ++ linkAllMaintainers item.source.maintainers
+                            )
+                    ]
                 , div []
-                    (if not (List.isEmpty item.source.teams) then
+                    (optionals (not (List.isEmpty item.source.teams))
                         [ h4 [] [ text "Teams" ]
-                        , ul []
-                            (List.map showTeam item.source.teams)
+                        , ul [] (List.map showTeam item.source.teams)
                         ]
-
-                     else
-                        []
                     )
                 , div []
-                    (List.append [ h4 [] [ text "Platforms" ] ]
-                        (if List.isEmpty item.source.platforms then
-                            [ p [] [ text "This package does not list its available platforms." ] ]
+                    [ h4 [] [ text "Platforms" ]
+                    , if List.isEmpty item.source.platforms then
+                        p [] [ text "This package does not list its available platforms." ]
 
-                         else
-                            [ ul [] (List.map showPlatform (List.sort item.source.platforms)) ]
-                        )
-                    )
+                      else
+                        ul [] (List.map showPlatform (List.sort item.source.platforms))
+                    ]
                 ]
 
         programs =
