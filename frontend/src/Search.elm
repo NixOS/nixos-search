@@ -324,12 +324,13 @@ init args defaultNixOSChannel nixosChannels maybeModel =
       , buckets = args.buckets
       , sort =
             args.sort
-                |> Maybe.withDefault ""
-                |> fromSortId
+                |> Maybe.andThen fromSortId
                 |> Maybe.withDefault Relevance
       , showSort = False
       , showInstallDetails = Unset
-      , searchType = Maybe.withDefault Route.PackageSearch args.type_
+      , searchType =
+            args.type_
+                |> Maybe.withDefault Route.PackageSearch
       }
         |> ensureLoading nixosChannels
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
