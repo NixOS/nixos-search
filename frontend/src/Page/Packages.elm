@@ -448,27 +448,31 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                 )
 
         showMaintainer maintainer =
-            li []
-                ((case maintainer.github of
-                    Just github ->
-                        a
-                            [ href ("https://github.com/" ++ github) ]
-                            [ text (Maybe.withDefault github maintainer.name) ]
+            let
+                nameLink : Html msg
+                nameLink =
+                    case maintainer.github of
+                        Just github ->
+                            a
+                                [ href ("https://github.com/" ++ github) ]
+                                [ text (Maybe.withDefault github maintainer.name) ]
 
-                    Nothing ->
-                        text (Maybe.withDefault "Unknown" maintainer.name)
-                 )
-                    :: (case maintainer.email of
-                            Just email ->
-                                [ text " <"
-                                , a [ href ("mailto:" ++ email) ] [ text email ]
-                                , text ">"
-                                ]
+                        Nothing ->
+                            text (Maybe.withDefault "Unknown" maintainer.name)
 
-                            Nothing ->
-                                []
-                       )
-                )
+                emailLink : List (Html msg)
+                emailLink =
+                    case maintainer.email of
+                        Just email ->
+                            [ text " <"
+                            , a [ href ("mailto:" ++ email) ] [ text email ]
+                            , text ">"
+                            ]
+
+                        Nothing ->
+                            []
+            in
+            li [] (nameLink :: emailLink)
 
         linkAllMaintainers maintainers =
             let
