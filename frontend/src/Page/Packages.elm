@@ -448,29 +448,16 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                 )
 
         showMaintainer maintainer =
-            let
-                optionalGithubLink : Maybe String -> Html msg -> Html msg
-                optionalGithubLink url node =
-                    case url of
-                        Just u ->
-                            a [ href ("https://github.com/" ++ u) ] [ node ]
-
-                        Nothing ->
-                            node
-            in
             li []
-                (optionalGithubLink
-                    maintainer.github
-                    (case ( maintainer.name, maintainer.github ) of
-                        ( Just name, _ ) ->
-                            text name
+                ((case maintainer.github of
+                    Just github ->
+                        a
+                            [ href ("https://github.com/" ++ github) ]
+                            [ text (Maybe.withDefault github maintainer.name) ]
 
-                        ( Nothing, Just github ) ->
-                            text github
-
-                        ( Nothing, Nothing ) ->
-                            text "Unknown"
-                    )
+                    Nothing ->
+                        text (Maybe.withDefault "Unknown" maintainer.name)
+                 )
                     :: (case maintainer.email of
                             Just email ->
                                 [ text " <"
