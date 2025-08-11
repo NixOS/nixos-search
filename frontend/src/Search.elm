@@ -549,21 +549,29 @@ createUrl :
     -> Model a b
     -> String
 createUrl toRoute model =
+    let
+        justIfNotDefault : t -> t -> Maybe t
+        justIfNotDefault fromModel fromDefault =
+            if fromModel == fromDefault then
+                Nothing
+
+            else
+                Just fromModel
+    in
     Route.routeToString <|
         toRoute
             { channel = Just model.channel
             , query =
-                if String.isEmpty model.query then
-                    Nothing
-
-                else
-                    Just (Route.SearchQuery.toSearchQuery model.query)
+                justIfNotDefault model.query defaultSearchArgs.query
+                    |> Maybe.map Route.SearchQuery.toSearchQuery
             , show = model.show
-            , from = Just model.from
-            , size = Just model.size
+            , from = justIfNotDefault model.from defaultSearchArgs.from
+            , size = justIfNotDefault model.size defaultSearchArgs.size
             , buckets = model.buckets
-            , sort = Just <| toSortId model.sort
-            , type_ = Just model.searchType
+            , sort =
+                justIfNotDefault model.sort defaultSearchArgs.sort
+                    |> Maybe.map toSortId
+            , type_ = justIfNotDefault model.searchType defaultSearchArgs.searchType
             }
 
 
