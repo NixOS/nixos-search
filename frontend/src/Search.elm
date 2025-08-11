@@ -311,29 +311,46 @@ init args defaultNixOSChannel nixosChannels maybeModel =
                     q
 
                 Nothing ->
-                    args.show |> Maybe.withDefault ""
+                    args.show
+                        |> Maybe.withDefault defaultSearchArgs.query
       , result = getField .result RemoteData.NotAsked
       , show = args.show
       , from =
             args.from
-                |> Maybe.withDefault 0
+                |> Maybe.withDefault defaultSearchArgs.from
       , size =
             args.size
-                |> Maybe.withDefault 50
+                |> Maybe.withDefault defaultSearchArgs.size
       , buckets = args.buckets
       , sort =
             args.sort
                 |> Maybe.andThen fromSortId
-                |> Maybe.withDefault Relevance
+                |> Maybe.withDefault defaultSearchArgs.sort
       , showSort = False
       , showInstallDetails = Unset
       , searchType =
             args.type_
-                |> Maybe.withDefault Route.PackageSearch
+                |> Maybe.withDefault defaultSearchArgs.searchType
       }
         |> ensureLoading nixosChannels
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
     )
+
+
+defaultSearchArgs :
+    { query : String
+    , from : Int
+    , size : Int
+    , sort : Sort
+    , searchType : SearchType
+    }
+defaultSearchArgs =
+    { query = ""
+    , from = 0
+    , size = 50
+    , sort = Relevance
+    , searchType = Route.PackageSearch
+    }
 
 
 shouldLoad :
