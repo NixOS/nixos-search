@@ -175,14 +175,14 @@ fromUrl url =
 
 
 routeToString : Route -> String
-routeToString =
+routeToString route =
     let
         buildString ( path, query, searchQuery ) =
             Route.SearchQuery.absolute path query <|
                 Maybe.withDefault [] <|
                     Maybe.map List.singleton searchQuery
     in
-    buildString << routeToPieces
+    buildString (routeToPieces route)
 
 
 routeToPieces : Route -> ( List String, List QueryParameter, Maybe ( String, Route.SearchQuery.SearchQuery ) )
