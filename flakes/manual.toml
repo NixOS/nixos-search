@@ -8,10 +8,6 @@ url = "git+https://codeberg.org/wolfangaukang/multifirefox?ref=main"
 
 [[sources]]
 type = "git"
-url = "git+https://git.sr.ht/~kerstin/sway-timetracker?ref=main"
-
-[[sources]]
-type = "git"
 url = "git+https://github.com/hannesgith/rquickshare?ref=flake"
 
 [[sources]]
@@ -237,6 +233,11 @@ repo = "rust-nix-templater"
 type = "gitlab"
 owner = "pi-lar"
 repo = "neuropil"
+
+[[sources]]
+type = "sourcehut"
+owner = "~kerstin"
+repo = "sway-timetracker"
 
 [[sources]]
 type = "sourcehut"
