@@ -536,11 +536,7 @@ pushUrl :
     -> ( Model a b, Cmd msg )
 pushUrl toRoute navKey model =
     ( model
-    , if String.isEmpty model.query then
-        Cmd.none
-
-      else
-        Browser.Navigation.pushUrl navKey <| createUrl toRoute model
+    , Browser.Navigation.pushUrl navKey <| createUrl toRoute model
     )
 
 
