@@ -311,29 +311,46 @@ init args defaultNixOSChannel nixosChannels maybeModel =
                     q
 
                 Nothing ->
-                    args.show |> Maybe.withDefault ""
+                    args.show
+                        |> Maybe.withDefault defaultSearchArgs.query
       , result = getField .result RemoteData.NotAsked
       , show = args.show
       , from =
             args.from
-                |> Maybe.withDefault 0
+                |> Maybe.withDefault defaultSearchArgs.from
       , size =
             args.size
-                |> Maybe.withDefault 50
+                |> Maybe.withDefault defaultSearchArgs.size
       , buckets = args.buckets
       , sort =
             args.sort
                 |> Maybe.andThen fromSortId
-                |> Maybe.withDefault Relevance
+                |> Maybe.withDefault defaultSearchArgs.sort
       , showSort = False
       , showInstallDetails = Unset
       , searchType =
             args.type_
-                |> Maybe.withDefault Route.PackageSearch
+                |> Maybe.withDefault defaultSearchArgs.searchType
       }
         |> ensureLoading nixosChannels
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
     )
+
+
+defaultSearchArgs :
+    { query : String
+    , from : Int
+    , size : Int
+    , sort : Sort
+    , searchType : SearchType
+    }
+defaultSearchArgs =
+    { query = ""
+    , from = 0
+    , size = 50
+    , sort = Relevance
+    , searchType = Route.PackageSearch
+    }
 
 
 shouldLoad :
@@ -528,21 +545,29 @@ createUrl :
     -> Model a b
     -> String
 createUrl toRoute model =
+    let
+        justIfNotDefault : t -> t -> Maybe t
+        justIfNotDefault fromModel fromDefault =
+            if fromModel == fromDefault then
+                Nothing
+
+            else
+                Just fromModel
+    in
     Route.routeToString <|
         toRoute
             { channel = Just model.channel
             , query =
-                if String.isEmpty model.query then
-                    Nothing
-
-                else
-                    Just (Route.SearchQuery.toSearchQuery model.query)
+                justIfNotDefault model.query defaultSearchArgs.query
+                    |> Maybe.map Route.SearchQuery.toSearchQuery
             , show = model.show
-            , from = Just model.from
-            , size = Just model.size
+            , from = justIfNotDefault model.from defaultSearchArgs.from
+            , size = justIfNotDefault model.size defaultSearchArgs.size
             , buckets = model.buckets
-            , sort = Just <| toSortId model.sort
-            , type_ = Just model.searchType
+            , sort =
+                justIfNotDefault model.sort defaultSearchArgs.sort
+                    |> Maybe.map toSortId
+            , type_ = justIfNotDefault model.searchType defaultSearchArgs.searchType
             }
 
 
