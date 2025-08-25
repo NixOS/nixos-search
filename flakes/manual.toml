@@ -1,10 +1,12 @@
 [[sources]]
-type = "git"
-url = "git+https://codeberg.org/wolfangaukang/python-trovo?ref=main"
+type = "codeberg"
+owner = "wolfangaukang"
+repo = "python-trovo"
 
 [[sources]]
-type = "git"
-url = "git+https://codeberg.org/wolfangaukang/multifirefox?ref=main"
+type = "codeberg"
+owner = "wolfangaukang"
+repo = "multifirefox"
 
 [[sources]]
 type = "git"
