@@ -639,17 +639,18 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                 , ul [ class "nav nav-tabs" ] <|
                                     [ li
                                         [ classList
-                                            [ ( "active", List.member showInstallDetails [ Search.Unset, Search.ViaNixShell, Search.FromFlake ] )
+                                            [ ( "active", showInstallDetails == Search.ViaNixEnv )
                                             , ( "pull-right", True )
                                             ]
                                         ]
                                         [ a
                                             [ href "#"
+                                            , class "deprecated"
                                             , Search.onClickStop <|
                                                 SearchMsg <|
-                                                    Search.ShowInstallDetails Search.ViaNixShell
+                                                    Search.ShowInstallDetails Search.ViaNixEnv
                                             ]
-                                            [ text "nix-shell" ]
+                                            [ text "nix-env" ]
                                         ]
                                     , li
                                         [ classList
@@ -667,7 +668,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         ]
                                     , li
                                         [ classList
-                                            [ ( "active", showInstallDetails == Search.ViaNixEnv )
+                                            [ ( "active", List.member showInstallDetails [ Search.Unset, Search.ViaNixShell, Search.FromFlake ] )
                                             , ( "pull-right", True )
                                             ]
                                         ]
@@ -675,9 +676,9 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                             [ href "#"
                                             , Search.onClickStop <|
                                                 SearchMsg <|
-                                                    Search.ShowInstallDetails Search.ViaNixEnv
+                                                    Search.ShowInstallDetails Search.ViaNixShell
                                             ]
-                                            [ text "nix-env" ]
+                                            [ text "nix-shell" ]
                                         ]
                                     ]
                                 , div
