@@ -654,6 +654,20 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         ]
                                     , li
                                         [ classList
+                                            [ ( "active", showInstallDetails == Search.ViaNixProfile )
+                                            , ( "pull-right", True )
+                                            ]
+                                        ]
+                                        [ a
+                                            [ href "#"
+                                            , Search.onClickStop <|
+                                                SearchMsg <|
+                                                    Search.ShowInstallDetails Search.ViaNixProfile
+                                            ]
+                                            [ text "nix profile" ]
+                                        ]
+                                    , li
+                                        [ classList
                                             [ ( "active", showInstallDetails == Search.ViaNixOS )
                                             , ( "pull-right", True )
                                             ]
@@ -798,6 +812,18 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         ]
                                         [ pre [ class "code-block shell-command" ]
                                             [ text "nix-shell -p "
+                                            , strong [] [ text item.source.attr_name ]
+                                            ]
+                                        ]
+                                    , div
+                                        [ classList
+                                            [ ( "active", showInstallDetails == Search.ViaNixProfile )
+                                            ]
+                                        , class "tab-pane"
+                                        , id "package-details-nixpkgs"
+                                        ]
+                                        [ pre [ class "code-block shell-command" ]
+                                            [ text "nix profile install nixpkgs#"
                                             , strong [] [ text item.source.attr_name ]
                                             ]
                                         ]
