@@ -216,6 +216,11 @@ repo = "nativelink"
 
 [[sources]]
 type = "github"
+owner = "utensils"
+repo = "mcp-nixos"
+
+[[sources]]
+type = "github"
 owner = "Wazzaps"
 repo = "fingerpaint"
 
