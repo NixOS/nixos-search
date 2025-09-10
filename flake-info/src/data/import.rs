@@ -200,6 +200,7 @@ pub struct Meta {
     pub description: Option<String>,
     #[serde(rename = "longDescription")]
     pub long_description: Option<String>,
+    pub mainProgram: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
