@@ -667,7 +667,22 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                 , ul [ class "nav nav-tabs" ] <|
                                     [ li
                                         [ classList
-                                            [ ( "active", List.member showInstallDetails [ Search.Unset, Search.ViaNixShell, Search.FromFlake ] )
+                                            [ ( "active", showInstallDetails == Search.ViaNixEnv )
+                                            , ( "pull-right", True )
+                                            ]
+                                        ]
+                                        [ a
+                                            [ href "#"
+                                            , class "deprecated"
+                                            , Search.onClickStop <|
+                                                SearchMsg <|
+                                                    Search.ShowInstallDetails Search.ViaNixEnv
+                                            ]
+                                            [ text "nix-env" ]
+                                        ]
+                                    , li
+                                        [ classList
+                                            [ ( "active", showInstallDetails == Search.ViaNixProfile )
                                             , ( "pull-right", True )
                                             ]
                                         ]
@@ -675,9 +690,9 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                             [ href "#"
                                             , Search.onClickStop <|
                                                 SearchMsg <|
-                                                    Search.ShowInstallDetails Search.ViaNixShell
+                                                    Search.ShowInstallDetails Search.ViaNixProfile
                                             ]
-                                            [ text "nix-shell" ]
+                                            [ text "nix profile" ]
                                         ]
                                     , li
                                         [ classList
@@ -695,7 +710,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         ]
                                     , li
                                         [ classList
-                                            [ ( "active", showInstallDetails == Search.ViaNixEnv )
+                                            [ ( "active", List.member showInstallDetails [ Search.Unset, Search.ViaNixShell, Search.FromFlake ] )
                                             , ( "pull-right", True )
                                             ]
                                         ]
@@ -703,9 +718,9 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                             [ href "#"
                                             , Search.onClickStop <|
                                                 SearchMsg <|
-                                                    Search.ShowInstallDetails Search.ViaNixEnv
+                                                    Search.ShowInstallDetails Search.ViaNixShell
                                             ]
-                                            [ text "nix-env" ]
+                                            [ text "nix-shell" ]
                                         ]
                                     ]
                                 , div
@@ -825,6 +840,18 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         ]
                                         [ pre [ class "code-block shell-command" ]
                                             [ text "nix-shell -p "
+                                            , strong [] [ text item.source.attr_name ]
+                                            ]
+                                        ]
+                                    , div
+                                        [ classList
+                                            [ ( "active", showInstallDetails == Search.ViaNixProfile )
+                                            ]
+                                        , class "tab-pane"
+                                        , id "package-details-nixpkgs"
+                                        ]
+                                        [ pre [ class "code-block shell-command" ]
+                                            [ text "nix profile install nixpkgs#"
                                             , strong [] [ text item.source.attr_name ]
                                             ]
                                         ]

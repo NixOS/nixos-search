@@ -766,6 +766,10 @@ header .navbar.navbar-static-top {
                   & > li > a {
                     margin-right: 0;
                   }
+
+                  .deprecated {
+                    color: var(--text-color-light);
+                  }
                 }
 
                 div.tab-content {
