@@ -719,8 +719,7 @@ fromSortId id =
 
 
 view :
-    { toRoute : Route.SearchRoute
-    , categoryName : String
+    { categoryName : String
     }
     -> List (Html c)
     -> List NixOSChannel
@@ -741,7 +740,7 @@ view :
     -> (Msg a b -> c)
     -> List (Html c)
     -> Html c
-view { toRoute, categoryName } title nixosChannels model viewSuccess viewBuckets outMsg searchBuckets =
+view { categoryName } title nixosChannels model viewSuccess viewBuckets outMsg searchBuckets =
     let
         resultStatus =
             case model.result of
@@ -769,16 +768,15 @@ view { toRoute, categoryName } title nixosChannels model viewSuccess viewBuckets
         )
         [ h1 [] title
         , viewSearchInput nixosChannels outMsg categoryName (Just model.channel) model.query
-        , viewResult nixosChannels outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets
+        , viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searchBuckets
         ]
 
 
 viewFlakes :
     (Msg a b -> msg)
-    -> String
     -> SearchType
     -> List (Html msg)
-viewFlakes outMsg _ selectedCategory =
+viewFlakes outMsg selectedCategory =
     [ li []
         [ ul []
             (List.map
@@ -807,7 +805,6 @@ viewFlakes outMsg _ selectedCategory =
 viewResult :
     List NixOSChannel
     -> (Msg a b -> c)
-    -> Route.SearchRoute
     -> String
     -> Model a b
     ->
@@ -825,7 +822,7 @@ viewResult :
         )
     -> List (Html c)
     -> Html c
-viewResult nixosChannels outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets =
+viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searchBuckets =
     case model.result of
         RemoteData.NotAsked ->
             div [] []
@@ -852,14 +849,14 @@ viewResult nixosChannels outMsg toRoute categoryName model viewSuccess viewBucke
                 div [ class "search-results" ]
                     [ ul [ class "search-sidebar" ] (searchBuckets ++ buckets)
                     , div []
-                        (viewResults nixosChannels model result viewSuccess toRoute outMsg categoryName)
+                        (viewResults nixosChannels model result viewSuccess outMsg categoryName)
                     ]
 
             else
                 div [ class "search-results" ]
                     [ ul [ class "search-sidebar" ] searchBuckets
                     , div []
-                        (viewResults nixosChannels model result viewSuccess toRoute outMsg categoryName)
+                        (viewResults nixosChannels model result viewSuccess outMsg categoryName)
                     ]
 
         RemoteData.Failure error ->
@@ -1048,11 +1045,10 @@ viewResults :
          -> List (ResultItem a)
          -> Html c
         )
-    -> Route.SearchRoute
     -> (Msg a b -> c)
     -> String
     -> List (Html c)
-viewResults nixosChannels model result viewSuccess _ outMsg categoryName =
+viewResults nixosChannels model result viewSuccess outMsg categoryName =
     let
         from =
             String.fromInt (model.from + 1)

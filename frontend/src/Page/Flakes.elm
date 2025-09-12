@@ -180,8 +180,8 @@ view nixosChannels model =
                 )
                 [ h1 [] bodyTitle
                 , viewSearchInput nixosChannels outMsg categoryName Nothing model_.query
-                , viewResult nixosChannels outMsg Route.Flakes categoryName model_ viewSuccess viewBuckets <|
-                    viewFlakes outMsg model_.channel model_.searchType
+                , viewResult nixosChannels outMsg categoryName model_ viewSuccess viewBuckets <|
+                    viewFlakes outMsg model_.searchType
                 ]
     in
     case model of

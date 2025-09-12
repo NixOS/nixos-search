@@ -143,7 +143,7 @@ view :
     -> Model
     -> Html Msg
 view nixosChannels model =
-    Search.view { toRoute = Route.Options, categoryName = "options" }
+    Search.view { categoryName = "options" }
         [ text "Search more than "
         , strong [] [ text "20 000 options" ]
         ]
@@ -170,10 +170,10 @@ viewSuccess :
     -> Maybe String
     -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
-viewSuccess nixosChannels channel showInstallDetails show hits =
+viewSuccess nixosChannels channel _ show hits =
     ul []
         (List.map
-            (viewResultItem nixosChannels channel showInstallDetails show)
+            (viewResultItem nixosChannels channel show)
             hits
         )
 
@@ -181,11 +181,10 @@ viewSuccess nixosChannels channel showInstallDetails show hits =
 viewResultItem :
     List NixOSChannel
     -> String
-    -> Details
     -> Maybe String
     -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItem nixosChannels channel _ show item =
+viewResultItem nixosChannels channel show item =
     let
         asPre value =
             pre [] [ text value ]

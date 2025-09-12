@@ -247,7 +247,7 @@ view :
     -> Model
     -> Html Msg
 view nixosChannels model =
-    Search.view { toRoute = Route.Packages, categoryName = "packages" }
+    Search.view { categoryName = "packages" }
         [ text "Search more than "
         , strong [] [ text "120 000 packages" ]
         ]
