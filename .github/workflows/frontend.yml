@@ -40,7 +40,7 @@ jobs:
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
       with:
         production-branch: 'main'
-        production-deploy: ${{ github.event_name == 'push' }}
+        production-deploy: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
         publish-dir: './dist'
         github-token: ${{ secrets.GITHUB_TOKEN }}
         deploy-message: 'Deploy from GitHub Actions'
