@@ -76,6 +76,11 @@ repo = "nix-bitcoin"
 
 [[sources]]
 type = "github"
+owner = "helix-editor"
+repo = "helix"
+
+[[sources]]
+type = "github"
 owner = "hellwolf"
 repo = "solc.nix"
 
