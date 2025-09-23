@@ -91,6 +91,11 @@ repo = "haskell.nix"
 
 [[sources]]
 type = "github"
+owner = "jj-vcs"
+repo = "jj"
+
+[[sources]]
+type = "github"
 owner = "jonahbron"
 repo = "micropython-builder"
 
