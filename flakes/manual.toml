@@ -61,6 +61,11 @@ repo = "nix-atlas"
 
 [[sources]]
 type = "github"
+owner = "eza-community"
+repo = "eza"
+
+[[sources]]
+type = "github"
 owner = "fort-nix"
 repo = "nix-bitcoin"
 
