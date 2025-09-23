@@ -166,6 +166,11 @@ repo = "nixos-hardware"
 
 [[sources]]
 type = "github"
+owner = "NixOS"
+repo = "nixpkgs"
+
+[[sources]]
+type = "github"
 owner = "PaddiM8"
 repo = "kalker"
 
