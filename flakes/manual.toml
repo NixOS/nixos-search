@@ -235,6 +235,11 @@ owner = "yusdacra"
 repo = "rust-nix-templater"
 
 [[sources]]
+type = "github"
+owner = "zed-industries"
+repo = "zed"
+
+[[sources]]
 type = "gitlab"
 owner = "pi-lar"
 repo = "neuropil"
