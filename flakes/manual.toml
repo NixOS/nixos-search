@@ -36,6 +36,11 @@ repo = "microvm.nix"
 
 [[sources]]
 type = "github"
+owner = "atuinsh"
+repo = "atuin"
+
+[[sources]]
+type = "github"
 owner = "bobvanderlinden"
 repo = "nixpkgs-ruby"
 
@@ -63,6 +68,11 @@ repo = "nix-atlas"
 type = "github"
 owner = "edolstra"
 repo = "flake-compat"
+
+[[sources]]
+type = "github"
+owner = "eza-community"
+repo = "eza"
 
 [[sources]]
 type = "github"
@@ -228,6 +238,11 @@ repo = "mcp-nixos"
 type = "github"
 owner = "Wazzaps"
 repo = "fingerpaint"
+
+[[sources]]
+type = "github"
+owner = "YaLTeR"
+repo = "niri"
 
 [[sources]]
 type = "github"
