@@ -66,6 +66,11 @@ repo = "nix-bitcoin"
 
 [[sources]]
 type = "github"
+owner = "gmodena"
+repo = "nix-flatpak"
+
+[[sources]]
+type = "github"
 owner = "hellwolf"
 repo = "solc.nix"
 
