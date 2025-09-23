@@ -10,50 +10,47 @@ jobs:
   automatic-custom-flakes-check:
     runs-on: ubuntu-latest
 
-    strategy:
-      fail-fast: true
-
     env:
       RUST_LOG: debug
 
     steps:
+      - name: Checking out the repository
+        uses: actions/checkout@v5
 
-    - name: Checking out the repository
-      uses: actions/checkout@v5
+      - name: Setup
+        uses: ./.github/actions/common-setup
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
-    - name: Setup
-      uses: ./.github/actions/common-setup
-      with:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+      - name: Try importing all custom flakes
+        shell: bash
+        run: |
+          shopt -s globstar
 
-    - name: Try importing all custom flakes
-      run: |
-        shopt -s globstar
+          had_error=0
 
-        had_error=0
+          for flake_group in flakes/**/*.toml
+          do
+            echo "::group::Group \"$(basename $flake_group .toml)\""
 
-        for flake_group in flakes/**/*.toml
-        do
-          echo "::group::Group \"$(basename $flake_group .toml)\""
+            nix run --accept-flake-config .#flake-info -- --json group "$flake_group" "$(basename "$flake_group" .toml)" --report
 
-         nix run --accept-flake-config .#flake-info -- --json group "$flake_group" "$(basename "$flake_group" .toml)" --report
+            if [[ -f "./report.txt" ]]
+            then
+              had_error=1
 
-          if [[ -f "./report.txt" ]]
-          then
-            had_error=1
+              # sic.:
+              # Workaround for multi line output
+              report="$(< ./report.txt)"
+              report="${report//'%'/'%25'}"
+              report="${report//$'\n'/'%0A'}"
+              report="${report//$'\r'/'%0D'}"
 
-            # sic.:
-            # Workaround for multi line output
-            report="$(< ./report.txt)"
-            report="${report//'%'/'%25'}"
-            report="${report//$'\n'/'%0A'}"
-            report="${report//$'\r'/'%0D'}"
+              echo "::error file=$flake_group::$report"
+            fi
 
-            echo "::error file=$flake_group::$report"
-          fi
+            echo ::endgroup::
 
-          echo ::endgroup::
-
-        done
-        exit $had_error
+          done
+          exit $had_error
