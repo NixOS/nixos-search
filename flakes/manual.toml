@@ -231,6 +231,11 @@ repo = "fingerpaint"
 
 [[sources]]
 type = "github"
+owner = "YaLTeR"
+repo = "niri"
+
+[[sources]]
+type = "github"
 owner = "yusdacra"
 repo = "nix-cargo-integration"
 
