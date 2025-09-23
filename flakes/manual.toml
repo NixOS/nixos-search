@@ -76,6 +76,11 @@ repo = "hyprland"
 
 [[sources]]
 type = "github"
+owner = "in-a-dil-emma"
+repo = "declarative-flatpak"
+
+[[sources]]
+type = "github"
 owner = "input-output-hk"
 repo = "haskell.nix"
 
