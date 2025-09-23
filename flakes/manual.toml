@@ -161,6 +161,11 @@ repo = "hydra"
 
 [[sources]]
 type = "github"
+owner = "numtide"
+repo = "flake-utils"
+
+[[sources]]
+type = "github"
 owner = "PaddiM8"
 repo = "kalker"
 
