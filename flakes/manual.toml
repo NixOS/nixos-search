@@ -81,6 +81,11 @@ repo = "haskell.nix"
 
 [[sources]]
 type = "github"
+owner = "jj-vcs"
+repo = "jj"
+
+[[sources]]
+type = "github"
 owner = "jonahbron"
 repo = "micropython-builder"
 
@@ -218,6 +223,11 @@ repo = "nativelink"
 type = "github"
 owner = "utensils"
 repo = "mcp-nixos"
+
+[[sources]]
+type = "github"
+owner = "Wazzaps"
+repo = "fingerpaint"
 
 [[sources]]
 type = "github"
