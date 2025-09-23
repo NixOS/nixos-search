@@ -36,6 +36,11 @@ repo = "microvm.nix"
 
 [[sources]]
 type = "github"
+owner = "atuinsh"
+repo = "atuin"
+
+[[sources]]
+type = "github"
 owner = "bobvanderlinden"
 repo = "nixpkgs-ruby"
 
@@ -61,6 +66,11 @@ repo = "nix-atlas"
 
 [[sources]]
 type = "github"
+owner = "eza-community"
+repo = "eza"
+
+[[sources]]
+type = "github"
 owner = "fort-nix"
 repo = "nix-bitcoin"
 
@@ -71,8 +81,18 @@ repo = "nix-flatpak"
 
 [[sources]]
 type = "github"
+owner = "helix-editor"
+repo = "helix"
+
+[[sources]]
+type = "github"
 owner = "hellwolf"
 repo = "solc.nix"
+
+[[sources]]
+type = "github"
+owner = "hercules-ci"
+repo = "flake-parts"
 
 [[sources]]
 type = "github"
@@ -83,6 +103,11 @@ repo = "hyprland"
 type = "github"
 owner = "input-output-hk"
 repo = "haskell.nix"
+
+[[sources]]
+type = "github"
+owner = "jj-vcs"
+repo = "jj"
 
 [[sources]]
 type = "github"
@@ -166,6 +191,11 @@ repo = "hydra"
 
 [[sources]]
 type = "github"
+owner = "numtide"
+repo = "flake-utils"
+
+[[sources]]
+type = "github"
 owner = "PaddiM8"
 repo = "kalker"
 
@@ -231,6 +261,11 @@ repo = "fingerpaint"
 
 [[sources]]
 type = "github"
+owner = "YaLTeR"
+repo = "niri"
+
+[[sources]]
+type = "github"
 owner = "yusdacra"
 repo = "nix-cargo-integration"
 
@@ -238,6 +273,11 @@ repo = "nix-cargo-integration"
 type = "github"
 owner = "yusdacra"
 repo = "rust-nix-templater"
+
+[[sources]]
+type = "github"
+owner = "zed-industries"
+repo = "zed"
 
 [[sources]]
 type = "gitlab"
