@@ -36,6 +36,11 @@ repo = "microvm.nix"
 
 [[sources]]
 type = "github"
+owner = "atuinsh"
+repo = "atuin"
+
+[[sources]]
+type = "github"
 owner = "bobvanderlinden"
 repo = "nixpkgs-ruby"
 
