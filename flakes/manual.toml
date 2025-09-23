@@ -71,6 +71,11 @@ repo = "solc.nix"
 
 [[sources]]
 type = "github"
+owner = "hercules-ci"
+repo = "flake-parts"
+
+[[sources]]
+type = "github"
 owner = "hyprwm"
 repo = "hyprland"
 
