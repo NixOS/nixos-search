@@ -191,6 +191,16 @@ repo = "hydra"
 
 [[sources]]
 type = "github"
+owner = "NixOS"
+repo = "nixos-hardware"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "nixpkgs"
+
+[[sources]]
+type = "github"
 owner = "numtide"
 repo = "flake-utils"
 
