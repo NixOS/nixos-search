@@ -3,14 +3,13 @@ name: "Hourly import to Elasticsearch"
 on:
   workflow_dispatch:
   schedule:
-  - cron: '0 * * * *'
+    - cron: "0 * * * *"
 
 permissions:
   contents: read
   issues: write
 
 jobs:
-
   nixos-channels:
     runs-on: ubuntu-latest
 
@@ -18,22 +17,23 @@ jobs:
       matrix: ${{ steps.nixos-channels.outputs.matrix }}
 
     steps:
-    - name: Checking out the repository
-      uses: actions/checkout@v5
+      - name: Checking out the repository
+        uses: actions/checkout@v5
 
-    - name: Setup
-      uses: ./.github/actions/common-setup
-      with:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+      - name: Setup
+        uses: ./.github/actions/common-setup
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
-    - name: NixOS Channels
-      id: nixos-channels
-      run: |
-        nix build --accept-flake-config -L .#nixosChannels
-        channels="{\"channel\": $(< ./result)}"
-        echo "$channels"
-        echo "matrix=$channels" >> "$GITHUB_OUTPUT"
+      - name: NixOS Channels
+        id: nixos-channels
+        shell: sh
+        run: |
+          nix build --accept-flake-config -L .#nixosChannels
+          channels="{\"channel\": $(cat ./result)}"
+          echo "$channels"
+          echo "matrix=$channels" >> "$GITHUB_OUTPUT"
 
   import-nixpkgs:
     needs: nixos-channels
@@ -49,40 +49,43 @@ jobs:
       FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL2 }}
 
     steps:
-    - name: Checking out the repository
-      uses: actions/checkout@v5
+      - name: Checking out the repository
+        uses: actions/checkout@v5
 
-    - name: Setup
-      uses: ./.github/actions/common-setup
-      with:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+      - name: Setup
+        uses: ./.github/actions/common-setup
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
-    - name: Import ${{ matrix.channel }} channel
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(< VERSION) nixpkgs ${{ matrix.channel }}
-      if: github.repository_owner == 'NixOS'
+      - name: Import ${{ matrix.channel }} channel
+        if: github.repository_owner == 'NixOS'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: sh
+        run: |
+          nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(cat VERSION) nixpkgs ${{ matrix.channel }}
 
-    - name: Warmup ${{ matrix.channel }} channel
-      run: |
-        for (( i = 0; i < 3; i++ )) do
-          curl -sS ${{ secrets.ELASTICSEARCH_URL2 }}/latest-$(< VERSION)-nixos-${{ matrix.channel }}/_search | jq -c '.took // .'
-        done
-      if: github.repository_owner == 'NixOS'
+      - name: Warmup ${{ matrix.channel }} channel
+        if: github.repository_owner == 'NixOS'
+        shell: sh
+        run: |
+          for i in 1 2 3
+          do
+            curl -sS ${{ secrets.ELASTICSEARCH_URL2 }}/latest-$(cat VERSION)-nixos-${{ matrix.channel }}/_search | jq -c '.took // .'
+          done
 
-    - name: Create issue if failed
-      if: failure()
-      uses: JasonEtco/create-an-issue@v2
-      with:
-        filename: .github/failing-import-issue.md
-        search_existing: open
-        update_existing: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        CHANNEL: ${{ matrix.channel }}
-        TRIGGER_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - name: Create issue if failed
+        if: failure()
+        uses: JasonEtco/create-an-issue@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANNEL: ${{ matrix.channel }}
+          TRIGGER_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          filename: .github/failing-import-issue.md
+          search_existing: open
+          update_existing: false
 
   import-flakes:
     runs-on: ubuntu-latest
@@ -99,24 +102,26 @@ jobs:
       FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL2 }}
 
     steps:
+      - name: Checking out the repository
+        uses: actions/checkout@v5
 
-    - name: Checking out the repository
-      uses: actions/checkout@v5
+      - name: Setup
+        uses: ./.github/actions/common-setup
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
-    - name: Setup
-      uses: ./.github/actions/common-setup
-      with:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+      - name: Import ${{ matrix.group }} group
+        if: github.repository_owner == 'NixOS'
+        shell: sh
+        run: |
+          nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(cat ./VERSION) group ./flakes/${{ matrix.group }}.toml ${{ matrix.group }}
 
-    - name: Import ${{ matrix.group }} group
-      run: |
-        nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(< ./VERSION) group ./flakes/${{ matrix.group }}.toml ${{ matrix.group }}
-      if: github.repository_owner == 'NixOS'
-
-    - name: Warmup ${{ matrix.group }} group
-      run: |
-        for (( i = 0; i < 3; i++ )) do
-          curl -sS ${{ secrets.ELASTICSEARCH_URL2 }}/latest-$(< VERSION)-group-${{ matrix.group }}/_search | jq -c '.took // .'
-        done
-      if: github.repository_owner == 'NixOS'
+      - name: Warmup ${{ matrix.group }} group
+        if: github.repository_owner == 'NixOS'
+        shell: sh
+        run: |
+          for i in 1 2 3
+          do
+            curl -sS ${{ secrets.ELASTICSEARCH_URL2 }}/latest-$(cat VERSION)-group-${{ matrix.group }}/_search | jq -c '.took // .'
+          done
