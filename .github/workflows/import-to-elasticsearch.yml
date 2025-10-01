@@ -94,7 +94,8 @@ jobs:
       fail-fast: false
       matrix:
         group:
-          - "manual"
+          - "github"
+          - "other"
 
     env:
       RUST_LOG: debug
