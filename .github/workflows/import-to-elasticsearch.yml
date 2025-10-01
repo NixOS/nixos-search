@@ -94,7 +94,8 @@ jobs:
       fail-fast: false
       matrix:
         group:
-          - "github"
+          - "github-atom"
+          - "github-ntoz"
           - "other"
 
     env:
