@@ -781,6 +781,11 @@ header .navbar.navbar-static-top {
 
               }
 
+              // put border around main program
+              & > :nth-child(3) code:has(strong) {
+                border: 2px solid;
+              }
+
               // maintainers and platforms
               & > :nth-child(4) {
                 margin-top: 1em;

@@ -1,4 +1,5 @@
 name: "Build flake-info"
+
 on:
   pull_request:
     paths:
@@ -13,18 +14,18 @@ on:
 jobs:
   build-flake-info:
     runs-on: ubuntu-latest
+
     steps:
-    - name: Checking out the repository
-      uses: actions/checkout@v4
+      - name: Checking out the repository
+        uses: actions/checkout@v5
 
-    - name: Setup
-      uses: ./.github/actions/common-setup
-      with:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+      - name: Setup
+        uses: ./.github/actions/common-setup
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
-
-
-    - name: Building flake-info
-      run: |
-        nix --accept-flake-config -vL build .#flake-info
+      - name: Building flake-info
+        shell: sh
+        run: |
+          nix --accept-flake-config -vL build .#flake-info

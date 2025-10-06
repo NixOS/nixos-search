@@ -78,6 +78,7 @@ type alias ResultItemSource =
     , outputs : List String
     , default_output : Maybe String
     , programs : List String
+    , mainProgram : Maybe String
     , description : Maybe String
     , longDescription : Maybe String
     , licenses : List ResultPackageLicense
@@ -246,7 +247,7 @@ view :
     -> Model
     -> Html Msg
 view nixosChannels model =
-    Search.view { toRoute = Route.Packages, categoryName = "packages" }
+    Search.view { categoryName = "packages" }
         [ text "Search more than "
         , strong [] [ text "120 000 packages" ]
         ]
@@ -573,10 +574,37 @@ viewResultItem nixosChannels channel showInstallDetails show item =
             div []
                 [ h4 [] [ text "Programs provided" ]
                 , if List.isEmpty item.source.programs then
-                    p [] [ text "This package provides no programs." ]
+                    case item.source.mainProgram of
+                        Nothing ->
+                            p [] [ text "This package provides no programs." ]
+
+                        Just mainProgram ->
+                            p []
+                                [ p [] [ text "Only the main program of this package is known: " ]
+                                , code [] [ strong [] [ text mainProgram ] ]
+                                ]
 
                   else
-                    p [] (List.intersperse (text " ") (List.map (\p -> code [] [ text p ]) (List.sort item.source.programs)))
+                    p []
+                        (List.intersperse (text " ")
+                            (List.map
+                                (\p ->
+                                    code []
+                                        [ case item.source.mainProgram of
+                                            Nothing ->
+                                                text p
+
+                                            Just mainProgram ->
+                                                if p == mainProgram then
+                                                    strong [] [ text p ]
+
+                                                else
+                                                    text p
+                                        ]
+                                )
+                                (List.sort item.source.programs)
+                            )
+                        )
                 ]
 
         longerPackageDetails =
@@ -1031,6 +1059,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.required "package_outputs" (Json.Decode.list Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_default_output" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_programs" (Json.Decode.list Json.Decode.string)
+        |> Json.Decode.Pipeline.required "package_mainProgram" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_description" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_longDescription" (Json.Decode.nullable Json.Decode.string)
         |> Json.Decode.Pipeline.required "package_license" (Json.Decode.list decodeResultPackageLicense)

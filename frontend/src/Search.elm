@@ -311,29 +311,46 @@ init args defaultNixOSChannel nixosChannels maybeModel =
                     q
 
                 Nothing ->
-                    args.show |> Maybe.withDefault ""
+                    args.show
+                        |> Maybe.withDefault defaultSearchArgs.query
       , result = getField .result RemoteData.NotAsked
       , show = args.show
       , from =
             args.from
-                |> Maybe.withDefault 0
+                |> Maybe.withDefault defaultSearchArgs.from
       , size =
             args.size
-                |> Maybe.withDefault 50
+                |> Maybe.withDefault defaultSearchArgs.size
       , buckets = args.buckets
       , sort =
             args.sort
                 |> Maybe.andThen fromSortId
-                |> Maybe.withDefault Relevance
+                |> Maybe.withDefault defaultSearchArgs.sort
       , showSort = False
       , showInstallDetails = Unset
       , searchType =
             args.type_
-                |> Maybe.withDefault Route.PackageSearch
+                |> Maybe.withDefault defaultSearchArgs.searchType
       }
         |> ensureLoading nixosChannels
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
     )
+
+
+defaultSearchArgs :
+    { query : String
+    , from : Int
+    , size : Int
+    , sort : Sort
+    , searchType : SearchType
+    }
+defaultSearchArgs =
+    { query = ""
+    , from = 0
+    , size = 50
+    , sort = Relevance
+    , searchType = Route.PackageSearch
+    }
 
 
 shouldLoad :
@@ -519,11 +536,7 @@ pushUrl :
     -> ( Model a b, Cmd msg )
 pushUrl toRoute navKey model =
     ( model
-    , if String.isEmpty model.query then
-        Cmd.none
-
-      else
-        Browser.Navigation.pushUrl navKey <| createUrl toRoute model
+    , Browser.Navigation.pushUrl navKey <| createUrl toRoute model
     )
 
 
@@ -532,21 +545,29 @@ createUrl :
     -> Model a b
     -> String
 createUrl toRoute model =
+    let
+        justIfNotDefault : t -> t -> Maybe t
+        justIfNotDefault fromModel fromDefault =
+            if fromModel == fromDefault then
+                Nothing
+
+            else
+                Just fromModel
+    in
     Route.routeToString <|
         toRoute
             { channel = Just model.channel
             , query =
-                if String.isEmpty model.query then
-                    Nothing
-
-                else
-                    Just (Route.SearchQuery.toSearchQuery model.query)
+                justIfNotDefault model.query defaultSearchArgs.query
+                    |> Maybe.map Route.SearchQuery.toSearchQuery
             , show = model.show
-            , from = Just model.from
-            , size = Just model.size
+            , from = justIfNotDefault model.from defaultSearchArgs.from
+            , size = justIfNotDefault model.size defaultSearchArgs.size
             , buckets = model.buckets
-            , sort = Just <| toSortId model.sort
-            , type_ = Just model.searchType
+            , sort =
+                justIfNotDefault model.sort defaultSearchArgs.sort
+                    |> Maybe.map toSortId
+            , type_ = justIfNotDefault model.searchType defaultSearchArgs.searchType
             }
 
 
@@ -698,8 +719,7 @@ fromSortId id =
 
 
 view :
-    { toRoute : Route.SearchRoute
-    , categoryName : String
+    { categoryName : String
     }
     -> List (Html c)
     -> List NixOSChannel
@@ -720,7 +740,7 @@ view :
     -> (Msg a b -> c)
     -> List (Html c)
     -> Html c
-view { toRoute, categoryName } title nixosChannels model viewSuccess viewBuckets outMsg searchBuckets =
+view { categoryName } title nixosChannels model viewSuccess viewBuckets outMsg searchBuckets =
     let
         resultStatus =
             case model.result of
@@ -748,16 +768,15 @@ view { toRoute, categoryName } title nixosChannels model viewSuccess viewBuckets
         )
         [ h1 [] title
         , viewSearchInput nixosChannels outMsg categoryName (Just model.channel) model.query
-        , viewResult nixosChannels outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets
+        , viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searchBuckets
         ]
 
 
 viewFlakes :
     (Msg a b -> msg)
-    -> String
     -> SearchType
     -> List (Html msg)
-viewFlakes outMsg _ selectedCategory =
+viewFlakes outMsg selectedCategory =
     [ li []
         [ ul []
             (List.map
@@ -786,7 +805,6 @@ viewFlakes outMsg _ selectedCategory =
 viewResult :
     List NixOSChannel
     -> (Msg a b -> c)
-    -> Route.SearchRoute
     -> String
     -> Model a b
     ->
@@ -804,7 +822,7 @@ viewResult :
         )
     -> List (Html c)
     -> Html c
-viewResult nixosChannels outMsg toRoute categoryName model viewSuccess viewBuckets searchBuckets =
+viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searchBuckets =
     case model.result of
         RemoteData.NotAsked ->
             div [] []
@@ -831,14 +849,14 @@ viewResult nixosChannels outMsg toRoute categoryName model viewSuccess viewBucke
                 div [ class "search-results" ]
                     [ ul [ class "search-sidebar" ] (searchBuckets ++ buckets)
                     , div []
-                        (viewResults nixosChannels model result viewSuccess toRoute outMsg categoryName)
+                        (viewResults nixosChannels model result viewSuccess outMsg categoryName)
                     ]
 
             else
                 div [ class "search-results" ]
                     [ ul [ class "search-sidebar" ] searchBuckets
                     , div []
-                        (viewResults nixosChannels model result viewSuccess toRoute outMsg categoryName)
+                        (viewResults nixosChannels model result viewSuccess outMsg categoryName)
                     ]
 
         RemoteData.Failure error ->
@@ -1027,11 +1045,10 @@ viewResults :
          -> List (ResultItem a)
          -> Html c
         )
-    -> Route.SearchRoute
     -> (Msg a b -> c)
     -> String
     -> List (Html c)
-viewResults nixosChannels model result viewSuccess _ outMsg categoryName =
+viewResults nixosChannels model result viewSuccess outMsg categoryName =
     let
         from =
             String.fromInt (model.from + 1)
