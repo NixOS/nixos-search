@@ -82,10 +82,10 @@ jobs:
           TITLE="Failing import for nixpkgs ${{ matrix.channel }}"
 
           if [ "$(gh issue list --state open --search "in:title $TITLE" -L 1 --json id --jq length)" -eq 0 ]; then
-          gh issue create \
-            --title "$TITLE" \
-            --label "prio:blocker" \
-            --body "This issue was triggered by ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            gh issue create \
+              --title "$TITLE" \
+              --label "prio:blocker" \
+              --body "This issue was triggered by ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           fi
 
   import-flakes:
