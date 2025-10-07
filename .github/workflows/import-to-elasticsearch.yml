@@ -77,15 +77,16 @@ jobs:
 
       - name: Create issue if failed
         if: failure()
-        uses: JasonEtco/create-an-issue@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CHANNEL: ${{ matrix.channel }}
-          TRIGGER_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        with:
-          filename: .github/failing-import-issue.md
-          search_existing: open
-          update_existing: false
+        shell: sh
+        run: |
+          TITLE="Failing import for nixpkgs ${{ matrix.channel }}"
+
+          if [ "$(gh issue list --state open --search "in:title $TITLE" -L 1 --json id --jq length)" -eq 0 ]; then
+          gh issue create \
+            --title "$TITLE" \
+            --label "prio:blocker" \
+            --body "This issue was triggered by ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
 
   import-flakes:
     runs-on: ubuntu-latest
