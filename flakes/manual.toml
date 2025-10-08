@@ -211,6 +211,11 @@ repo = "nixos-hardware"
 
 [[sources]]
 type = "github"
+owner = "NixOS"
+repo = "nixops"
+
+[[sources]]
+type = "github"
 owner = "numtide"
 repo = "flake-utils"
 
