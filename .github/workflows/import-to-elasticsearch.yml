@@ -77,6 +77,8 @@ jobs:
 
       - name: Create issue if failed
         if: failure()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: sh
         run: |
           TITLE="Failing import for nixpkgs ${{ matrix.channel }}"
