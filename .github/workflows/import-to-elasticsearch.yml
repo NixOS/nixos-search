@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
   nixos-channels:
@@ -42,6 +41,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.nixos-channels.outputs.matrix) }}
+
+    permissions:
+      issues: write
 
     env:
       RUST_LOG: debug
