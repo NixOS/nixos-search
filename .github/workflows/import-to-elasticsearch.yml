@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
   nixos-channels:
@@ -43,6 +42,9 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.nixos-channels.outputs.matrix) }}
 
+    permissions:
+      issues: write
+
     env:
       RUST_LOG: debug
       FI_ES_EXISTS_STRATEGY: abort
@@ -77,6 +79,9 @@ jobs:
 
       - name: Create issue if failed
         if: failure()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         shell: sh
         run: |
           TITLE="Failing import for nixpkgs ${{ matrix.channel }}"
