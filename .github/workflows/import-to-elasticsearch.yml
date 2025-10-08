@@ -81,6 +81,7 @@ jobs:
         if: failure()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         shell: sh
         run: |
           TITLE="Failing import for nixpkgs ${{ matrix.channel }}"
