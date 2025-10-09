@@ -71,6 +71,11 @@ repo = "nosys"
 
 [[sources]]
 type = "github"
+owner = "divnix"
+repo = "std"
+
+[[sources]]
+type = "github"
 owner = "edolstra"
 repo = "flake-compat"
 
