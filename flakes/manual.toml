@@ -332,6 +332,11 @@ repo = "nix-filter"
 
 [[sources]]
 type = "github"
+owner = "numtide"
+repo = "nix-gl-host"
+
+[[sources]]
+type = "github"
 owner = "PaddiM8"
 repo = "kalker"
 
