@@ -302,6 +302,11 @@ repo = "flake-utils"
 
 [[sources]]
 type = "github"
+owner = "numtide"
+repo = "freelancer-toolbox"
+
+[[sources]]
+type = "github"
 owner = "PaddiM8"
 repo = "kalker"
 
