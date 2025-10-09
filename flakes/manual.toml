@@ -403,6 +403,11 @@ repo = "x86_64-linux"
 [[sources]]
 type = "github"
 owner = "numtide"
+repo = "blueprint"
+
+[[sources]]
+type = "github"
+owner = "numtide"
 repo = "flake-utils"
 
 [[sources]]
