@@ -81,6 +81,11 @@ repo = "nix-bitcoin"
 
 [[sources]]
 type = "github"
+owner = "gytis-ivaskevicius"
+repo = "flake-utils-plus"
+
+[[sources]]
+type = "github"
 owner = "helix-editor"
 repo = "helix"
 
