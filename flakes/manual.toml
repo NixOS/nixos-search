@@ -66,6 +66,11 @@ repo = "nix-atlas"
 
 [[sources]]
 type = "github"
+owner = "divnix"
+repo = "nosys"
+
+[[sources]]
+type = "github"
 owner = "edolstra"
 repo = "flake-compat"
 
