@@ -317,6 +317,11 @@ repo = "nar-serve"
 
 [[sources]]
 type = "github"
+owner = "numtide"
+repo = "nits"
+
+[[sources]]
+type = "github"
 owner = "PaddiM8"
 repo = "kalker"
 
