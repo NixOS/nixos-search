@@ -236,6 +236,11 @@ repo = "nix-auth"
 
 [[sources]]
 type = "github"
+owner = "numtide"
+repo = "nix-filter"
+
+[[sources]]
+type = "github"
 owner = "PaddiM8"
 repo = "kalker"
 
