@@ -92,6 +92,11 @@ repo = "nix-installer"
 [[sources]]
 type = "github"
 owner = "DeterminateSystems"
+repo = "update-flake-lock"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
 repo = "zpool-auto-expand-partitions"
 
 [[sources]]
