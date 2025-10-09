@@ -35,6 +35,10 @@ type = "git"
 url = "git+https://github.com/TamtamHero/fw-fanctrl?ref=packaging/nix"
 
 [[sources]]
+type = "git"
+url = "git+https://git.clan.lol/clan/clan-core"
+
+[[sources]]
 type = "github"
 owner = "anpandey"
 repo = "numen-nix"
