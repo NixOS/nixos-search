@@ -347,6 +347,11 @@ repo = "nixos-passthru-cache"
 
 [[sources]]
 type = "github"
+owner = "numtide"
+repo = "nixos-rke2"
+
+[[sources]]
+type = "github"
 owner = "PaddiM8"
 repo = "kalker"
 
