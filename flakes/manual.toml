@@ -342,6 +342,11 @@ repo = "nix-vm-test"
 
 [[sources]]
 type = "github"
+owner = "numtide"
+repo = "nixos-passthru-cache"
+
+[[sources]]
+type = "github"
 owner = "PaddiM8"
 repo = "kalker"
 
