@@ -312,6 +312,11 @@ repo = "github-deploy"
 
 [[sources]]
 type = "github"
+owner = "numtide"
+repo = "nar-serve"
+
+[[sources]]
+type = "github"
 owner = "PaddiM8"
 repo = "kalker"
 
