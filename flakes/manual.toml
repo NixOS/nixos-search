@@ -293,6 +293,11 @@ repo = "build-go-cache"
 [[sources]]
 type = "github"
 owner = "numtide"
+repo = "devshell"
+
+[[sources]]
+type = "github"
+owner = "numtide"
 repo = "flake-utils"
 
 [[sources]]
