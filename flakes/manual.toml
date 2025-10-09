@@ -62,6 +62,11 @@ repo = "bonk"
 [[sources]]
 type = "github"
 owner = "DeterminateSystems"
+repo = "cpiotools"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
 repo = "determinate"
 
 [[sources]]
