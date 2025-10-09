@@ -261,6 +261,11 @@ repo = "nixos-rke2"
 
 [[sources]]
 type = "github"
+owner = "numtide"
+repo = "system-manager"
+
+[[sources]]
+type = "github"
 owner = "PaddiM8"
 repo = "kalker"
 
