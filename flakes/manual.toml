@@ -57,6 +57,11 @@ repo = "nyx"
 [[sources]]
 type = "github"
 owner = "DeterminateSystems"
+repo = "bonk"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
 repo = "determinate"
 
 [[sources]]
