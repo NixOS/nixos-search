@@ -102,6 +102,11 @@ repo = "flake-templates"
 [[sources]]
 type = "github"
 owner = "DeterminateSystems"
+repo = "magic-nix-cache"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
 repo = "nix-installer"
 
 [[sources]]
