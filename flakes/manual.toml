@@ -187,6 +187,11 @@ repo = "nix-vscode-extensions"
 [[sources]]
 type = "github"
 owner = "NixOS"
+repo = "amis"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
 repo = "bundlers"
 
 [[sources]]
