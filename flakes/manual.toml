@@ -337,6 +337,11 @@ repo = "nix-gl-host"
 
 [[sources]]
 type = "github"
+owner = "numtide"
+repo = "nix-vm-test"
+
+[[sources]]
+type = "github"
 owner = "PaddiM8"
 repo = "kalker"
 
