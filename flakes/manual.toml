@@ -367,6 +367,11 @@ repo = "snow"
 
 [[sources]]
 type = "github"
+owner = "snowfallorg"
+repo = "templates"
+
+[[sources]]
+type = "github"
 owner = "stackbuilders"
 repo = "nixpkgs-terraform"
 
