@@ -227,6 +227,11 @@ repo = "frost"
 [[sources]]
 type = "github"
 owner = "snowfallorg"
+repo = "icehouse"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
 repo = "lib"
 
 [[sources]]
