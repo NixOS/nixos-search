@@ -318,6 +318,11 @@ repo = "agenix"
 [[sources]]
 type = "github"
 owner = "snowfallorg"
+repo = "drift"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
 repo = "lib"
 
 [[sources]]
