@@ -333,6 +333,11 @@ repo = "agenix"
 [[sources]]
 type = "github"
 owner = "snowfallorg"
+repo = "lib"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
 repo = "nix-software-center"
 
 [[sources]]
