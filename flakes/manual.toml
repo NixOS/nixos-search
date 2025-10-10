@@ -377,6 +377,11 @@ repo = "thaw"
 
 [[sources]]
 type = "github"
+owner = "snowfallorg"
+repo = "whats-in-my-store"
+
+[[sources]]
+type = "github"
 owner = "stackbuilders"
 repo = "nixpkgs-terraform"
 
