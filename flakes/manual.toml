@@ -358,6 +358,11 @@ repo = "lib"
 [[sources]]
 type = "github"
 owner = "snowfallorg"
+repo = "nix-editor"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
 repo = "nix-software-center"
 
 [[sources]]
