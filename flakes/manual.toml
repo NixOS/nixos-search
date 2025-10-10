@@ -318,12 +318,12 @@ repo = "agenix"
 [[sources]]
 type = "github"
 owner = "snowfallorg"
-repo = "nixos-conf-editor"
+repo = "nix-software-center"
 
 [[sources]]
 type = "github"
 owner = "snowfallorg"
-repo = "nix-software-center"
+repo = "nixos-conf-editor"
 
 [[sources]]
 type = "github"
