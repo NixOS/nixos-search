@@ -362,6 +362,11 @@ repo = "nixos-conf-editor"
 
 [[sources]]
 type = "github"
+owner = "snowfallorg"
+repo = "snow"
+
+[[sources]]
+type = "github"
 owner = "stackbuilders"
 repo = "nixpkgs-terraform"
 
