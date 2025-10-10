@@ -333,6 +333,11 @@ repo = "icehouse"
 [[sources]]
 type = "github"
 owner = "snowfallorg"
+repo = "icicle"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
 repo = "lib"
 
 [[sources]]
