@@ -338,6 +338,11 @@ repo = "drift"
 [[sources]]
 type = "github"
 owner = "snowfallorg"
+repo = "frost"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
 repo = "lib"
 
 [[sources]]
