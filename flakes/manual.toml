@@ -519,6 +519,11 @@ type = "github"
 owner = "nix-community"
 repo = "nixpkgs-lint"
 
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixpkgs-swh"
+
 [[source]]
 type = "github"
 owner = "nix-community"
