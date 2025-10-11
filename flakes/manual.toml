@@ -469,6 +469,11 @@ type = "github"
 owner = "nix-community"
 repo = "nixd"
 
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixdoc"
+
 [[source]]
 type = "github"
 owner = "nix-community"
