@@ -207,6 +207,11 @@ repo = "disko"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "disko-templates"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "fenix"
 
 [[sources]]
