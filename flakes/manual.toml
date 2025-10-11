@@ -257,6 +257,11 @@ repo = "flakelight"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "go-nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "home-manager"
 
 [[sources]]
