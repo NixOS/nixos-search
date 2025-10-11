@@ -454,6 +454,11 @@ type = "github"
 owner = "nix-community"
 repo = "nixGL"
 
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixago"
+
 [[source]]
 type = "github"
 owner = "nix-community"
