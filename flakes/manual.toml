@@ -357,6 +357,11 @@ repo = "nix-bundle"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "nix-direnv"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nix-vscode-extensions"
 
 [[source]]
