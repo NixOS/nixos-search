@@ -504,6 +504,11 @@ type = "github"
 owner = "nix-community"
 repo = "nixos-generators"
 
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixos-vscode-server"
+
 [[source]]
 type = "github"
 owner = "nix-community"
