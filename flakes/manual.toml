@@ -432,6 +432,11 @@ repo = "nix-ts-mode"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "nix-unit"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nix-vscode-extensions"
 
 [[source]]
