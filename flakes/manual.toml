@@ -197,6 +197,11 @@ repo = "crate2nix"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "crystal2nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "fenix"
 
 [[sources]]
