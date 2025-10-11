@@ -636,6 +636,11 @@ repo = "steam-fetcher"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "stylix"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
