@@ -576,6 +576,11 @@ repo = "nurl"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "patsh"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
