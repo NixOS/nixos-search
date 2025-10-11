@@ -377,6 +377,11 @@ repo = "nix-eval-jobs"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "nix-github-actions"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nix-vscode-extensions"
 
 [[source]]
