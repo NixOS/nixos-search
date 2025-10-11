@@ -292,6 +292,11 @@ repo = "impermanence"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "kickstart-nix.nvim"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nix-vscode-extensions"
 
 [[source]]
