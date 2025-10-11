@@ -656,6 +656,11 @@ repo = "tree-sitter-nix"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "trustix"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
