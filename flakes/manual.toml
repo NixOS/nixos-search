@@ -616,6 +616,11 @@ repo = "rnix-parser"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "robotnix"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
