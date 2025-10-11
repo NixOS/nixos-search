@@ -427,6 +427,11 @@ repo = "nix-snapd"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "nix-ts-mode"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nix-vscode-extensions"
 
 [[source]]
