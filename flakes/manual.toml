@@ -514,6 +514,11 @@ type = "github"
 owner = "nix-community"
 repo = "NixOS-WSL"
 
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixpkgs-lint"
+
 [[source]]
 type = "github"
 owner = "nix-community"
