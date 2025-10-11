@@ -439,6 +439,11 @@ type = "github"
 owner = "nix-community"
 repo = "nix-vscode-extensions"
 
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix4nvchad"
+
 [[source]]
 type = "github"
 owner = "nix-community"
