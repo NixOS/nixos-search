@@ -494,6 +494,11 @@ type = "github"
 owner = "nix-community"
 repo = "nixos-facter"
 
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixos-facter-modules"
+
 [[source]]
 type = "github"
 owner = "nix-community"
