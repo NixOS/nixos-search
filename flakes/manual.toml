@@ -237,6 +237,11 @@ repo = "fenix"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "flake-compat"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "home-manager"
 
 [[sources]]
