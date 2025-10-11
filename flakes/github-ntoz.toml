@@ -120,6 +120,11 @@ repo = "niri"
 
 [[sources]]
 type = "github"
+owner = "vorburger"
+repo = "bazel-nix"
+
+[[sources]]
+type = "github"
 owner = "yusdacra"
 repo = "nix-cargo-integration"
 
