@@ -596,6 +596,11 @@ repo = "poetry2nix"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "preservation"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
