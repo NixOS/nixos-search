@@ -101,6 +101,11 @@ repo = "hyprland"
 
 [[sources]]
 type = "github"
+owner = "Infinidoge"
+repo = "nix-minecraft"
+
+[[sources]]
+type = "github"
 owner = "input-output-hk"
 repo = "haskell.nix"
 
