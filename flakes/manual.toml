@@ -211,6 +211,11 @@ repo = "nixvim"
 
 [[sources]]
 type = "github"
+owner = "pyproject-nix"
+repo = "pyproject.nix"
+
+[[sources]]
+type = "github"
 owner = "ryantm"
 repo = "agenix"
 
