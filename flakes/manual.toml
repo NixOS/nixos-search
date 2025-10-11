@@ -581,6 +581,11 @@ repo = "patsh"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "pip2nix"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
