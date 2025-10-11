@@ -302,6 +302,11 @@ repo = "lanzaboote"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "linyaps-flake"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nix-vscode-extensions"
 
 [[source]]
