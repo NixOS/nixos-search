@@ -297,6 +297,11 @@ repo = "kickstart-nix.nvim"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "lanzaboote"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nix-vscode-extensions"
 
 [[source]]
