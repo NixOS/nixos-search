@@ -606,6 +606,11 @@ repo = "queued-build-hook"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "redoxpkgs"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
