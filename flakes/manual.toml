@@ -661,6 +661,11 @@ repo = "trustix"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "vscode-nix-ide"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
