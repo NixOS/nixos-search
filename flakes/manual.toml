@@ -182,6 +182,11 @@ repo = "browser-previews"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "buildbot-nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "fenix"
 
 [[sources]]
