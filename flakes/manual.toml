@@ -322,6 +322,11 @@ repo = "mavenix"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "mineflake"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nix-vscode-extensions"
 
 [[source]]
