@@ -641,6 +641,11 @@ repo = "stylix"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "talon-nix"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
