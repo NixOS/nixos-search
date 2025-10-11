@@ -272,6 +272,11 @@ repo = "harmonia"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "haumea"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "home-manager"
 
 [[sources]]
