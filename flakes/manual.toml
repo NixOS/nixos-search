@@ -227,6 +227,11 @@ repo = "emacs-overlay"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "ethereum.nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "fenix"
 
 [[sources]]
