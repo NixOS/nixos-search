@@ -631,6 +631,11 @@ repo = "srvos"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "steam-fetcher"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
