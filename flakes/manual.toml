@@ -464,6 +464,11 @@ type = "github"
 owner = "nix-community"
 repo = "nixago-extensions"
 
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixd"
+
 [[source]]
 type = "github"
 owner = "nix-community"
