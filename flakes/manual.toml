@@ -382,6 +382,11 @@ repo = "nix-github-actions"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "nix-index"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nix-vscode-extensions"
 
 [[source]]
