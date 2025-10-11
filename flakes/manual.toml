@@ -332,6 +332,11 @@ repo = "naersk"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "namaka"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nix-vscode-extensions"
 
 [[source]]
