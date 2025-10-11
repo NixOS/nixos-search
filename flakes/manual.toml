@@ -402,6 +402,11 @@ repo = "nix-installers"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "nix-ld"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nix-vscode-extensions"
 
 [[source]]
