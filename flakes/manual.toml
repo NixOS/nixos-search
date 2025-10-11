@@ -267,6 +267,11 @@ repo = "gomod2nix"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "harmonia"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "home-manager"
 
 [[sources]]
