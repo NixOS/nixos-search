@@ -509,6 +509,11 @@ type = "github"
 owner = "nix-community"
 repo = "nixos-vscode-server"
 
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "NixOS-WSL"
+
 [[source]]
 type = "github"
 owner = "nix-community"
