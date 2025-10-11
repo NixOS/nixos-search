@@ -621,6 +621,11 @@ repo = "robotnix"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "rustowl-flake"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
