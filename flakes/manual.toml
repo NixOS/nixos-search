@@ -666,6 +666,11 @@ repo = "vscode-nix-ide"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "vulnix"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
