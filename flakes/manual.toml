@@ -222,6 +222,11 @@ repo = "dream2nix"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "emacs-overlay"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "fenix"
 
 [[sources]]
