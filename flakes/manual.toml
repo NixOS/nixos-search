@@ -474,6 +474,11 @@ type = "github"
 owner = "nix-community"
 repo = "nixdoc"
 
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixhelm"
+
 [[source]]
 type = "github"
 owner = "nix-community"
