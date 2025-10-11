@@ -412,6 +412,11 @@ repo = "nix-melt"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "nix-on-droid"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nix-vscode-extensions"
 
 [[source]]
