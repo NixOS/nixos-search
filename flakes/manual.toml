@@ -362,6 +362,11 @@ repo = "nix-direnv"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "nix-doom-emacs"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nix-vscode-extensions"
 
 [[source]]
