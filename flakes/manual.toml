@@ -571,6 +571,11 @@ repo = "nur-packages-template"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "nurl"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
