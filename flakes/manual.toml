@@ -529,6 +529,11 @@ type = "github"
 owner = "nix-community"
 repo = "nixpkgs-terraform-providers-bin"
 
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixpkgs-wayland"
+
 [[source]]
 type = "github"
 owner = "nix-community"
