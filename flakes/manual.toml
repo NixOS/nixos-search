@@ -217,6 +217,11 @@ repo = "dns.nix"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "dream2nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "fenix"
 
 [[sources]]
