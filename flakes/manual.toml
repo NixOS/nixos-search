@@ -444,6 +444,11 @@ type = "github"
 owner = "nix-community"
 repo = "nix4nvchad"
 
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix4vscode"
+
 [[source]]
 type = "github"
 owner = "nix-community"
