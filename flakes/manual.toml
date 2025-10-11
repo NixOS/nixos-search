@@ -252,6 +252,11 @@ repo = "flake-nimble"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "flakelight"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "home-manager"
 
 [[sources]]
