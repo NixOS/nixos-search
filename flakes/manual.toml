@@ -247,6 +247,11 @@ repo = "flake-firefox-nightly"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "flake-nimble"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "home-manager"
 
 [[sources]]
