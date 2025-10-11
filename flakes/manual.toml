@@ -262,6 +262,11 @@ repo = "go-nix"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "gomod2nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "home-manager"
 
 [[sources]]
