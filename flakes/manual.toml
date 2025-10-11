@@ -392,6 +392,11 @@ repo = "nix-index-database"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "nix-init"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nix-vscode-extensions"
 
 [[source]]
