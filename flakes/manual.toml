@@ -202,6 +202,11 @@ repo = "crystal2nix"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "disko"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "fenix"
 
 [[sources]]
