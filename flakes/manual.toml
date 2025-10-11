@@ -651,6 +651,11 @@ repo = "templates"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "tree-sitter-nix"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
