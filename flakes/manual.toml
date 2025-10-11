@@ -556,6 +556,11 @@ repo = "nixvim"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "noogle"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
