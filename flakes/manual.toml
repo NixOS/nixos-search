@@ -422,6 +422,11 @@ repo = "nix-on-droid-app"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "nix-snapd"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nix-vscode-extensions"
 
 [[source]]
