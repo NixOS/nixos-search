@@ -671,6 +671,11 @@ repo = "vulnix"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "zephyr-nix"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
