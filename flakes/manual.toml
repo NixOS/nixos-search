@@ -282,6 +282,11 @@ repo = "home-manager"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "hydra-check"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nix-vscode-extensions"
 
 [[source]]
