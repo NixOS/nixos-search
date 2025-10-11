@@ -187,6 +187,11 @@ repo = "buildbot-nix"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "comma"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "fenix"
 
 [[sources]]
