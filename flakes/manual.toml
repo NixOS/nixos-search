@@ -367,6 +367,11 @@ repo = "nix-doom-emacs"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "nix-environments"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nix-vscode-extensions"
 
 [[source]]
