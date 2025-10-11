@@ -586,6 +586,11 @@ repo = "pip2nix"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "plasma-manager"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
