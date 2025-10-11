@@ -484,6 +484,11 @@ type = "github"
 owner = "nix-community"
 repo = "nixos-anywhere"
 
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixos-apple-silicon"
+
 [[source]]
 type = "github"
 owner = "nix-community"
