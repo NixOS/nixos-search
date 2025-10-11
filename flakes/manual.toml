@@ -646,6 +646,11 @@ repo = "talon-nix"
 
 [[sources]]
 type = "github"
+owner = "nix-community"
+repo = "templates"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
