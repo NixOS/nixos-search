@@ -242,6 +242,11 @@ repo = "flake-compat"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "flake-firefox-nightly"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "home-manager"
 
 [[sources]]
