@@ -312,6 +312,11 @@ repo = "luarocks-nix"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "manix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nix-vscode-extensions"
 
 [[source]]
