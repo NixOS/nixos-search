@@ -302,6 +302,11 @@ repo = "nix"
 
 [[sources]]
 type = "github"
+owner = "NixOS"
+repo = "nix-mode"
+
+[[sources]]
+type = "github"
 owner = "numtide"
 repo = "flake-utils"
 
