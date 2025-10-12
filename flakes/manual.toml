@@ -116,6 +116,11 @@ repo = "flake-schemas"
 
 [[sources]]
 type = "github"
+owner = "DeterminateSystems"
+repo = "flake-templates"
+
+[[sources]]
+type = "github"
 owner = "dgollings"
 repo = "nix-atlas"
 
