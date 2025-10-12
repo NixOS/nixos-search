@@ -197,6 +197,11 @@ repo = "bundlers"
 [[sources]]
 type = "github"
 owner = "NixOS"
+repo = "experimental-nix-installer"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
 repo = "hydra"
 
 [[sources]]
