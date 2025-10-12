@@ -111,6 +111,11 @@ repo = "flake-iter"
 
 [[sources]]
 type = "github"
+owner = "DeterminateSystems"
+repo = "flake-schemas"
+
+[[sources]]
+type = "github"
 owner = "dgollings"
 repo = "nix-atlas"
 
