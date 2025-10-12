@@ -96,6 +96,11 @@ repo = "dhcpv6macd"
 
 [[sources]]
 type = "github"
+owner = "DeterminateSystems"
+repo = "fh"
+
+[[sources]]
+type = "github"
 owner = "dgollings"
 repo = "nix-atlas"
 
