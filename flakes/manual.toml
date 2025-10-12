@@ -86,6 +86,11 @@ repo = "cpiotools"
 
 [[sources]]
 type = "github"
+owner = "DeterminateSystems"
+repo = "determinate"
+
+[[sources]]
+type = "github"
 owner = "dgollings"
 repo = "nix-atlas"
 
