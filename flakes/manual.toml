@@ -131,6 +131,11 @@ repo = "nix-config-parser"
 
 [[sources]]
 type = "github"
+owner = "DeterminateSystems"
+repo = "nix-installer"
+
+[[sources]]
+type = "github"
 owner = "dgollings"
 repo = "nix-atlas"
 
