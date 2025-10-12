@@ -126,6 +126,11 @@ repo = "magic-nix-cache"
 
 [[sources]]
 type = "github"
+owner = "DeterminateSystems"
+repo = "nix-config-parser"
+
+[[sources]]
+type = "github"
 owner = "dgollings"
 repo = "nix-atlas"
 
