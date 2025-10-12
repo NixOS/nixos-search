@@ -278,6 +278,11 @@ repo = "x86_64-linux"
 [[sources]]
 type = "github"
 owner = "NixOS"
+repo = "amis"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
 repo = "hydra"
 
 [[sources]]
