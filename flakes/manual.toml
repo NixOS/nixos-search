@@ -101,6 +101,11 @@ repo = "fh"
 
 [[sources]]
 type = "github"
+owner = "DeterminateSystems"
+repo = "flake-checker"
+
+[[sources]]
+type = "github"
 owner = "dgollings"
 repo = "nix-atlas"
 
