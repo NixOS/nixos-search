@@ -146,6 +146,11 @@ repo = "nix-src"
 
 [[sources]]
 type = "github"
+owner = "DeterminateSystems"
+repo = "nixos-vault-service"
+
+[[sources]]
+type = "github"
 owner = "dgollings"
 repo = "nix-atlas"
 
