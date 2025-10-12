@@ -192,6 +192,11 @@ repo = "amis"
 [[sources]]
 type = "github"
 owner = "NixOS"
+repo = "bundlers"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
 repo = "hydra"
 
 [[sources]]
