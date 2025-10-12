@@ -151,6 +151,11 @@ repo = "nixos-vault-service"
 
 [[sources]]
 type = "github"
+owner = "DeterminateSystems"
+repo = "update-flake-lock"
+
+[[sources]]
+type = "github"
 owner = "dgollings"
 repo = "nix-atlas"
 
