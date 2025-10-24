@@ -256,6 +256,11 @@ repo = "mcp-nixos"
 
 [[sources]]
 type = "github"
+owner = "viperML"
+repo = "wrapper-manager"
+
+[[sources]]
+type = "github"
 owner = "Wazzaps"
 repo = "fingerpaint"
 
