@@ -272,12 +272,40 @@ impl Elasticsearch {
                 .await
                 .map_err(ElasticsearchError::PushError)?;
 
-            dbg!(response)
-                .exception()
+            // Elasticsearch bulk API returns HTTP 200 even when some items fail
+            // Reference: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html
+            let response_body: serde_json::Value = dbg!(response)
+                .json()
                 .await
-                .map_err(ElasticsearchError::ClientError)?
-                .map(ElasticsearchError::PushResponseError)
-                .map_or(Ok(()), Err)?;
+                .map_err(ElasticsearchError::ClientError)?;
+
+            // Warn if any items in the bulk request failed
+            if let Some(true) = response_body.get("errors").and_then(|v| v.as_bool()) {
+                if let Some(items) = response_body.get("items").and_then(|v| v.as_array()) {
+                    let mut failed_count = 0;
+
+                    for (idx, item) in items.iter().enumerate() {
+                        if let Some(index_result) = item.get("index") {
+                            if let Some(status) = index_result.get("status").and_then(|s| s.as_u64()) {
+                                if status >= 400 {
+                                    failed_count += 1;
+                                    let error_type = index_result.get("error")
+                                        .and_then(|e| e.get("type"))
+                                        .and_then(|t| t.as_str())
+                                        .unwrap_or("unknown");
+                                    let error_reason = index_result.get("error")
+                                        .and_then(|e| e.get("reason"))
+                                        .and_then(|r| r.as_str())
+                                        .unwrap_or("");
+                                    warn!("  Item {}: status {}, type: {}, reason: {}", idx, status, error_type, error_reason);
+                                }
+                            }
+                        }
+                    }
+
+                    warn!("Bulk request had {} failed items out of {}", failed_count, items.len());
+                }
+            }
         }
 
         Ok(())
