@@ -222,6 +222,8 @@ pub enum ElasticsearchError {
     PushError(elasticsearch::Error),
     #[error("Push exports returned bad result: {0:?}")]
     PushResponseError(response::Exception),
+    #[error("One or more bulk requests had failed items")]
+    BulkRequestPartialFailure,
 
     #[error("Failed to iitialize index: {0}")]
     InitIndexError(elasticsearch::Error),
@@ -263,6 +265,8 @@ impl Elasticsearch {
                 .map(|e| BulkOperation::from(BulkOperation::index(e)))
         });
 
+        let mut had_failures = false;
+
         for body in bodies {
             let response = self
                 .client
@@ -272,9 +276,19 @@ impl Elasticsearch {
                 .await
                 .map_err(ElasticsearchError::PushError)?;
 
+            let response = dbg!(response);
+            if response.status_code().is_client_error() || response.status_code().is_server_error() {
+                return response
+                    .exception()
+                    .await
+                    .map_err(ElasticsearchError::ClientError)?
+                    .map(ElasticsearchError::PushResponseError)
+                    .map_or(Ok(()), Err);
+            }
+
             // Elasticsearch bulk API returns HTTP 200 even when some items fail
             // Reference: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html
-            let response_body: serde_json::Value = dbg!(response)
+            let response_body: serde_json::Value = response
                 .json()
                 .await
                 .map_err(ElasticsearchError::ClientError)?;
@@ -304,8 +318,13 @@ impl Elasticsearch {
                     }
 
                     warn!("Bulk request had {} failed items out of {}", failed_count, items.len());
+                    had_failures = true;
                 }
             }
+        }
+
+        if had_failures {
+            return Err(ElasticsearchError::BulkRequestPartialFailure);
         }
 
         Ok(())
