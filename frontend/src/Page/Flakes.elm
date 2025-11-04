@@ -162,7 +162,7 @@ view nixosChannels model =
             [ text "Search packages and options of "
             , strong []
                 [ a
-                    [ href "https://github.com/NixOS/nixos-search/tree/main/flakes" ]
+                    [ href "https://github.com/NixOS/nixos-search/blob/main/flakes/manual.toml" ]
                     [ text "public flakes" ]
                 ]
             ]
