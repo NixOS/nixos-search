@@ -100,9 +100,7 @@ jobs:
       fail-fast: false
       matrix:
         group:
-          - "github-atom"
-          - "github-ntoz"
-          - "other"
+          - "manual"
 
     env:
       RUST_LOG: debug

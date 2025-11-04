@@ -1,0 +1,299 @@
+[[sources]]
+type = "git"
+url = "git+https://codeberg.org/alch_emi/embers-nix-packages.git?ref=main"
+
+[[sources]]
+type = "git"
+url = "git+https://codeberg.org/wolfangaukang/python-trovo?ref=main"
+
+[[sources]]
+type = "git"
+url = "git+https://codeberg.org/wolfangaukang/multifirefox?ref=main"
+
+[[sources]]
+type = "git"
+url = "git+https://github.com/hannesgith/rquickshare?ref=flake"
+
+[[sources]]
+type = "git"
+url = "git+https://github.com/hannesgith/neohtop?ref=nixify"
+
+[[sources]]
+type = "git"
+url = "git+https://github.com/raboof/octopin?ref=nix"
+
+[[sources]]
+type = "git"
+url = "git+https://github.com/TamtamHero/fw-fanctrl?ref=packaging/nix"
+
+[[sources]]
+type = "github"
+owner = "anpandey"
+repo = "numen-nix"
+
+[[sources]]
+# Please open upstream issue when removing:
+# https://github.com/astro/microvm.nix/issues/new
+type = "github"
+owner = "astro"
+repo = "microvm.nix"
+
+[[sources]]
+type = "github"
+owner = "atuinsh"
+repo = "atuin"
+
+[[sources]]
+type = "github"
+owner = "bobvanderlinden"
+repo = "nixpkgs-ruby"
+
+[[sources]]
+type = "github"
+owner = "brizzbuzz"
+repo = "opnix"
+
+[[sources]]
+type = "github"
+owner = "CertainLach"
+repo = "fleet"
+
+[[sources]]
+type = "github"
+owner = "chaotic-cx"
+repo = "nyx"
+
+[[sources]]
+type = "github"
+owner = "dgollings"
+repo = "nix-atlas"
+
+[[sources]]
+type = "github"
+owner = "edolstra"
+repo = "flake-compat"
+
+[[sources]]
+type = "github"
+owner = "eza-community"
+repo = "eza"
+
+[[sources]]
+type = "github"
+owner = "fort-nix"
+repo = "nix-bitcoin"
+
+[[sources]]
+type = "github"
+owner = "helix-editor"
+repo = "helix"
+
+[[sources]]
+type = "github"
+owner = "hellwolf"
+repo = "solc.nix"
+
+[[sources]]
+type = "github"
+owner = "hercules-ci"
+repo = "flake-parts"
+
+[[sources]]
+type = "github"
+owner = "hyprwm"
+repo = "hyprland"
+
+[[sources]]
+type = "github"
+owner = "input-output-hk"
+repo = "haskell.nix"
+
+[[sources]]
+type = "github"
+owner = "jj-vcs"
+repo = "jj"
+
+[[sources]]
+type = "github"
+owner = "jonahbron"
+repo = "micropython-builder"
+
+[[sources]]
+type = "github"
+owner = "juliosueiras-nix"
+repo = "nix-security"
+
+[[sources]]
+type = "github"
+owner = "kashw2"
+repo = "bitbucket-runner-nix"
+
+[[sources]]
+type = "github"
+owner = "lnbits"
+repo = "lnbits-legend"
+
+[[sources]]
+type = "github"
+owner = "matthewcroughan"
+repo = "filestash-nix"
+
+[[sources]]
+type = "github"
+owner = "Mic92"
+repo = "sops-nix"
+
+[[sources]]
+type = "github"
+owner = "mirrexagon"
+repo = "nixpkgs-esp-dev"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "lightmeter"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "offen"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "openpgp-ca"
+
+[[sources]]
+type = "github"
+owner = "ngi-nix"
+repo = "weblate"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "autofirma-nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "fenix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "home-manager"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-vscode-extensions"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "hydra"
+
+[[sources]]
+type = "github"
+owner = "numtide"
+repo = "flake-utils"
+
+[[sources]]
+type = "github"
+owner = "PaddiM8"
+repo = "kalker"
+
+[[sources]]
+type = "github"
+owner = "PrismLauncher"
+repo = "PrismLauncher"
+
+[[source]]
+type = "github"
+owner = "pta2002"
+repo = "nixvim"
+
+[[sources]]
+type = "github"
+owner = "ryantm"
+repo = "agenix"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "nixos-conf-editor"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "nix-software-center"
+
+[[sources]]
+type = "github"
+owner = "stackbuilders"
+repo = "nixpkgs-terraform"
+
+[[sources]]
+type = "github"
+owner = "StardustXR"
+repo = "telescope"
+
+[[sources]]
+type = "github"
+owner = "surrealdb"
+repo = "surrealdb"
+
+[[sources]]
+type = "github"
+owner = "Svenum"
+repo = "Solaar-Flake"
+
+[[sources]]
+type = "github"
+owner = "TraceMachina"
+repo = "nativelink"
+
+[[sources]]
+type = "github"
+owner = "utensils"
+repo = "mcp-nixos"
+
+[[sources]]
+type = "github"
+owner = "Wazzaps"
+repo = "fingerpaint"
+
+[[sources]]
+type = "github"
+owner = "YaLTeR"
+repo = "niri"
+
+[[sources]]
+type = "github"
+owner = "yusdacra"
+repo = "nix-cargo-integration"
+
+[[sources]]
+type = "github"
+owner = "yusdacra"
+repo = "rust-nix-templater"
+
+[[sources]]
+type = "github"
+owner = "zed-industries"
+repo = "zed"
+
+[[sources]]
+type = "gitlab"
+owner = "pi-lar"
+repo = "neuropil"
+
+[[sources]]
+type = "sourcehut"
+owner = "~kerstin"
+repo = "sway-timetracker"
+
+[[sources]]
+type = "sourcehut"
+owner = "~munksgaard"
+repo = "geomyidae-flake"

@@ -49,8 +49,6 @@ jobs:
 
               echo "::error file=$flake_group::$report"
             fi
- 
-            nix-store --gc
 
             echo ::endgroup::
 
