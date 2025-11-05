@@ -7,8 +7,8 @@
 /// the schema and keep it as simple as possible.
 ///
 /// When merging a PR that changes the schema, also update the
-/// VERSION in the root of the repo, so a fresh index will be
-/// created.
+/// version.nix `import` version in the root of the repo,
+/// so a fresh index will be created.
 
 use std::{
     collections::HashSet,
