@@ -34,7 +34,7 @@
           };
           lib = nixpkgs.lib;
           warnToUpgradeNix = lib.warn "Please upgrade Nix to 2.7 or later.";
-          version = lib.fileContents ./VERSION;
+          version = (import ./version.nix).frontend;
           nixosChannels =
             let
               allChannels = (import "${nixos-infra}/channels.nix").channels;
