@@ -225,6 +225,11 @@ repo = "flake-outputs"
 
 [[sources]]
 type = "github"
+owner = "nix-systems"
+repo = "riscv64-linux"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
