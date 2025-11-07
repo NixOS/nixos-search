@@ -201,6 +201,11 @@ repo = "aarch64-linux"
 [[sources]]
 type = "github"
 owner = "nix-systems"
+repo = "current-system"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
 repo = "default"
 
 [[sources]]
