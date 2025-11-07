@@ -191,6 +191,11 @@ repo = "nix-vscode-extensions"
 [[sources]]
 type = "github"
 owner = "nix-systems"
+repo = "aarch64-darwin"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
 repo = "default"
 
 [[sources]]
