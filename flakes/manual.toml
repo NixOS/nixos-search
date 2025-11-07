@@ -220,6 +220,11 @@ repo = "default-linux"
 
 [[sources]]
 type = "github"
+owner = "nix-systems"
+repo = "flake-outputs"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
