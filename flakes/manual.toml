@@ -235,6 +235,11 @@ repo = "x86_64-darwin"
 
 [[sources]]
 type = "github"
+owner = "nix-systems"
+repo = "x86_64-linux"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
