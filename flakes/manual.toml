@@ -200,6 +200,11 @@ repo = "default-darwin"
 
 [[sources]]
 type = "github"
+owner = "nix-systems"
+repo = "default-linux"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
