@@ -96,6 +96,9 @@ enum Command {
 
         #[structopt(long, help = "Whether write an error report about failed packages")]
         report: bool,
+
+        #[structopt(long, help = "Run nix garbage collection between every group member evaluation")]
+        with_gc: bool,
     },
 }
 
@@ -225,7 +228,7 @@ async fn run_command(
             } else {
                 Source::Git { url: flake }
             };
-            let (info, exports) = flake_info::process_flake(&source, &kind, temp_store, extra)
+            let (info, exports) = flake_info::process_flake(&source, &kind, temp_store, extra, false)
                 .map_err(FlakeInfoError::Flake)?;
 
             let ident = (
@@ -294,6 +297,7 @@ async fn run_command(
             temp_store,
             name,
             report,
+            with_gc,
         } => {
             // if reporting is enabled delete old report
             if report && tokio::fs::metadata("report.txt").await.is_ok() {
@@ -309,7 +313,7 @@ async fn run_command(
                             format!("While processing nixpkgs archive {}", source.to_flake_ref())
                         })
                         .map(|result| (result, nixpkgs.git_ref.to_owned())),
-                    _ => flake_info::process_flake(source, &kind, temp_store, &extra)
+                    _ => flake_info::process_flake(source, &kind, temp_store, &extra, with_gc)
                         .with_context(|| {
                             format!("While processing flake {}", source.to_flake_ref())
                         })

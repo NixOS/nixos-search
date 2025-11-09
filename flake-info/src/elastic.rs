@@ -541,7 +541,7 @@ mod tests {
 
         let exports = sources
             .iter()
-            .flat_map(|s| process_flake(s, &Kind::All, false, &[]))
+            .flat_map(|s| process_flake(s, &Kind::All, false, &[], false))
             .map(|(_info, exports)| exports)
             .flatten()
             .collect::<Vec<Export>>();
