@@ -3,13 +3,12 @@
 /// Flakes, or Nixpkgs.
 ///
 /// The output format can be kept as simple as possible and does
-/// not need to use utilities like OneOrMany, as we can evolve 
+/// not need to use utilities like OneOrMany, as we can evolve
 /// the schema and keep it as simple as possible.
 ///
 /// When merging a PR that changes the schema, also update the
 /// version.nix `import` version in the root of the repo,
 /// so a fresh index will be created.
-
 use std::{
     collections::HashSet,
     convert::{TryFrom, TryInto},
@@ -396,22 +395,21 @@ impl From<import::Team> for Team {
                 scope,
                 shortName,
                 githubTeams,
-            } =>
-              Team {
-                  members: members
-                      .map(OneOrMany::into_list)
-                      .unwrap_or_default()
-                      .into_iter()
-                      .map(Maintainer::from)
-                      .collect(),
-                  scope,
-                  shortName,
-                  githubTeams: githubTeams
-                      .map(OneOrMany::into_list)
-                      .unwrap_or_default()
-                      .into_iter()
-                      .collect(),
-              },
+            } => Team {
+                members: members
+                    .map(OneOrMany::into_list)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(Maintainer::from)
+                    .collect(),
+                scope,
+                shortName,
+                githubTeams: githubTeams
+                    .map(OneOrMany::into_list)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .collect(),
+            },
             #[allow(non_snake_case)]
             import::Team::Simple(shortName) => Team {
                 shortName: Some(shortName),

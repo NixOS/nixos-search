@@ -7,7 +7,7 @@ use log::{error, info, warn};
 use sha2::Digest;
 use std::io;
 use std::path::PathBuf;
-use structopt::{clap::ArgGroup, StructOpt};
+use structopt::{StructOpt, clap::ArgGroup};
 use thiserror::Error;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
@@ -59,7 +59,7 @@ enum Command {
 
         #[structopt(
             long = "attr",
-            help = "Restrict to importing a single attribute. Implies --kind package",
+            help = "Restrict to importing a single attribute. Implies --kind package"
         )]
         attribute: Option<String>,
     },
@@ -75,9 +75,7 @@ enum Command {
         )]
         channel: String,
 
-        #[structopt(
-            help = "Restrict to importing a single attribute",
-        )]
+        #[structopt(help = "Restrict to importing a single attribute")]
         attribute: Option<String>,
     },
 
@@ -216,17 +214,17 @@ async fn run_command(
 
     match command {
         Command::Flake { flake, temp_store } => {
-            let source =
-                if flake.starts_with("github:") {
-                    let mut s = flake.split(":").skip(1).next().unwrap().split("/");
-                    Source::Github {
-                        owner: s.next().expect("github owner").to_string(),
-                        repo: s.next().expect("github repo").to_string(),
-                        git_ref: None,
-                        description: None
-                    }
+            let source = if flake.starts_with("github:") {
+                let mut s = flake.split(":").skip(1).next().unwrap().split("/");
+                Source::Github {
+                    owner: s.next().expect("github owner").to_string(),
+                    repo: s.next().expect("github repo").to_string(),
+                    git_ref: None,
+                    description: None,
                 }
-                else { Source::Git { url: flake } };
+            } else {
+                Source::Git { url: flake }
+            };
             let (info, exports) = flake_info::process_flake(&source, &kind, temp_store, extra)
                 .map_err(FlakeInfoError::Flake)?;
 
@@ -264,7 +262,11 @@ async fn run_command(
                 ident,
             ))
         }
-        Command::NixpkgsArchive { source, channel, attribute } => {
+        Command::NixpkgsArchive {
+            source,
+            channel,
+            attribute,
+        } => {
             let ident = (
                 "nixos".to_string(),
                 channel.to_owned(),

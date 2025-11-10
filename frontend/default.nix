@@ -19,7 +19,7 @@ pkgs.npmlock2nix.v1.build {
   buildCommands = [
     "HOME=$PWD npm run prod"
   ];
-  buildInputs = 
+  buildInputs =
     (with pkgs; [
       nodejs
       elm2nix
