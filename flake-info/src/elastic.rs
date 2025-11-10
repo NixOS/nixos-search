@@ -2,10 +2,10 @@ use std::collections::HashMap;
 
 use clap::arg_enum;
 pub use elasticsearch::http::transport::Transport;
-use elasticsearch::{http::response, indices::*, BulkOperation, Elasticsearch as Client};
+use elasticsearch::{BulkOperation, Elasticsearch as Client, http::response, indices::*};
 use lazy_static::lazy_static;
 use log::{info, warn};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use thiserror::Error;
 
 use crate::data::Export;
@@ -277,7 +277,8 @@ impl Elasticsearch {
                 .map_err(ElasticsearchError::PushError)?;
 
             let response = dbg!(response);
-            if response.status_code().is_client_error() || response.status_code().is_server_error() {
+            if response.status_code().is_client_error() || response.status_code().is_server_error()
+            {
                 return response
                     .exception()
                     .await
@@ -300,24 +301,35 @@ impl Elasticsearch {
 
                     for (idx, item) in items.iter().enumerate() {
                         if let Some(index_result) = item.get("index") {
-                            if let Some(status) = index_result.get("status").and_then(|s| s.as_u64()) {
+                            if let Some(status) =
+                                index_result.get("status").and_then(|s| s.as_u64())
+                            {
                                 if status >= 400 {
                                     failed_count += 1;
-                                    let error_type = index_result.get("error")
+                                    let error_type = index_result
+                                        .get("error")
                                         .and_then(|e| e.get("type"))
                                         .and_then(|t| t.as_str())
                                         .unwrap_or("unknown");
-                                    let error_reason = index_result.get("error")
+                                    let error_reason = index_result
+                                        .get("error")
                                         .and_then(|e| e.get("reason"))
                                         .and_then(|r| r.as_str())
                                         .unwrap_or("");
-                                    warn!("  Item {}: status {}, type: {}, reason: {}", idx, status, error_type, error_reason);
+                                    warn!(
+                                        "  Item {}: status {}, type: {}, reason: {}",
+                                        idx, status, error_type, error_reason
+                                    );
                                 }
                             }
                         }
                     }
 
-                    warn!("Bulk request had {} failed items out of {}", failed_count, items.len());
+                    warn!(
+                        "Bulk request had {} failed items out of {}",
+                        failed_count,
+                        items.len()
+                    );
                     had_failures = true;
                 }
             }
