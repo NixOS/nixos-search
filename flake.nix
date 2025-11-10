@@ -12,6 +12,8 @@
   inputs.npmlock2nix.flake = false;
   inputs.nixos-infra.url = "github:NixOS/infra";
   inputs.nixos-infra.flake = false;
+  inputs.treefmt-nix.url = "github:numtide/treefmt-nix";
+  inputs.treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
 
   outputs = { self
             , nixpkgs
@@ -19,6 +21,7 @@
             , flake-utils
             , npmlock2nix
             , nixos-infra
+            , treefmt-nix
             }:
     flake-utils.lib.eachDefaultSystem
       (system:
@@ -33,6 +36,7 @@
             ];
           };
           lib = nixpkgs.lib;
+          treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
           warnToUpgradeNix = lib.warn "Please upgrade Nix to 2.7 or later.";
           version = (import ./version.nix).frontend;
           nixosChannels =
@@ -77,10 +81,12 @@
             echo '${builtins.toJSON (builtins.map (c: c.id) nixosChannels.channels)}' > $out
           '';
 
+          treefmt = treefmtEval.config.build.wrapper;
+
           mkDevShell = { inputsFrom ? [], extraPackages ? [], extraShellHook ? "" }:
             pkgs.mkShell {
               inherit inputsFrom;
-              packages = extraPackages;
+              packages = [treefmt] ++ extraPackages;
               shellHook = ''
                 export NIXOS_CHANNELS='${builtins.toJSON nixosChannels}';
                 export ELASTICSEARCH_MAPPING_SCHEMA_VERSION="${version}";
@@ -97,6 +103,8 @@
             inherit nixosChannels version;
           };
           packages.nixosChannels = nixosChannelsFile;
+
+          formatter = treefmt;
 
           devShells.default = mkDevShell {
             inputsFrom = [
