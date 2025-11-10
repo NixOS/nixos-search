@@ -97,7 +97,10 @@ enum Command {
         #[structopt(long, help = "Whether write an error report about failed packages")]
         report: bool,
 
-        #[structopt(long, help = "Run nix garbage collection between every group member evaluation")]
+        #[structopt(
+            long,
+            help = "Run nix garbage collection between every group member evaluation"
+        )]
         with_gc: bool,
     },
 }
@@ -228,8 +231,9 @@ async fn run_command(
             } else {
                 Source::Git { url: flake }
             };
-            let (info, exports) = flake_info::process_flake(&source, &kind, temp_store, extra, false)
-                .map_err(FlakeInfoError::Flake)?;
+            let (info, exports) =
+                flake_info::process_flake(&source, &kind, temp_store, extra, false)
+                    .map_err(FlakeInfoError::Flake)?;
 
             let ident = (
                 "flake".to_owned(),
