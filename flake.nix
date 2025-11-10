@@ -2,7 +2,9 @@
   description = "Code behind search.nixos.org";
 
   nixConfig.extra-substituters = [ "https://nixos-search.cachix.org" ];
-  nixConfig.extra-trusted-public-keys = [ "nixos-search.cachix.org-1:1HV3YF8az4fywnH+pAd+CXFEdpTXtv9WpoivPi+H70o=" ];
+  nixConfig.extra-trusted-public-keys = [
+    "nixos-search.cachix.org-1:1HV3YF8az4fywnH+pAd+CXFEdpTXtv9WpoivPi+H70o="
+  ];
 
   inputs.nixpkgs.url = "nixpkgs/nixos-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
@@ -16,16 +18,17 @@
   inputs.treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
 
   outputs =
-    { self
-    , nixpkgs
-    , nixpkgs-npmlock2nix
-    , flake-utils
-    , npmlock2nix
-    , nixos-infra
-    , treefmt-nix
+    {
+      self,
+      nixpkgs,
+      nixpkgs-npmlock2nix,
+      flake-utils,
+      npmlock2nix,
+      nixos-infra,
+      treefmt-nix,
     }:
-    flake-utils.lib.eachDefaultSystem
-      (system:
+    flake-utils.lib.eachDefaultSystem (
+      system:
       let
         pkgs = import nixpkgs { inherit system; };
         pkgsNpmlock2nix = import nixpkgs-npmlock2nix {
@@ -43,40 +46,33 @@
         nixosChannels =
           let
             allChannels = (import "${nixos-infra}/channels.nix").channels;
-            filteredChannels =
-              lib.filterAttrs
-                (n: v:
-                  builtins.elem v.status [ "rolling" "beta" "stable" "deprecated" ] &&
-                  lib.hasPrefix "nixos-" n &&
-                  v ? variant && v.variant == "primary"
-                )
-                allChannels;
+            filteredChannels = lib.filterAttrs (
+              n: v:
+              builtins.elem v.status [
+                "rolling"
+                "beta"
+                "stable"
+                "deprecated"
+              ]
+              && lib.hasPrefix "nixos-" n
+              && v ? variant
+              && v.variant == "primary"
+            ) allChannels;
           in
           {
-            channels =
-              lib.mapAttrsToList
-                (n: v:
-                  {
-                    id = lib.removePrefix "nixos-" n;
-                    status = v.status;
-                    jobset =
-                      builtins.concatStringsSep
-                        "/"
-                        (lib.init (lib.splitString "/" v.job));
-                    branch = n;
-                  }
+            channels = lib.mapAttrsToList (n: v: {
+              id = lib.removePrefix "nixos-" n;
+              status = v.status;
+              jobset = builtins.concatStringsSep "/" (lib.init (lib.splitString "/" v.job));
+              branch = n;
+            }) filteredChannels;
+            default = builtins.head (
+              builtins.sort (e1: e2: !(builtins.lessThan e1 e2)) (
+                builtins.map (lib.removePrefix "nixos-") (
+                  builtins.attrNames (lib.filterAttrs (_: v: v.status == "stable") filteredChannels)
                 )
-                filteredChannels;
-            default =
-              builtins.head
-                (builtins.sort (e1: e2: ! (builtins.lessThan e1 e2))
-                  (builtins.map
-                    (lib.removePrefix "nixos-")
-                    (builtins.attrNames
-                      (lib.filterAttrs (_: v: v.status == "stable") filteredChannels)
-                    )
-                  )
-                );
+              )
+            );
           };
         nixosChannelsFile = pkgs.runCommand "nixosChannels.json" { } ''
           echo '${builtins.toJSON (builtins.map (c: c.id) nixosChannels.channels)}' > $out
@@ -84,14 +80,20 @@
 
         treefmt = treefmtEval.config.build.wrapper;
 
-        mkDevShell = { inputsFrom ? [ ], extraPackages ? [ ], extraShellHook ? "" }:
+        mkDevShell =
+          {
+            inputsFrom ? [ ],
+            extraPackages ? [ ],
+            extraShellHook ? "",
+          }:
           pkgs.mkShell {
             inherit inputsFrom;
             packages = [ treefmt ] ++ extraPackages;
             shellHook = ''
               export NIXOS_CHANNELS='${builtins.toJSON nixosChannels}';
               export ELASTICSEARCH_MAPPING_SCHEMA_VERSION="${version}";
-            '' + extraShellHook;
+            ''
+            + extraShellHook;
           };
       in
       rec {
@@ -136,7 +138,10 @@
 
         devShells.frontend = mkDevShell {
           inputsFrom = [ packages.frontend ];
-          extraPackages = [ pkgs.rustfmt pkgs.yarn ];
+          extraPackages = [
+            pkgs.rustfmt
+            pkgs.yarn
+          ];
           extraShellHook = ''
             export PATH=$PWD/frontend/node_modules/.bin:$PATH
             rm -rf frontend/node_modules
@@ -157,34 +162,44 @@
           meta.description = "Run OpenSearch on port 9200 in an ephemeral VM for local testing";
         };
       }
-      ) // {
+    )
+    // {
       # Local testing VM configuration
       nixosConfigurations.opensearch-vm = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         modules = [
           (import "${nixpkgs}/nixos/modules/virtualisation/qemu-vm.nix")
-          ({ lib, pkgs, ... }: {
-            system.stateVersion = "25.05";
-            services.getty.autologinUser = "root";
-            virtualisation = {
-              diskImage = null; # makes VM ephemeral
-              graphics = false;
-              forwardPorts = [{ guest.port = 9200; host.port = 9200; }]; # expose :9200 from guest to host
-              memorySize = 1024 * 8; # 8 GB
-            };
-            environment.systemPackages = [ pkgs.opensearch-cli ];
-            networking.firewall.allowedTCPPorts = [ 9200 ];
-            services.opensearch = {
-              enable = true;
-              settings = {
-                "network.host" = "0.0.0.0";
-                "http.cors.enabled" = "true";
-                "http.cors.allow-origin" = "http://localhost:3000";
-                "http.cors.allow-credentials" = "true";
-                "http.cors.allow-headers" = "X-Requested-With,X-Auth-Token,Content-Type,Content-Length,Authorization";
+          (
+            { lib, pkgs, ... }:
+            {
+              system.stateVersion = "25.05";
+              services.getty.autologinUser = "root";
+              virtualisation = {
+                diskImage = null; # makes VM ephemeral
+                graphics = false;
+                forwardPorts = [
+                  {
+                    guest.port = 9200;
+                    host.port = 9200;
+                  }
+                ]; # expose :9200 from guest to host
+                memorySize = 1024 * 8; # 8 GB
               };
-            };
-          })
+              environment.systemPackages = [ pkgs.opensearch-cli ];
+              networking.firewall.allowedTCPPorts = [ 9200 ];
+              services.opensearch = {
+                enable = true;
+                settings = {
+                  "network.host" = "0.0.0.0";
+                  "http.cors.enabled" = "true";
+                  "http.cors.allow-origin" = "http://localhost:3000";
+                  "http.cors.allow-credentials" = "true";
+                  "http.cors.allow-headers" =
+                    "X-Requested-With,X-Auth-Token,Content-Type,Content-Length,Authorization";
+                };
+              };
+            }
+          )
         ];
       };
     };

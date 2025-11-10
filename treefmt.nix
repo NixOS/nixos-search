@@ -3,7 +3,7 @@
   projectRootFile = "flake.nix";
 
   programs = {
-    nixpkgs-fmt.enable = true;
+    nixfmt.enable = true;
     rustfmt.enable = true;
     elm-format.enable = true;
 
