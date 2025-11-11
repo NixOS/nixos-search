@@ -121,7 +121,7 @@ jobs:
         if: github.repository_owner == 'NixOS'
         shell: sh
         run: |
-          nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(nix eval --raw --file ./version.nix import) group ./flakes/${{ matrix.group }}.toml ${{ matrix.group }}
+          nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(nix eval --raw --file ./version.nix import) group ./flakes/${{ matrix.group }}.toml ${{ matrix.group }} --with-gc
 
       - name: Warmup ${{ matrix.group }} group
         if: github.repository_owner == 'NixOS'

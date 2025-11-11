@@ -24,10 +24,16 @@ pub fn process_flake(
     kind: &data::import::Kind,
     temp_store: bool,
     extra: &[String],
+    with_gc: bool,
 ) -> Result<(Flake, Vec<Export>)> {
     let mut info = commands::get_flake_info(source.to_flake_ref(), temp_store, extra)?;
     info.source = Some(source.clone());
     let packages = commands::get_derivation_info(source.to_flake_ref(), *kind, temp_store, extra)?;
+
+    if with_gc {
+        commands::run_garbage_collection()?;
+    }
+
     trace!("flake info: {:#?}", info);
     trace!("flake content: {:#?}", packages);
 
