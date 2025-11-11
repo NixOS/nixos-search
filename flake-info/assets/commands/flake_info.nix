@@ -1,8 +1,9 @@
 {
   flake ? null,
+  input-flake ? "input-flake",
 }:
 let
-  resolved = builtins.getFlake "input-flake";
+  resolved = builtins.getFlake input-flake;
 
   nixpkgs = (import <nixpkgs> { });
   lib = nixpkgs.lib;
