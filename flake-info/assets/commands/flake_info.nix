@@ -9,41 +9,106 @@ let
 
   # filter = lib.filterAttrs (key: _ : key == "apps" || key == "packages");
 
+  # Reference system to use for extracting full package metadata
+  # For other systems, we only check attribute names to avoid redundant evaluation
+  referenceSystem = "x86_64-linux";
+
   withSystem = fn: lib.mapAttrs (system: drvs: (fn system drvs));
-  isValid =
-    d:
-    let
-      r = builtins.tryEval (
-        lib.isDerivation d
-        && !(lib.attrByPath [ "meta" "broken" ] false d)
-        && builtins.seq d.name true
-        && d ? outputs
-      );
-    in
-    r.success && r.value;
-  validPkgs = lib.filterAttrs (k: v: isValid v);
 
   readPackages =
     system: drvs:
-    lib.mapAttrsToList (
-      attribute_name: drv:
-      (
-        {
-          entry_type = "package";
-          attribute_name = attribute_name;
-          system = system;
-          name = drv.name;
-          # TODO consider using `builtins.parseDrvName`
-          version = drv.version or "";
-          outputs = drv.outputs;
-          # paths = builtins.listToAttrs ( map (output: {name = output; value = drv.${output};}) drv.outputs );
-          default_output = drv.outputName;
-        }
-        // lib.optionalAttrs (drv ? meta.description) { inherit (drv.meta) description; }
-        // lib.optionalAttrs (drv ? meta.longDescription) { inherit (drv.meta) longDescription; }
-        // lib.optionalAttrs (drv ? meta.license) { inherit (drv.meta) license; }
-      )
-    ) (validPkgs drvs);
+    let
+      # Safely evaluate metadata fields that might be expensive or broken
+      # Returns { success = bool; value = any; }
+      safeEval = attr: builtins.tryEval attr;
+
+      # Full evaluation - used for reference system
+      processPackageFull =
+        attribute_name: drv:
+        let
+          # Try to get basic derivation info without forcing expensive evaluation
+          typeCheck = builtins.tryEval (builtins.isAttrs drv && drv ? type);
+
+          # Only proceed if it looks like it could be a derivation
+          derivResult =
+            if typeCheck.success && typeCheck.value then
+              safeEval (lib.isDerivation drv)
+            else
+              {
+                success = false;
+                value = false;
+              };
+
+          # Early exit if not a valid derivation
+          nameResult =
+            if derivResult.success && derivResult.value then
+              safeEval drv.name
+            else
+              {
+                success = false;
+                value = null;
+              };
+
+          # Check if broken - only if we got this far
+          brokenResult =
+            if nameResult.success then
+              safeEval (drv.meta.broken or false)
+            else
+              {
+                success = true;
+                value = false;
+              };
+
+          isBroken = brokenResult.success && brokenResult.value;
+        in
+        # Only build package info if: it's a derivation, has a name, and is not broken
+        if nameResult.success && !isBroken then
+          let
+            versionResult = safeEval (drv.version or "");
+            outputsResult = safeEval drv.outputs;
+            outputNameResult = safeEval drv.outputName;
+            descResult = safeEval (drv.meta.description or null);
+            longDescResult = safeEval (drv.meta.longDescription or null);
+            licenseResult = safeEval (drv.meta.license or null);
+          in
+          {
+            entry_type = "package";
+            attribute_name = attribute_name;
+            system = system;
+            name = nameResult.value;
+            version = if versionResult.success then versionResult.value else "";
+            outputs = if outputsResult.success then outputsResult.value else [ "out" ];
+            default_output = if outputNameResult.success then outputNameResult.value else "out";
+          }
+          // lib.optionalAttrs (descResult.success && descResult.value != null) {
+            description = descResult.value;
+          }
+          // lib.optionalAttrs (longDescResult.success && longDescResult.value != null) {
+            longDescription = longDescResult.value;
+          }
+          // lib.optionalAttrs (licenseResult.success && licenseResult.value != null) {
+            license = licenseResult.value;
+          }
+        else
+          null;
+
+      # Lightweight evaluation - only attribute name and system, no package evaluation
+      processPackageLight = attribute_name: drv: {
+        entry_type = "package";
+        attribute_name = attribute_name;
+        system = system;
+        # Don't access any attributes of drv to avoid forcing evaluation
+      };
+
+      # Use full processing for reference system, lightweight for others
+      results =
+        if system == referenceSystem then
+          lib.mapAttrsToList processPackageFull drvs
+        else
+          lib.mapAttrsToList processPackageLight drvs;
+    in
+    # Filter out null entries (only relevant for full processing)
+    if system == referenceSystem then builtins.filter (x: x != null) results else results;
   readApps =
     system: apps:
     lib.mapAttrsToList (
@@ -156,34 +221,159 @@ let
 
   read = reader: set: lib.flatten (lib.attrValues (withSystem reader set));
 
+  # Get all package sets by system for potential fallback evaluation
+  allPackageSets = {
+    legacyPackages = resolved.legacyPackages or { };
+    packages = resolved.packages or { };
+  };
+
   legacyPackages' = read readPackages (resolved.legacyPackages or { });
   packages' = read readPackages (resolved.packages or { });
 
   apps' = read readApps (resolved.apps or { });
 
-  collectSystems = lib.lists.foldr (
-    drv@{ attribute_name, system, ... }:
-    set:
+  # Helper to fully evaluate a package from a specific system when needed
+  evaluatePackageFromSystem =
+    pkgSet: system: attribute_name:
     let
-      present = set."${attribute_name}" or ({ platforms = [ ]; } // drv);
+      drvs = pkgSet.${system} or { };
+      drv = drvs.${attribute_name} or null;
+      safeEval = attr: builtins.tryEval attr;
 
-      drv' = present // {
-        platforms = present.platforms ++ [ system ];
-      };
-      drv'' = removeAttrs drv' [ "system" ];
+      typeCheck = builtins.tryEval (builtins.isAttrs drv && drv ? type);
+      derivResult =
+        if typeCheck.success && typeCheck.value then
+          safeEval (lib.isDerivation drv)
+        else
+          {
+            success = false;
+            value = false;
+          };
+      nameResult =
+        if derivResult.success && derivResult.value then
+          safeEval drv.name
+        else
+          {
+            success = false;
+            value = null;
+          };
+      brokenResult =
+        if nameResult.success then
+          safeEval (drv.meta.broken or false)
+        else
+          {
+            success = true;
+            value = false;
+          };
+      isBroken = brokenResult.success && brokenResult.value;
     in
-    set
-    // {
-      ${attribute_name} = drv'';
-    }
-  ) { };
+    if nameResult.success && !isBroken then
+      let
+        versionResult = safeEval (drv.version or "");
+        outputsResult = safeEval drv.outputs;
+        outputNameResult = safeEval drv.outputName;
+        descResult = safeEval (drv.meta.description or null);
+        longDescResult = safeEval (drv.meta.longDescription or null);
+        licenseResult = safeEval (drv.meta.license or null);
+      in
+      {
+        name = nameResult.value;
+        version = if versionResult.success then versionResult.value else "";
+        outputs = if outputsResult.success then outputsResult.value else [ "out" ];
+        default_output = if outputNameResult.success then outputNameResult.value else "out";
+      }
+      // lib.optionalAttrs (descResult.success && descResult.value != null) {
+        description = descResult.value;
+      }
+      // lib.optionalAttrs (longDescResult.success && longDescResult.value != null) {
+        longDescription = longDescResult.value;
+      }
+      // lib.optionalAttrs (licenseResult.success && licenseResult.value != null) {
+        license = licenseResult.value;
+      }
+    else
+      null;
+
+  collectSystems =
+    pkgSet: list:
+    lib.lists.foldr (
+      drv@{ attribute_name, system, ... }:
+      set:
+      let
+        # Check if this is a lightweight package entry (only has attribute_name, system, entry_type)
+        # Apps are not lightweight - they have bin/type fields
+        isLightweightPackage = !(drv ? name) && drv.entry_type == "package";
+
+        # For apps, check if they have metadata (bin/type fields)
+        isApp = drv.entry_type == "app";
+        appHasMetadata = isApp && (drv ? bin || drv ? type);
+
+        # Get existing entry or create new base
+        present =
+          set."${attribute_name}" or (
+            if isLightweightPackage then
+              {
+                platforms = [ ];
+                entry_type = "package";
+                inherit attribute_name;
+              }
+            else
+              ({ platforms = [ ]; } // drv)
+          );
+
+        # Check if present entry has metadata
+        presentHasMetadata =
+          present ? name || (present.entry_type == "app" && (present ? bin || present ? type));
+
+        # Merge entries
+        drv' =
+          if isLightweightPackage then
+            if presentHasMetadata then
+              # Present has metadata, just add platform
+              present
+              // {
+                platforms = present.platforms ++ [ system ];
+              }
+            else
+              # Present lacks metadata, this must be a platform-specific package
+              # Evaluate it from this system
+              let
+                metadata = evaluatePackageFromSystem pkgSet system attribute_name;
+              in
+              if metadata != null then
+                present
+                // metadata
+                // {
+                  platforms = present.platforms ++ [ system ];
+                }
+              else
+                # Evaluation failed, just add platform without metadata
+                present
+                // {
+                  platforms = present.platforms ++ [ system ];
+                }
+          else
+            # Current entry has full metadata (package with name, or app with bin/type)
+            present
+            // drv
+            // {
+              platforms = present.platforms ++ [ system ];
+            };
+
+        drv'' = removeAttrs drv' [ "system" ];
+      in
+      set
+      // {
+        ${attribute_name} = drv'';
+      }
+    ) { } list;
 
 in
 
 rec {
-  legacyPackages = lib.attrValues (collectSystems legacyPackages');
-  packages = lib.attrValues (collectSystems packages');
-  apps = lib.attrValues (collectSystems apps');
+  legacyPackages = lib.attrValues (collectSystems allPackageSets.legacyPackages legacyPackages');
+  packages = lib.attrValues (collectSystems allPackageSets.packages packages');
+  apps = lib.attrValues (collectSystems { } apps'); # apps don't need fallback evaluation
   options = readFlakeOptions;
   all = packages ++ apps ++ options;
 
