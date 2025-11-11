@@ -1,4 +1,5 @@
-{ pkgs ? import <nixpkgs> {}
+{
+  pkgs ? import <nixpkgs> { },
 }:
 pkgs.rustPlatform.buildRustPackage rec {
   name = "flake-info";
@@ -11,11 +12,13 @@ pkgs.rustPlatform.buildRustPackage rec {
   };
   nativeBuildInputs = with pkgs; [ pkg-config ];
   buildInputs =
-    with pkgs; [
+    with pkgs;
+    [
       openssl
       openssl.dev
       makeWrapper
-    ] ++ lib.optional pkgs.stdenv.isDarwin [
+    ]
+    ++ lib.optional pkgs.stdenv.isDarwin [
       libiconv
       darwin.apple_sdk.frameworks.Security
     ];

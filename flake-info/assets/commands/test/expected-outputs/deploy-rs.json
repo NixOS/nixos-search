@@ -1,0 +1,56 @@
+[
+  {
+    "attribute_name": "default",
+    "default_output": "out",
+    "description": "A Simple multi-profile Nix-flake deploy tool",
+    "entry_type": "package",
+    "name": "deploy-rs-0.1.0",
+    "outputs": ["out"],
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "aarch64-linux",
+      "aarch64-darwin"
+    ],
+    "version": "0.1.0"
+  },
+  {
+    "attribute_name": "deploy-rs",
+    "default_output": "out",
+    "description": "A Simple multi-profile Nix-flake deploy tool",
+    "entry_type": "package",
+    "name": "deploy-rs-0.1.0",
+    "outputs": ["out"],
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "aarch64-linux",
+      "aarch64-darwin"
+    ],
+    "version": "0.1.0"
+  },
+  {
+    "attribute_name": "default",
+    "bin": "/nix/store/gf4frwka3pdn3l41mf965vdg1s90p1ni-deploy-rs-0.1.0/bin/deploy",
+    "entry_type": "app",
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "aarch64-linux",
+      "aarch64-darwin"
+    ],
+    "type": "app"
+  },
+  {
+    "attribute_name": "deploy-rs",
+    "bin": "/nix/store/gf4frwka3pdn3l41mf965vdg1s90p1ni-deploy-rs-0.1.0/bin/deploy",
+    "entry_type": "app",
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "aarch64-linux",
+      "aarch64-darwin"
+    ],
+    "type": "app"
+  }
+]
