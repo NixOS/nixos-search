@@ -33,4 +33,4 @@ jobs:
       - name: Running flake-info tests
         shell: sh
         run: |
-          nix-build ./flake-info/assets/commands/test
+          nix-build ./flake-info/assets/commands/test --option extra-substituters ""
