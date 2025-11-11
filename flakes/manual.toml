@@ -228,10 +228,11 @@ type = "github"
 owner = "snowfallorg"
 repo = "nix-software-center"
 
-[[sources]]
-type = "github"
-owner = "stackbuilders"
-repo = "nixpkgs-terraform"
+# This one appears to be too heavy on the GitHub Actions runner
+#[[sources]]
+#type = "github"
+#owner = "stackbuilders"
+#repo = "nixpkgs-terraform"
 
 [[sources]]
 type = "github"
