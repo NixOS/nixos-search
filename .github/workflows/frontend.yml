@@ -1,4 +1,5 @@
 name: "Frontend: Build & Deploy to Netlify"
+
 on:
   workflow_dispatch:
   pull_request:
@@ -6,7 +7,7 @@ on:
       - "flake.nix"
       - "flake.lock"
       - "frontend/**"
-      - "VERSION"
+      - "version.nix"
 
   push:
     branches:
@@ -15,37 +16,37 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
-    - name: Checking out the repository
-      uses: actions/checkout@v5
+      - name: Checking out the repository
+        uses: actions/checkout@v5
 
-    - name: Setup
-      uses: ./.github/actions/common-setup
-      with:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+      - name: Setup
+        uses: ./.github/actions/common-setup
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
+      - name: Building search.nixos.org
+        shell: sh
+        run: |
+          nix -vL build .#frontend
+          mkdir ./dist
+          cp -RL ./result/* ./dist/
 
-
-    - name: Building search.nixos.org
-      run: |
-        nix -vL build .#frontend
-        mkdir ./dist
-        cp -RL ./result/* ./dist/
-
-    - name: Deploy to Netlify
-      uses: nwtgck/actions-netlify@v3.0
-      env:
-        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-      with:
-        production-branch: 'main'
-        production-deploy: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
-        publish-dir: './dist'
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        deploy-message: 'Deploy from GitHub Actions'
-        enable-pull-request-comment: true
-        overwrites-pull-request-comment: true
-        enable-commit-comment: false
-        enable-commit-status: true
-      if: github.repository_owner == 'NixOS'
+      - name: Deploy to Netlify
+        uses: nwtgck/actions-netlify@v3.0
+        if: github.repository_owner == 'NixOS'
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        with:
+          production-branch: "main"
+          production-deploy: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+          publish-dir: "./dist"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: "Deploy from GitHub Actions"
+          enable-pull-request-comment: true
+          overwrites-pull-request-comment: true
+          enable-commit-comment: false
+          enable-commit-status: true

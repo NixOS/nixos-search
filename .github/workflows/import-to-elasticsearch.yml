@@ -3,14 +3,12 @@ name: "Hourly import to Elasticsearch"
 on:
   workflow_dispatch:
   schedule:
-  - cron: '0 * * * *'
+    - cron: "0 * * * *"
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
-
   nixos-channels:
     runs-on: ubuntu-latest
 
@@ -18,22 +16,23 @@ jobs:
       matrix: ${{ steps.nixos-channels.outputs.matrix }}
 
     steps:
-    - name: Checking out the repository
-      uses: actions/checkout@v5
+      - name: Checking out the repository
+        uses: actions/checkout@v5
 
-    - name: Setup
-      uses: ./.github/actions/common-setup
-      with:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+      - name: Setup
+        uses: ./.github/actions/common-setup
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
-    - name: NixOS Channels
-      id: nixos-channels
-      run: |
-        nix build --accept-flake-config -L .#nixosChannels
-        channels="{\"channel\": $(< ./result)}"
-        echo "$channels"
-        echo "matrix=$channels" >> "$GITHUB_OUTPUT"
+      - name: NixOS Channels
+        id: nixos-channels
+        shell: sh
+        run: |
+          nix build --accept-flake-config -L .#nixosChannels
+          channels="{\"channel\": $(cat ./result)}"
+          echo "$channels"
+          echo "matrix=$channels" >> "$GITHUB_OUTPUT"
 
   import-nixpkgs:
     needs: nixos-channels
@@ -43,46 +42,56 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.nixos-channels.outputs.matrix) }}
 
+    permissions:
+      issues: write
+
     env:
       RUST_LOG: debug
       FI_ES_EXISTS_STRATEGY: abort
       FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL2 }}
 
     steps:
-    - name: Checking out the repository
-      uses: actions/checkout@v5
+      - name: Checking out the repository
+        uses: actions/checkout@v5
 
-    - name: Setup
-      uses: ./.github/actions/common-setup
-      with:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+      - name: Setup
+        uses: ./.github/actions/common-setup
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
-    - name: Import ${{ matrix.channel }} channel
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(< VERSION) nixpkgs ${{ matrix.channel }}
-      if: github.repository_owner == 'NixOS'
+      - name: Import ${{ matrix.channel }} channel
+        if: github.repository_owner == 'NixOS'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: sh
+        run: |
+          nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(nix eval --raw --file ./version.nix import) nixpkgs ${{ matrix.channel }}
 
-    - name: Warmup ${{ matrix.channel }} channel
-      run: |
-        for (( i = 0; i < 3; i++ )) do
-          curl -sS ${{ secrets.ELASTICSEARCH_URL2 }}/latest-$(< VERSION)-nixos-${{ matrix.channel }}/_search | jq -c '.took // .'
-        done
-      if: github.repository_owner == 'NixOS'
+      - name: Warmup ${{ matrix.channel }} channel
+        if: github.repository_owner == 'NixOS'
+        shell: sh
+        run: |
+          for i in 1 2 3
+          do
+            curl -sS ${{ secrets.ELASTICSEARCH_URL2 }}/latest-$(nix eval --raw --file ./version.nix import)-nixos-${{ matrix.channel }}/_search | jq -c '.took // .'
+          done
 
-    - name: Create issue if failed
-      if: failure()
-      uses: JasonEtco/create-an-issue@v2
-      with:
-        filename: .github/failing-import-issue.md
-        search_existing: open
-        update_existing: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        CHANNEL: ${{ matrix.channel }}
-        TRIGGER_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - name: Create issue if failed
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        shell: sh
+        run: |
+          TITLE="Failing import for nixpkgs ${{ matrix.channel }}"
+
+          if [ "$(gh issue list --state open --search "in:title $TITLE" -L 1 --json id --jq length)" -eq 0 ]; then
+            gh issue create \
+              --title "$TITLE" \
+              --label "prio:blocker" \
+              --body "This issue was triggered by ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
 
   import-flakes:
     runs-on: ubuntu-latest
@@ -99,24 +108,26 @@ jobs:
       FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL2 }}
 
     steps:
+      - name: Checking out the repository
+        uses: actions/checkout@v5
 
-    - name: Checking out the repository
-      uses: actions/checkout@v5
+      - name: Setup
+        uses: ./.github/actions/common-setup
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
-    - name: Setup
-      uses: ./.github/actions/common-setup
-      with:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+      - name: Import ${{ matrix.group }} group
+        if: github.repository_owner == 'NixOS'
+        shell: sh
+        run: |
+          nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(nix eval --raw --file ./version.nix import) group ./flakes/${{ matrix.group }}.toml ${{ matrix.group }} --with-gc
 
-    - name: Import ${{ matrix.group }} group
-      run: |
-        nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(< ./VERSION) group ./flakes/${{ matrix.group }}.toml ${{ matrix.group }}
-      if: github.repository_owner == 'NixOS'
-
-    - name: Warmup ${{ matrix.group }} group
-      run: |
-        for (( i = 0; i < 3; i++ )) do
-          curl -sS ${{ secrets.ELASTICSEARCH_URL2 }}/latest-$(< VERSION)-group-${{ matrix.group }}/_search | jq -c '.took // .'
-        done
-      if: github.repository_owner == 'NixOS'
+      - name: Warmup ${{ matrix.group }} group
+        if: github.repository_owner == 'NixOS'
+        shell: sh
+        run: |
+          for i in 1 2 3
+          do
+            curl -sS ${{ secrets.ELASTICSEARCH_URL2 }}/latest-$(nix eval --raw --file ./version.nix import)-group-${{ matrix.group }}/_search | jq -c '.took // .'
+          done

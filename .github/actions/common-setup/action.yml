@@ -1,15 +1,18 @@
 name: Setup Environment
+
 inputs:
   GITHUB_TOKEN:
     required: true
     description: "GitHub access token used to prevent GitHub's rate limit for unauthenticated requests"
+
   CACHIX_SIGNING_KEY: # determines what node version to install
     required: true
-    description: 'Cachix Signing Key'
+    description: "Cachix Signing Key"
+
 runs:
   using: "composite"
-  steps:
 
+  steps:
     - name: Installing Nix
       uses: cachix/install-nix-action@v30
       with:
@@ -20,4 +23,4 @@ runs:
     - uses: cachix/cachix-action@v15
       with:
         name: nixos-search
-        signingKey: '${{ inputs.CACHIX_SIGNING_KEY }}'
+        signingKey: "${{ inputs.CACHIX_SIGNING_KEY }}"
