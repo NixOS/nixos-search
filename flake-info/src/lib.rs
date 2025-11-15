@@ -1,7 +1,7 @@
 #![recursion_limit = "256"]
 
 use anyhow::Result;
-use data::{import::Kind, Export, Flake, Source};
+use data::{Export, Flake, Source, import::Kind};
 use lazy_static::lazy_static;
 use std::path::{Path, PathBuf};
 
@@ -24,10 +24,16 @@ pub fn process_flake(
     kind: &data::import::Kind,
     temp_store: bool,
     extra: &[String],
+    with_gc: bool,
 ) -> Result<(Flake, Vec<Export>)> {
     let mut info = commands::get_flake_info(source.to_flake_ref(), temp_store, extra)?;
     info.source = Some(source.clone());
     let packages = commands::get_derivation_info(source.to_flake_ref(), *kind, temp_store, extra)?;
+
+    if with_gc {
+        commands::run_garbage_collection()?;
+    }
+
     trace!("flake info: {:#?}", info);
     trace!("flake content: {:#?}", packages);
 
@@ -39,7 +45,11 @@ pub fn process_flake(
     Ok((info, exports))
 }
 
-pub fn process_nixpkgs(nixpkgs: &Source, kind: &Kind, attribute: &Option<String>) -> Result<Vec<Export>, anyhow::Error> {
+pub fn process_nixpkgs(
+    nixpkgs: &Source,
+    kind: &Kind,
+    attribute: &Option<String>,
+) -> Result<Vec<Export>, anyhow::Error> {
     let drvs = if matches!(kind, Kind::All | Kind::Package) {
         commands::get_nixpkgs_info(nixpkgs, attribute)?
     } else {

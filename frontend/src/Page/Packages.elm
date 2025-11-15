@@ -648,7 +648,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                             ]
                                         ]
                                         [ pre [ class "code-block shell-command" ]
-                                            [ text "nix profile install "
+                                            [ text "nix profile add "
                                             , strong [] [ text flakeUrl ]
                                             , text "#"
                                             , em [] [ text item.source.attr_name ]
@@ -773,7 +773,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         [ pre [ class "code-block shell-command" ]
                                             [ text "# without flakes:\nnix-env -iA nixpkgs."
                                             , strong [] [ text item.source.attr_name ]
-                                            , text "\n# with flakes:\nnix profile install nixpkgs#"
+                                            , text "\n# with flakes:\nnix profile add nixpkgs#"
                                             , strong [] [ text item.source.attr_name ]
                                             ]
                                         ]
