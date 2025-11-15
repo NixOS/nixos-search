@@ -2,7 +2,6 @@
 /// gathered from the various nix tools. Because the nix tools
 /// are very flexible, we need some utilities such as OneOrMany
 /// to support different notations found in the wild.
-
 use std::collections::HashMap;
 use std::fmt;
 use std::marker::PhantomData;
