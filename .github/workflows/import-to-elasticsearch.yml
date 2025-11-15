@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
   nixos-channels:
@@ -43,6 +42,9 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.nixos-channels.outputs.matrix) }}
 
+    permissions:
+      issues: write
+
     env:
       RUST_LOG: debug
       FI_ES_EXISTS_STRATEGY: abort
@@ -64,7 +66,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: sh
         run: |
-          nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(cat VERSION) nixpkgs ${{ matrix.channel }}
+          nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(nix eval --raw --file ./version.nix import) nixpkgs ${{ matrix.channel }}
 
       - name: Warmup ${{ matrix.channel }} channel
         if: github.repository_owner == 'NixOS'
@@ -72,20 +74,24 @@ jobs:
         run: |
           for i in 1 2 3
           do
-            curl -sS ${{ secrets.ELASTICSEARCH_URL2 }}/latest-$(cat VERSION)-nixos-${{ matrix.channel }}/_search | jq -c '.took // .'
+            curl -sS ${{ secrets.ELASTICSEARCH_URL2 }}/latest-$(nix eval --raw --file ./version.nix import)-nixos-${{ matrix.channel }}/_search | jq -c '.took // .'
           done
 
       - name: Create issue if failed
         if: failure()
-        uses: JasonEtco/create-an-issue@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CHANNEL: ${{ matrix.channel }}
-          TRIGGER_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        with:
-          filename: .github/failing-import-issue.md
-          search_existing: open
-          update_existing: false
+          GH_REPO: ${{ github.repository }}
+        shell: sh
+        run: |
+          TITLE="Failing import for nixpkgs ${{ matrix.channel }}"
+
+          if [ "$(gh issue list --state open --search "in:title $TITLE" -L 1 --json id --jq length)" -eq 0 ]; then
+            gh issue create \
+              --title "$TITLE" \
+              --label "prio:blocker" \
+              --body "This issue was triggered by ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
 
   import-flakes:
     runs-on: ubuntu-latest
@@ -115,7 +121,7 @@ jobs:
         if: github.repository_owner == 'NixOS'
         shell: sh
         run: |
-          nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(cat ./VERSION) group ./flakes/${{ matrix.group }}.toml ${{ matrix.group }}
+          nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(nix eval --raw --file ./version.nix import) group ./flakes/${{ matrix.group }}.toml ${{ matrix.group }} --with-gc
 
       - name: Warmup ${{ matrix.group }} group
         if: github.repository_owner == 'NixOS'
@@ -123,5 +129,5 @@ jobs:
         run: |
           for i in 1 2 3
           do
-            curl -sS ${{ secrets.ELASTICSEARCH_URL2 }}/latest-$(cat VERSION)-group-${{ matrix.group }}/_search | jq -c '.took // .'
+            curl -sS ${{ secrets.ELASTICSEARCH_URL2 }}/latest-$(nix eval --raw --file ./version.nix import)-group-${{ matrix.group }}/_search | jq -c '.took // .'
           done
