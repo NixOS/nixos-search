@@ -1,0 +1,460 @@
+[
+  {
+    "attribute_name": "agenix",
+    "default_output": "out",
+    "description": "age-encrypted secrets for NixOS",
+    "entry_type": "package",
+    "name": "agenix-0.15.0",
+    "outputs": ["out"],
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "aarch64-linux",
+      "aarch64-darwin"
+    ],
+    "version": "0.15.0"
+  },
+  {
+    "attribute_name": "default",
+    "default_output": "out",
+    "description": "age-encrypted secrets for NixOS",
+    "entry_type": "package",
+    "name": "agenix-0.15.0",
+    "outputs": ["out"],
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "aarch64-linux",
+      "aarch64-darwin"
+    ],
+    "version": "0.15.0"
+  },
+  {
+    "attribute_name": "doc",
+    "default_output": "out",
+    "entry_type": "package",
+    "name": "agenix-doc",
+    "outputs": ["out"],
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "aarch64-linux",
+      "aarch64-darwin"
+    ],
+    "version": ""
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": {
+      "_type": "literalExpression",
+      "text": "\"${pkgs.age}/bin/age\"\n"
+    },
+    "description": "The age executable to use.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "age"
+    ],
+    "internal": false,
+    "loc": ["age", "ageBin"],
+    "name": "age.ageBin",
+    "readOnly": false,
+    "type": "string",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": {
+      "_type": "literalExpression",
+      "text": "if isDarwin\nthen [\n  \"/etc/ssh/ssh_host_ed25519_key\"\n  \"/etc/ssh/ssh_host_rsa_key\"\n]\nelse if (config.services.openssh.enable or false)\nthen map (e: e.path) (lib.filter (e: e.type == \"rsa\" || e.type == \"ed25519\") config.services.openssh.hostKeys)\nelse [];\n"
+    },
+    "description": "Path to SSH keys to be used as identities in age decryption.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "age"
+    ],
+    "internal": false,
+    "loc": ["age", "identityPaths"],
+    "name": "age.identityPaths",
+    "readOnly": false,
+    "type": "list of absolute path",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": { "_type": "literalExpression", "text": "{ }" },
+    "description": "Attrset of secrets.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "age"
+    ],
+    "internal": false,
+    "loc": ["age", "secrets"],
+    "name": "age.secrets",
+    "readOnly": false,
+    "type": "attribute set of (submodule)",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "description": "Age file the secret is loaded from.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "age"
+    ],
+    "internal": false,
+    "loc": ["age", "secrets", "<name>", "file"],
+    "name": "age.secrets.<name>.file",
+    "readOnly": false,
+    "type": "absolute path",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": {
+      "_type": "literalExpression",
+      "text": "users.${config.owner}.group or \"0\"\n"
+    },
+    "description": "Group of the decrypted secret.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "age"
+    ],
+    "internal": false,
+    "loc": ["age", "secrets", "<name>", "group"],
+    "name": "age.secrets.<name>.group",
+    "readOnly": false,
+    "type": "string",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": { "_type": "literalExpression", "text": "\"0400\"" },
+    "description": "Permissions mode of the decrypted secret in a format understood by chmod.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "age"
+    ],
+    "internal": false,
+    "loc": ["age", "secrets", "<name>", "mode"],
+    "name": "age.secrets.<name>.mode",
+    "readOnly": false,
+    "type": "string",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": {
+      "_type": "literalExpression",
+      "text": "config._module.args.name"
+    },
+    "description": "Name of the file used in {option}`age.secretsDir`\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "age"
+    ],
+    "internal": false,
+    "loc": ["age", "secrets", "<name>", "name"],
+    "name": "age.secrets.<name>.name",
+    "readOnly": false,
+    "type": "string",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": { "_type": "literalExpression", "text": "\"0\"" },
+    "description": "User of the decrypted secret.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "age"
+    ],
+    "internal": false,
+    "loc": ["age", "secrets", "<name>", "owner"],
+    "name": "age.secrets.<name>.owner",
+    "readOnly": false,
+    "type": "string",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": {
+      "_type": "literalExpression",
+      "text": "\"${cfg.secretsDir}/${config.name}\"\n"
+    },
+    "description": "Path where the decrypted secret is installed.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "age"
+    ],
+    "internal": false,
+    "loc": ["age", "secrets", "<name>", "path"],
+    "name": "age.secrets.<name>.path",
+    "readOnly": false,
+    "type": "string",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": { "_type": "literalExpression", "text": "true" },
+    "description": "Whether to enable symlinking secrets to their destination.",
+    "entry_type": "option",
+    "example": { "_type": "literalExpression", "text": "true" },
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "age"
+    ],
+    "internal": false,
+    "loc": ["age", "secrets", "<name>", "symlink"],
+    "name": "age.secrets.<name>.symlink",
+    "readOnly": false,
+    "type": "boolean",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": { "_type": "literalExpression", "text": "\"/run/agenix\"" },
+    "description": "Folder where secrets are symlinked to\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "age"
+    ],
+    "internal": false,
+    "loc": ["age", "secretsDir"],
+    "name": "age.secretsDir",
+    "readOnly": false,
+    "type": "absolute path",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": { "_type": "literalExpression", "text": "\"/run/agenix.d\"" },
+    "description": "Where secrets are created before they are symlinked to {option}`age.secretsDir`\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "age"
+    ],
+    "internal": false,
+    "loc": ["age", "secretsMountPoint"],
+    "name": "age.secretsMountPoint",
+    "readOnly": false,
+    "type": "string (with check: non-empty without trailing slash)",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": {
+      "_type": "literalExpression",
+      "text": "\"${pkgs.age}/bin/age\"\n"
+    },
+    "description": "The age executable to use.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "default"
+    ],
+    "internal": false,
+    "loc": ["age", "ageBin"],
+    "name": "age.ageBin",
+    "readOnly": false,
+    "type": "string",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": {
+      "_type": "literalExpression",
+      "text": "if isDarwin\nthen [\n  \"/etc/ssh/ssh_host_ed25519_key\"\n  \"/etc/ssh/ssh_host_rsa_key\"\n]\nelse if (config.services.openssh.enable or false)\nthen map (e: e.path) (lib.filter (e: e.type == \"rsa\" || e.type == \"ed25519\") config.services.openssh.hostKeys)\nelse [];\n"
+    },
+    "description": "Path to SSH keys to be used as identities in age decryption.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "default"
+    ],
+    "internal": false,
+    "loc": ["age", "identityPaths"],
+    "name": "age.identityPaths",
+    "readOnly": false,
+    "type": "list of absolute path",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": { "_type": "literalExpression", "text": "{ }" },
+    "description": "Attrset of secrets.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "default"
+    ],
+    "internal": false,
+    "loc": ["age", "secrets"],
+    "name": "age.secrets",
+    "readOnly": false,
+    "type": "attribute set of (submodule)",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "description": "Age file the secret is loaded from.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "default"
+    ],
+    "internal": false,
+    "loc": ["age", "secrets", "<name>", "file"],
+    "name": "age.secrets.<name>.file",
+    "readOnly": false,
+    "type": "absolute path",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": {
+      "_type": "literalExpression",
+      "text": "users.${config.owner}.group or \"0\"\n"
+    },
+    "description": "Group of the decrypted secret.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "default"
+    ],
+    "internal": false,
+    "loc": ["age", "secrets", "<name>", "group"],
+    "name": "age.secrets.<name>.group",
+    "readOnly": false,
+    "type": "string",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": { "_type": "literalExpression", "text": "\"0400\"" },
+    "description": "Permissions mode of the decrypted secret in a format understood by chmod.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "default"
+    ],
+    "internal": false,
+    "loc": ["age", "secrets", "<name>", "mode"],
+    "name": "age.secrets.<name>.mode",
+    "readOnly": false,
+    "type": "string",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": {
+      "_type": "literalExpression",
+      "text": "config._module.args.name"
+    },
+    "description": "Name of the file used in {option}`age.secretsDir`\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "default"
+    ],
+    "internal": false,
+    "loc": ["age", "secrets", "<name>", "name"],
+    "name": "age.secrets.<name>.name",
+    "readOnly": false,
+    "type": "string",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": { "_type": "literalExpression", "text": "\"0\"" },
+    "description": "User of the decrypted secret.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "default"
+    ],
+    "internal": false,
+    "loc": ["age", "secrets", "<name>", "owner"],
+    "name": "age.secrets.<name>.owner",
+    "readOnly": false,
+    "type": "string",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": {
+      "_type": "literalExpression",
+      "text": "\"${cfg.secretsDir}/${config.name}\"\n"
+    },
+    "description": "Path where the decrypted secret is installed.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "default"
+    ],
+    "internal": false,
+    "loc": ["age", "secrets", "<name>", "path"],
+    "name": "age.secrets.<name>.path",
+    "readOnly": false,
+    "type": "string",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": { "_type": "literalExpression", "text": "true" },
+    "description": "Whether to enable symlinking secrets to their destination.",
+    "entry_type": "option",
+    "example": { "_type": "literalExpression", "text": "true" },
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "default"
+    ],
+    "internal": false,
+    "loc": ["age", "secrets", "<name>", "symlink"],
+    "name": "age.secrets.<name>.symlink",
+    "readOnly": false,
+    "type": "boolean",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": { "_type": "literalExpression", "text": "\"/run/agenix\"" },
+    "description": "Folder where secrets are symlinked to\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "default"
+    ],
+    "internal": false,
+    "loc": ["age", "secretsDir"],
+    "name": "age.secretsDir",
+    "readOnly": false,
+    "type": "absolute path",
+    "visible": true
+  },
+  {
+    "declarations": ["modules/age.nix"],
+    "default": { "_type": "literalExpression", "text": "\"/run/agenix.d\"" },
+    "description": "Where secrets are created before they are symlinked to {option}`age.secretsDir`\n",
+    "entry_type": "option",
+    "flake": [
+      "github:ryantm/agenix/fcdea223397448d35d9b31f798479227e80183f6",
+      "default"
+    ],
+    "internal": false,
+    "loc": ["age", "secretsMountPoint"],
+    "name": "age.secretsMountPoint",
+    "readOnly": false,
+    "type": "string (with check: non-empty without trailing slash)",
+    "visible": true
+  }
+]
