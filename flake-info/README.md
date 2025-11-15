@@ -71,7 +71,6 @@ The `<flake>` argument should contain a valid reference to a flake. It accepts a
 > use gitlab:<user>/<repo>/github:<user>/<repo>/sourcehut:<user>/<repo> to
 > shortcut gitlab, github or sourcehut repositories
 
-
 Optionally, analyzing can be done in a temporary store enabled by the `--temp-store` option.
 
 #### Example
@@ -108,21 +107,21 @@ An example `targets.json` file can look like the following
 
 ```json
 [
-    {
-        "type": "git",
-        "url": "./."
-    },
-    {
-        "type": "git",
-        "url": "github:fluffynukeit/adaspark"
-    },
-    {
-        "type": "github",
-        "owner": "ngi-nix",
-        "repo": "offen",
-        "hash": "4052febf151d60aa4352fa1960cf3ae088f600aa",
-        "description": "Hier könnte Ihre Werbung stehen"
-    }
+  {
+    "type": "git",
+    "url": "./."
+  },
+  {
+    "type": "git",
+    "url": "github:fluffynukeit/adaspark"
+  },
+  {
+    "type": "github",
+    "owner": "ngi-nix",
+    "repo": "offen",
+    "hash": "4052febf151d60aa4352fa1960cf3ae088f600aa",
+    "description": "Hier könnte Ihre Werbung stehen"
+  }
 ]
 ```
 
@@ -152,7 +151,6 @@ A number of flags is dedicated to pushing to elasticsearch.
 -u, --elastic-user <elastic-user>                        Elasticsearch username (unimplemented) [env: FI_ES_USER=]
 ```
 
-
 #### Example
 
 ```
@@ -161,7 +159,6 @@ $ flake-info --push \
              --elastic-index-name latest-21-21.05
              --elastic-schema-version 21 group ./examples/ngi-nix.json ngi-nix
 ```
-
 
 ## Installation
 
