@@ -1,0 +1,71 @@
+[
+  {
+    "attribute_name": "darwin-specific",
+    "default_output": "out",
+    "entry_type": "package",
+    "name": "darwin-test",
+    "outputs": ["out"],
+    "platforms": ["x86_64-darwin", "aarch64-darwin"],
+    "version": ""
+  },
+  {
+    "attribute_name": "hello",
+    "default_output": "out",
+    "entry_type": "package",
+    "name": "hello",
+    "outputs": ["out"],
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "aarch64-linux",
+      "aarch64-darwin"
+    ],
+    "version": ""
+  },
+  {
+    "attribute_name": "linux-specific",
+    "default_output": "out",
+    "entry_type": "package",
+    "name": "linux-test",
+    "outputs": ["out"],
+    "platforms": ["x86_64-linux", "aarch64-linux"],
+    "version": ""
+  },
+  {
+    "attribute_name": "test-package",
+    "default_output": "out",
+    "description": "A test package",
+    "entry_type": "package",
+    "license": {
+      "deprecated": false,
+      "free": true,
+      "fullName": "MIT License",
+      "redistributable": true,
+      "shortName": "mit",
+      "spdxId": "MIT",
+      "url": "https://spdx.org/licenses/MIT.html"
+    },
+    "longDescription": "This is a longer description for testing",
+    "name": "test-package-1.2.3",
+    "outputs": ["out"],
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "aarch64-linux",
+      "aarch64-darwin"
+    ],
+    "version": "1.2.3"
+  },
+  {
+    "attribute_name": "app-hello",
+    "bin": "/nix/store/sqw9kyl8zrfnkklb3vp6gji9jw9qfgb5-hello-2.12.2/bin/hello",
+    "entry_type": "app",
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "aarch64-linux",
+      "aarch64-darwin"
+    ],
+    "type": "app"
+  }
+]

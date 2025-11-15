@@ -1,0 +1,26 @@
+name: manage ElasticSearch
+
+# Action for admins to manually kick off authenticated ElasticSearch
+# commands. Anyone who is authorized to manually trigger workflows
+# can use this workflow to perform ElasticSearch maintenance in an
+# audited way.
+
+on:
+  workflow_dispatch:
+    inputs:
+      method:
+        default: GET
+      path:
+        required: true
+
+permissions: {}
+
+jobs:
+  manage-es:
+    runs-on: ubuntu-latest
+    env:
+      FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL2 }}
+    steps:
+      - name: Manage ElasticSearch
+        run: |
+            curl -sS -X ${{ inputs.method }} ${{ secrets.ELASTICSEARCH_URL2 }}/${{ inputs.path }}

@@ -7,7 +7,7 @@ on:
       - "flake.nix"
       - "flake.lock"
       - "frontend/**"
-      - "VERSION"
+      - "version.nix"
 
   push:
     branches:
