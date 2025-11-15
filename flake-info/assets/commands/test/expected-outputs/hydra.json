@@ -1,0 +1,347 @@
+[
+  {
+    "attribute_name": "default",
+    "default_output": "out",
+    "description": "Build of Hydra on x86_64-linux",
+    "entry_type": "package",
+    "name": "hydra-0.1.20251106.241ab71",
+    "outputs": ["out", "doc"],
+    "platforms": ["x86_64-linux", "aarch64-linux"],
+    "version": "0.1.20251106.241ab71"
+  },
+  {
+    "attribute_name": "hydra",
+    "default_output": "out",
+    "description": "Build of Hydra on x86_64-linux",
+    "entry_type": "package",
+    "name": "hydra-0.1.20251106.241ab71",
+    "outputs": ["out", "doc"],
+    "platforms": ["x86_64-linux", "aarch64-linux"],
+    "version": "0.1.20251106.241ab71"
+  },
+  {
+    "attribute_name": "nix-eval-jobs",
+    "default_output": "out",
+    "description": "Hydra's builtin hydra-eval-jobs as a standalone",
+    "entry_type": "package",
+    "license": {
+      "deprecated": true,
+      "free": true,
+      "fullName": "GNU General Public License v3.0",
+      "redistributable": true,
+      "shortName": "gpl3",
+      "spdxId": "GPL-3.0",
+      "url": "https://spdx.org/licenses/GPL-3.0.html"
+    },
+    "name": "nix-eval-jobs-2.32.1",
+    "outputs": ["out"],
+    "platforms": ["x86_64-linux", "aarch64-linux"],
+    "version": "2.32.1"
+  },
+  {
+    "declarations": ["nixos-modules/hydra.nix"],
+    "default": {
+      "_type": "literalExpression",
+      "text": "optional (config.nix.buildMachines != []) \"/etc/nix/machines\""
+    },
+    "description": "List of files containing build machines.",
+    "entry_type": "option",
+    "example": {
+      "_type": "literalExpression",
+      "text": "[\n  \"/etc/nix/machines\"\n  \"/var/lib/hydra/provisioner/machines\"\n]"
+    },
+    "flake": [
+      "github:NixOS/hydra/241ab718002ca5740b7e3f659d0fbd483ab40523",
+      "hydra"
+    ],
+    "internal": false,
+    "loc": ["services", "hydra-dev", "buildMachinesFiles"],
+    "name": "services.hydra-dev.buildMachinesFiles",
+    "readOnly": false,
+    "type": "list of absolute path",
+    "visible": true
+  },
+  {
+    "declarations": ["nixos-modules/hydra.nix"],
+    "default": {
+      "_type": "literalExpression",
+      "text": "\"dbi:Pg:dbname=hydra;user=hydra;\""
+    },
+    "description": "The DBI string for Hydra database connection.\n\nNOTE: Attempts to set `application_name` will be overridden by\n`hydra-TYPE` (where TYPE is e.g. `evaluator`, `queue-runner`,\netc.) in all hydra services to more easily distinguish where\nqueries are coming from.\n",
+    "entry_type": "option",
+    "example": {
+      "_type": "literalExpression",
+      "text": "\"dbi:Pg:dbname=hydra;host=postgres.example.org;user=foo;\""
+    },
+    "flake": [
+      "github:NixOS/hydra/241ab718002ca5740b7e3f659d0fbd483ab40523",
+      "hydra"
+    ],
+    "internal": false,
+    "loc": ["services", "hydra-dev", "dbi"],
+    "name": "services.hydra-dev.dbi",
+    "readOnly": false,
+    "type": "string",
+    "visible": true
+  },
+  {
+    "declarations": ["nixos-modules/hydra.nix"],
+    "default": { "_type": "literalExpression", "text": "false" },
+    "description": "Whether to run the server in debug mode.",
+    "entry_type": "option",
+    "flake": [
+      "github:NixOS/hydra/241ab718002ca5740b7e3f659d0fbd483ab40523",
+      "hydra"
+    ],
+    "internal": false,
+    "loc": ["services", "hydra-dev", "debugServer"],
+    "name": "services.hydra-dev.debugServer",
+    "readOnly": false,
+    "type": "boolean",
+    "visible": true
+  },
+  {
+    "declarations": ["nixos-modules/hydra.nix"],
+    "default": { "_type": "literalExpression", "text": "false" },
+    "description": "Whether to run Hydra services.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:NixOS/hydra/241ab718002ca5740b7e3f659d0fbd483ab40523",
+      "hydra"
+    ],
+    "internal": false,
+    "loc": ["services", "hydra-dev", "enable"],
+    "name": "services.hydra-dev.enable",
+    "readOnly": false,
+    "type": "boolean",
+    "visible": true
+  },
+  {
+    "declarations": ["nixos-modules/hydra.nix"],
+    "description": "Extra lines for the Hydra configuration.",
+    "entry_type": "option",
+    "flake": [
+      "github:NixOS/hydra/241ab718002ca5740b7e3f659d0fbd483ab40523",
+      "hydra"
+    ],
+    "internal": false,
+    "loc": ["services", "hydra-dev", "extraConfig"],
+    "name": "services.hydra-dev.extraConfig",
+    "readOnly": false,
+    "type": "strings concatenated with \"\\n\"",
+    "visible": true
+  },
+  {
+    "declarations": ["nixos-modules/hydra.nix"],
+    "default": { "_type": "literalExpression", "text": "{ }" },
+    "description": "Extra environment variables for Hydra.",
+    "entry_type": "option",
+    "flake": [
+      "github:NixOS/hydra/241ab718002ca5740b7e3f659d0fbd483ab40523",
+      "hydra"
+    ],
+    "internal": false,
+    "loc": ["services", "hydra-dev", "extraEnv"],
+    "name": "services.hydra-dev.extraEnv",
+    "readOnly": false,
+    "type": "attribute set of string",
+    "visible": true
+  },
+  {
+    "declarations": ["nixos-modules/hydra.nix"],
+    "default": {
+      "_type": "literalExpression",
+      "text": "\"/nix/var/nix/gcroots/hydra\""
+    },
+    "description": "Directory that holds Hydra garbage collector roots.",
+    "entry_type": "option",
+    "flake": [
+      "github:NixOS/hydra/241ab718002ca5740b7e3f659d0fbd483ab40523",
+      "hydra"
+    ],
+    "internal": false,
+    "loc": ["services", "hydra-dev", "gcRootsDir"],
+    "name": "services.hydra-dev.gcRootsDir",
+    "readOnly": false,
+    "type": "absolute path",
+    "visible": true
+  },
+  {
+    "declarations": ["nixos-modules/hydra.nix"],
+    "description": "The base URL for the Hydra webserver instance. Used for links in emails.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:NixOS/hydra/241ab718002ca5740b7e3f659d0fbd483ab40523",
+      "hydra"
+    ],
+    "internal": false,
+    "loc": ["services", "hydra-dev", "hydraURL"],
+    "name": "services.hydra-dev.hydraURL",
+    "readOnly": false,
+    "type": "string",
+    "visible": true
+  },
+  {
+    "declarations": ["nixos-modules/hydra.nix"],
+    "default": { "_type": "literalExpression", "text": "\"*\"" },
+    "description": "The hostname or address to listen on or <literal>*</literal> to listen\non all interfaces.\n",
+    "entry_type": "option",
+    "example": { "_type": "literalExpression", "text": "\"localhost\"" },
+    "flake": [
+      "github:NixOS/hydra/241ab718002ca5740b7e3f659d0fbd483ab40523",
+      "hydra"
+    ],
+    "internal": false,
+    "loc": ["services", "hydra-dev", "listenHost"],
+    "name": "services.hydra-dev.listenHost",
+    "readOnly": false,
+    "type": "string",
+    "visible": true
+  },
+  {
+    "declarations": ["nixos-modules/hydra.nix"],
+    "default": { "_type": "literalExpression", "text": "null" },
+    "description": "Path to a file containing the logo of your Hydra instance.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:NixOS/hydra/241ab718002ca5740b7e3f659d0fbd483ab40523",
+      "hydra"
+    ],
+    "internal": false,
+    "loc": ["services", "hydra-dev", "logo"],
+    "name": "services.hydra-dev.logo",
+    "readOnly": false,
+    "type": "null or absolute path",
+    "visible": true
+  },
+  {
+    "declarations": ["nixos-modules/hydra.nix"],
+    "default": { "_type": "literalExpression", "text": "0" },
+    "description": "Threshold of minimum disk space (GiB) to determine if the queue runner should run or not.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:NixOS/hydra/241ab718002ca5740b7e3f659d0fbd483ab40523",
+      "hydra"
+    ],
+    "internal": false,
+    "loc": ["services", "hydra-dev", "minimumDiskFree"],
+    "name": "services.hydra-dev.minimumDiskFree",
+    "readOnly": false,
+    "type": "signed integer",
+    "visible": true
+  },
+  {
+    "declarations": ["nixos-modules/hydra.nix"],
+    "default": { "_type": "literalExpression", "text": "0" },
+    "description": "Threshold of minimum disk space (GiB) to determine if the evaluator should run or not.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:NixOS/hydra/241ab718002ca5740b7e3f659d0fbd483ab40523",
+      "hydra"
+    ],
+    "internal": false,
+    "loc": ["services", "hydra-dev", "minimumDiskFreeEvaluator"],
+    "name": "services.hydra-dev.minimumDiskFreeEvaluator",
+    "readOnly": false,
+    "type": "signed integer",
+    "visible": true
+  },
+  {
+    "declarations": ["nixos-modules/hydra.nix"],
+    "description": "Sender email address used for email notifications.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:NixOS/hydra/241ab718002ca5740b7e3f659d0fbd483ab40523",
+      "hydra"
+    ],
+    "internal": false,
+    "loc": ["services", "hydra-dev", "notificationSender"],
+    "name": "services.hydra-dev.notificationSender",
+    "readOnly": false,
+    "type": "string",
+    "visible": true
+  },
+  {
+    "declarations": ["nixos-modules/hydra.nix"],
+    "description": "The Hydra package.",
+    "entry_type": "option",
+    "flake": [
+      "github:NixOS/hydra/241ab718002ca5740b7e3f659d0fbd483ab40523",
+      "hydra"
+    ],
+    "internal": false,
+    "loc": ["services", "hydra-dev", "package"],
+    "name": "services.hydra-dev.package",
+    "readOnly": false,
+    "type": "absolute path",
+    "visible": true
+  },
+  {
+    "declarations": ["nixos-modules/hydra.nix"],
+    "default": { "_type": "literalExpression", "text": "3000" },
+    "description": "TCP port the web server should listen to.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:NixOS/hydra/241ab718002ca5740b7e3f659d0fbd483ab40523",
+      "hydra"
+    ],
+    "internal": false,
+    "loc": ["services", "hydra-dev", "port"],
+    "name": "services.hydra-dev.port",
+    "readOnly": false,
+    "type": "signed integer",
+    "visible": true
+  },
+  {
+    "declarations": ["nixos-modules/hydra.nix"],
+    "default": { "_type": "literalExpression", "text": "null" },
+    "description": "Hostname of the SMTP server to use to send email.\n",
+    "entry_type": "option",
+    "example": {
+      "_type": "literalExpression",
+      "text": "[\n  \"localhost\"\n]"
+    },
+    "flake": [
+      "github:NixOS/hydra/241ab718002ca5740b7e3f659d0fbd483ab40523",
+      "hydra"
+    ],
+    "internal": false,
+    "loc": ["services", "hydra-dev", "smtpHost"],
+    "name": "services.hydra-dev.smtpHost",
+    "readOnly": false,
+    "type": "null or string",
+    "visible": true
+  },
+  {
+    "declarations": ["nixos-modules/hydra.nix"],
+    "default": { "_type": "literalExpression", "text": "\"\"" },
+    "description": "Piece of HTML that is included on all pages.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:NixOS/hydra/241ab718002ca5740b7e3f659d0fbd483ab40523",
+      "hydra"
+    ],
+    "internal": false,
+    "loc": ["services", "hydra-dev", "tracker"],
+    "name": "services.hydra-dev.tracker",
+    "readOnly": false,
+    "type": "string",
+    "visible": true
+  },
+  {
+    "declarations": ["nixos-modules/hydra.nix"],
+    "default": { "_type": "literalExpression", "text": "false" },
+    "description": "Whether to use binary caches for downloading store paths. Note that\nbinary substitutions trigger (a potentially large number of) additional\nHTTP requests that slow down the queue monitor thread significantly.\nAlso, this Hydra instance will serve those downloaded store paths to\nits users with its own signature attached as if it had built them\nitself, so don't enable this feature unless your active binary caches\nare absolute trustworthy.\n",
+    "entry_type": "option",
+    "flake": [
+      "github:NixOS/hydra/241ab718002ca5740b7e3f659d0fbd483ab40523",
+      "hydra"
+    ],
+    "internal": false,
+    "loc": ["services", "hydra-dev", "useSubstitutes"],
+    "name": "services.hydra-dev.useSubstitutes",
+    "readOnly": false,
+    "type": "boolean",
+    "visible": true
+  }
+]

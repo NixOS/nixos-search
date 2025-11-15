@@ -4,9 +4,9 @@ use std::collections::{HashMap, HashSet};
 
 use command_run::{Command, LogTo};
 
-use crate::data::import::{NixOption, NixpkgsEntry, Package};
-use crate::data::Nixpkgs;
 use crate::Source;
+use crate::data::Nixpkgs;
+use crate::data::import::{NixOption, NixpkgsEntry, Package};
 
 pub fn get_nixpkgs_info(nixpkgs: &Source, attribute: &Option<String>) -> Result<Vec<NixpkgsEntry>> {
     let mut command = Command::new("nix-env");
@@ -22,8 +22,10 @@ pub fn get_nixpkgs_info(nixpkgs: &Source, attribute: &Option<String>) -> Result<
         "-qa",
     ]);
     match attribute {
-        Some(attr) => { command.add_arg(attr); },
-        None => {},
+        Some(attr) => {
+            command.add_arg(attr);
+        }
+        None => {}
     }
     command.add_arg("--meta");
 

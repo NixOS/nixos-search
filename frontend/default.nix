@@ -1,6 +1,7 @@
-{ pkgs ? import <nixpkgs> { }
-, nixosChannels
-, version
+{
+  pkgs ? import <nixpkgs> { },
+  nixosChannels,
+  version,
 }:
 pkgs.npmlock2nix.v1.build {
   src = ./.;
@@ -19,12 +20,12 @@ pkgs.npmlock2nix.v1.build {
   buildCommands = [
     "HOME=$PWD npm run prod"
   ];
-  buildInputs = 
+  buildInputs =
     (with pkgs; [
       nodejs
       elm2nix
-    ]) ++
-    (with pkgs.elmPackages; [
+    ])
+    ++ (with pkgs.elmPackages; [
       elm
       elm-format
       elm-language-server
@@ -32,14 +33,16 @@ pkgs.npmlock2nix.v1.build {
     ]);
   node_modules_attrs = {
     sourceOverrides = {
-      elm = sourceIngo: drv: drv.overrideAttrs (old: {
-        postPatch = ''
-          sed -i -e "s|download(|//download(|" install.js
-          sed -i -e "s|request(|//request(|" download.js
-          sed -i -e "s|var version|return; var version|" download.js
-          cp ${pkgs.elmPackages.elm}/bin/elm bin/elm
-        '';
-      });
+      elm =
+        sourceIngo: drv:
+        drv.overrideAttrs (old: {
+          postPatch = ''
+            sed -i -e "s|download(|//download(|" install.js
+            sed -i -e "s|request(|//request(|" download.js
+            sed -i -e "s|var version|return; var version|" download.js
+            cp ${pkgs.elmPackages.elm}/bin/elm bin/elm
+          '';
+        });
     };
   };
 }
