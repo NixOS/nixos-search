@@ -2,12 +2,14 @@ name: Switch Logo
 
 on:
   schedule:
-    - cron: '0 0 31 5 *'    # Change to pride logo. “At 00:00 on day-of-month 31 in May.”
-    - cron: '0 0 1 7 *'     # Switch back to normal logo. “At 00:00 on day-of-month 1 in July.”
+    - cron: "0 0 31 5 *" # Change to pride logo. “At 00:00 on day-of-month 31 in May.”
+    - cron: "0 0 1 7 *" # Switch back to normal logo. “At 00:00 on day-of-month 1 in July.”
 
 jobs:
   swap-logo:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
