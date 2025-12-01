@@ -166,6 +166,11 @@ repo = "bitbucket-runner-nix"
 
 [[sources]]
 type = "github"
+owner = "linyinfeng"
+repo = "angrr"
+
+[[sources]]
+type = "github"
 owner = "lnbits"
 repo = "lnbits-legend"
 
