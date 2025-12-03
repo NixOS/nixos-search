@@ -18,3 +18,18 @@ Elm.Main.init({
         nixosChannels: JSON.parse(process.env.NIXOS_CHANNELS),
     },
 });
+
+document.addEventListener("DOMContentLoaded", function () {
+    const shortcutEl = document.getElementById("shortcut-list-el");
+    const searchInput = document.getElementById("search-query-input");
+    // the shortcutEl is only used for focusing the search input.
+    // disable it when the search input is focused so we can type normally.
+    if (shortcutEl && searchInput) {
+        searchInput.addEventListener("focus", () => {
+            shortcutEl.disconnectedCallback();
+        });
+        searchInput.addEventListener("blur", () => {
+            shortcutEl.connectedCallback();
+        });
+    }
+});
