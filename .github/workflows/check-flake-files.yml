@@ -34,7 +34,7 @@ jobs:
           do
             echo "::group::Group \"$(basename $flake_group .toml)\""
 
-            nix run --accept-flake-config .#flake-info -- --json group "$flake_group" "$(basename "$flake_group" .toml)" --report
+            nix run --accept-flake-config .#flake-info -- --json group "$flake_group" "$(basename "$flake_group" .toml)" --report --with-gc
 
             if [[ -f "./report.txt" ]]
             then
