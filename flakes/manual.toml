@@ -6,17 +6,19 @@ url = "git+https://codeberg.org/alch_emi/embers-nix-packages.git?ref=main"
 type = "git"
 url = "git+https://codeberg.org/wolfangaukang/python-trovo?ref=main"
 
-[[sources]]
-type = "git"
-url = "git+https://codeberg.org/wolfangaukang/multifirefox?ref=main"
+# wolfangaukang is no longer in 'maintainers'
+#[[sources]]
+#type = "git"
+#url = "git+https://codeberg.org/wolfangaukang/multifirefox?ref=main"
 
 [[sources]]
 type = "git"
 url = "git+https://github.com/hannesgith/rquickshare?ref=flake"
 
-[[sources]]
-type = "git"
-url = "git+https://github.com/hannesgith/neohtop?ref=nixify"
+# missing field 'name'
+#[[sources]]
+#type = "git"
+#url = "git+https://github.com/hannesgith/neohtop?ref=nixify"
 
 [[sources]]
 type = "git"
@@ -31,12 +33,13 @@ type = "github"
 owner = "anpandey"
 repo = "numen-nix"
 
-[[sources]]
-# Please open upstream issue when removing:
-# https://github.com/astro/microvm.nix/issues/new
-type = "github"
-owner = "astro"
-repo = "microvm.nix"
+#[[sources]]
+## Please open upstream issue when removing:
+## https://github.com/astro/microvm.nix/issues/new
+## (issue incoming, https://github.com/NixOS/nixos-search/pull/1115)
+#type = "github"
+#owner = "astro"
+#repo = "microvm.nix"
 
 [[sources]]
 type = "github"
@@ -173,10 +176,11 @@ type = "github"
 owner = "nix-community"
 repo = "autofirma-nix"
 
-[[sources]]
-type = "github"
-owner = "nix-community"
-repo = "fenix"
+# error: attribute 'outputName' missing
+#[[sources]]
+#type = "github"
+#owner = "nix-community"
+#repo = "fenix"
 
 [[sources]]
 type = "github"
