@@ -32,6 +32,11 @@ owner = "anpandey"
 repo = "numen-nix"
 
 [[sources]]
+type = "github"
+owner = "astro"
+repo = "deadnix"
+
+[[sources]]
 # Please open upstream issue when removing:
 # https://github.com/astro/microvm.nix/issues/new
 type = "github"
