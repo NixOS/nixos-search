@@ -6,17 +6,23 @@ url = "git+https://codeberg.org/alch_emi/embers-nix-packages.git?ref=main"
 type = "git"
 url = "git+https://codeberg.org/wolfangaukang/python-trovo?ref=main"
 
-[[sources]]
-type = "git"
-url = "git+https://codeberg.org/wolfangaukang/multifirefox?ref=main"
+# wolfangaukang is no longer in 'maintainers'
+#[[sources]]
+#type = "git"
+#url = "git+https://codeberg.org/wolfangaukang/multifirefox?ref=main"
 
 [[sources]]
 type = "git"
 url = "git+https://github.com/hannesgith/rquickshare?ref=flake"
 
+# missing field 'name'
+#[[sources]]
+#type = "git"
+#url = "git+https://github.com/hannesgith/neohtop?ref=nixify"
+
 [[sources]]
 type = "git"
-url = "git+https://github.com/hannesgith/neohtop?ref=nixify"
+url = "git+https://github.com/raboof/dmake?ref=nix"
 
 [[sources]]
 type = "git"
@@ -31,12 +37,13 @@ type = "github"
 owner = "anpandey"
 repo = "numen-nix"
 
-[[sources]]
-# Please open upstream issue when removing:
-# https://github.com/astro/microvm.nix/issues/new
-type = "github"
-owner = "astro"
-repo = "microvm.nix"
+#[[sources]]
+## Please open upstream issue when removing:
+## https://github.com/astro/microvm.nix/issues/new
+## (issue incoming, https://github.com/NixOS/nixos-search/pull/1115)
+#type = "github"
+#owner = "astro"
+#repo = "microvm.nix"
 
 [[sources]]
 type = "github"
@@ -70,6 +77,16 @@ repo = "nix-atlas"
 
 [[sources]]
 type = "github"
+owner = "divnix"
+repo = "nosys"
+
+[[sources]]
+type = "github"
+owner = "divnix"
+repo = "std"
+
+[[sources]]
+type = "github"
 owner = "edolstra"
 repo = "flake-compat"
 
@@ -82,6 +99,16 @@ repo = "eza"
 type = "github"
 owner = "fort-nix"
 repo = "nix-bitcoin"
+
+[[sources]]
+type = "github"
+owner = "gmodena"
+repo = "nix-flatpak"
+
+[[sources]]
+type = "github"
+owner = "gytis-ivaskevicius"
+repo = "flake-utils-plus"
 
 [[sources]]
 type = "github"
@@ -102,6 +129,11 @@ repo = "flake-parts"
 type = "github"
 owner = "hyprwm"
 repo = "hyprland"
+
+[[sources]]
+type = "github"
+owner = "Infinidoge"
+repo = "nix-minecraft"
 
 [[sources]]
 type = "github"
@@ -173,10 +205,11 @@ type = "github"
 owner = "nix-community"
 repo = "autofirma-nix"
 
-[[sources]]
-type = "github"
-owner = "nix-community"
-repo = "fenix"
+# error: attribute 'outputName' missing
+#[[sources]]
+#type = "github"
+#owner = "nix-community"
+#repo = "fenix"
 
 [[sources]]
 type = "github"
@@ -212,6 +245,16 @@ repo = "PrismLauncher"
 type = "github"
 owner = "pta2002"
 repo = "nixvim"
+
+[[sources]]
+type = "github"
+owner = "pyproject-nix"
+repo = "pyproject.nix"
+
+[[sources]]
+type = "github"
+owner = "pyproject-nix"
+repo = "uv2nix"
 
 [[sources]]
 type = "github"
@@ -292,6 +335,11 @@ repo = "zed"
 type = "gitlab"
 owner = "pi-lar"
 repo = "neuropil"
+
+[[sources]]
+type = "sourcehut"
+owner = "~alexdavid"
+repo = "jail.nix"
 
 [[sources]]
 type = "sourcehut"
