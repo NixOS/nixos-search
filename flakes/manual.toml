@@ -303,6 +303,11 @@ repo = "neuropil"
 
 [[sources]]
 type = "sourcehut"
+owner = "~alexdavid"
+repo = "jail.nix"
+
+[[sources]]
+type = "sourcehut"
 owner = "~kerstin"
 repo = "sway-timetracker"
 
