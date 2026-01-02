@@ -92,6 +92,11 @@ repo = "nix-bitcoin"
 
 [[sources]]
 type = "github"
+owner = "gmodena"
+repo = "nix-flatpak"
+
+[[sources]]
+type = "github"
 owner = "gytis-ivaskevicius"
 repo = "flake-utils-plus"
 
@@ -114,6 +119,11 @@ repo = "flake-parts"
 type = "github"
 owner = "hyprwm"
 repo = "hyprland"
+
+[[sources]]
+type = "github"
+owner = "Infinidoge"
+repo = "nix-minecraft"
 
 [[sources]]
 type = "github"
@@ -300,6 +310,11 @@ repo = "zed"
 type = "gitlab"
 owner = "pi-lar"
 repo = "neuropil"
+
+[[sources]]
+type = "sourcehut"
+owner = "~alexdavid"
+repo = "jail.nix"
 
 [[sources]]
 type = "sourcehut"
