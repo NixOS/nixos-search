@@ -222,6 +222,56 @@ repo = "nix-vscode-extensions"
 
 [[sources]]
 type = "github"
+owner = "nix-systems"
+repo = "aarch64-darwin"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "aarch64-linux"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "current-system"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "default"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "default-darwin"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "default-linux"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "flake-outputs"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "riscv64-linux"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "x86_64-darwin"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "x86_64-linux"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
