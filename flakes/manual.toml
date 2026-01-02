@@ -1,3 +1,5 @@
+# Please keep all sources ordered alphabetically first by type and then by lower-cased 'owner' field (if any)
+
 [[sources]]
 type = "git"
 url = "git+https://codeberg.org/alch_emi/embers-nix-packages.git?ref=main"
@@ -300,6 +302,11 @@ repo = "nativelink"
 type = "github"
 owner = "utensils"
 repo = "mcp-nixos"
+
+[[sources]]
+type = "github"
+owner = "vorburger"
+repo = "bazel-nix"
 
 [[sources]]
 type = "github"
