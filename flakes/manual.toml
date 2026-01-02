@@ -1,3 +1,5 @@
+# Please keep all sources ordered alphabetically first by type and then by lower-cased 'owner' field (if any)
+
 [[sources]]
 type = "git"
 url = "git+https://codeberg.org/alch_emi/embers-nix-packages.git?ref=main"
@@ -37,13 +39,10 @@ type = "github"
 owner = "anpandey"
 repo = "numen-nix"
 
-#[[sources]]
-## Please open upstream issue when removing:
-## https://github.com/astro/microvm.nix/issues/new
-## (issue incoming, https://github.com/NixOS/nixos-search/pull/1115)
-#type = "github"
-#owner = "astro"
-#repo = "microvm.nix"
+[[sources]]
+type = "github"
+owner = "astro"
+repo = "deadnix"
 
 [[sources]]
 type = "github"
@@ -223,6 +222,56 @@ repo = "nix-vscode-extensions"
 
 [[sources]]
 type = "github"
+owner = "nix-systems"
+repo = "aarch64-darwin"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "aarch64-linux"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "current-system"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "default"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "default-darwin"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "default-linux"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "flake-outputs"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "riscv64-linux"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "x86_64-darwin"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "x86_64-linux"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
@@ -305,6 +354,11 @@ repo = "mcp-nixos"
 type = "github"
 owner = "viperML"
 repo = "wrapper-manager"
+
+[[sources]]
+type = "github"
+owner = "vorburger"
+repo = "bazel-nix"
 
 [[sources]]
 type = "github"
