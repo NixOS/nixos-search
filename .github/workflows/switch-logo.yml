@@ -1,0 +1,36 @@
+name: Switch Logo
+
+on:
+  schedule:
+    - cron: "0 0 31 5 *" # Change to pride logo. “At 00:00 on day-of-month 31 in May.”
+    - cron: "0 0 1 7 *" # Switch back to normal logo. “At 00:00 on day-of-month 1 in July.”
+
+jobs:
+  swap-logo:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+      - name: Switch Logo
+        run: |
+          TODAY=$(date +'%m-%d')
+          if [ "$TODAY" == "05-31" ]; then
+            # Switch to pride logo.
+            sed --in-place 's|/images/nix-logo\.png|/images/nix-logo-pride.png|g' frontend/src/Main.elm
+            git_commit_message="chore(logo): use pride logo"
+          elif [ "$TODAY" == "07-01" ]; then
+            # Switch back to normal logo.
+            sed --in-place 's|/images/nix-logo-pride\.png|/images/nix-logo.png|g' frontend/src/Main.elm
+            git_commit_message="chore(logo): switch back to normal logo"
+          else
+            echo "No action needed for logo today."
+            exit 0
+          fi
+
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add frontend/src/Main.elm
+          git commit --message "$git_commit_message"
+          git push
