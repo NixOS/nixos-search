@@ -394,7 +394,7 @@ view model =
               }
             , Shortcut.simpleShortcut (Shortcut.Regular "/") <| CtrlKRegistered
             ]
-            []
+            [ id "shortcut-list-el" ]
             [ div []
                 [ header []
                     [ div [ class "navbar navbar-static-top" ]
