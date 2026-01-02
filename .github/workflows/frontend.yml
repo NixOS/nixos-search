@@ -7,7 +7,7 @@ on:
       - "flake.nix"
       - "flake.lock"
       - "frontend/**"
-      - "VERSION"
+      - "version.nix"
 
   push:
     branches:
@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checking out the repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup
         uses: ./.github/actions/common-setup

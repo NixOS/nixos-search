@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - name: Checking out the repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup
         uses: ./.github/actions/common-setup
@@ -29,3 +29,8 @@ jobs:
         shell: sh
         run: |
           nix --accept-flake-config -vL build .#flake-info
+
+      - name: Running flake-info tests
+        shell: sh
+        run: |
+          nix-build ./flake-info/assets/commands/test --option substituters "https://cache.nixos.org"
