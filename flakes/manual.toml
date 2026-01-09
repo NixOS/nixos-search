@@ -36,6 +36,11 @@ url = "git+https://github.com/TamtamHero/fw-fanctrl?ref=packaging/nix"
 
 [[sources]]
 type = "github"
+owner = "4JX"
+repo = "L5P-Keyboard-RGB"
+
+[[sources]]
+type = "github"
 owner = "anpandey"
 repo = "numen-nix"
 
