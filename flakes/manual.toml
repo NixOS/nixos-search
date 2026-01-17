@@ -136,6 +136,11 @@ repo = "hyprland"
 
 [[sources]]
 type = "github"
+owner = "in-a-dil-emma"
+repo = "declarative-flatpak"
+
+[[sources]]
+type = "github"
 owner = "Infinidoge"
 repo = "nix-minecraft"
 
