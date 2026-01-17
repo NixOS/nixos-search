@@ -56,6 +56,11 @@ repo = "nixpkgs-ruby"
 
 [[sources]]
 type = "github"
+owner = "bohdantkachenko"
+repo = "chromium-pwa-wmclass-sync"
+
+[[sources]]
+type = "github"
 owner = "brizzbuzz"
 repo = "opnix"
 
