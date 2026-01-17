@@ -405,6 +405,7 @@ type Msg a b
 type Details
     = ViaNixShell
     | ViaNixOS
+    | ViaNixProfile
     | ViaNixEnv
     | FromFlake
     | Unset
