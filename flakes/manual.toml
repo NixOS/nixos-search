@@ -89,10 +89,10 @@ type = "github"
 owner = "DeterminateSystems"
 repo = "determinate"
 
-[[sources]]
-type = "github"
-owner = "DeterminateSystems"
-repo = "dhcpv6macd"
+# [[sources]]
+# type = "github"
+# owner = "DeterminateSystems"
+# repo = "dhcpv6macd"
 
 [[sources]]
 type = "github"
