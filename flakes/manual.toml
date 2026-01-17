@@ -1,3 +1,5 @@
+# Please keep all sources ordered alphabetically first by type and then by lower-cased 'owner' field (if any)
+
 [[sources]]
 type = "git"
 url = "git+https://codeberg.org/alch_emi/embers-nix-packages.git?ref=main"
@@ -37,13 +39,10 @@ type = "github"
 owner = "anpandey"
 repo = "numen-nix"
 
-#[[sources]]
-## Please open upstream issue when removing:
-## https://github.com/astro/microvm.nix/issues/new
-## (issue incoming, https://github.com/NixOS/nixos-search/pull/1115)
-#type = "github"
-#owner = "astro"
-#repo = "microvm.nix"
+[[sources]]
+type = "github"
+owner = "astro"
+repo = "deadnix"
 
 [[sources]]
 type = "github"
@@ -77,6 +76,16 @@ repo = "nix-atlas"
 
 [[sources]]
 type = "github"
+owner = "divnix"
+repo = "nosys"
+
+[[sources]]
+type = "github"
+owner = "divnix"
+repo = "std"
+
+[[sources]]
+type = "github"
 owner = "edolstra"
 repo = "flake-compat"
 
@@ -89,6 +98,16 @@ repo = "eza"
 type = "github"
 owner = "fort-nix"
 repo = "nix-bitcoin"
+
+[[sources]]
+type = "github"
+owner = "gmodena"
+repo = "nix-flatpak"
+
+[[sources]]
+type = "github"
+owner = "gytis-ivaskevicius"
+repo = "flake-utils-plus"
 
 [[sources]]
 type = "github"
@@ -114,6 +133,11 @@ repo = "hyprland"
 type = "github"
 owner = "in-a-dil-emma"
 repo = "declarative-flatpak"
+
+[[sources]]
+type = "github"
+owner = "Infinidoge"
+repo = "nix-minecraft"
 
 [[sources]]
 type = "github"
@@ -203,6 +227,56 @@ repo = "nix-vscode-extensions"
 
 [[sources]]
 type = "github"
+owner = "nix-systems"
+repo = "aarch64-darwin"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "aarch64-linux"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "current-system"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "default"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "default-darwin"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "default-linux"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "flake-outputs"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "riscv64-linux"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "x86_64-darwin"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "x86_64-linux"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
@@ -225,6 +299,16 @@ repo = "PrismLauncher"
 type = "github"
 owner = "pta2002"
 repo = "nixvim"
+
+[[sources]]
+type = "github"
+owner = "pyproject-nix"
+repo = "pyproject.nix"
+
+[[sources]]
+type = "github"
+owner = "pyproject-nix"
+repo = "uv2nix"
 
 [[sources]]
 type = "github"
@@ -273,6 +357,16 @@ repo = "mcp-nixos"
 
 [[sources]]
 type = "github"
+owner = "viperML"
+repo = "wrapper-manager"
+
+[[sources]]
+type = "github"
+owner = "vorburger"
+repo = "bazel-nix"
+
+[[sources]]
+type = "github"
 owner = "Wazzaps"
 repo = "fingerpaint"
 
@@ -300,6 +394,11 @@ repo = "zed"
 type = "gitlab"
 owner = "pi-lar"
 repo = "neuropil"
+
+[[sources]]
+type = "sourcehut"
+owner = "~alexdavid"
+repo = "jail.nix"
 
 [[sources]]
 type = "sourcehut"
