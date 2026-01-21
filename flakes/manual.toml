@@ -347,6 +347,11 @@ repo = "Solaar-Flake"
 
 [[sources]]
 type = "github"
+owner = "synalice"
+repo = "kconfq"
+
+[[sources]]
+type = "github"
 owner = "TraceMachina"
 repo = "nativelink"
 
