@@ -851,7 +851,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         , id "package-details-nixpkgs"
                                         ]
                                         [ pre [ class "code-block shell-command" ]
-                                            [ text "nix profile install nixpkgs#"
+                                            [ text "nix profile add nixpkgs#"
                                             , strong [] [ text item.source.attr_name ]
                                             ]
                                         ]
