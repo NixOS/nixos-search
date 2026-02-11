@@ -30,7 +30,7 @@
         "elm": "^0.19.1-5",
         "elm-reloader": "^1.0.0",
         "elm-review": "^2.13.5",
-        "elm-test": "^0.19.1-revision9",
+        "elm-test": "^0.19.1-revision17",
         "elm-webpack-loader": "^8.0.0",
         "file-loader": "^6.2.0",
         "html-webpack-plugin": "^5.5.0",
