@@ -1,9 +1,8 @@
-module UrlRoundtrip exposing (routeRoundtrips, searchQueryRoundtrips)
+module UrlRoundtrip exposing (routeRoundtrips)
 
 import Expect
 import Fuzz exposing (Fuzzer)
 import Route exposing (Route, SearchArgs, SearchType)
-import Route.SearchQuery as SearchQuery exposing (SearchQuery)
 import Test exposing (Test)
 import Url
 
@@ -14,18 +13,8 @@ routeRoundtrips =
         \route ->
             ("http://localhost" ++ Route.routeToString route)
                 |> Url.fromString
-                |> Maybe.andThen Route.fromUrl
+                |> Maybe.map Route.fromUrl
                 |> Expect.equal (Just route)
-
-
-searchQueryRoundtrips : Test
-searchQueryRoundtrips =
-    Test.fuzz searchQueryFuzzer "Search query roundtrips" <|
-        \searchQuery ->
-            searchQuery
-                |> SearchQuery.searchQueryToString
-                |> Maybe.map SearchQuery.toSearchQuery
-                |> Expect.equal (Just searchQuery)
 
 
 routeFuzzer : Fuzzer Route
@@ -42,7 +31,7 @@ routeFuzzer =
 searchArgsFuzzer : Fuzzer SearchArgs
 searchArgsFuzzer =
     Fuzz.constant SearchArgs
-        |> Fuzz.andMap (Fuzz.maybe searchQueryFuzzer)
+        |> Fuzz.andMap (Fuzz.maybe Fuzz.string)
         |> Fuzz.andMap (Fuzz.maybe Fuzz.string)
         |> Fuzz.andMap (Fuzz.maybe Fuzz.string)
         |> Fuzz.andMap (Fuzz.maybe (Fuzz.intAtLeast 0))
@@ -50,11 +39,6 @@ searchArgsFuzzer =
         |> Fuzz.andMap (Fuzz.maybe Fuzz.string)
         |> Fuzz.andMap (Fuzz.maybe Fuzz.string)
         |> Fuzz.andMap (Fuzz.maybe searchTypeFuzzer)
-
-
-searchQueryFuzzer : Fuzzer SearchQuery
-searchQueryFuzzer =
-    Fuzz.map SearchQuery.toSearchQuery Fuzz.string
 
 
 searchTypeFuzzer : Fuzzer SearchType

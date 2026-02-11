@@ -87,7 +87,6 @@ import Route
         , allTypes
         , searchTypeToTitle
         )
-import Route.SearchQuery
 import Task
 
 
@@ -303,10 +302,7 @@ init args defaultNixOSChannel nixosChannels maybeModel =
                 |> Maybe.withDefault modelChannel
       , flake = defaultFlakeId
       , query =
-            case
-                args.query
-                    |> Maybe.andThen Route.SearchQuery.searchQueryToString
-            of
+            case args.query of
                 Just q ->
                     q
 
@@ -557,9 +553,7 @@ createUrl toRoute model =
     Route.routeToString <|
         toRoute
             { channel = Just model.channel
-            , query =
-                justIfNotDefault model.query defaultSearchArgs.query
-                    |> Maybe.map Route.SearchQuery.toSearchQuery
+            , query = justIfNotDefault model.query defaultSearchArgs.query
             , show = model.show
             , from = justIfNotDefault model.from defaultSearchArgs.from
             , size = justIfNotDefault model.size defaultSearchArgs.size

@@ -10,13 +10,12 @@ module Route exposing
     , searchTypeToTitle
     )
 
+import AppUrl exposing (AppUrl)
+import Dict
 import Html
 import Html.Attributes
-import Route.SearchQuery exposing (SearchQuery)
+import Maybe.Extra
 import Url
-import Url.Builder exposing (QueryParameter)
-import Url.Parser exposing ((</>), (<?>))
-import Url.Parser.Query
 
 
 
@@ -24,7 +23,7 @@ import Url.Parser.Query
 
 
 type alias SearchArgs =
-    { query : Maybe SearchQuery
+    { query : Maybe String
     , channel : Maybe String
     , show : Maybe String
     , from : Maybe Int
@@ -98,39 +97,60 @@ type alias SearchRoute =
     SearchArgs -> Route
 
 
-searchQueryParser : Url.Url -> Url.Parser.Parser (SearchArgs -> msg) msg
-searchQueryParser url =
+searchQueryParser : AppUrl -> SearchArgs
+searchQueryParser appUrl =
     let
-        rawQuery =
-            Route.SearchQuery.toRawQuery url
+        string : String -> Maybe String
+        string k =
+            case Dict.get k appUrl.queryParameters of
+                Just [ v ] ->
+                    Just v
 
-        maybeQuery =
-            Maybe.andThen (Route.SearchQuery.searchString "query") rawQuery
+                _ ->
+                    Nothing
+
+        int : String -> Maybe Int
+        int k =
+            case Dict.get k appUrl.queryParameters of
+                Just [ v ] ->
+                    String.toInt v
+
+                _ ->
+                    Nothing
     in
-    Url.Parser.map (SearchArgs maybeQuery) <|
-        Url.Parser.top
-            <?> Url.Parser.Query.string "channel"
-            <?> Url.Parser.Query.string "show"
-            <?> Url.Parser.Query.int "from"
-            <?> Url.Parser.Query.int "size"
-            <?> Url.Parser.Query.string "buckets"
-            <?> Url.Parser.Query.string "sort"
-            <?> Url.Parser.Query.map (Maybe.andThen searchTypeFromString) (Url.Parser.Query.string "type")
+    { query = string "query"
+    , channel = string "channel"
+    , show = string "show"
+    , from = int "from"
+    , size = int "size"
+    , buckets = string "buckets"
+    , sort = string "sort"
+    , type_ = Maybe.andThen searchTypeFromString (string "type")
+    }
 
 
-searchArgsToUrl : SearchArgs -> ( List QueryParameter, Maybe ( String, Route.SearchQuery.SearchQuery ) )
+searchArgsToUrl : SearchArgs -> AppUrl.QueryParameters
 searchArgsToUrl args =
-    ( List.filterMap identity
-        [ Maybe.map (Url.Builder.string "channel") args.channel
-        , Maybe.map (Url.Builder.string "show") args.show
-        , Maybe.map (Url.Builder.int "from") args.from
-        , Maybe.map (Url.Builder.int "size") args.size
-        , Maybe.map (Url.Builder.string "buckets") args.buckets
-        , Maybe.map (Url.Builder.string "sort") args.sort
-        , Maybe.map (Url.Builder.string "type") <| Maybe.map searchTypeToString args.type_
-        ]
-    , Maybe.map (Tuple.pair "query") args.query
-    )
+    let
+        string : String -> Maybe String -> Maybe ( String, List String )
+        string k v =
+            Maybe.map (\s -> ( k, [ s ] )) v
+
+        int : String -> Maybe Int -> Maybe ( String, List String )
+        int k v =
+            Maybe.map (\i -> ( k, [ String.fromInt i ] )) v
+    in
+    [ string "channel" args.channel
+    , string "show" args.show
+    , int "from" args.from
+    , int "size" args.size
+    , string "buckets" args.buckets
+    , string "sort" args.sort
+    , string "type" <| Maybe.map searchTypeToString args.type_
+    , string "query" args.query
+    ]
+        |> Maybe.Extra.values
+        |> Dict.fromList
 
 
 type Route
@@ -141,15 +161,28 @@ type Route
     | Flakes SearchArgs
 
 
-parser : Url.Url -> Url.Parser.Parser (Route -> msg) msg
-parser url =
-    Url.Parser.oneOf
-        [ Url.Parser.map Home Url.Parser.top
-        , Url.Parser.map NotFound <| Url.Parser.s "not-found"
-        , Url.Parser.map Packages <| Url.Parser.s "packages" </> searchQueryParser url
-        , Url.Parser.map Options <| Url.Parser.s "options" </> searchQueryParser url
-        , Url.Parser.map Flakes <| Url.Parser.s "flakes" </> searchQueryParser url
-        ]
+fromUrl : Url.Url -> Route
+fromUrl url =
+    let
+        appUrl : AppUrl
+        appUrl =
+            AppUrl.fromUrl url
+    in
+    case appUrl.path of
+        [] ->
+            Home
+
+        [ "packages" ] ->
+            Packages (searchQueryParser appUrl)
+
+        [ "options" ] ->
+            Options (searchQueryParser appUrl)
+
+        [ "flakes" ] ->
+            Flakes (searchQueryParser appUrl)
+
+        _ ->
+            NotFound
 
 
 
@@ -161,15 +194,6 @@ href targetRoute =
     Html.Attributes.href (routeToString targetRoute)
 
 
-fromUrl : Url.Url -> Maybe Route
-fromUrl url =
-    -- The RealWorld spec treats the fragment like a path.
-    -- This makes it *literally* the path, so we can proceed
-    -- with parsing as if it had been a normal path all along.
-    --{ url | path = Maybe.withDefault "" url.fragment, fragment = Nothing }
-    Url.Parser.parse (parser url) url
-
-
 
 -- INTERNAL
 
@@ -177,31 +201,21 @@ fromUrl url =
 routeToString : Route -> String
 routeToString route =
     let
-        buildString ( path, query, searchQuery ) =
-            Route.SearchQuery.absolute path query <|
-                Maybe.withDefault [] <|
-                    Maybe.map List.singleton searchQuery
+        ( path, queryParameters ) =
+            case route of
+                Home ->
+                    ( [], Dict.empty )
+
+                NotFound ->
+                    ( [ "not-found" ], Dict.empty )
+
+                Packages searchArgs ->
+                    ( [ "packages" ], searchArgsToUrl searchArgs )
+
+                Options searchArgs ->
+                    ( [ "options" ], searchArgsToUrl searchArgs )
+
+                Flakes searchArgs ->
+                    ( [ "flakes" ], searchArgsToUrl searchArgs )
     in
-    buildString (routeToPieces route)
-
-
-routeToPieces : Route -> ( List String, List QueryParameter, Maybe ( String, Route.SearchQuery.SearchQuery ) )
-routeToPieces page =
-    case page of
-        Home ->
-            ( [], [], Nothing )
-
-        NotFound ->
-            ( [ "not-found" ], [], Nothing )
-
-        Packages searchArgs ->
-            searchArgsToUrl searchArgs
-                |> (\( query, raw ) -> ( [ "packages" ], query, raw ))
-
-        Options searchArgs ->
-            searchArgsToUrl searchArgs
-                |> (\( query, raw ) -> ( [ "options" ], query, raw ))
-
-        Flakes searchArgs ->
-            searchArgsToUrl searchArgs
-                |> (\( query, raw ) -> ( [ "flakes" ], query, raw ))
+    AppUrl.toString { path = path, queryParameters = queryParameters, fragment = Nothing }

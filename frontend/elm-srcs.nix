@@ -55,6 +55,11 @@
     version = "1.0.1";
   };
 
+  "lydell/elm-app-url" = {
+    sha256 = "1ja6f8slc7366wknbip6iraa3zvkss1svcs2kvw42zpaw24zanv1";
+    version = "1.0.4";
+  };
+
   "pablohirafuji/elm-syntax-highlight" = {
     sha256 = "0yadpqbq9nbmhzaasvcdcn4c1yak1v0xalx4126akvffic531gq9";
     version = "3.6.0";
@@ -116,17 +121,12 @@
   };
 
   "elm-explorations/test" = {
-    sha256 = "1fsd7bajm7qa93r5pn3mdafqh3blpzya601jbs9l238p0hmvh576";
-    version = "1.2.2";
+    sha256 = "15ayrylxancgjbdnmb0x7297vx86mn7206mdzihbf1yr4g6hlq3i";
+    version = "2.2.1";
   };
 
   "elm/random" = {
     sha256 = "138n2455wdjwa657w6sjq18wx2r0k60ibpc4frhbqr50sncxrfdl";
     version = "1.0.0";
-  };
-
-  "elm/svg" = {
-    sha256 = "1cwcj73p61q45wqwgqvrvz3aypjyy3fw732xyxdyj6s256hwkn0k";
-    version = "1.0.1";
   };
 }
