@@ -365,11 +365,10 @@ ensureLoading :
     -> Model a b
     -> Model a b
 ensureLoading nixosChannels model =
-    let
-        channels =
-            List.map .id nixosChannels
-    in
-    if not (String.isEmpty model.query) && List.member model.channel channels then
+    if
+        not (String.isEmpty model.query)
+            && List.any (\channel -> channel.id == model.channel) nixosChannels
+    then
         { model | result = RemoteData.Loading }
 
     else
