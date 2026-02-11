@@ -81,6 +81,7 @@ init :
     -> ( Model, Cmd Msg )
 init flags url navKey =
     let
+        nixosChannels : Search.NixOSChannels
         nixosChannels =
             case Json.Decode.decodeValue decodeNixOSChannels flags.nixosChannels of
                 Ok c ->
@@ -89,15 +90,18 @@ init flags url navKey =
                 Err _ ->
                     { default = "", channels = [] }
 
+        elasticSearch : Search.Options
+        elasticSearch =
+            { mappingSchemaVersion = flags.elasticsearchMappingSchemaVersion
+            , url = flags.elasticsearchUrl
+            , username = flags.elasticsearchUsername
+            , password = flags.elasticsearchPassword
+            }
+
         model : Model
         model =
             { navKey = navKey
-            , elasticsearch =
-                Search.Options
-                    flags.elasticsearchMappingSchemaVersion
-                    flags.elasticsearchUrl
-                    flags.elasticsearchUsername
-                    flags.elasticsearchPassword
+            , elasticsearch = elasticSearch
             , defaultNixOSChannel = nixosChannels.default
             , nixosChannels = nixosChannels.channels
             , page = NotFound
