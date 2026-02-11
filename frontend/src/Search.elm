@@ -984,10 +984,6 @@ viewChannels :
     -> String
     -> List (Html c)
 viewChannels nixosChannels outMsg selectedChannel =
-    let
-        channels =
-            List.map .id nixosChannels
-    in
     List.append
         [ div []
             [ h2 [] [ text "Channel: " ]
@@ -1011,7 +1007,7 @@ viewChannels nixosChannels outMsg selectedChannel =
                 )
             ]
         ]
-        (if List.member selectedChannel channels then
+        (if List.any (\{ id } -> id == selectedChannel) nixosChannels then
             []
 
          else
