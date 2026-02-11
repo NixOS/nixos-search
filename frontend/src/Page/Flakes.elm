@@ -1,6 +1,6 @@
 module Page.Flakes exposing
     ( Model(..)
-    , Msg(..)
+    , Msg
     , init
     , makeRequest
     , update
