@@ -89,6 +89,7 @@ init flags url navKey =
                 Err _ ->
                     { default = "", channels = [] }
 
+        model : Model
         model =
             { navKey = navKey
             , elasticsearch =
