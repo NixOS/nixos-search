@@ -627,8 +627,7 @@ toAggregations bucketsFields =
             ]
     in
     ( "aggs"
-    , Json.Encode.object <|
-        List.append fields allFields
+    , Json.Encode.object <| fields ++ allFields
     )
 
 
@@ -642,36 +641,27 @@ toSortQuery sort field fields =
     , case sort of
         AlphabeticallyAsc ->
             Json.Encode.list Json.Encode.object
-                [ List.append
-                    [ ( field, Json.Encode.string "asc" )
-                    ]
-                    (List.map
+                [ ( field, Json.Encode.string "asc" )
+                    :: List.map
                         (\x -> ( x, Json.Encode.string "asc" ))
                         fields
-                    )
                 ]
 
         AlphabeticallyDesc ->
             Json.Encode.list Json.Encode.object
-                [ List.append
-                    [ ( field, Json.Encode.string "desc" )
-                    ]
-                    (List.map
+                [ ( field, Json.Encode.string "desc" )
+                    :: List.map
                         (\x -> ( x, Json.Encode.string "desc" ))
                         fields
-                    )
                 ]
 
         Relevance ->
             Json.Encode.list Json.Encode.object
-                [ List.append
-                    [ ( "_score", Json.Encode.string "desc" )
-                    , ( field, Json.Encode.string "desc" )
-                    ]
-                    (List.map
+                [ ( "_score", Json.Encode.string "desc" )
+                    :: ( field, Json.Encode.string "desc" )
+                    :: List.map
                         (\x -> ( x, Json.Encode.string "desc" ))
                         fields
-                    )
                 ]
     )
 
