@@ -1,8 +1,7 @@
 # search.nixos.org
 
 This repository contains the scripts and the web application for
-`search.nixos.org`. 
-
+`search.nixos.org`.
 
 ## How this project came to be
 
@@ -16,7 +15,6 @@ to tempting not to try.
 For backend we are using Elasticsearch instance which is kindly sponsored by
 [bonsai.io](https://bonsai.io). On the frontend we are using
 [Elm](https://elm-lang.org).
-
 
 ## How search works?
 
@@ -34,7 +32,6 @@ query that will output only one result item.
 A less important, but providing better user experience. are suggestions for
 writing better search query. Suggesting feature should guide user to write
 better queries which in turn will produce better results.
-
 
 ## Development
 
@@ -119,10 +116,20 @@ Inclusion in the search does not imply endorsement by the Nix project or anyone 
 
 We generally try to include a wide range of flakes that could be of interest to Nix users, but reserve the right to refuse or remove flakes for reasons such as:
 
-* Flakes that do not actually work
-* Malicious packages
-* Flakes with incorrect or incomplete license metadata
-* Lack of relevance
-* Programs that are already part of nixpkgs (we prefer you help maintain them there)
-* Outdated package or packaging
-* Flakes that require `allow-import-from-derivation`
+- Flakes that do not actually work
+- Malicious packages
+- Flakes with incorrect or incomplete license metadata
+- Lack of relevance
+- Programs that are already part of nixpkgs (we prefer you help maintain them there)
+- Outdated package or packaging
+- Flakes that require `allow-import-from-derivation`
+
+## Contributing patches
+
+- Patches are very welcome!
+- You can send a PRs without opening an issue first, but if you're planning significant work it might be good to discuss your ideas beforehand to avoid disappointment later.
+- Reviews by people without write access are welcome.
+- Every PR requires at least one approval by someone (other than the author) with write access. They can either:
+  - approve and merge immediately;
+  - approve and leave feedback - the author can merge after considering the feedback;
+  - add comments without approving.

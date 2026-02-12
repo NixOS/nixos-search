@@ -1,18 +1,30 @@
+# Please keep all sources ordered alphabetically first by type and then by lower-cased 'owner' field (if any)
+
+[[sources]]
+type = "git"
+url = "git+https://codeberg.org/alch_emi/embers-nix-packages.git?ref=main"
+
 [[sources]]
 type = "git"
 url = "git+https://codeberg.org/wolfangaukang/python-trovo?ref=main"
 
-[[sources]]
-type = "git"
-url = "git+https://codeberg.org/wolfangaukang/multifirefox?ref=main"
+# wolfangaukang is no longer in 'maintainers'
+#[[sources]]
+#type = "git"
+#url = "git+https://codeberg.org/wolfangaukang/multifirefox?ref=main"
 
 [[sources]]
 type = "git"
 url = "git+https://github.com/hannesgith/rquickshare?ref=flake"
 
+# missing field 'name'
+#[[sources]]
+#type = "git"
+#url = "git+https://github.com/hannesgith/neohtop?ref=nixify"
+
 [[sources]]
 type = "git"
-url = "git+https://github.com/hannesgith/neohtop?ref=nixify"
+url = "git+https://github.com/raboof/dmake?ref=nix"
 
 [[sources]]
 type = "git"
@@ -28,11 +40,9 @@ owner = "anpandey"
 repo = "numen-nix"
 
 [[sources]]
-# Please open upstream issue when removing:
-# https://github.com/astro/microvm.nix/issues/new
 type = "github"
 owner = "astro"
-repo = "microvm.nix"
+repo = "deadnix"
 
 [[sources]]
 type = "github"
@@ -43,6 +53,11 @@ repo = "atuin"
 type = "github"
 owner = "bobvanderlinden"
 repo = "nixpkgs-ruby"
+
+[[sources]]
+type = "github"
+owner = "bohdantkachenko"
+repo = "chromium-pwa-wmclass-sync"
 
 [[sources]]
 type = "github"
@@ -66,6 +81,16 @@ repo = "nix-atlas"
 
 [[sources]]
 type = "github"
+owner = "divnix"
+repo = "nosys"
+
+[[sources]]
+type = "github"
+owner = "divnix"
+repo = "std"
+
+[[sources]]
+type = "github"
 owner = "edolstra"
 repo = "flake-compat"
 
@@ -78,6 +103,16 @@ repo = "eza"
 type = "github"
 owner = "fort-nix"
 repo = "nix-bitcoin"
+
+[[sources]]
+type = "github"
+owner = "gmodena"
+repo = "nix-flatpak"
+
+[[sources]]
+type = "github"
+owner = "gytis-ivaskevicius"
+repo = "flake-utils-plus"
 
 [[sources]]
 type = "github"
@@ -98,6 +133,11 @@ repo = "flake-parts"
 type = "github"
 owner = "hyprwm"
 repo = "hyprland"
+
+[[sources]]
+type = "github"
+owner = "Infinidoge"
+repo = "nix-minecraft"
 
 [[sources]]
 type = "github"
@@ -229,10 +269,11 @@ type = "github"
 owner = "nix-community"
 repo = "ethereum.nix"
 
-[[sources]]
-type = "github"
-owner = "nix-community"
-repo = "fenix"
+# error: attribute 'outputName' missing
+#[[sources]]
+#type = "github"
+#owner = "nix-community"
+#repo = "fenix"
 
 [[sources]]
 type = "github"
@@ -681,6 +722,56 @@ repo = "zon2nix"
 
 [[sources]]
 type = "github"
+owner = "nix-systems"
+repo = "aarch64-darwin"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "aarch64-linux"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "current-system"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "default"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "default-darwin"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "default-linux"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "flake-outputs"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "riscv64-linux"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "x86_64-darwin"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "x86_64-linux"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
@@ -698,6 +789,16 @@ repo = "kalker"
 type = "github"
 owner = "PrismLauncher"
 repo = "PrismLauncher"
+
+[[sources]]
+type = "github"
+owner = "pyproject-nix"
+repo = "pyproject.nix"
+
+[[sources]]
+type = "github"
+owner = "pyproject-nix"
+repo = "uv2nix"
 
 [[sources]]
 type = "github"
@@ -736,6 +837,11 @@ repo = "Solaar-Flake"
 
 [[sources]]
 type = "github"
+owner = "synalice"
+repo = "kconfq"
+
+[[sources]]
+type = "github"
 owner = "TraceMachina"
 repo = "nativelink"
 
@@ -743,6 +849,16 @@ repo = "nativelink"
 type = "github"
 owner = "utensils"
 repo = "mcp-nixos"
+
+[[sources]]
+type = "github"
+owner = "viperML"
+repo = "wrapper-manager"
+
+[[sources]]
+type = "github"
+owner = "vorburger"
+repo = "bazel-nix"
 
 [[sources]]
 type = "github"
@@ -773,6 +889,11 @@ repo = "zed"
 type = "gitlab"
 owner = "pi-lar"
 repo = "neuropil"
+
+[[sources]]
+type = "sourcehut"
+owner = "~alexdavid"
+repo = "jail.nix"
 
 [[sources]]
 type = "sourcehut"
