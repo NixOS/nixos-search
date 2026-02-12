@@ -81,6 +81,7 @@ init :
     -> ( Model, Cmd Msg )
 init flags url navKey =
     let
+        nixosChannels : Search.NixOSChannels
         nixosChannels =
             case Json.Decode.decodeValue decodeNixOSChannels flags.nixosChannels of
                 Ok c ->
@@ -89,14 +90,18 @@ init flags url navKey =
                 Err _ ->
                     { default = "", channels = [] }
 
+        elasticSearch : Search.Options
+        elasticSearch =
+            { mappingSchemaVersion = flags.elasticsearchMappingSchemaVersion
+            , url = flags.elasticsearchUrl
+            , username = flags.elasticsearchUsername
+            , password = flags.elasticsearchPassword
+            }
+
+        model : Model
         model =
             { navKey = navKey
-            , elasticsearch =
-                Search.Options
-                    flags.elasticsearchMappingSchemaVersion
-                    flags.elasticsearchUrl
-                    flags.elasticsearchUsername
-                    flags.elasticsearchPassword
+            , elasticsearch = elasticSearch
             , defaultNixOSChannel = nixosChannels.default
             , nixosChannels = nixosChannels.channels
             , page = NotFound
@@ -222,77 +227,74 @@ changeRouteTo :
     -> Url.Url
     -> ( Model, Cmd Msg )
 changeRouteTo currentModel url =
-    case Route.fromUrl url of
-        Nothing ->
-            ( { currentModel | page = NotFound }
-            , Cmd.none
-            )
+    let
+        route : Route.Route
+        route =
+            Route.fromUrl url
 
-        Just route ->
+        model =
+            { currentModel | route = route }
+
+        avoidReinit ( newModel, cmd ) =
+            if pageMatch currentModel.page newModel.page then
+                ( model, Cmd.none )
+
+            else
+                ( newModel, cmd )
+    in
+    case route of
+        Route.NotFound ->
+            ( { model | page = NotFound }, Cmd.none )
+
+        Route.Home ->
+            -- Always redirect to /packages until we have something to show
+            -- on the home page
+            ( model, Browser.Navigation.replaceUrl model.navKey "/packages" )
+
+        Route.Packages searchArgs ->
             let
-                model =
-                    { currentModel | route = route }
+                modelPage =
+                    case model.page of
+                        Packages x ->
+                            Just x
 
-                avoidReinit ( newModel, cmd ) =
-                    if pageMatch currentModel.page newModel.page then
-                        ( model, Cmd.none )
-
-                    else
-                        ( newModel, cmd )
+                        _ ->
+                            Nothing
             in
-            case route of
-                Route.NotFound ->
-                    ( { model | page = NotFound }, Cmd.none )
+            Page.Packages.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
+                |> updateWith Packages PackagesMsg model
+                |> avoidReinit
+                |> attemptQuery
 
-                Route.Home ->
-                    -- Always redirect to /packages until we have something to show
-                    -- on the home page
-                    ( model, Browser.Navigation.replaceUrl model.navKey "/packages" )
+        Route.Options searchArgs ->
+            let
+                modelPage =
+                    case model.page of
+                        Options x ->
+                            Just x
 
-                Route.Packages searchArgs ->
-                    let
-                        modelPage =
-                            case model.page of
-                                Packages x ->
-                                    Just x
+                        _ ->
+                            Nothing
+            in
+            Page.Options.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
+                |> updateWith Options OptionsMsg model
+                |> avoidReinit
+                |> attemptQuery
 
-                                _ ->
-                                    Nothing
-                    in
-                    Page.Packages.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
-                        |> updateWith Packages PackagesMsg model
-                        |> avoidReinit
-                        |> attemptQuery
+        Route.Flakes searchArgs ->
+            let
+                modelPage =
+                    case model.page of
+                        Flakes x ->
+                            Just x
 
-                Route.Options searchArgs ->
-                    let
-                        modelPage =
-                            case model.page of
-                                Options x ->
-                                    Just x
-
-                                _ ->
-                                    Nothing
-                    in
-                    Page.Options.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
-                        |> updateWith Options OptionsMsg model
-                        |> avoidReinit
-                        |> attemptQuery
-
-                Route.Flakes searchArgs ->
-                    let
-                        modelPage =
-                            case model.page of
-                                Flakes x ->
-                                    Just x
-
-                                _ ->
-                                    Nothing
-                    in
-                    Page.Flakes.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
-                        |> updateWith Flakes FlakesMsg model
-                        |> avoidReinit
-                        |> attemptQuery
+                        _ ->
+                            Nothing
+            in
+            Page.Flakes.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
+                |> updateWith Flakes FlakesMsg model
+                |> avoidReinit
+                |> attemptQuery
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )

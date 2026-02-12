@@ -17,7 +17,7 @@ toggleList list item =
         List.filter (\x -> x /= item) list
 
     else
-        List.append list [ item ]
+        list ++ [ item ]
 
 
 showHtml : String -> Maybe (List (Html msg))

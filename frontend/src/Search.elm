@@ -87,7 +87,6 @@ import Route
         , allTypes
         , searchTypeToTitle
         )
-import Route.SearchQuery
 import Task
 
 
@@ -303,10 +302,7 @@ init args defaultNixOSChannel nixosChannels maybeModel =
                 |> Maybe.withDefault modelChannel
       , flake = defaultFlakeId
       , query =
-            case
-                args.query
-                    |> Maybe.andThen Route.SearchQuery.searchQueryToString
-            of
+            case args.query of
                 Just q ->
                     q
 
@@ -365,11 +361,10 @@ ensureLoading :
     -> Model a b
     -> Model a b
 ensureLoading nixosChannels model =
-    let
-        channels =
-            List.map .id nixosChannels
-    in
-    if not (String.isEmpty model.query) && List.member model.channel channels then
+    if
+        not (String.isEmpty model.query)
+            && List.any (\channel -> channel.id == model.channel) nixosChannels
+    then
         { model | result = RemoteData.Loading }
 
     else
@@ -558,9 +553,7 @@ createUrl toRoute model =
     Route.routeToString <|
         toRoute
             { channel = Just model.channel
-            , query =
-                justIfNotDefault model.query defaultSearchArgs.query
-                    |> Maybe.map Route.SearchQuery.toSearchQuery
+            , query = justIfNotDefault model.query defaultSearchArgs.query
             , show = model.show
             , from = justIfNotDefault model.from defaultSearchArgs.from
             , size = justIfNotDefault model.size defaultSearchArgs.size
@@ -628,8 +621,7 @@ toAggregations bucketsFields =
             ]
     in
     ( "aggs"
-    , Json.Encode.object <|
-        List.append fields allFields
+    , Json.Encode.object <| fields ++ allFields
     )
 
 
@@ -643,36 +635,27 @@ toSortQuery sort field fields =
     , case sort of
         AlphabeticallyAsc ->
             Json.Encode.list Json.Encode.object
-                [ List.append
-                    [ ( field, Json.Encode.string "asc" )
-                    ]
-                    (List.map
+                [ ( field, Json.Encode.string "asc" )
+                    :: List.map
                         (\x -> ( x, Json.Encode.string "asc" ))
                         fields
-                    )
                 ]
 
         AlphabeticallyDesc ->
             Json.Encode.list Json.Encode.object
-                [ List.append
-                    [ ( field, Json.Encode.string "desc" )
-                    ]
-                    (List.map
+                [ ( field, Json.Encode.string "desc" )
+                    :: List.map
                         (\x -> ( x, Json.Encode.string "desc" ))
                         fields
-                    )
                 ]
 
         Relevance ->
             Json.Encode.list Json.Encode.object
-                [ List.append
-                    [ ( "_score", Json.Encode.string "desc" )
-                    , ( field, Json.Encode.string "desc" )
-                    ]
-                    (List.map
+                [ ( "_score", Json.Encode.string "desc" )
+                    :: ( field, Json.Encode.string "desc" )
+                    :: List.map
                         (\x -> ( x, Json.Encode.string "desc" ))
                         fields
-                    )
                 ]
     )
 
@@ -995,10 +978,6 @@ viewChannels :
     -> String
     -> List (Html c)
 viewChannels nixosChannels outMsg selectedChannel =
-    let
-        channels =
-            List.map .id nixosChannels
-    in
     List.append
         [ div []
             [ h2 [] [ text "Channel: " ]
@@ -1022,7 +1001,7 @@ viewChannels nixosChannels outMsg selectedChannel =
                 )
             ]
         ]
-        (if List.member selectedChannel channels then
+        (if List.any (\{ id } -> id == selectedChannel) nixosChannels then
             []
 
          else
