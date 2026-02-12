@@ -51,7 +51,6 @@ import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
 import List.Extra
-import Maybe
 import Regex
 import Route exposing (SearchType)
 import Search

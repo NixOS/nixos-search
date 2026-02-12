@@ -12,7 +12,7 @@ module Search exposing
     , ResultHitsTotal
     , ResultItem
     , SearchResult
-    , Sort(..)
+    , Sort
     , decodeAggregation
     , decodeNixOSChannels
     , decodeResolvedFlake
