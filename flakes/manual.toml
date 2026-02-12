@@ -41,6 +41,11 @@ repo = "numen-nix"
 
 [[sources]]
 type = "github"
+owner = "astro"
+repo = "deadnix"
+
+[[sources]]
+type = "github"
 owner = "atuinsh"
 repo = "atuin"
 
@@ -48,6 +53,11 @@ repo = "atuin"
 type = "github"
 owner = "bobvanderlinden"
 repo = "nixpkgs-ruby"
+
+[[sources]]
+type = "github"
+owner = "bohdantkachenko"
+repo = "chromium-pwa-wmclass-sync"
 
 [[sources]]
 type = "github"
@@ -225,6 +235,56 @@ repo = "nix-vscode-extensions"
 
 [[sources]]
 type = "github"
+owner = "nix-systems"
+repo = "aarch64-darwin"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "aarch64-linux"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "current-system"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "default"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "default-darwin"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "default-linux"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "flake-outputs"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "riscv64-linux"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "x86_64-darwin"
+
+[[sources]]
+type = "github"
+owner = "nix-systems"
+repo = "x86_64-linux"
+
+[[sources]]
+type = "github"
 owner = "NixOS"
 repo = "hydra"
 
@@ -295,6 +355,11 @@ repo = "Solaar-Flake"
 
 [[sources]]
 type = "github"
+owner = "synalice"
+repo = "kconfq"
+
+[[sources]]
+type = "github"
 owner = "TraceMachina"
 repo = "nativelink"
 
@@ -302,6 +367,11 @@ repo = "nativelink"
 type = "github"
 owner = "utensils"
 repo = "mcp-nixos"
+
+[[sources]]
+type = "github"
+owner = "viperML"
+repo = "wrapper-manager"
 
 [[sources]]
 type = "github"
