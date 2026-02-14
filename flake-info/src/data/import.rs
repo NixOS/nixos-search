@@ -87,6 +87,7 @@ pub enum ModulePath {
 #[serde(untagged)]
 pub enum DocString {
     DocFormat(DocFormat),
+    Literal(Literal),
     String(String),
 }
 
@@ -115,6 +116,20 @@ pub enum Literal {
     LiteralMarkdown(String),
 }
 
+fn render_literal(literal: &Literal) -> String {
+    match literal {
+        Literal::LiteralExpression(s) => s.to_owned(),
+        Literal::LiteralDocBook(db) => db.render_docbook().unwrap_or_else(|e| {
+            warn!("Could not render DocBook content: {}", e);
+            db.to_owned()
+        }),
+        Literal::LiteralMarkdown(md) => md.render_markdown().unwrap_or_else(|e| {
+            warn!("Could not render Markdown content: {}", e);
+            md.to_owned()
+        }),
+    }
+}
+
 impl Serialize for DocString {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -126,6 +141,7 @@ impl Serialize for DocString {
                     warn!("Could not render Markdown content: {}", e);
                     md.to_owned()
                 })),
+            DocString::Literal(literal) => serializer.serialize_str(&render_literal(literal)),
         }
     }
 }
@@ -136,19 +152,7 @@ impl Serialize for DocValue {
         S: Serializer,
     {
         match self {
-            DocValue::Literal(Literal::LiteralExpression(s)) => serializer.serialize_str(&s),
-            DocValue::Literal(Literal::LiteralDocBook(db)) => {
-                serializer.serialize_str(&db.render_docbook().unwrap_or_else(|e| {
-                    warn!("Could not render DocBook content: {}", e);
-                    db.to_owned()
-                }))
-            }
-            DocValue::Literal(Literal::LiteralMarkdown(md)) => {
-                serializer.serialize_str(&md.render_markdown().unwrap_or_else(|e| {
-                    warn!("Could not render Markdown content: {}", e);
-                    md.to_owned()
-                }))
-            }
+            DocValue::Literal(literal) => serializer.serialize_str(&render_literal(literal)),
             DocValue::Value(v) => serializer.serialize_str(&print_value(v)),
         }
     }
