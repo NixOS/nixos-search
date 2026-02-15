@@ -91,20 +91,18 @@ You may need to manually edit `frontend/src/Search.elm` to use the right index.
 
 ## Adding flakes
 
-To add your own flakes to the search index edit [./flakes/manual.toml](./flakes/manual.toml), keeping the alphabetical ordering.
-
-Possible types are `github`, `gitlab`, `sourcehut`, and `git` (which is the fallback for any kind of git repository but requires to set a revision key manually as of now).
+To add flakes to the flake search index, submit a pull request editing [./flakes/flake.nix](./flakes/flake.nix) changing flake inputs
 
 To test whether your flake is compatible with nix flake-info you can try running `flake-info` against it
 
-```
-$ nix run github:nixos/nixos-search#flake-info -- --json flake <your flake handle>
+```console
+nix run github:nixos/nixos-search#flake-info -- --json flake <REPLACE_WITH_THE_FLAKE_INPUT>
 ```
 
 E.g.
 
-```
-$ nix run github:nixos/nixos-search#flake-info -- --json flake git+https://codeberg.org/wolfangaukang/python-trovo?ref=main
+```console
+nix run github:nixos/nixos-search#flake-info -- --json flake git+https://codeberg.org/wolfangaukang/python-trovo?ref=main
 $ nix run github:nixos/nixos-search#flake-info -- --json flake github:CertainLach/fleet
 $ nix run github:nixos/nixos-search#flake-info -- --json flake gitlab:pi-lar/neuropil
 $ nix run github:nixos/nixos-search#flake-info -- --json flake sourcehut:~munksgaard/geomyidae-flake
