@@ -1,21 +1,27 @@
 {
   description = "Code behind search.nixos.org";
 
-  nixConfig.extra-substituters = [ "https://nixos-search.cachix.org" ];
-  nixConfig.extra-trusted-public-keys = [
-    "nixos-search.cachix.org-1:1HV3YF8az4fywnH+pAd+CXFEdpTXtv9WpoivPi+H70o="
-  ];
+  nixConfig = {
+    extra-substituters = [ "https://nixos-search.cachix.org" ];
+    extra-trusted-public-keys = [
+      "nixos-search.cachix.org-1:1HV3YF8az4fywnH+pAd+CXFEdpTXtv9WpoivPi+H70o="
+    ];
+  };
 
-  inputs.nixpkgs.url = "nixpkgs/nixos-unstable";
-  inputs.flake-utils.url = "github:numtide/flake-utils";
-  # https://github.com/nix-community/npmlock2nix/blob/master/nix/sources.json
-  inputs.nixpkgs-npmlock2nix.url = "nixpkgs/c5ed8beb478a8ca035f033f659b60c89500a3034";
-  inputs.npmlock2nix.url = "github:nix-community/npmlock2nix";
-  inputs.npmlock2nix.flake = false;
-  inputs.nixos-infra.url = "github:NixOS/infra";
-  inputs.nixos-infra.flake = false;
-  inputs.treefmt-nix.url = "github:numtide/treefmt-nix";
-  inputs.treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
+  inputs = {
+    nixpkgs.url = "nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
+    # https://github.com/nix-community/npmlock2nix/blob/master/nix/sources.json
+    nixpkgs-npmlock2nix.url = "nixpkgs/c5ed8beb478a8ca035f033f659b60c89500a3034";
+    npmlock2nix.url = "github:nix-community/npmlock2nix";
+    npmlock2nix.flake = false;
+    nixos-infra.url = "github:NixOS/infra";
+    nixos-infra.flake = false;
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
 
   outputs =
     {
@@ -97,59 +103,66 @@
           };
       in
       rec {
-
-        packages.default = packages.flake-info;
-        packages.flake-info = import ./flake-info { inherit pkgs; };
-        packages.frontend = import ./frontend {
-          pkgs = pkgs // {
-            inherit (pkgsNpmlock2nix) npmlock2nix;
+        packages = {
+          default = packages.flake-info;
+          flake-info = import ./flake-info { inherit pkgs; };
+          frontend = import ./frontend {
+            pkgs = pkgs // {
+              inherit (pkgsNpmlock2nix) npmlock2nix;
+            };
+            inherit nixosChannels version;
           };
-          inherit nixosChannels version;
+          nixosChannels = nixosChannelsFile;
         };
-        packages.nixosChannels = nixosChannelsFile;
 
         formatter = treefmt;
 
-        devShells.default = mkDevShell {
-          inputsFrom = [
-            packages.flake-info
-            packages.frontend
-          ];
-          extraPackages = [
-            pkgs.opensearch-cli
-            pkgs.rustfmt
-            pkgs.yarn
-          ];
-          extraShellHook = ''
-            export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
-            export LINK_MANPAGES_PANDOC_FILTER="${packages.flake-info.LINK_MANPAGES_PANDOC_FILTER}";
-            export PATH=$PWD/frontend/node_modules/.bin:$PATH
-          '';
-        };
+        devShells = {
+          default = mkDevShell {
+            inputsFrom = [
+              packages.flake-info
+              packages.frontend
+            ];
+            extraPackages = with pkgs; [
+              opensearch-cli
+              rustfmt
+              rust-analyzer
+              yarn
+            ];
+            extraShellHook = ''
+              export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
+              export LINK_MANPAGES_PANDOC_FILTER="${packages.flake-info.LINK_MANPAGES_PANDOC_FILTER}";
+              export PATH=$PWD/frontend/node_modules/.bin:$PATH
+            '';
+          };
 
-        devShells.flake-info = mkDevShell {
-          inputsFrom = [ packages.flake-info ];
-          extraPackages = [ pkgs.rustfmt ];
-          extraShellHook = ''
-            export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
-            export LINK_MANPAGES_PANDOC_FILTER="${packages.flake-info.LINK_MANPAGES_PANDOC_FILTER}";
-          '';
-        };
+          flake-info = mkDevShell {
+            inputsFrom = [ packages.flake-info ];
+            extraPackages = with pkgs; [
+              rustfmt
+              rust-analyzer
+            ];
+            extraShellHook = ''
+              export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
+              export LINK_MANPAGES_PANDOC_FILTER="${packages.flake-info.LINK_MANPAGES_PANDOC_FILTER}";
+            '';
+          };
 
-        devShells.frontend = mkDevShell {
-          inputsFrom = [ packages.frontend ];
-          extraPackages = [
-            pkgs.rustfmt
-            pkgs.yarn
-          ];
-          extraShellHook = ''
-            export PATH=$PWD/frontend/node_modules/.bin:$PATH
-            rm -rf frontend/node_modules
-            ln -sf ${packages.frontend.node_modules}/node_modules frontend/
-            echo "========================================================"
-            echo "= To develop the frontend run: cd frontend && yarn dev ="
-            echo "========================================================"
-          '';
+          frontend = mkDevShell {
+            inputsFrom = [ packages.frontend ];
+            extraPackages = with pkgs; [
+              rustfmt
+              yarn
+            ];
+            extraShellHook = ''
+              export PATH=$PWD/frontend/node_modules/.bin:$PATH
+              rm -rf frontend/node_modules
+              ln -sf ${packages.frontend.node_modules}/node_modules frontend/
+              echo "========================================================"
+              echo "= To develop the frontend run: cd frontend && yarn dev ="
+              echo "========================================================"
+            '';
+          };
         };
 
         # XXX: for backwards compatibility
@@ -185,7 +198,7 @@
                 ]; # expose :9200 from guest to host
                 memorySize = 1024 * 8; # 8 GB
               };
-              environment.systemPackages = [ pkgs.opensearch-cli ];
+              environment.systemPackages = with pkgs; [ opensearch-cli ];
               networking.firewall.allowedTCPPorts = [ 9200 ];
               services.opensearch = {
                 enable = true;
