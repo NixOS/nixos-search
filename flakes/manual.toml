@@ -217,7 +217,67 @@ repo = "weblate"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "authentik-nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "autofirma-nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "browser-previews"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "buildbot-nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "comma"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "crate2nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "crystal2nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "disko"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "disko-templates"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "dns.nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "dream2nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "emacs-overlay"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "ethereum.nix"
 
 # error: attribute 'outputName' missing
 #[[sources]]
@@ -228,12 +288,447 @@ repo = "autofirma-nix"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "flake-compat"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "flake-firefox-nightly"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "flake-nimble"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "flakelight"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "go-nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "gomod2nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "harmonia"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "haumea"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "home-manager"
 
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "hydra-check"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "impermanence"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "kickstart-nix.nvim"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "lanzaboote"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "linyaps-flake"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "luarocks-nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "manix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "mavenix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "mineflake"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "naersk"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "namaka"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "napalm"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "neovim-nightly-overlay"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nh"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-bundle"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-direnv"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-doom-emacs"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-environments"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-eval-jobs"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-github-actions"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-index"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-index-database"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-init"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-installers"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-ld"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-melt"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-on-droid"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-on-droid-app"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-snapd"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-ts-mode"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix-unit"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nix-vscode-extensions"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix4nvchad"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nix4vscode"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixGL"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixago"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixago-extensions"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixd"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixdoc"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixhelm"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixos-anywhere"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixos-apple-silicon"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixos-facter"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixos-facter-modules"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixos-generators"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixos-vscode-server"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "NixOS-WSL"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixpkgs-lint"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixpkgs-swh"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixpkgs-terraform-providers-bin"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixpkgs-wayland"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixpkgs-xr"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixpkgs.lib"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixt"
+
+[[source]]
+type = "github"
+owner = "nix-community"
+repo = "nixvim"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "noogle"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "NUR"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nur-packages-template"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nurl"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "patsh"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "pip2nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "plasma-manager"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "poetry2nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "preservation"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "queued-build-hook"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "redoxpkgs"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "rnix-parser"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "robotnix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "rustowl-flake"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "srvos"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "steam-fetcher"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "stylix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "talon-nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "templates"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "tree-sitter-nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "trustix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "vscode-nix-ide"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "vulnix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "zephyr-nix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "zon2nix"
 
 [[sources]]
 type = "github"
@@ -304,11 +799,6 @@ repo = "kalker"
 type = "github"
 owner = "PrismLauncher"
 repo = "PrismLauncher"
-
-[[source]]
-type = "github"
-owner = "pta2002"
-repo = "nixvim"
 
 [[sources]]
 type = "github"
