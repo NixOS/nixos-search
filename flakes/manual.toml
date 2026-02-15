@@ -15,6 +15,10 @@ url = "git+https://codeberg.org/wolfangaukang/python-trovo?ref=main"
 
 [[sources]]
 type = "git"
+url = "git+https://git.clan.lol/clan/clan-core"
+
+[[sources]]
+type = "git"
 url = "git+https://github.com/hannesgith/rquickshare?ref=flake"
 
 # missing field 'name'
