@@ -190,6 +190,14 @@ owner = "Mic92"
 repo = "sops-nix"
 
 [[sources]]
+# Please open upstream issue when removing:
+# https://github.com/astro/microvm.nix/issues/new
+# (issue incoming, https://github.com/NixOS/nixos-search/pull/1115)
+type = "github"
+owner = "microvm.nix"
+repo = "microvm.nix"
+
+[[sources]]
 type = "github"
 owner = "mirrexagon"
 repo = "nixpkgs-esp-dev"
