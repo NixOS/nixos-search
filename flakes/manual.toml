@@ -328,12 +328,67 @@ repo = "agenix"
 [[sources]]
 type = "github"
 owner = "snowfallorg"
-repo = "nixos-conf-editor"
+repo = "drift"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "frost"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "icehouse"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "icicle"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "lib"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "nix-data"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "nix-editor"
 
 [[sources]]
 type = "github"
 owner = "snowfallorg"
 repo = "nix-software-center"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "nixos-conf-editor"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "snow"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "templates"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "thaw"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "whats-in-my-store"
 
 [[sources]]
 type = "github"
