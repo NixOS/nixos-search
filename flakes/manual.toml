@@ -288,7 +288,57 @@ repo = "x86_64-linux"
 [[sources]]
 type = "github"
 owner = "NixOS"
+repo = "amis"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "bundlers"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "experimental-nix-installer"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
 repo = "hydra"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "nix"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "nix-mode"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "nixfmt"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "nixops"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "nixos-hardware"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "patchelf"
+
+[[sources]]
+type = "github"
+owner = "NixOS"
+repo = "templates"
 
 [[sources]]
 type = "github"
