@@ -12,7 +12,7 @@ pub mod data;
 pub mod elastic;
 
 pub use commands::get_flake_info;
-use log::trace;
+use log::{trace, warn};
 
 lazy_static! {
     static ref DATADIR: PathBuf =
@@ -28,7 +28,49 @@ pub fn process_flake(
 ) -> Result<(Flake, Vec<Export>)> {
     let mut info = commands::get_flake_info(source.to_flake_ref(), temp_store, extra)?;
     info.source = Some(source.clone());
-    let packages = commands::get_derivation_info(source.to_flake_ref(), *kind, temp_store, extra)?;
+    let fetch =
+        |kind| commands::get_derivation_info(source.to_flake_ref(), kind, temp_store, extra);
+    let packages = match fetch(*kind) {
+        Ok(packages) => packages,
+        Err(err) => {
+            if matches!(kind, Kind::All) {
+                warn!(
+                    "Failed to extract options for {} ({}). Retrying with packages+apps only.",
+                    source.to_flake_ref(),
+                    err
+                );
+                let packages_result = fetch(Kind::Package);
+                let apps_result = fetch(Kind::App);
+                match (packages_result, apps_result) {
+                    (Ok(mut packages), Ok(mut apps)) => {
+                        packages.append(&mut apps);
+                        packages
+                    }
+                    (Ok(packages), Err(apps_err)) => {
+                        warn!(
+                            "Failed to extract apps for {} ({}). Continuing with packages only.",
+                            source.to_flake_ref(),
+                            apps_err
+                        );
+                        packages
+                    }
+                    (Err(packages_err), Ok(apps)) => {
+                        warn!(
+                            "Failed to extract packages for {} ({}). Continuing with apps only.",
+                            source.to_flake_ref(),
+                            packages_err
+                        );
+                        apps
+                    }
+                    (Err(packages_err), Err(_apps_err)) => {
+                        return Err(packages_err);
+                    }
+                }
+            } else {
+                return Err(err);
+            }
+        }
+    };
 
     if with_gc {
         commands::run_garbage_collection()?;
