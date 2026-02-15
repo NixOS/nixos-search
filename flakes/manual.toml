@@ -81,6 +81,91 @@ repo = "nyx"
 
 [[sources]]
 type = "github"
+owner = "DeterminateSystems"
+repo = "bonk"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "cpiotools"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "determinate"
+
+# [[sources]]
+# type = "github"
+# owner = "DeterminateSystems"
+# repo = "dhcpv6macd"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "fh"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "flake-checker"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "flake-iter"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "flake-schemas"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "flake-templates"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "magic-nix-cache"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "nix-config-parser"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "nix-installer"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "nix-netboot-serve"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "nix-src"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "nixos-vault-service"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "update-flake-lock"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "zpool-auto-expand-partitions"
+
+[[sources]]
+type = "github"
 owner = "dgollings"
 repo = "nix-atlas"
 
