@@ -366,6 +366,11 @@ owner = "TraceMachina"
 repo = "nativelink"
 
 [[sources]]
+type = "sourcehut"
+owner = "tweag"
+repo = "opam-nix"
+
+[[sources]]
 type = "github"
 owner = "utensils"
 repo = "mcp-nixos"
