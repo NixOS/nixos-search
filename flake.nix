@@ -126,6 +126,7 @@
             extraPackages = with pkgs; [
               opensearch-cli
               rustfmt
+              rust-analyzer
               yarn
             ];
             extraShellHook = ''
@@ -137,7 +138,10 @@
 
           flake-info = mkDevShell {
             inputsFrom = [ packages.flake-info ];
-            extraPackages = with pkgs; [ rustfmt ];
+            extraPackages = with pkgs; [
+              rustfmt
+              rust-analyzer
+            ];
             extraShellHook = ''
               export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
               export LINK_MANPAGES_PANDOC_FILTER="${packages.flake-info.LINK_MANPAGES_PANDOC_FILTER}";
