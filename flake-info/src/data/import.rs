@@ -514,4 +514,29 @@ mod tests {
                 if text == "```nix\n{ foo = 1; }\n```"
         ));
     }
+
+    fn ser_value<T: serde::Serialize>(v: &T) -> serde_json::Value {
+        serde_json::to_value(v).unwrap()
+    }
+
+    #[test]
+    fn test_serialize_literal_expression_and_docstring() {
+        let ds = DocString::Literal(Literal::LiteralExpression("pkgs.foo".to_string()));
+        let got = ser_value(&ds);
+        assert_eq!(got, serde_json::json!("pkgs.foo"));
+
+        let dv = DocValue::Literal(Literal::LiteralExpression("pkgs.bar".to_string()));
+        let got2 = ser_value(&dv);
+        assert_eq!(got2, serde_json::json!("pkgs.bar"));
+    }
+
+    #[test]
+    fn test_serialize_docvalue_value_uses_print_value() {
+        let v = serde_json::json!({ "hello": "world" });
+        let dv = DocValue::Value(v.clone());
+        let serialized = ser_value(&dv);
+
+        let expected = serde_json::json!(print_value(&v));
+        assert_eq!(serialized, expected);
+    }
 }
