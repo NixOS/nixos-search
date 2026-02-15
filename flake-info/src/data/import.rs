@@ -87,6 +87,7 @@ pub enum ModulePath {
 #[serde(untagged)]
 pub enum DocString {
     DocFormat(DocFormat),
+    Literal(Literal),
     String(String),
 }
 
@@ -115,6 +116,20 @@ pub enum Literal {
     LiteralMarkdown(String),
 }
 
+fn render_literal(literal: &Literal) -> String {
+    match literal {
+        Literal::LiteralExpression(s) => s.to_owned(),
+        Literal::LiteralDocBook(db) => db.render_docbook().unwrap_or_else(|e| {
+            warn!("Could not render DocBook content: {}", e);
+            db.to_owned()
+        }),
+        Literal::LiteralMarkdown(md) => md.render_markdown().unwrap_or_else(|e| {
+            warn!("Could not render Markdown content: {}", e);
+            md.to_owned()
+        }),
+    }
+}
+
 impl Serialize for DocString {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -126,6 +141,7 @@ impl Serialize for DocString {
                     warn!("Could not render Markdown content: {}", e);
                     md.to_owned()
                 })),
+            DocString::Literal(literal) => serializer.serialize_str(&render_literal(literal)),
         }
     }
 }
@@ -136,19 +152,7 @@ impl Serialize for DocValue {
         S: Serializer,
     {
         match self {
-            DocValue::Literal(Literal::LiteralExpression(s)) => serializer.serialize_str(&s),
-            DocValue::Literal(Literal::LiteralDocBook(db)) => {
-                serializer.serialize_str(&db.render_docbook().unwrap_or_else(|e| {
-                    warn!("Could not render DocBook content: {}", e);
-                    db.to_owned()
-                }))
-            }
-            DocValue::Literal(Literal::LiteralMarkdown(md)) => {
-                serializer.serialize_str(&md.render_markdown().unwrap_or_else(|e| {
-                    warn!("Could not render Markdown content: {}", e);
-                    md.to_owned()
-                }))
-            }
+            DocValue::Literal(literal) => serializer.serialize_str(&render_literal(literal)),
             DocValue::Value(v) => serializer.serialize_str(&print_value(v)),
         }
     }
@@ -486,5 +490,53 @@ mod tests {
     }
 
     #[test]
-    fn test_option_parsing() {}
+    fn test_option_parsing() {
+        let json = r#"
+        {
+            "declarations": [],
+            "name": "test-option",
+            "description": { "_type": "literalMD", "text": "Hello **world**" },
+            "default": { "_type": "literalMD", "text": "```nix\n{ foo = 1; }\n```" }
+        }
+        "#;
+
+        let option: NixOption = serde_json::from_str(json).unwrap();
+
+        assert!(matches!(
+            option.description,
+            Some(DocString::Literal(Literal::LiteralMarkdown(ref text)))
+                if text == "Hello **world**"
+        ));
+
+        assert!(matches!(
+            option.default,
+            Some(DocValue::Literal(Literal::LiteralMarkdown(ref text)))
+                if text == "```nix\n{ foo = 1; }\n```"
+        ));
+    }
+
+    fn ser_value<T: serde::Serialize>(v: &T) -> serde_json::Value {
+        serde_json::to_value(v).unwrap()
+    }
+
+    #[test]
+    fn test_serialize_literal_expression_and_docstring() {
+        let ds = DocString::Literal(Literal::LiteralExpression("pkgs.foo".to_string()));
+        let got = ser_value(&ds);
+        assert_eq!(got, serde_json::json!("pkgs.foo"));
+
+        let dv = DocValue::Literal(Literal::LiteralExpression("pkgs.bar".to_string()));
+        let got2 = ser_value(&dv);
+        assert_eq!(got2, serde_json::json!("pkgs.bar"));
+    }
+
+    #[test]
+    fn test_serialize_docvalue_value_uses_print_value() {
+        let v = serde_json::json!({ "hello": "world" });
+        let dv = DocValue::Value(v.clone());
+        let serialized = ser_value(&dv);
+
+        let expected = serde_json::json!(print_value(&v));
+        assert_eq!(serialized, expected);
+    }
 }
