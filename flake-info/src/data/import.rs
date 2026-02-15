@@ -490,5 +490,28 @@ mod tests {
     }
 
     #[test]
-    fn test_option_parsing() {}
+    fn test_option_parsing() {
+        let json = r#"
+        {
+            "declarations": [],
+            "name": "test-option",
+            "description": { "_type": "literalMD", "text": "Hello **world**" },
+            "default": { "_type": "literalMD", "text": "```nix\n{ foo = 1; }\n```" }
+        }
+        "#;
+
+        let option: NixOption = serde_json::from_str(json).unwrap();
+
+        assert!(matches!(
+            option.description,
+            Some(DocString::Literal(Literal::LiteralMarkdown(ref text)))
+                if text == "Hello **world**"
+        ));
+
+        assert!(matches!(
+            option.default,
+            Some(DocValue::Literal(Literal::LiteralMarkdown(ref text)))
+                if text == "```nix\n{ foo = 1; }\n```"
+        ));
+    }
 }
