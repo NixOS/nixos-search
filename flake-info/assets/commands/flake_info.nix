@@ -146,8 +146,7 @@ let
             # can allow it.
             modulesPath = "${nixpkgs.path}/nixos/modules";
 
-            # Provide commonly-used arguments so module evaluation that expects them
-            # (e.g. `pkgs` or `config`) does not fail during CI evaluation.
+            # Provide commonly-used pkgs so module evaluation that expects it do not fail during CI evaluation
             pkgs = nixpkgs;
           };
         }).options;
