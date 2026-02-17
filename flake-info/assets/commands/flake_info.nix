@@ -149,7 +149,6 @@ let
             # Provide commonly-used arguments so module evaluation that expects them
             # (e.g. `pkgs` or `config`) does not fail during CI evaluation.
             pkgs = nixpkgs;
-            config = { };
           };
         }).options;
 
