@@ -145,6 +145,10 @@ let
             # this is done to import *profiles* which do not declare any options, so we
             # can allow it.
             modulesPath = "${nixpkgs.path}/nixos/modules";
+
+            # Provide commonly-used arguments so module evaluation that expects them
+            # (e.g. `pkgs` or `config`) does not fail during CI evaluation.
+            pkgs = nixpkgs;
           };
         }).options;
 
