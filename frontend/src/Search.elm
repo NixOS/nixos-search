@@ -103,6 +103,7 @@ type alias Model a b =
     , showSort : Bool
     , showInstallDetails : Details
     , searchType : Route.SearchType
+    , redirectedChannel : Maybe String
     }
 
 
@@ -296,10 +297,23 @@ init args defaultNixOSChannel nixosChannels maybeModel =
 
         modelChannel =
             getField .channel defaultNixOSChannel
-    in
-    ( { channel =
+
+        requestedChannel =
             args.channel
                 |> Maybe.withDefault modelChannel
+
+        isValidChannel ch =
+            List.any (\c -> c.id == ch) nixosChannels
+
+        ( validChannel, redirected ) =
+            if isValidChannel requestedChannel then
+                ( requestedChannel, Nothing )
+
+            else
+                ( defaultNixOSChannel, args.channel )
+    in
+    ( { channel = validChannel
+      , redirectedChannel = redirected
       , flake = defaultFlakeId
       , query =
             case args.query of
@@ -466,6 +480,7 @@ update toRoute navKey msg model nixosChannels =
         ChannelChange channel ->
             { model
                 | channel = channel
+                , redirectedChannel = Nothing
                 , show = Nothing
                 , buckets = Nothing
                 , from = 0
@@ -750,10 +765,21 @@ view { categoryName } title nixosChannels model viewSuccess viewBuckets outMsg s
                 []
             )
         )
-        [ h1 [] title
-        , viewSearchInput nixosChannels outMsg categoryName (Just model.channel) model.query
-        , viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searchBuckets
-        ]
+        ([ h1 [] title
+         , viewSearchInput nixosChannels outMsg categoryName (Just model.channel) model.query
+         ]
+            ++ (case model.redirectedChannel of
+                    Just oldChannel ->
+                        [ p [ class "alert alert-info" ]
+                            [ text <| "Channel \"" ++ oldChannel ++ "\" is no longer available. Showing results for \"" ++ model.channel ++ "\" instead."
+                            ]
+                        ]
+
+                    Nothing ->
+                        []
+               )
+            ++ [ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searchBuckets ]
+        )
 
 
 viewFlakes :
