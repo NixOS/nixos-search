@@ -35,6 +35,10 @@ type = "git"
 url = "git+https://github.com/TamtamHero/fw-fanctrl?ref=packaging/nix"
 
 [[sources]]
+type = "git"
+url = "git+https://github.com/xddxdd/nix-cachyos-kernel?ref=release"
+
+[[sources]]
 type = "github"
 owner = "abathur"
 repo = "resholve"
