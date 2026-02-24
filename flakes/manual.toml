@@ -247,6 +247,11 @@ repo = "home-manager"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "nixvim"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nix-vscode-extensions"
 
 [[sources]]
@@ -318,11 +323,6 @@ repo = "kalker"
 type = "github"
 owner = "PrismLauncher"
 repo = "PrismLauncher"
-
-[[source]]
-type = "github"
-owner = "pta2002"
-repo = "nixvim"
 
 [[sources]]
 type = "github"
