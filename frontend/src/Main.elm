@@ -377,7 +377,7 @@ view model =
                     "NixOS Search - Options" ++ maybeQuery m.query
 
                 Flakes m ->
-                    "NixOS Search - Flakes (Experimental)" ++ maybeFlakeQuery m
+                    "NixOS Search - 3rd-party Flakes" ++ maybeFlakeQuery m
 
                 _ ->
                     "NixOS Search"
@@ -463,7 +463,7 @@ viewNavigation route =
             (viewNavigationItem route)
             [ ( Route.Packages searchArgs, text "Packages" )
             , ( Route.Options searchArgs, text "NixOS options" )
-            , ( Route.Flakes searchArgs, span [] [ text "Flakes", sup [] [ span [ class "label label-info" ] [ small [] [ text "Experimental" ] ] ] ] )
+            , ( Route.Flakes searchArgs, text "3rd-party Flakes" )
             ]
         ++ [ li [] [ a [ href "https://wiki.nixos.org" ] [ text "NixOS Wiki" ] ] ]
 
