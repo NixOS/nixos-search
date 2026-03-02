@@ -40,6 +40,11 @@ url = "git+https://github.com/xddxdd/nix-cachyos-kernel?ref=release"
 
 [[sources]]
 type = "github"
+owner = "4JX"
+repo = "L5P-Keyboard-RGB"
+
+[[sources]]
+type = "github"
 owner = "abathur"
 repo = "resholve"
 
