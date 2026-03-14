@@ -480,6 +480,11 @@ owner = "pi-lar"
 repo = "neuropil"
 
 [[sources]]
+type = "gitlab"
+owner = "simple-nixos-mailserver"
+repo = "nixos-mailserver"
+
+[[sources]]
 type = "sourcehut"
 owner = "~alexdavid"
 repo = "jail.nix"
