@@ -472,6 +472,11 @@ repo = "serokell.nix"
 
 [[sources]]
 type = "github"
+owner = "serokell"
+repo = "stack-to-nix"
+
+[[sources]]
+type = "github"
 owner = "snowfallorg"
 repo = "drift"
 
