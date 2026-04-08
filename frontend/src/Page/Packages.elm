@@ -307,14 +307,9 @@ viewBuckets bucketsAsString result =
             selectedBucket.teams
         |> viewBucket
             "Platforms"
-            (result.aggregations.package_platforms.buckets |> sortBuckets |> filterPlatformsBucket)
+            (result.aggregations.package_platforms.buckets |> sortBuckets)
             (createBucketsMsg .platforms (\s v -> { s | platforms = v }))
             selectedBucket.platforms
-
-
-filterPlatformsBucket : List { a | key : String } -> List { a | key : String }
-filterPlatformsBucket =
-    List.filter (\a -> List.member a.key platforms)
 
 
 viewSuccess :
@@ -1034,11 +1029,11 @@ makeRequestBody query from size maybeBuckets sort =
         "package"
         "package_attr_name"
         [ "package_pversion" ]
-        [ "package_attr_set"
-        , "package_license_set"
-        , "package_maintainers_set"
-        , "package_teams_set"
-        , "package_platforms"
+        [ { field = "package_attr_set", size = 20, include = Nothing }
+        , { field = "package_license_set", size = 20, include = Nothing }
+        , { field = "package_maintainers_set", size = 20, include = Nothing }
+        , { field = "package_teams_set", size = 20, include = Nothing }
+        , { field = "package_platforms", size = 20, include = Just platforms }
         ]
         filterByBuckets
         "package_attr_name"
