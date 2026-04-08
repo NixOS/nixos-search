@@ -20,6 +20,7 @@ pkgs.rustPlatform.buildRustPackage rec {
     ]
     ++ lib.optional pkgs.stdenv.isDarwin [
       libiconv
+      darwin.apple_sdk.frameworks.Security
     ];
 
   checkInputs = with pkgs; [ pandoc ];
