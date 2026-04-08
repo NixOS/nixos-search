@@ -346,6 +346,11 @@ repo = "agenix"
 
 [[sources]]
 type = "github"
+owner = "sincorchetes"
+repo = "nixos-flake-hardware-profiles"
+
+[[sources]]
+type = "github"
 owner = "snowfallorg"
 repo = "drift"
 
