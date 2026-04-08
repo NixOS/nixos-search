@@ -432,6 +432,11 @@ repo = "agenix"
 
 [[sources]]
 type = "github"
+owner = "serokell"
+repo = "deploy-rs"
+
+[[sources]]
+type = "github"
 owner = "snowfallorg"
 repo = "drift"
 
