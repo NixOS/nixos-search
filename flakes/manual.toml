@@ -497,6 +497,11 @@ repo = "upload-daemon"
 
 [[sources]]
 type = "github"
+owner = "serokell"
+repo = "vault-secrets"
+
+[[sources]]
+type = "github"
 owner = "snowfallorg"
 repo = "drift"
 
