@@ -467,6 +467,11 @@ repo = "nix-templates"
 
 [[sources]]
 type = "github"
+owner = "serokell"
+repo = "serokell.nix"
+
+[[sources]]
+type = "github"
 owner = "snowfallorg"
 repo = "drift"
 
