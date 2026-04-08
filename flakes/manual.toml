@@ -447,6 +447,11 @@ repo = "haskell-nix-weeder"
 
 [[sources]]
 type = "github"
+owner = "serokell"
+repo = "mix-to-nix"
+
+[[sources]]
+type = "github"
 owner = "snowfallorg"
 repo = "drift"
 
