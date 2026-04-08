@@ -437,6 +437,11 @@ repo = "deploy-rs"
 
 [[sources]]
 type = "github"
+owner = "serokell"
+repo = "gemini-infra"
+
+[[sources]]
+type = "github"
 owner = "snowfallorg"
 repo = "drift"
 
