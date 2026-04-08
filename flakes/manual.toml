@@ -457,6 +457,11 @@ repo = "nix-npm-buildpackage"
 
 [[sources]]
 type = "github"
+owner = "serokell"
+repo = "nix-pandoc"
+
+[[sources]]
+type = "github"
 owner = "snowfallorg"
 repo = "drift"
 
