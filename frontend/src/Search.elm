@@ -13,6 +13,7 @@ module Search exposing
     , ResultItem
     , SearchResult
     , Sort
+    , Terms
     , decodeAggregation
     , decodeNixOSChannels
     , decodeResolvedFlake
@@ -597,46 +598,64 @@ sortBy =
     ]
 
 
+type alias Terms =
+    { field : String
+    , size : Int
+    , include : Maybe (List String)
+    }
+
+
 toAggregations :
-    List String
+    List Terms
     -> ( String, Json.Encode.Value )
-toAggregations bucketsFields =
+toAggregations terms =
     let
-        fields =
+        aggs =
             List.map
-                (\field ->
-                    ( field
+                (\term ->
+                    ( term.field
                     , Json.Encode.object
                         [ ( "terms"
                           , Json.Encode.object
-                                [ ( "field"
-                                  , Json.Encode.string field
-                                  )
-                                , ( "size"
-                                  , Json.Encode.int 20
-                                  )
-                                ]
+                                ([ ( "field"
+                                   , Json.Encode.string term.field
+                                   )
+                                 , ( "size"
+                                   , Json.Encode.int term.size
+                                   )
+                                 ]
+                                    ++ (case term.include of
+                                            Just include ->
+                                                [ ( "include"
+                                                  , Json.Encode.list Json.Encode.string include
+                                                  )
+                                                ]
+
+                                            Nothing ->
+                                                []
+                                       )
+                                )
                           )
                         ]
                     )
                 )
-                bucketsFields
+                terms
 
-        allFields =
+        allAggs =
             [ ( "all"
               , Json.Encode.object
                     [ ( "global"
                       , Json.Encode.object []
                       )
                     , ( "aggregations"
-                      , Json.Encode.object fields
+                      , Json.Encode.object aggs
                       )
                     ]
               )
             ]
     in
     ( "aggs"
-    , Json.Encode.object <| fields ++ allFields
+    , Json.Encode.object <| aggs ++ allAggs
     )
 
 
@@ -1316,12 +1335,12 @@ makeRequestBody :
     -> String
     -> String
     -> List String
-    -> List String
+    -> List Terms
     -> List ( String, Json.Encode.Value )
     -> String
     -> List ( String, Float )
     -> Http.Body
-makeRequestBody query from sizeRaw sort type_ sortField otherSortFields bucketsFields filterByBuckets mainField fields =
+makeRequestBody query from sizeRaw sort type_ sortField otherSortFields terms filterByBuckets mainField fields =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -1346,7 +1365,7 @@ makeRequestBody query from sizeRaw sort type_ sortField otherSortFields bucketsF
               , Json.Encode.int size
               )
             , toSortQuery sort sortField otherSortFields
-            , toAggregations bucketsFields
+            , toAggregations terms
             , ( "query"
               , Json.Encode.object
                     [ ( "bool"
