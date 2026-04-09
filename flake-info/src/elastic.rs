@@ -162,6 +162,14 @@ lazy_static! {
                 "option_default": {"type": "text"},
                 "option_example": {"type": "text"},
                 "option_source": {"type": "keyword"},
+                // Modular service fields
+                "service_package": {
+                    "type": "keyword",
+                    "fields": {
+                        "edge": {"type": "text", "analyzer": "edge"}
+                    },
+                },
+                "service_module": {"type": "keyword"},
             }
         },
         "settings": {

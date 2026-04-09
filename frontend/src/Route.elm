@@ -37,12 +37,15 @@ type alias SearchArgs =
 type SearchType
     = OptionSearch
     | PackageSearch
+    | ModularServiceSearch
 
 
 
 -- | FlakeSearch
 
 
+-- Sub-navigation inside the 3rd-party Flakes page. Modular services are
+-- nixpkgs-specific and do not appear as a flake sub-tab.
 allTypes : List SearchType
 allTypes =
     [ PackageSearch, OptionSearch ]
@@ -56,6 +59,9 @@ searchTypeFromString string =
 
         "packages" ->
             Just PackageSearch
+
+        "modular-services" ->
+            Just ModularServiceSearch
 
         -- "flakes" ->
         --     Just FlakeSearch
@@ -72,6 +78,9 @@ searchTypeToString stype =
         PackageSearch ->
             "packages"
 
+        ModularServiceSearch ->
+            "modular-services"
+
 
 
 -- FlakeSearch ->
@@ -86,6 +95,9 @@ searchTypeToTitle stype =
 
         PackageSearch ->
             "Packages"
+
+        ModularServiceSearch ->
+            "Modular Services"
 
 
 
@@ -159,6 +171,7 @@ type Route
     | Packages SearchArgs
     | Options SearchArgs
     | Flakes SearchArgs
+    | ModularServices SearchArgs
 
 
 fromUrl : Url.Url -> Route
@@ -180,6 +193,9 @@ fromUrl url =
 
         [ "flakes" ] ->
             Flakes (searchQueryParser appUrl)
+
+        [ "modular-services" ] ->
+            ModularServices (searchQueryParser appUrl)
 
         _ ->
             NotFound
@@ -217,5 +233,8 @@ routeToString route =
 
                 Flakes searchArgs ->
                     ( [ "flakes" ], searchArgsToUrl searchArgs )
+
+                ModularServices searchArgs ->
+                    ( [ "modular-services" ], searchArgsToUrl searchArgs )
     in
     AppUrl.toString { path = path, queryParameters = queryParameters, fragment = Nothing }

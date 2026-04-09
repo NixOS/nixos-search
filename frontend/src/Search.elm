@@ -922,13 +922,23 @@ viewNoResults :
     -> Html c
 viewNoResults categoryName query =
     div [ class "search-no-results" ]
-        [ h2 [] [ text <| "No " ++ categoryName ++ " found!" ]
-        , text "You might want to "
-        , Html.a [ href "https://github.com/NixOS/nixpkgs/blob/master/pkgs/README.md#quick-start-to-adding-a-package" ] [ text "add a package" ]
-        , text " or "
-        , Html.a [ href ("https://github.com/NixOS/nixpkgs/issues?q=" ++ query) ] [ text "search nixpkgs issues" ]
-        , text "."
-        ]
+        ([ h2 [] [ text <| "No " ++ categoryName ++ " found!" ]
+         ]
+            ++ (if categoryName == "modular services" then
+                    [ text "Not all packages provide modular services. You might want to "
+                    , Html.a [ href ("https://github.com/NixOS/nixpkgs/issues?q=" ++ query) ] [ text "search nixpkgs issues" ]
+                    , text "."
+                    ]
+
+                else
+                    [ text "You might want to "
+                    , Html.a [ href "https://github.com/NixOS/nixpkgs/blob/master/pkgs/README.md#quick-start-to-adding-a-package" ] [ text "add a package" ]
+                    , text " or "
+                    , Html.a [ href ("https://github.com/NixOS/nixpkgs/issues?q=" ++ query) ] [ text "search nixpkgs issues" ]
+                    , text "."
+                    ]
+               )
+        )
 
 
 closeButton : Html a
