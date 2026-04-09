@@ -71,6 +71,14 @@ pub struct NixOption {
 
     /// If defined in a flake, contains defining flake and optionally a module
     pub flake: Option<ModulePath>,
+
+    /// For modular service options: the package attrname providing this service
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub service_package: Option<String>,
+
+    /// For modular service options: the module name (e.g. "default")
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub service_module: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -186,6 +194,7 @@ pub enum NixpkgsEntry {
         programs: Vec<String>,
     },
     Option(NixOption),
+    Service(NixOption),
 }
 
 /// Most information about packages in nixpkgs is contained in the meta key
@@ -238,6 +247,7 @@ arg_enum! {
         App,
         Package,
         Option,
+        Service,
         All,
     }
 }
@@ -248,6 +258,7 @@ impl AsRef<str> for Kind {
             Kind::App => "apps",
             Kind::Package => "packages",
             Kind::Option => "options",
+            Kind::Service => "services",
             Kind::All => "all",
         }
     }

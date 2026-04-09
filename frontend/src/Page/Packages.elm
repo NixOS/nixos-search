@@ -852,6 +852,13 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                     ]
                                 ]
                     , programs
+                    , div []
+                        [ Html.h4 [] [ text "Modular Services" ]
+                        , Html.p []
+                            [ a [ href ("/modular-services?channel=" ++ channel ++ "&query=" ++ item.source.pname) ]
+                                [ text "Search modular services" ]
+                            ]
+                        ]
                     , maintainersTeamsAndPlatforms
                     ]
                 ]

@@ -178,7 +178,7 @@ let
         in
         opt
         // {
-          entry_type = "option";
+          entry_type = extraAttrs.entry_type or "option";
         }
         // applyOnAttr "default" substFunction
         // applyOnAttr "example" substFunction # (_: { __type = "function"; })
@@ -199,6 +199,25 @@ let
     map (cleanUpOption extraAttrs) (
       lib.filter (x: x.visible && !x.internal && lib.head x.loc != "_module") opts
     );
+
+  # Parses the angle-bracket prefix from modular service option names to extract
+  # service_package and service_module, strips the prefix, and tags as entry_type = "service".
+  parseServiceOption = opt:
+    let
+      # Match: <imports = [ pkgs.PKG.services.MODULE ]>.OPTNAME
+      # Group 1: package attrname, group 2: module name, group 3: remaining option path
+      m = builtins.match ".*imports.*pkgs\\.([^.]+)\\.services\\.([^ ]+).*>\\.(.*)" opt.name;
+    in
+    if m != null then
+      opt // {
+        entry_type = "service";
+        name = builtins.elemAt m 2;
+        service_package = builtins.elemAt m 0;
+        service_module = builtins.elemAt m 1;
+      }
+    else
+      # Fallback: keep as-is but still tag as service
+      opt // { entry_type = "service"; };
 
   readFlakeOptions =
     let
@@ -373,6 +392,31 @@ let
       }
     ) { } list;
 
+  # nixpkgs-specific, doesn't use the flake argument
+  nixpkgsBaseModules = import <nixpkgs/nixos/modules/module-list.nix> ++ [
+    <nixpkgs/nixos/modules/virtualisation/qemu-vm.nix>
+    { nixpkgs.hostPlatform = "x86_64-linux"; }
+  ];
+
+  # Evaluate the base NixOS modules to discover documentation.nixos.extraModules,
+  # which includes modular service options (see NixOS/nixpkgs#modular-services).
+  nixpkgsBaseEval = lib.evalModules {
+    modules = nixpkgsBaseModules ++ [
+      ({ ... }: { _module.check = false; })
+    ];
+    specialArgs = {
+      modulesPath = "${nixpkgs.path}/nixos/modules";
+      pkgs = nixpkgs;
+    };
+  };
+
+  nixpkgsExtraModules = nixpkgsBaseEval.config.documentation.nixos.extraModules or [];
+
+  # Evaluate base + extra modules together (extra modules depend on base option types).
+  # Then partition: options whose name starts with "<" come from modular services.
+  nixpkgsAllOpts = readNixOSOptions { module = nixpkgsBaseModules ++ nixpkgsExtraModules; };
+  isServiceOption = opt: lib.hasPrefix "<" opt.name;
+
 in
 
 rec {
@@ -382,11 +426,12 @@ rec {
   options = readFlakeOptions;
   all = packages ++ apps ++ options;
 
-  # nixpkgs-specific, doesn't use the flake argument
-  nixos-options = readNixOSOptions {
-    module = import <nixpkgs/nixos/modules/module-list.nix> ++ [
-      <nixpkgs/nixos/modules/virtualisation/qemu-vm.nix>
-      { nixpkgs.hostPlatform = "x86_64-linux"; }
-    ];
-  };
+  nixos-options = builtins.filter (opt: !(isServiceOption opt)) nixpkgsAllOpts;
+
+  nixos-services =
+    let
+      parsed = map parseServiceOption (builtins.filter isServiceOption nixpkgsAllOpts);
+    in
+    # Filter out top-level submodule container entries (no service_package means regex didn't match)
+    builtins.filter (opt: opt ? service_package) parsed;
 }
