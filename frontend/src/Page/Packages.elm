@@ -853,37 +853,25 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                     ]
                                 ]
                     , programs
+                    , maintainersTeamsAndPlatforms
                     , if List.isEmpty item.source.modularServices then
                         text ""
 
                       else
                         div []
-                            [ Html.h4 [] [ text "Modular Services" ]
-                            , Html.p []
-                                [ text "This package provides "
-                                , text
-                                    (if List.length item.source.modularServices == 1 then
-                                        "a modular service: "
-
-                                     else
-                                        "modular services: "
+                            [ h4 [] [ text "Modular Services" ]
+                            , ul []
+                                (List.map
+                                    (\mod_ ->
+                                        li []
+                                            [ a
+                                                [ href ("/modular-services?channel=" ++ channel ++ "&query=" ++ item.source.attr_name) ]
+                                                [ code [] [ text ("pkgs." ++ item.source.attr_name ++ ".services." ++ mod_) ] ]
+                                            ]
                                     )
-                                , Html.span []
-                                    (List.intersperse (text ", ")
-                                        (List.map
-                                            (\mod_ ->
-                                                code [] [ text ("pkgs." ++ item.source.attr_name ++ ".services." ++ mod_) ]
-                                            )
-                                            item.source.modularServices
-                                        )
-                                    )
-                                , text ". "
-                                , a [ href ("/modular-services?channel=" ++ channel ++ "&query=" ++ item.source.attr_name) ]
-                                    [ text "Browse its options" ]
-                                , text "."
-                                ]
+                                    item.source.modularServices
+                                )
                             ]
-                    , maintainersTeamsAndPlatforms
                     ]
                 ]
 
