@@ -42,10 +42,10 @@ type SearchType
 
 
 -- | FlakeSearch
-
-
 -- Sub-navigation inside the 3rd-party Flakes page. Modular services are
 -- nixpkgs-specific and do not appear as a flake sub-tab.
+
+
 allTypes : List SearchType
 allTypes =
     [ PackageSearch, OptionSearch ]
