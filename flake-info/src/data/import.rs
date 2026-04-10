@@ -71,6 +71,19 @@ pub struct NixOption {
 
     /// If defined in a flake, contains defining flake and optionally a module
     pub flake: Option<ModulePath>,
+
+    /// For modular service options: the canonical package attrname providing this service
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub service_package: Option<String>,
+
+    /// For modular service options: the module name (e.g. "default")
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub service_module: Option<String>,
+
+    /// For modular service options: all packages that expose this same service
+    /// module (e.g. ["php", "php82", "php83", "php84", "php85"]).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub service_packages: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -184,8 +197,10 @@ pub enum NixpkgsEntry {
         attribute: String,
         package: Package,
         programs: Vec<String>,
+        modular_services: Vec<String>,
     },
     Option(NixOption),
+    Service(NixOption),
 }
 
 /// Most information about packages in nixpkgs is contained in the meta key
@@ -238,6 +253,7 @@ arg_enum! {
         App,
         Package,
         Option,
+        ModularService,
         All,
     }
 }
@@ -248,6 +264,7 @@ impl AsRef<str> for Kind {
             Kind::App => "apps",
             Kind::Package => "packages",
             Kind::Option => "options",
+            Kind::ModularService => "services",
             Kind::All => "all",
         }
     }
@@ -459,6 +476,7 @@ mod tests {
                 attribute,
                 package,
                 programs: Vec::new(),
+                modular_services: Vec::new(),
             })
             .collect();
     }
