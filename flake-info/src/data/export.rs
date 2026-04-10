@@ -85,6 +85,8 @@ pub enum Derivation {
         package_system: String,
         package_homepage: Vec<String>,
         package_position: Option<String>,
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        package_modular_services: Vec<String>,
     },
     #[serde(rename = "app")]
     App {
@@ -190,6 +192,7 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                     package_system: String::new(),
                     package_homepage: Vec::new(),
                     package_position: None,
+                    package_modular_services: Vec::new(),
                 }
             }
             import::FlakeEntry::App {
@@ -217,6 +220,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                 attribute,
                 package,
                 programs,
+                modular_services,
             } => {
                 let package_attr_set: Vec<_> = attribute.split(".").collect();
                 let package_attr_set: String = (if package_attr_set.len() > 1 {
@@ -313,6 +317,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                         .homepage
                         .map_or(Default::default(), OneOrMany::into_list),
                     package_position: position,
+                    package_modular_services: modular_services,
                 }
             }
             import::NixpkgsEntry::Option(option) => option.try_into()?,

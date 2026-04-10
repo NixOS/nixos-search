@@ -91,6 +91,7 @@ type alias ResultItemSource =
     , flakeName : Maybe String
     , flakeDescription : Maybe String
     , flakeUrl : Maybe ( String, String )
+    , modularServices : List String
     }
 
 
@@ -852,13 +853,36 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                     ]
                                 ]
                     , programs
-                    , div []
-                        [ Html.h4 [] [ text "Modular Services" ]
-                        , Html.p []
-                            [ a [ href ("/modular-services?channel=" ++ channel ++ "&query=" ++ item.source.pname) ]
-                                [ text "Search modular services" ]
+                    , if List.isEmpty item.source.modularServices then
+                        text ""
+
+                      else
+                        div []
+                            [ Html.h4 [] [ text "Modular Services" ]
+                            , Html.p []
+                                [ text "This package provides "
+                                , text
+                                    (if List.length item.source.modularServices == 1 then
+                                        "a modular service: "
+
+                                     else
+                                        "modular services: "
+                                    )
+                                , Html.span []
+                                    (List.intersperse (text ", ")
+                                        (List.map
+                                            (\mod_ ->
+                                                code [] [ text ("pkgs." ++ item.source.attr_name ++ ".services." ++ mod_) ]
+                                            )
+                                            item.source.modularServices
+                                        )
+                                    )
+                                , text ". "
+                                , a [ href ("/modular-services?channel=" ++ channel ++ "&query=" ++ item.source.attr_name) ]
+                                    [ text "Browse its options" ]
+                                , text "."
+                                ]
                             ]
-                        ]
                     , maintainersTeamsAndPlatforms
                     ]
                 ]
@@ -1101,6 +1125,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "flake_name" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_description" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_resolved" (Json.Decode.map Just decodeResolvedFlake) Nothing
+        |> Json.Decode.Pipeline.optional "package_modular_services" (Json.Decode.list Json.Decode.string) []
 
 
 type alias ResolvedFlake =

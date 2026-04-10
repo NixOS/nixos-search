@@ -426,6 +426,7 @@ makeRequestBody query from size sort =
         [ ( "option_name", 6.0 )
         , ( "option_description", 1.0 )
         , ( "service_package", 3.0 )
+        , ( "service_packages", 3.0 )
         ]
 
 

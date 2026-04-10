@@ -197,6 +197,7 @@ pub enum NixpkgsEntry {
         attribute: String,
         package: Package,
         programs: Vec<String>,
+        modular_services: Vec<String>,
     },
     Option(NixOption),
     Service(NixOption),
