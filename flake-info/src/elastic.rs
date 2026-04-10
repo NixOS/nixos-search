@@ -170,6 +170,12 @@ lazy_static! {
                     },
                 },
                 "service_module": {"type": "keyword"},
+                "service_packages": {
+                    "type": "keyword",
+                    "fields": {
+                        "edge": {"type": "text", "analyzer": "edge"}
+                    },
+                },
             }
         },
         "settings": {

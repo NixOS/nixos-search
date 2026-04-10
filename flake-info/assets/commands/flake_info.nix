@@ -219,6 +219,34 @@ let
       # Fallback: keep as-is but still tag as service
       opt // { entry_type = "service"; };
 
+  # Deduplicate service options that share the same underlying module. When
+  # several packages re-export the same service module (e.g. php, php82..php85
+  # all point to the same pkgs/development/interpreters/php/service.nix), we
+  # end up with identical option entries differing only by service_package.
+  # Group by (declarations, parsed name) and keep a single entry per group,
+  # with a canonical service_package and the full list in service_packages.
+  deduplicateServices = opts:
+    let
+      keyOf = opt: builtins.toJSON [ (opt.declarations or []) (opt.name or "") (opt.service_module or "") ];
+      addToGroup = acc: opt:
+        let k = keyOf opt;
+        in acc // { ${k} = (acc.${k} or []) ++ [ opt ]; };
+      grouped = lib.foldl' addToGroup { } opts;
+      mergeGroup = entries:
+        let
+          # Sort packages alphabetically; the shortest/unversioned name (e.g.
+          # "php") naturally sorts before versioned variants ("php82").
+          packages = lib.sort (a: b: a < b) (
+            lib.unique (map (e: e.service_package or "") entries)
+          );
+        in
+        (builtins.head entries) // {
+          service_package = builtins.head packages;
+          service_packages = packages;
+        };
+    in
+    lib.mapAttrsToList (_: mergeGroup) grouped;
+
   readFlakeOptions =
     let
       nixosModulesOpts = builtins.concatLists (
@@ -461,7 +489,8 @@ rec {
   nixos-services =
     let
       parsed = map parseServiceOption (builtins.filter isServiceOption nixpkgsAllOpts);
+      # Filter out top-level submodule container entries (no service_package means regex didn't match)
+      real = builtins.filter (opt: opt ? service_package) parsed;
     in
-    # Filter out top-level submodule container entries (no service_package means regex didn't match)
-    builtins.filter (opt: opt ? service_package) parsed;
+    deduplicateServices real;
 }

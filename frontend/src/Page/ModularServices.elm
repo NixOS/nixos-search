@@ -80,6 +80,7 @@ type alias ResultItemSource =
     -- service metadata
     , servicePackage : Maybe String
     , serviceModule : Maybe String
+    , servicePackages : List String
     }
 
 
@@ -220,18 +221,33 @@ viewResultItem nixosChannels channel show item =
                                         )
                                     |> Maybe.withDefault []
                                )
-                            ++ (item.source.servicePackage
-                                    |> Maybe.map
-                                        (\pkg ->
-                                            [ div [] [ text "Provided by package" ]
-                                            , div []
-                                                [ a
-                                                    [ href ("/packages?channel=" ++ channel ++ "&query=" ++ pkg ++ "&show=" ++ pkg) ]
-                                                    [ code [] [ text pkg ] ]
-                                                ]
-                                            ]
-                                        )
-                                    |> Maybe.withDefault []
+                            ++ (let
+                                    pkgLink pkg =
+                                        a
+                                            [ href ("/packages?channel=" ++ channel ++ "&query=" ++ pkg ++ "&show=" ++ pkg) ]
+                                            [ code [] [ text pkg ] ]
+                                in
+                                case item.source.servicePackages of
+                                    [] ->
+                                        item.source.servicePackage
+                                            |> Maybe.map
+                                                (\pkg ->
+                                                    [ div [] [ text "Provided by package" ]
+                                                    , div [] [ pkgLink pkg ]
+                                                    ]
+                                                )
+                                            |> Maybe.withDefault []
+
+                                    [ single ] ->
+                                        [ div [] [ text "Provided by package" ]
+                                        , div [] [ pkgLink single ]
+                                        ]
+
+                                    many ->
+                                        [ div [] [ text "Provided by packages" ]
+                                        , div []
+                                            (List.intersperse (text ", ") (List.map pkgLink many))
+                                        ]
                                )
                             ++ (item.source.description
                                     |> Maybe.andThen Utils.showHtml
@@ -434,6 +450,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "flake_resolved" (Json.Decode.map Just decodeResolvedFlake) Nothing
         |> Json.Decode.Pipeline.optional "service_package" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "service_module" (Json.Decode.map Just Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "service_packages" (Json.Decode.list Json.Decode.string) []
 
 
 decodeResultAggregations : Json.Decode.Decoder ResultAggregations
