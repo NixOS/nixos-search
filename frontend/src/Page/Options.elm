@@ -206,7 +206,7 @@ viewResultItem nixosChannels channel show item =
                 Just <|
                     div [ Html.Attributes.map SearchMsg Search.trapClick ] <|
                         [ div [] [ text "Name" ]
-                        , div [] [ asPreCode item.source.name ]
+                        , div [] [ viewOptionNameDetail channel item.source.name ]
                         ]
                             ++ (item.source.description
                                     |> Maybe.andThen Utils.showHtml
@@ -357,6 +357,68 @@ findSource nixosChannels channel source =
 
         _ ->
             [ span [] [ text "Not Found" ] ]
+
+
+{-| Render an option name as dot-separated segments where each non-final
+segment links to an options search filtered by that prefix. This lets users
+click-navigate into option groups (e.g. `programs.firefox`) from the
+expanded option details.
+-}
+viewOptionNameDetail : String -> String -> Html Msg
+viewOptionNameDetail channel name =
+    let
+        parts =
+            String.split "." name
+
+        lastIndex =
+            List.length parts - 1
+
+        groupRoute prefix =
+            Route.Options
+                { query = Just prefix
+                , channel = Just channel
+                , show = Nothing
+                , from = Nothing
+                , size = Nothing
+                , buckets = Nothing
+                , sort = Nothing
+                , type_ = Nothing
+                }
+
+        renderSegment idx segment =
+            let
+                prefix =
+                    parts
+                        |> List.take (idx + 1)
+                        |> String.join "."
+
+                separator =
+                    if idx < lastIndex then
+                        [ text "." ]
+
+                    else
+                        []
+            in
+            if idx == lastIndex then
+                text segment :: separator
+
+            else
+                a
+                    [ Route.href (groupRoute prefix)
+                    , class "option-name-group"
+                    ]
+                    [ text segment ]
+                    :: separator
+    in
+    div []
+        [ pre []
+            [ code [ class "code-block" ]
+                (parts
+                    |> List.indexedMap renderSegment
+                    |> List.concat
+                )
+            ]
+        ]
 
 
 
