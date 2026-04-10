@@ -84,10 +84,12 @@ import List.Extra
 import RemoteData
 import Route
     exposing
-        ( SearchType
+        ( OptionSource
+        , SearchType
         , allTypes
         , searchTypeToTitle
         )
+import Set exposing (Set)
 import Task
 
 
@@ -105,6 +107,7 @@ type alias Model a b =
     , showInstallDetails : Details
     , searchType : Route.SearchType
     , redirectedChannel : Maybe String
+    , excludedOptionSources : Set String
     }
 
 
@@ -342,6 +345,7 @@ init args defaultNixOSChannel nixosChannels maybeModel =
       , searchType =
             args.type_
                 |> Maybe.withDefault defaultSearchArgs.searchType
+      , excludedOptionSources = args.excludedOptionSources
       }
         |> ensureLoading nixosChannels
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
@@ -410,6 +414,7 @@ type Msg a b
     | ShowDetails String
     | ChangePage Int
     | ShowInstallDetails Details
+    | SetOptionSourceIncluded OptionSource Bool
 
 
 type Details
@@ -540,6 +545,26 @@ update toRoute navKey msg model nixosChannels =
             { model | showInstallDetails = details }
                 |> pushUrl toRoute navKey
 
+        SetOptionSourceIncluded source included ->
+            let
+                id =
+                    Route.optionSourceId source
+
+                excluded =
+                    if included then
+                        Set.remove id model.excludedOptionSources
+
+                    else
+                        Set.insert id model.excludedOptionSources
+            in
+            { model
+                | excludedOptionSources = excluded
+                , show = Nothing
+                , from = 0
+            }
+                |> ensureLoading nixosChannels
+                |> pushUrl toRoute navKey
+
 
 pushUrl :
     Route.SearchRoute
@@ -578,6 +603,7 @@ createUrl toRoute model =
                 justIfNotDefault model.sort defaultSearchArgs.sort
                     |> Maybe.map toSortId
             , type_ = justIfNotDefault model.searchType defaultSearchArgs.searchType
+            , excludedOptionSources = model.excludedOptionSources
             }
 
 
@@ -684,11 +710,15 @@ toSortQuery sort field fields =
                 ]
 
         Relevance ->
+            -- When scores tie, fall back to ascending alphabetical order on the
+            -- main field (and any secondary fields). Using asc gives a natural
+            -- reading order, e.g. `php-fpm.package` before `php-fpm.settings`,
+            -- instead of the reverse order you get with desc.
             Json.Encode.list Json.Encode.object
                 [ ( "_score", Json.Encode.string "desc" )
-                    :: ( field, Json.Encode.string "desc" )
+                    :: ( field, Json.Encode.string "asc" )
                     :: List.map
-                        (\x -> ( x, Json.Encode.string "desc" ))
+                        (\x -> ( x, Json.Encode.string "asc" ))
                         fields
                 ]
     )
@@ -909,8 +939,7 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
             in
             div []
                 [ div [ class "alert alert-error" ]
-                    [ ul [ class "search-sidebar" ] searchBuckets
-                    , h4 [] [ text errorTitle ]
+                    [ h4 [] [ text errorTitle ]
                     , text errorMessage
                     ]
                 ]
@@ -922,13 +951,23 @@ viewNoResults :
     -> Html c
 viewNoResults categoryName query =
     div [ class "search-no-results" ]
-        [ h2 [] [ text <| "No " ++ categoryName ++ " found!" ]
-        , text "You might want to "
-        , Html.a [ href "https://github.com/NixOS/nixpkgs/blob/master/pkgs/README.md#quick-start-to-adding-a-package" ] [ text "add a package" ]
-        , text " or "
-        , Html.a [ href ("https://github.com/NixOS/nixpkgs/issues?q=" ++ query) ] [ text "search nixpkgs issues" ]
-        , text "."
-        ]
+        ([ h2 [] [ text <| "No " ++ categoryName ++ " found!" ]
+         ]
+            ++ (if categoryName == "modular services" then
+                    [ text "Not all packages provide modular services. You might want to "
+                    , Html.a [ href ("https://github.com/NixOS/nixpkgs/issues?q=" ++ query) ] [ text "search nixpkgs issues" ]
+                    , text "."
+                    ]
+
+                else
+                    [ text "You might want to "
+                    , Html.a [ href "https://github.com/NixOS/nixpkgs/blob/master/pkgs/README.md#quick-start-to-adding-a-package" ] [ text "add a package" ]
+                    , text " or "
+                    , Html.a [ href ("https://github.com/NixOS/nixpkgs/issues?q=" ++ query) ] [ text "search nixpkgs issues" ]
+                    , text "."
+                    ]
+               )
+        )
 
 
 closeButton : Html a
@@ -1270,20 +1309,31 @@ type alias Options =
 
 
 filterByType :
-    String
+    List String
     -> List ( String, Json.Encode.Value )
-filterByType type_ =
-    [ ( "term"
-      , Json.Encode.object
-            [ ( "type"
+filterByType types =
+    case types of
+        [ type_ ] ->
+            [ ( "term"
               , Json.Encode.object
-                    [ ( "value", Json.Encode.string type_ )
-                    , ( "_name", Json.Encode.string <| "filter_" ++ type_ ++ "s" )
+                    [ ( "type"
+                      , Json.Encode.object
+                            [ ( "value", Json.Encode.string type_ )
+                            , ( "_name", Json.Encode.string <| "filter_" ++ type_ ++ "s" )
+                            ]
+                      )
                     ]
               )
             ]
-      )
-    ]
+
+        _ ->
+            [ ( "terms"
+              , Json.Encode.object
+                    [ ( "type", Json.Encode.list Json.Encode.string types )
+                    , ( "_name", Json.Encode.string <| "filter_" ++ String.join "_" types )
+                    ]
+              )
+            ]
 
 
 searchFields :
@@ -1332,7 +1382,7 @@ makeRequestBody :
     -> Int
     -> Int
     -> Sort
-    -> String
+    -> List String
     -> String
     -> List String
     -> List Terms
@@ -1340,7 +1390,7 @@ makeRequestBody :
     -> String
     -> List ( String, Float )
     -> Http.Body
-makeRequestBody query from sizeRaw sort type_ sortField otherSortFields terms filterByBuckets mainField fields =
+makeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets mainField fields =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -1373,7 +1423,7 @@ makeRequestBody query from sizeRaw sort type_ sortField otherSortFields terms fi
                             [ ( "filter"
                               , Json.Encode.list Json.Encode.object
                                     (List.append
-                                        [ filterByType type_ ]
+                                        [ filterByType types ]
                                         (if List.isEmpty filterByBuckets then
                                             []
 

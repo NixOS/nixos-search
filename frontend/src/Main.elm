@@ -39,6 +39,7 @@ import Search
         , decodeNixOSChannels
         , defaultFlakeId
         )
+import Set
 import Shortcut
 import Task
 import Url
@@ -176,7 +177,25 @@ attemptQuery (( model, _ ) as pair) =
 
         Options searchModel ->
             if Search.shouldLoad searchModel then
-                submitQuery OptionsMsg Page.Options.makeRequest { searchModel | searchType = OptionSearch }
+                Tuple.mapSecond
+                    (\cmd ->
+                        Cmd.batch
+                            [ cmd
+                            , Cmd.map OptionsMsg <|
+                                Page.Options.makeRequest
+                                    model.elasticsearch
+                                    model.nixosChannels
+                                    OptionSearch
+                                    searchModel.channel
+                                    searchModel.query
+                                    searchModel.from
+                                    searchModel.size
+                                    searchModel.buckets
+                                    searchModel.sort
+                                    searchModel.excludedOptionSources
+                            ]
+                    )
+                    pair
 
             else
                 noEffects pair
@@ -456,13 +475,13 @@ viewNavigation route =
                         args
 
                     _ ->
-                        Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+                        Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Set.empty
     in
     li [] [ a [ href "https://nixos.org" ] [ text "Back to nixos.org" ] ]
         :: List.map
             (viewNavigationItem route)
             [ ( Route.Packages searchArgs, text "Packages" )
-            , ( Route.Options searchArgs, text "NixOS options" )
+            , ( Route.Options searchArgs, text "Options" )
             , ( Route.Flakes searchArgs, text "3rd-party Flakes" )
             ]
         ++ [ li [] [ a [ href "https://wiki.nixos.org" ] [ text "NixOS Wiki" ] ] ]
