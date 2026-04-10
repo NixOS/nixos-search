@@ -476,6 +476,7 @@ mod tests {
                 attribute,
                 package,
                 programs: Vec::new(),
+                modular_services: Vec::new(),
             })
             .collect();
     }
