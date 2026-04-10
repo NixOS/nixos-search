@@ -121,6 +121,8 @@ pub enum Derivation {
         option_flake: Option<ModulePath>,
         service_package: Option<String>,
         service_module: Option<String>,
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        service_packages: Vec<String>,
     },
 }
 
@@ -325,6 +327,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     flake,
                     service_package,
                     service_module,
+                    service_packages,
                 } = option;
                 Derivation::Service {
                     option_source: declarations.get(0).map(Clone::clone),
@@ -336,6 +339,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     option_type,
                     service_package,
                     service_module,
+                    service_packages,
                 }
             }
         })
