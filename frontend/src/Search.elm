@@ -684,11 +684,15 @@ toSortQuery sort field fields =
                 ]
 
         Relevance ->
+            -- When scores tie, fall back to ascending alphabetical order on the
+            -- main field (and any secondary fields). Using asc gives a natural
+            -- reading order, e.g. `php-fpm.package` before `php-fpm.settings`,
+            -- instead of the reverse order you get with desc.
             Json.Encode.list Json.Encode.object
                 [ ( "_score", Json.Encode.string "desc" )
-                    :: ( field, Json.Encode.string "desc" )
+                    :: ( field, Json.Encode.string "asc" )
                     :: List.map
-                        (\x -> ( x, Json.Encode.string "desc" ))
+                        (\x -> ( x, Json.Encode.string "asc" ))
                         fields
                 ]
     )
