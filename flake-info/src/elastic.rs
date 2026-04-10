@@ -144,6 +144,9 @@ lazy_static! {
                 "package_homepage": {
                     "type": "keyword"
                 },
+                "package_modular_services": {
+                    "type": "keyword"
+                },
                 // Options fields
                 "option_name": {
                     "type": "keyword",

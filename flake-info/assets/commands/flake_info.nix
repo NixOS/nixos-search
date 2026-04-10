@@ -493,4 +493,11 @@ rec {
       real = builtins.filter (opt: opt ? service_package) parsed;
     in
     deduplicateServices real;
+
+  # Map from package attribute name to the list of modular service module
+  # names it exposes. Used by the packages importer to annotate each package
+  # with its modular services so the UI can link to them only when they exist.
+  nixos-package-services = lib.foldl' (acc: { pkgName, moduleName, ... }:
+    acc // { ${pkgName} = (acc.${pkgName} or [ ]) ++ [ moduleName ]; }
+  ) { } discoverServiceModules;
 }
