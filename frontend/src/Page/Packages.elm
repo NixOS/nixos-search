@@ -865,7 +865,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                     (\mod_ ->
                                         li []
                                             [ a
-                                                [ href ("/modular-services?channel=" ++ channel ++ "&query=" ++ item.source.attr_name) ]
+                                                [ href ("/options?channel=" ++ channel ++ "&query=" ++ item.source.attr_name ++ "&include_nixos_options=0") ]
                                                 [ code [] [ text ("pkgs." ++ item.source.attr_name ++ ".services." ++ mod_) ] ]
                                             ]
                                     )
@@ -1045,7 +1045,7 @@ makeRequestBody query from size maybeBuckets sort =
         from
         size
         sort
-        "package"
+        [ "package" ]
         "package_attr_name"
         [ "package_pversion" ]
         [ { field = "package_attr_set", size = 20, include = Nothing }

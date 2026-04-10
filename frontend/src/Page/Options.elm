@@ -22,6 +22,8 @@ import Html
         , a
         , code
         , div
+        , input
+        , label
         , li
         , pre
         , span
@@ -31,14 +33,17 @@ import Html
         )
 import Html.Attributes
     exposing
-        ( class
+        ( checked
+        , class
         , classList
         , href
         , target
+        , type_
         )
 import Html.Events
     exposing
-        ( onClick
+        ( onCheck
+        , onClick
         )
 import Http exposing (Body)
 import Json.Decode
@@ -76,6 +81,11 @@ type alias ResultItemSource =
     , flakeName : Maybe String
     , flakeDescription : Maybe String
     , flakeUrl : Maybe String
+
+    -- modular service metadata (populated only for `service` docs)
+    , servicePackage : Maybe String
+    , serviceModule : Maybe String
+    , servicePackages : List String
     }
 
 
@@ -152,7 +162,22 @@ view nixosChannels model =
         viewSuccess
         viewBuckets
         SearchMsg
-        []
+        [ viewIncludeNixosOptionsToggle model.includeNixosOptions ]
+
+
+viewIncludeNixosOptionsToggle : Bool -> Html Msg
+viewIncludeNixosOptionsToggle isChecked =
+    li [ class "search-include-nixos-options" ]
+        [ label []
+            [ input
+                [ type_ "checkbox"
+                , checked isChecked
+                , onCheck (\b -> SearchMsg (Search.IncludeNixosOptionsChange b))
+                ]
+                []
+            , text " Show NixOS-specific options"
+            ]
+        ]
 
 
 viewBuckets :
@@ -201,13 +226,64 @@ viewResultItem nixosChannels channel show item =
                         (pre [] [ code [ class "code-block" ] [ text value ] ])
                 ]
 
+        -- Modular-service options are stored with just the short option name
+        -- (e.g. "package") and carry `service_module` metadata. Render the
+        -- full `system.services.<name>.<module>.<option>` path so users can
+        -- see how the option is addressed in configuration.
+        isService =
+            item.source.serviceModule /= Nothing || item.source.servicePackage /= Nothing
+
+        displayName =
+            case item.source.serviceModule of
+                Just mod_ ->
+                    "system.services.<name>." ++ mod_ ++ "." ++ item.source.name
+
+                Nothing ->
+                    if isService then
+                        "system.services.<name>." ++ item.source.name
+
+                    else
+                        item.source.name
+
         showDetails =
             if Just item.source.name == show then
                 Just <|
                     div [ Html.Attributes.map SearchMsg Search.trapClick ] <|
                         [ div [] [ text "Name" ]
-                        , div [] [ asPreCode item.source.name ]
+                        , div [] [ asPreCode displayName ]
                         ]
+                            ++ (if isService then
+                                    let
+                                        pkgLink pkg =
+                                            a
+                                                [ href ("/packages?channel=" ++ channel ++ "&query=" ++ pkg ++ "&show=" ++ pkg) ]
+                                                [ code [] [ text pkg ] ]
+                                    in
+                                    case item.source.servicePackages of
+                                        [] ->
+                                            item.source.servicePackage
+                                                |> Maybe.map
+                                                    (\pkg ->
+                                                        [ div [] [ text "Provided by package" ]
+                                                        , div [] [ pkgLink pkg ]
+                                                        ]
+                                                    )
+                                                |> Maybe.withDefault []
+
+                                        [ single ] ->
+                                            [ div [] [ text "Provided by package" ]
+                                            , div [] [ pkgLink single ]
+                                            ]
+
+                                        many ->
+                                            [ div [] [ text "Provided by packages" ]
+                                            , div []
+                                                (List.intersperse (text ", ") (List.map pkgLink many))
+                                            ]
+
+                                else
+                                    []
+                               )
                             ++ (item.source.description
                                     |> Maybe.andThen Utils.showHtml
                                     |> Maybe.map
@@ -274,6 +350,7 @@ viewResultItem nixosChannels channel show item =
 
                 _ ->
                     []
+
     in
     li
         [ class "option"
@@ -291,7 +368,7 @@ viewResultItem nixosChannels channel show item =
                                 [ onClick toggle
                                 , href ""
                                 ]
-                                [ text item.source.name ]
+                                [ text displayName ]
                             ]
                         ]
                     )
@@ -373,10 +450,19 @@ makeRequest :
     -> Int
     -> Maybe String
     -> Search.Sort
+    -> Bool
     -> Cmd Msg
-makeRequest options nixosChannels _ channel query from size _ sort =
+makeRequest options nixosChannels _ channel query from size _ sort includeNixosOptions =
+    let
+        types =
+            if includeNixosOptions then
+                [ "option", "service" ]
+
+            else
+                [ "service" ]
+    in
     Search.makeRequest
-        (makeRequestBody query from size sort)
+        (makeRequestBody types query from size sort)
         nixosChannels
         channel
         decodeResultItemSource
@@ -387,14 +473,14 @@ makeRequest options nixosChannels _ channel query from size _ sort =
         |> Cmd.map SearchMsg
 
 
-makeRequestBody : String -> Int -> Int -> Search.Sort -> Body
-makeRequestBody query from size sort =
+makeRequestBody : List String -> String -> Int -> Int -> Search.Sort -> Body
+makeRequestBody types query from size sort =
     Search.makeRequestBody
         (String.trim query)
         from
         size
         sort
-        "option"
+        types
         "option_name"
         []
         []
@@ -403,6 +489,8 @@ makeRequestBody query from size sort =
         [ ( "option_name", 6.0 )
         , ( "option_description", 1.0 )
         , ( "flake_name", 0.5 )
+        , ( "service_package", 3.0 )
+        , ( "service_packages", 3.0 )
         ]
 
 
@@ -425,6 +513,9 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "flake_name" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_description" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_resolved" (Json.Decode.map Just decodeResolvedFlake) Nothing
+        |> Json.Decode.Pipeline.optional "service_package" (Json.Decode.map Just Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "service_module" (Json.Decode.map Just Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "service_packages" (Json.Decode.list Json.Decode.string) []
 
 
 decodeResultAggregations : Json.Decode.Decoder ResultAggregations

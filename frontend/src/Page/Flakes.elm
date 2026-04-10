@@ -84,17 +84,6 @@ init searchArgs defaultNixOSChannel nixosChannels model =
                         _ ->
                             Nothing
 
-        ModularServiceSearch ->
-            -- Flakes don't have modular services; fall back to packages
-            Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg) <|
-                Page.Packages.init searchArgs defaultNixOSChannel nixosChannels <|
-                    case model of
-                        Just (PackagesModel model_) ->
-                            Just model_
-
-                        _ ->
-                            Nothing
-
 
 
 -- UPDATE
@@ -246,29 +235,12 @@ makeRequest options nixosChannels searchType index_id query from size maybeBucke
                 |> Cmd.map Page.Options.SearchMsg
                 |> Cmd.map OptionsMsg
 
-        ModularServiceSearch ->
-            -- Flakes don't have modular services; fall back to packages
-            Search.makeRequest
-                (makeRequestBody PackageSearch query from size maybeBuckets sort)
-                nixosChannels
-                index_id
-                Page.Packages.decodeResultItemSource
-                Page.Packages.decodeResultAggregations
-                options
-                Search.QueryResponse
-                (Just "query-packages")
-                |> Cmd.map Page.Packages.SearchMsg
-                |> Cmd.map PackagesMsg
-
 
 makeRequestBody : SearchType -> String -> Int -> Int -> Maybe String -> Search.Sort -> Body
 makeRequestBody searchType query from size maybeBuckets sort =
     case searchType of
         OptionSearch ->
-            Page.Options.makeRequestBody query from size sort
+            Page.Options.makeRequestBody [ "option" ] query from size sort
 
         PackageSearch ->
-            Page.Packages.makeRequestBody query from size maybeBuckets sort
-
-        ModularServiceSearch ->
             Page.Packages.makeRequestBody query from size maybeBuckets sort

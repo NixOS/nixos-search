@@ -29,7 +29,6 @@ import Html.Attributes
         )
 import Json.Decode
 import Page.Flakes exposing (Model(..))
-import Page.ModularServices
 import Page.Options
 import Page.Packages
 import RemoteData exposing (RemoteData(..))
@@ -73,7 +72,6 @@ type Page
     | Packages Page.Packages.Model
     | Options Page.Options.Model
     | Flakes Page.Flakes.Model
-    | ModularServices Page.ModularServices.Model
 
 
 init :
@@ -123,7 +121,6 @@ type Msg
     | PackagesMsg Page.Packages.Msg
     | OptionsMsg Page.Options.Msg
     | FlakesMsg Page.Flakes.Msg
-    | ModularServicesMsg Page.ModularServices.Msg
     | CtrlKRegistered
     | SearchFocusResult
 
@@ -179,7 +176,25 @@ attemptQuery (( model, _ ) as pair) =
 
         Options searchModel ->
             if Search.shouldLoad searchModel then
-                submitQuery OptionsMsg Page.Options.makeRequest { searchModel | searchType = OptionSearch }
+                Tuple.mapSecond
+                    (\cmd ->
+                        Cmd.batch
+                            [ cmd
+                            , Cmd.map OptionsMsg <|
+                                Page.Options.makeRequest
+                                    model.elasticsearch
+                                    model.nixosChannels
+                                    OptionSearch
+                                    searchModel.channel
+                                    searchModel.query
+                                    searchModel.from
+                                    searchModel.size
+                                    searchModel.buckets
+                                    searchModel.sort
+                                    searchModel.includeNixosOptions
+                            ]
+                    )
+                    pair
 
             else
                 noEffects pair
@@ -194,13 +209,6 @@ attemptQuery (( model, _ ) as pair) =
         Flakes (PackagesModel searchModel) ->
             if Search.shouldLoad searchModel then
                 submitQuery FlakesMsg Page.Flakes.makeRequest { searchModel | channel = defaultFlakeId }
-
-            else
-                noEffects pair
-
-        ModularServices searchModel ->
-            if Search.shouldLoad searchModel then
-                submitQuery ModularServicesMsg Page.ModularServices.makeRequest { searchModel | searchType = ModularServiceSearch }
 
             else
                 noEffects pair
@@ -226,9 +234,6 @@ pageMatch m1 m2 =
             { model_a | show = Nothing, result = NotAsked } == { model_b | show = Nothing, result = NotAsked }
 
         ( Flakes (PackagesModel model_a), Flakes (PackagesModel model_b) ) ->
-            { model_a | show = Nothing, result = NotAsked } == { model_b | show = Nothing, result = NotAsked }
-
-        ( ModularServices model_a, ModularServices model_b ) ->
             { model_a | show = Nothing, result = NotAsked } == { model_b | show = Nothing, result = NotAsked }
 
         _ ->
@@ -309,21 +314,6 @@ changeRouteTo currentModel url =
                 |> avoidReinit
                 |> attemptQuery
 
-        Route.ModularServices searchArgs ->
-            let
-                modelPage =
-                    case model.page of
-                        ModularServices x ->
-                            Just x
-
-                        _ ->
-                            Nothing
-            in
-            Page.ModularServices.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
-                |> updateWith ModularServices ModularServicesMsg model
-                |> avoidReinit
-                |> attemptQuery
-
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -360,10 +350,6 @@ update msg model =
         ( FlakesMsg subMsg, Flakes subModel ) ->
             Page.Flakes.update model.navKey subMsg subModel model.nixosChannels
                 |> updateWith Flakes FlakesMsg model
-
-        ( ModularServicesMsg subMsg, ModularServices subModel ) ->
-            Page.ModularServices.update model.navKey subMsg subModel model.nixosChannels
-                |> updateWith ModularServices ModularServicesMsg model
 
         ( CtrlKRegistered, _ ) ->
             ( model, Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> SearchFocusResult) )
@@ -410,9 +396,6 @@ view model =
 
                 Flakes m ->
                     "NixOS Search - 3rd-party Flakes" ++ maybeFlakeQuery m
-
-                ModularServices m ->
-                    "NixOS Search - Modular Services" ++ maybeQuery m.query
 
                 _ ->
                     "NixOS Search"
@@ -490,18 +473,14 @@ viewNavigation route =
                     Route.Flakes args ->
                         args
 
-                    Route.ModularServices args ->
-                        args
-
                     _ ->
-                        Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+                        Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing True
     in
     li [] [ a [ href "https://nixos.org" ] [ text "Back to nixos.org" ] ]
         :: List.map
             (viewNavigationItem route)
             [ ( Route.Packages searchArgs, text "Packages" )
-            , ( Route.Options searchArgs, text "NixOS options" )
-            , ( Route.ModularServices searchArgs, text "Modular Services" )
+            , ( Route.Options searchArgs, text "Options" )
             , ( Route.Flakes searchArgs, text "3rd-party Flakes" )
             ]
         ++ [ li [] [ a [ href "https://wiki.nixos.org" ] [ text "NixOS Wiki" ] ] ]
@@ -531,9 +510,6 @@ viewPage model =
 
         Flakes flakesModel ->
             Html.map (\m -> FlakesMsg m) <| Page.Flakes.view model.nixosChannels flakesModel
-
-        ModularServices servicesModel ->
-            Html.map (\m -> ModularServicesMsg m) <| Page.ModularServices.view model.nixosChannels servicesModel
 
 
 

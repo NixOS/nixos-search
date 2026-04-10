@@ -105,6 +105,7 @@ type alias Model a b =
     , showInstallDetails : Details
     , searchType : Route.SearchType
     , redirectedChannel : Maybe String
+    , includeNixosOptions : Bool
     }
 
 
@@ -342,6 +343,7 @@ init args defaultNixOSChannel nixosChannels maybeModel =
       , searchType =
             args.type_
                 |> Maybe.withDefault defaultSearchArgs.searchType
+      , includeNixosOptions = args.includeNixosOptions
       }
         |> ensureLoading nixosChannels
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
@@ -410,6 +412,7 @@ type Msg a b
     | ShowDetails String
     | ChangePage Int
     | ShowInstallDetails Details
+    | IncludeNixosOptionsChange Bool
 
 
 type Details
@@ -540,6 +543,15 @@ update toRoute navKey msg model nixosChannels =
             { model | showInstallDetails = details }
                 |> pushUrl toRoute navKey
 
+        IncludeNixosOptionsChange include ->
+            { model
+                | includeNixosOptions = include
+                , show = Nothing
+                , from = 0
+            }
+                |> ensureLoading nixosChannels
+                |> pushUrl toRoute navKey
+
 
 pushUrl :
     Route.SearchRoute
@@ -578,6 +590,7 @@ createUrl toRoute model =
                 justIfNotDefault model.sort defaultSearchArgs.sort
                     |> Maybe.map toSortId
             , type_ = justIfNotDefault model.searchType defaultSearchArgs.searchType
+            , includeNixosOptions = model.includeNixosOptions
             }
 
 
@@ -874,8 +887,7 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
             in
             if result.hits.total.value == 0 && List.isEmpty buckets then
                 div [ class "search-results" ]
-                    [ ul [ class "search-sidebar" ] searchBuckets
-                    , viewNoResults categoryName model.query
+                    [ viewNoResults categoryName model.query
                     ]
 
             else if not (List.isEmpty buckets) then
@@ -913,8 +925,7 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
             in
             div []
                 [ div [ class "alert alert-error" ]
-                    [ ul [ class "search-sidebar" ] searchBuckets
-                    , h4 [] [ text errorTitle ]
+                    [ h4 [] [ text errorTitle ]
                     , text errorMessage
                     ]
                 ]
@@ -1284,20 +1295,31 @@ type alias Options =
 
 
 filterByType :
-    String
+    List String
     -> List ( String, Json.Encode.Value )
-filterByType type_ =
-    [ ( "term"
-      , Json.Encode.object
-            [ ( "type"
+filterByType types =
+    case types of
+        [ type_ ] ->
+            [ ( "term"
               , Json.Encode.object
-                    [ ( "value", Json.Encode.string type_ )
-                    , ( "_name", Json.Encode.string <| "filter_" ++ type_ ++ "s" )
+                    [ ( "type"
+                      , Json.Encode.object
+                            [ ( "value", Json.Encode.string type_ )
+                            , ( "_name", Json.Encode.string <| "filter_" ++ type_ ++ "s" )
+                            ]
+                      )
                     ]
               )
             ]
-      )
-    ]
+
+        _ ->
+            [ ( "terms"
+              , Json.Encode.object
+                    [ ( "type", Json.Encode.list Json.Encode.string types )
+                    , ( "_name", Json.Encode.string <| "filter_" ++ String.join "_" types )
+                    ]
+              )
+            ]
 
 
 searchFields :
@@ -1346,7 +1368,7 @@ makeRequestBody :
     -> Int
     -> Int
     -> Sort
-    -> String
+    -> List String
     -> String
     -> List String
     -> List Terms
@@ -1354,7 +1376,7 @@ makeRequestBody :
     -> String
     -> List ( String, Float )
     -> Http.Body
-makeRequestBody query from sizeRaw sort type_ sortField otherSortFields terms filterByBuckets mainField fields =
+makeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets mainField fields =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -1387,7 +1409,7 @@ makeRequestBody query from sizeRaw sort type_ sortField otherSortFields terms fi
                             [ ( "filter"
                               , Json.Encode.list Json.Encode.object
                                     (List.append
-                                        [ filterByType type_ ]
+                                        [ filterByType types ]
                                         (if List.isEmpty filterByBuckets then
                                             []
 
