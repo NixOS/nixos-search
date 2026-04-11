@@ -2,7 +2,7 @@
   /**
     Backend index version used by import jobs when writing data to Elasticsearch
   */
-  import = "44";
+  import = "45";
 
   /**
     Frontend index version used by the UI when querying Elasticsearch

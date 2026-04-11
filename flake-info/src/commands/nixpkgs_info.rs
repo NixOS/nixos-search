@@ -47,6 +47,8 @@ pub fn get_nixpkgs_info(nixpkgs: &Source, attribute: &Option<String>) -> Result<
         _ => Default::default(),
     };
 
+    let mut package_services = get_nixpkgs_package_services(nixpkgs).unwrap_or_default();
+
     Ok(attr_set
         .into_iter()
         .map(|(attribute, package)| {
@@ -55,13 +57,35 @@ pub fn get_nixpkgs_info(nixpkgs: &Source, attribute: &Option<String>) -> Result<
                 .unwrap_or_default()
                 .into_iter()
                 .collect();
+            let modular_services = package_services.remove(&attribute).unwrap_or_default();
             NixpkgsEntry::Derivation {
                 attribute,
                 package,
                 programs,
+                modular_services,
             }
         })
         .collect())
+}
+
+pub fn get_nixpkgs_package_services(nixpkgs: &Source) -> Result<HashMap<String, Vec<String>>> {
+    let mut command = Command::with_args("nix", &["eval", "--json"]);
+    command.add_arg_pair("-f", super::EXTRACT_SCRIPT.clone());
+    command.add_arg_pair("-I", format!("nixpkgs={}", nixpkgs.to_flake_ref()));
+    command.add_arg("nixos-package-services");
+
+    command.enable_capture();
+    command.log_to = LogTo::Log;
+    command.log_output_on_error = true;
+
+    let cow = command
+        .run()
+        .with_context(|| "Failed to gather modular service mapping for packages")?;
+
+    let output = &*cow.stdout_string_lossy();
+    let map: HashMap<String, Vec<String>> =
+        serde_json::from_str(output).with_context(|| "Could not parse package-services map")?;
+    Ok(map)
 }
 
 pub fn get_nixpkgs_programs(nixpkgs: &Nixpkgs) -> Result<HashMap<String, HashSet<String>>> {
@@ -123,4 +147,26 @@ pub fn get_nixpkgs_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
         serde_path_to_error::deserialize(de).with_context(|| "Could not parse options")?;
 
     Ok(attr_set.into_iter().map(NixpkgsEntry::Option).collect())
+}
+
+pub fn get_nixpkgs_services(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
+    let mut command = Command::with_args("nix", &["eval", "--json"]);
+    command.add_arg_pair("-f", super::EXTRACT_SCRIPT.clone());
+    command.add_arg_pair("-I", format!("nixpkgs={}", nixpkgs.to_flake_ref()));
+    command.add_arg("nixos-services");
+
+    command.enable_capture();
+    command.log_to = LogTo::Log;
+    command.log_output_on_error = true;
+
+    let cow = command
+        .run()
+        .with_context(|| "Failed to gather information about nixpkgs modular services")?;
+
+    let output = &*cow.stdout_string_lossy();
+    let de = &mut Deserializer::from_str(output);
+    let attr_set: Vec<NixOption> =
+        serde_path_to_error::deserialize(de).with_context(|| "Could not parse services")?;
+
+    Ok(attr_set.into_iter().map(NixpkgsEntry::Service).collect())
 }

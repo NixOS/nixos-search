@@ -144,6 +144,9 @@ lazy_static! {
                 "package_homepage": {
                     "type": "keyword"
                 },
+                "package_modular_services": {
+                    "type": "keyword"
+                },
                 // Options fields
                 "option_name": {
                     "type": "keyword",
@@ -162,6 +165,20 @@ lazy_static! {
                 "option_default": {"type": "text"},
                 "option_example": {"type": "text"},
                 "option_source": {"type": "keyword"},
+                // Modular service fields
+                "service_package": {
+                    "type": "keyword",
+                    "fields": {
+                        "edge": {"type": "text", "analyzer": "edge"}
+                    },
+                },
+                "service_module": {"type": "keyword"},
+                "service_packages": {
+                    "type": "keyword",
+                    "fields": {
+                        "edge": {"type": "text", "analyzer": "edge"}
+                    },
+                },
             }
         },
         "settings": {

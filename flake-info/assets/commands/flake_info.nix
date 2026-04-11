@@ -178,7 +178,7 @@ let
         in
         opt
         // {
-          entry_type = "option";
+          entry_type = extraAttrs.entry_type or "option";
         }
         // applyOnAttr "default" substFunction
         // applyOnAttr "example" substFunction # (_: { __type = "function"; })
@@ -199,6 +199,65 @@ let
     map (cleanUpOption extraAttrs) (
       lib.filter (x: x.visible && !x.internal && lib.head x.loc != "_module") opts
     );
+
+  # Parses the angle-bracket prefix from modular service option names to extract
+  # service_package and service_module, strips the prefix, and tags as entry_type = "service".
+  parseServiceOption =
+    opt:
+    let
+      # Match: <imports = [ pkgs.PKG.services.MODULE ]>.OPTNAME
+      # Group 1: package attrname, group 2: module name, group 3: remaining option path
+      m = builtins.match ".*imports.*pkgs\\.([^.]+)\\.services\\.([^ ]+).*>\\.(.*)" opt.name;
+    in
+    if m != null then
+      opt
+      // {
+        entry_type = "service";
+        name = builtins.elemAt m 2;
+        service_package = builtins.elemAt m 0;
+        service_module = builtins.elemAt m 1;
+      }
+    else
+      # Fallback: keep as-is but still tag as service
+      opt // { entry_type = "service"; };
+
+  # Deduplicate service options that share the same underlying module. When
+  # several packages re-export the same service module (e.g. php, php82..php85
+  # all point to the same pkgs/development/interpreters/php/service.nix), we
+  # end up with identical option entries differing only by service_package.
+  # Group by (declarations, parsed name) and keep a single entry per group,
+  # with a canonical service_package and the full list in service_packages.
+  deduplicateServices =
+    opts:
+    let
+      keyOf =
+        opt:
+        builtins.toJSON [
+          (opt.declarations or [ ])
+          (opt.name or "")
+          (opt.service_module or "")
+        ];
+      addToGroup =
+        acc: opt:
+        let
+          k = keyOf opt;
+        in
+        acc // { ${k} = (acc.${k} or [ ]) ++ [ opt ]; };
+      grouped = lib.foldl' addToGroup { } opts;
+      mergeGroup =
+        entries:
+        let
+          # Sort packages alphabetically; the shortest/unversioned name (e.g.
+          # "php") naturally sorts before versioned variants ("php82").
+          packages = lib.sort (a: b: a < b) (lib.unique (map (e: e.service_package or "") entries));
+        in
+        (builtins.head entries)
+        // {
+          service_package = builtins.head packages;
+          service_packages = packages;
+        };
+    in
+    lib.mapAttrsToList (_: mergeGroup) grouped;
 
   readFlakeOptions =
     let
@@ -373,6 +432,78 @@ let
       }
     ) { } list;
 
+  # nixpkgs-specific, doesn't use the flake argument
+  nixpkgsBaseModules = import <nixpkgs/nixos/modules/module-list.nix> ++ [
+    <nixpkgs/nixos/modules/virtualisation/qemu-vm.nix>
+    { nixpkgs.hostPlatform = "x86_64-linux"; }
+  ];
+
+  # Discover modular services by introspection: any package exposing a `.services`
+  # attrset where each value is a module (not a derivation). This does not rely on
+  # nixpkgs' documentation.nixos.extraModules (which is an intermediate solution)
+  # and automatically picks up new modular services as they are added.
+  discoverServiceModules =
+    let
+      tryGetServices =
+        pkgName:
+        let
+          eval = builtins.tryEval (
+            let
+              pkg = nixpkgs.${pkgName} or null;
+            in
+            if
+              pkg != null
+              && builtins.isAttrs pkg
+              && pkg ? services
+              && builtins.isAttrs pkg.services
+              && !(lib.isDerivation pkg.services)
+            then
+              lib.filter (n: !(lib.isDerivation pkg.services.${n})) (builtins.attrNames pkg.services)
+            else
+              [ ]
+          );
+        in
+        if eval.success then
+          map (moduleName: {
+            inherit pkgName moduleName;
+            module = nixpkgs.${pkgName}.services.${moduleName};
+          }) eval.value
+        else
+          [ ];
+    in
+    lib.concatMap tryGetServices (
+      builtins.filter (n: !(lib.hasPrefix "_" n)) (builtins.attrNames nixpkgs)
+    );
+
+  # Build a synthetic module that exposes each discovered service as a submodule
+  # option with a distinguishable name prefix, mirroring nixpkgs' fakeSubmodule
+  # approach so the rest of the pipeline (name parsing, etc.) stays unchanged.
+  discoveredServicesModule = {
+    options = lib.listToAttrs (
+      map (
+        {
+          pkgName,
+          moduleName,
+          module,
+        }:
+        {
+          name = "<imports = [ pkgs.${pkgName}.services.${moduleName} ]>";
+          value = lib.mkOption {
+            type = lib.types.submoduleWith { modules = [ module ]; };
+            description = "Modular service from pkgs.${pkgName}.services.${moduleName}";
+            default = { };
+          };
+        }
+      ) discoverServiceModules
+    );
+  };
+
+  # Evaluate base + discovered service modules together (service modules depend on
+  # base option types). Then partition: options whose name starts with "<" come
+  # from modular services.
+  nixpkgsAllOpts = readNixOSOptions { module = nixpkgsBaseModules ++ [ discoveredServicesModule ]; };
+  isServiceOption = opt: lib.hasPrefix "<" opt.name;
+
 in
 
 rec {
@@ -382,11 +513,22 @@ rec {
   options = readFlakeOptions;
   all = packages ++ apps ++ options;
 
-  # nixpkgs-specific, doesn't use the flake argument
-  nixos-options = readNixOSOptions {
-    module = import <nixpkgs/nixos/modules/module-list.nix> ++ [
-      <nixpkgs/nixos/modules/virtualisation/qemu-vm.nix>
-      { nixpkgs.hostPlatform = "x86_64-linux"; }
-    ];
-  };
+  nixos-options = builtins.filter (opt: !(isServiceOption opt)) nixpkgsAllOpts;
+
+  nixos-services =
+    let
+      parsed = map parseServiceOption (builtins.filter isServiceOption nixpkgsAllOpts);
+      # Filter out top-level submodule container entries (no service_package means regex didn't match)
+      real = builtins.filter (opt: opt ? service_package) parsed;
+    in
+    deduplicateServices real;
+
+  # Map from package attribute name to the list of modular service module
+  # names it exposes. Used by the packages importer to annotate each package
+  # with its modular services so the UI can link to them only when they exist.
+  nixos-package-services = lib.foldl' (
+    acc:
+    { pkgName, moduleName, ... }:
+    acc // { ${pkgName} = (acc.${pkgName} or [ ]) ++ [ moduleName ]; }
+  ) { } discoverServiceModules;
 }

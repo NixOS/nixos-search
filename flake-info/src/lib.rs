@@ -62,8 +62,15 @@ pub fn process_nixpkgs(
         Vec::new()
     };
 
+    let mut services = if matches!(kind, Kind::All | Kind::ModularService) {
+        commands::get_nixpkgs_services(nixpkgs)?
+    } else {
+        Vec::new()
+    };
+
     let mut all = drvs;
     all.append(&mut options);
+    all.append(&mut services);
 
     let exports = all
         .into_iter()
