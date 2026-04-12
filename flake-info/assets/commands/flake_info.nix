@@ -438,70 +438,19 @@ let
     { nixpkgs.hostPlatform = "x86_64-linux"; }
   ];
 
-  # Discover modular services by introspection: any package exposing a `.services`
-  # attrset where each value is a module (not a derivation). This does not rely on
-  # nixpkgs' documentation.nixos.extraModules (which is an intermediate solution)
-  # and automatically picks up new modular services as they are added.
-  discoverServiceModules =
-    let
-      tryGetServices =
-        pkgName:
-        let
-          eval = builtins.tryEval (
-            let
-              pkg = nixpkgs.${pkgName} or null;
-            in
-            if
-              pkg != null
-              && builtins.isAttrs pkg
-              && pkg ? services
-              && builtins.isAttrs pkg.services
-              && !(lib.isDerivation pkg.services)
-            then
-              lib.filter (n: !(lib.isDerivation pkg.services.${n})) (builtins.attrNames pkg.services)
-            else
-              [ ]
-          );
-        in
-        if eval.success then
-          map (moduleName: {
-            inherit pkgName moduleName;
-            module = nixpkgs.${pkgName}.services.${moduleName};
-          }) eval.value
-        else
-          [ ];
-    in
-    lib.concatMap tryGetServices (
-      builtins.filter (n: !(lib.hasPrefix "_" n)) (builtins.attrNames nixpkgs)
-    );
+  # Use nixpkgs' hand-maintained modular services list rather than walking all
+  # `pkgs` attributes (which would force shallow evaluation of every package
+  # and is too expensive -- see NixOS/nixpkgs#509117).
+  serviceDocModules =
+    (import <nixpkgs/nixos/modules/misc/documentation/modular-services.nix> {
+      inherit lib;
+      pkgs = nixpkgs;
+    }).documentation.nixos.extraModules;
 
-  # Build a synthetic module that exposes each discovered service as a submodule
-  # option with a distinguishable name prefix, mirroring nixpkgs' fakeSubmodule
-  # approach so the rest of the pipeline (name parsing, etc.) stays unchanged.
-  discoveredServicesModule = {
-    options = lib.listToAttrs (
-      map (
-        {
-          pkgName,
-          moduleName,
-          module,
-        }:
-        {
-          name = "<imports = [ pkgs.${pkgName}.services.${moduleName} ]>";
-          value = lib.mkOption {
-            type = lib.types.submoduleWith { modules = [ module ]; };
-            description = "Modular service from pkgs.${pkgName}.services.${moduleName}";
-            default = { };
-          };
-        }
-      ) discoverServiceModules
-    );
-  };
-
-  # Evaluate base + discovered service modules together (service modules depend on
-  # base option types). Then partition: options whose name starts with "<" come
-  # from modular services.
-  nixpkgsAllOpts = readNixOSOptions { module = nixpkgsBaseModules ++ [ discoveredServicesModule ]; };
+  # Evaluate base + service documentation modules together (service modules
+  # depend on base option types). Then partition: options whose name starts
+  # with "<" come from modular services.
+  nixpkgsAllOpts = readNixOSOptions { module = nixpkgsBaseModules ++ serviceDocModules; };
   isServiceOption = opt: lib.hasPrefix "<" opt.name;
 
 in
@@ -524,11 +473,18 @@ rec {
     deduplicateServices real;
 
   # Map from package attribute name to the list of modular service module
-  # names it exposes. Used by the packages importer to annotate each package
-  # with its modular services so the UI can link to them only when they exist.
-  nixos-package-services = lib.foldl' (
-    acc:
-    { pkgName, moduleName, ... }:
-    acc // { ${pkgName} = (acc.${pkgName} or [ ]) ++ [ moduleName ]; }
-  ) { } discoverServiceModules;
+  # names it exposes. Derived from the parsed service options above so it
+  # stays in sync with nixpkgs' hand-maintained list.
+  nixos-package-services =
+    let
+      parsed = map parseServiceOption (builtins.filter isServiceOption nixpkgsAllOpts);
+      real = builtins.filter (opt: opt ? service_package) parsed;
+    in
+    lib.foldl' (
+      acc: opt:
+      acc
+      // {
+        ${opt.service_package} = lib.unique ((acc.${opt.service_package} or [ ]) ++ [ opt.service_module ]);
+      }
+    ) { } real;
 }
