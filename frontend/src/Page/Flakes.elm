@@ -240,7 +240,7 @@ makeRequestBody : SearchType -> String -> Int -> Int -> Maybe String -> Search.S
 makeRequestBody searchType query from size maybeBuckets sort =
     case searchType of
         OptionSearch ->
-            Page.Options.makeRequestBody query from size sort
+            Page.Options.makeRequestBody [ "option" ] query from size sort
 
         PackageSearch ->
             Page.Packages.makeRequestBody query from size maybeBuckets sort
