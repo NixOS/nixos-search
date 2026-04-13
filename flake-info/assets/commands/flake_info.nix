@@ -151,16 +151,24 @@ let
   cleanUpOption =
     extraAttrs: opt:
     let
-      applyOnAttr = n: f: lib.optionalAttrs (builtins.hasAttr n opt) { ${n} = f opt.${n}; };
+      safeApplyOnAttr =
+        n: f:
+        let
+          valueResult = builtins.tryEval opt.${n};
+        in
+        if builtins.hasAttr n opt && valueResult.success then
+          lib.optionalAttrs (valueResult.value != null) { ${n} = f valueResult.value; }
+        else
+          { };
     in
     opt
     // {
       entry_type = extraAttrs.entry_type or "option";
     }
-    // applyOnAttr "default" substFunction
-    // applyOnAttr "example" substFunction
-    // applyOnAttr "type" substFunction
-    // applyOnAttr "declarations" (map mkDeclaration)
+    // safeApplyOnAttr "default" substFunction
+    // safeApplyOnAttr "example" substFunction
+    // safeApplyOnAttr "type" substFunction
+    // safeApplyOnAttr "declarations" (map mkDeclaration)
     // extraAttrs;
 
   # Filter for user-visible, non-internal options
@@ -172,9 +180,11 @@ let
       modulePath ? null,
     }:
     let
-      declarations =
+      flakePackages = resolved.packages or resolved.legacyPackages or { };
+      modules = (if lib.isList module then module else [ module ]);
+      evalResult = builtins.tryEval (
         (lib.evalModules {
-          modules = (if lib.isList module then module else [ module ]) ++ [
+          modules = modules ++ [
             (
               { ... }:
               {
@@ -192,15 +202,27 @@ let
             # Provide commonly-used arguments so module evaluation that expects them
             # (e.g. `pkgs` or `config`) does not fail during CI evaluation.
             pkgs = nixpkgs;
+            flakePackages = flakePackages;
           };
-        }).options;
+        })
+      );
 
-      opts = lib.optionAttrSetToDocList declarations;
+      rawOpts =
+        if evalResult.success then
+          let
+            docOpts = builtins.tryEval (lib.optionAttrSetToDocList evalResult.value.options);
+          in
+          if docOpts.success then docOpts.value else [ ]
+        else
+          [ ];
+
+      opts = filterOptions rawOpts;
       extraAttrs = lib.optionalAttrs (modulePath != null) {
         flake = modulePath;
       };
+      cleanupResult = builtins.tryEval (map (cleanUpOption extraAttrs) opts);
     in
-    map (cleanUpOption extraAttrs) (filterOptions opts);
+    if cleanupResult.success then cleanupResult.value else [ ];
 
   # Parses the angle-bracket prefix from modular service option names to extract
   # service_package and service_module, strips the prefix, and tags as entry_type = "service".
@@ -295,8 +317,10 @@ let
           addOnce = acc: opt: if acc ? ${opt.name} then acc else acc // { ${opt.name} = opt; };
         in
         lib.attrValues (lib.foldl' addOnce { } opts);
+
+      dedupResult = builtins.tryEval (dedup raw);
     in
-    dedup raw;
+    if dedupResult.success then dedupResult.value else [ ];
 
   # Extract options from home-manager's module system.
   # Only produces output when `resolved` points to a home-manager flake
