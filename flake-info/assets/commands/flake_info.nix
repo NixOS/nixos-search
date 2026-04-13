@@ -126,10 +126,53 @@ let
       )
     ) apps;
 
+  # Replace functions by the string <function>
+  substFunction =
+    x:
+    if builtins.isAttrs x then
+      lib.mapAttrs (_: substFunction) x
+    else if builtins.isList x then
+      map substFunction x
+    else if lib.isFunction x then
+      "function"
+    else
+      x;
+
+  # Strip store-path prefix from a declaration path
+  mkDeclaration =
+    decl:
+    let
+      discard = lib.concatStringsSep "/" (lib.take 4 (lib.splitString "/" decl)) + "/";
+      path = if lib.hasPrefix builtins.storeDir decl then lib.removePrefix discard decl else decl;
+    in
+    path;
+
+  # Clean up a raw option attrset for indexing
+  cleanUpOption =
+    extraAttrs: opt:
+    let
+      applyOnAttr = n: f: lib.optionalAttrs (builtins.hasAttr n opt) { ${n} = f opt.${n}; };
+    in
+    opt
+    // {
+      entry_type = extraAttrs.entry_type or "option";
+    }
+    // applyOnAttr "default" substFunction
+    // applyOnAttr "example" substFunction
+    // applyOnAttr "type" substFunction
+    // applyOnAttr "declarations" (map mkDeclaration)
+    // extraAttrs;
+
+  # Filter for user-visible, non-internal options
+  filterOptions = opts: lib.filter (x: x.visible && !x.internal && lib.head x.loc != "_module") opts;
+
   readNixOSOptions =
+    {
+      module,
+      modulePath ? null,
+    }:
     let
       declarations =
-        module:
         (lib.evalModules {
           modules = (if lib.isList module then module else [ module ]) ++ [
             (
@@ -152,53 +195,12 @@ let
           };
         }).options;
 
-      cleanUpOption =
-        extraAttrs: opt:
-        let
-          applyOnAttr = n: f: lib.optionalAttrs (builtins.hasAttr n opt) { ${n} = f opt.${n}; };
-          mkDeclaration =
-            decl:
-            let
-              discard = lib.concatStringsSep "/" (lib.take 4 (lib.splitString "/" decl)) + "/";
-              path = if lib.hasPrefix builtins.storeDir decl then lib.removePrefix discard decl else decl;
-            in
-            path;
-
-          # Replace functions by the string <function>
-          substFunction =
-            x:
-            if builtins.isAttrs x then
-              lib.mapAttrs (_: substFunction) x
-            else if builtins.isList x then
-              map substFunction x
-            else if lib.isFunction x then
-              "function"
-            else
-              x;
-        in
-        opt
-        // {
-          entry_type = extraAttrs.entry_type or "option";
-        }
-        // applyOnAttr "default" substFunction
-        // applyOnAttr "example" substFunction # (_: { __type = "function"; })
-        // applyOnAttr "type" substFunction
-        // applyOnAttr "declarations" (map mkDeclaration)
-        // extraAttrs;
-    in
-    {
-      module,
-      modulePath ? null,
-    }:
-    let
-      opts = lib.optionAttrSetToDocList (declarations module);
+      opts = lib.optionAttrSetToDocList declarations;
       extraAttrs = lib.optionalAttrs (modulePath != null) {
         flake = modulePath;
       };
     in
-    map (cleanUpOption extraAttrs) (
-      lib.filter (x: x.visible && !x.internal && lib.head x.loc != "_module") opts
-    );
+    map (cleanUpOption extraAttrs) (filterOptions opts);
 
   # Parses the angle-bracket prefix from modular service option names to extract
   # service_package and service_module, strips the prefix, and tags as entry_type = "service".
@@ -278,10 +280,64 @@ let
         module = resolved.nixosModule;
         modulePath = [ flake ];
       });
+
+      raw =
+        # We assume that `nixosModules` includes `nixosModule` when there
+        # are multiple modules
+        if nixosModulesOpts != [ ] then nixosModulesOpts else nixosModuleOpts;
+
+      # When a flake re-exports the same module under multiple names
+      # (e.g. `default` and `home-manager`), deduplicate by option name,
+      # keeping the first occurrence.
+      dedup =
+        opts:
+        let
+          addOnce = acc: opt: if acc ? ${opt.name} then acc else acc // { ${opt.name} = opt; };
+        in
+        lib.attrValues (lib.foldl' addOnce { } opts);
     in
-    # We assume that `nixosModules` includes `nixosModule` when there
-    # are multiple modules
-    if nixosModulesOpts != [ ] then nixosModulesOpts else nixosModuleOpts;
+    dedup raw;
+
+  # Extract options from home-manager's module system.
+  # Only produces output when `resolved` points to a home-manager flake
+  # (detected by the presence of `modules/modules.nix`).
+  readHomeManagerOptions =
+    let
+      # Home-manager modules use `lib.hm.*` helpers; extend nixpkgs' lib with
+      # HM's custom library so module evaluation does not fail.
+      hmLib = import "${resolved}/modules/lib/stdlib-extended.nix" lib;
+
+      hmModulesPath = "${resolved}/modules/modules.nix";
+      hmModuleList =
+        let
+          fn = import hmModulesPath;
+        in
+        if builtins.isFunction fn then
+          fn {
+            lib = hmLib;
+            pkgs = nixpkgs;
+          }
+        else
+          fn;
+
+      declarations =
+        (hmLib.evalModules {
+          modules = hmModuleList ++ [
+            (
+              { lib, ... }:
+              {
+                _module.check = lib.mkForce false;
+              }
+            )
+          ];
+          specialArgs = {
+            pkgs = nixpkgs;
+          };
+        }).options;
+
+      opts = hmLib.optionAttrSetToDocList declarations;
+    in
+    map (cleanUpOption { entry_type = "home-manager-option"; }) (filterOptions opts);
 
   read = reader: set: lib.flatten (lib.attrValues (withSystem reader set));
 
@@ -460,7 +516,12 @@ rec {
   packages = lib.attrValues (collectSystems allPackageSets.packages packages');
   apps = lib.attrValues (collectSystems { } apps'); # apps don't need fallback evaluation
   options = readFlakeOptions;
-  all = packages ++ apps ++ options;
+  home-manager-options =
+    let
+      hasHmModules = builtins.tryEval (builtins.pathExists "${resolved}/modules/modules.nix");
+    in
+    if hasHmModules.success && hasHmModules.value then readHomeManagerOptions else [ ];
+  all = packages ++ apps ++ options ++ home-manager-options;
 
   nixos-options = builtins.filter (opt: !(isServiceOption opt)) nixpkgsAllOpts;
 

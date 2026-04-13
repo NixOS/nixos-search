@@ -47,6 +47,9 @@ pub enum FlakeEntry {
     },
     /// an option defined in a module of a flake
     Option(NixOption),
+    /// a home-manager option extracted from a flake's module system
+    #[serde(rename = "home-manager-option")]
+    HomeManagerOption(NixOption),
 }
 
 /// The representation of an option that is part of some module and can be used
@@ -253,6 +256,7 @@ arg_enum! {
         App,
         Package,
         Option,
+        HomeManagerOption,
         ModularService,
         All,
     }
@@ -264,6 +268,7 @@ impl AsRef<str> for Kind {
             Kind::App => "apps",
             Kind::Package => "packages",
             Kind::Option => "options",
+            Kind::HomeManagerOption => "home-manager-options",
             Kind::ModularService => "services",
             Kind::All => "all",
         }
