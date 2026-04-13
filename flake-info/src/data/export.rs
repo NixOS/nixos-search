@@ -124,6 +124,16 @@ pub enum Derivation {
         service_module: Option<String>,
         service_packages: Vec<String>,
     },
+    #[serde(rename = "home-manager-option")]
+    HomeManagerOption {
+        option_source: Option<String>,
+        option_name: String,
+        option_description: Option<DocString>,
+        option_type: Option<String>,
+        option_default: Option<DocValue>,
+        option_example: Option<DocValue>,
+        option_flake: Option<ModulePath>,
+    },
 }
 
 // ----- Conversions
@@ -205,6 +215,24 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                 app_type,
             },
             import::FlakeEntry::Option(option) => option.try_into()?,
+            import::FlakeEntry::HomeManagerOption(NixOption {
+                declarations,
+                description,
+                name,
+                option_type,
+                default,
+                example,
+                flake,
+                ..
+            }) => Derivation::HomeManagerOption {
+                option_source: declarations.get(0).map(Clone::clone),
+                option_name: name,
+                option_description: description,
+                option_default: default,
+                option_example: example,
+                option_flake: flake,
+                option_type,
+            },
         })
     }
 }
