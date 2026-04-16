@@ -192,7 +192,7 @@ attemptQuery (( model, _ ) as pair) =
                                     searchModel.size
                                     searchModel.buckets
                                     searchModel.sort
-                                    searchModel.excludedOptionSources
+                                    searchModel.includedOptionSources
                             ]
                     )
                     pair
@@ -475,7 +475,7 @@ viewNavigation route =
                         args
 
                     _ ->
-                        Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Set.empty
+                        Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing (Set.fromList (List.map Route.optionSourceId Route.allOptionSources))
     in
     li [] [ a [ href "https://nixos.org" ] [ text "Back to nixos.org" ] ]
         :: List.map

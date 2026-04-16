@@ -37,7 +37,7 @@ type alias SearchArgs =
     , buckets : Maybe String
     , sort : Maybe String
     , type_ : Maybe SearchType
-    , excludedOptionSources : Set String
+    , includedOptionSources : Set String
     }
 
 
@@ -48,11 +48,12 @@ Add a new variant here (plus its cases below) to expose it to the page.
 type OptionSource
     = NixosOptions
     | ModularServiceOptions
+    | HomeManagerOptionSource
 
 
 allOptionSources : List OptionSource
 allOptionSources =
-    [ NixosOptions, ModularServiceOptions ]
+    [ NixosOptions, ModularServiceOptions, HomeManagerOptionSource ]
 
 
 {-| Stable identifier used in URL parameter names and the excluded-sources set.
@@ -66,6 +67,9 @@ optionSourceId source =
         ModularServiceOptions ->
             "modular_service"
 
+        HomeManagerOptionSource ->
+            "home_manager"
+
 
 {-| Elasticsearch document `type` field value.
 -}
@@ -78,6 +82,9 @@ optionSourceDocType source =
         ModularServiceOptions ->
             "service"
 
+        HomeManagerOptionSource ->
+            "home-manager-option"
+
 
 {-| Human-readable checkbox label.
 -}
@@ -89,6 +96,9 @@ optionSourceLabel source =
 
         ModularServiceOptions ->
             "Modular services"
+
+        HomeManagerOptionSource ->
+            "Home Manager"
 
 
 optionSourceUrlParam : OptionSource -> String
@@ -189,16 +199,16 @@ searchQueryParser appUrl =
     , buckets = string "buckets"
     , sort = string "sort"
     , type_ = Maybe.andThen searchTypeFromString (string "type")
-    , excludedOptionSources =
-        -- Each source defaults to included; URL explicitly says "0" to exclude.
+    , includedOptionSources =
+        -- Each source defaults to included; URL says "0" to exclude.
         allOptionSources
             |> List.filterMap
                 (\source ->
                     if string (optionSourceUrlParam source) == Just "0" then
-                        Just (optionSourceId source)
+                        Nothing
 
                     else
-                        Nothing
+                        Just (optionSourceId source)
                 )
             |> Set.fromList
     }
@@ -228,11 +238,11 @@ searchArgsToUrl args =
             (\source ->
                 let
                     value =
-                        if Set.member (optionSourceId source) args.excludedOptionSources then
-                            "0"
+                        if Set.member (optionSourceId source) args.includedOptionSources then
+                            "1"
 
                         else
-                            "1"
+                            "0"
                 in
                 string (optionSourceUrlParam source) (Just value)
             )
