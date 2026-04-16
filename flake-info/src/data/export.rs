@@ -215,24 +215,6 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                 app_type,
             },
             import::FlakeEntry::Option(option) => option.try_into()?,
-            import::FlakeEntry::HomeManagerOption(NixOption {
-                declarations,
-                description,
-                name,
-                option_type,
-                default,
-                example,
-                flake,
-                ..
-            }) => Derivation::HomeManagerOption {
-                option_source: declarations.get(0).map(Clone::clone),
-                option_name: name,
-                option_description: description,
-                option_default: default,
-                option_example: example,
-                option_flake: flake,
-                option_type,
-            },
         })
     }
 }
@@ -373,6 +355,24 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     service_packages,
                 }
             }
+            import::NixpkgsEntry::HomeManagerOption(NixOption {
+                declarations,
+                description,
+                name,
+                option_type,
+                default,
+                example,
+                flake,
+                ..
+            }) => Derivation::HomeManagerOption {
+                option_source: declarations.get(0).map(Clone::clone),
+                option_name: name,
+                option_description: description,
+                option_default: default,
+                option_example: example,
+                option_flake: flake,
+                option_type,
+            },
         })
     }
 }
