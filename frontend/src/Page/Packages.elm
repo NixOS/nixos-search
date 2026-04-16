@@ -1072,7 +1072,7 @@ makeRequestBody query from size maybeBuckets sort =
         , { field = "package_platforms", size = 20, include = Just platforms }
         ]
         filterByBuckets
-        "package_attr_name"
+        [ "package_attr_name" ]
         [ ( "package_attr_name", 9.0 )
         , ( "package_programs", 9.0 )
         , ( "package_pname", 6.0 )

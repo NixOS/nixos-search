@@ -77,6 +77,9 @@ type alias ResultItemSource =
     , example : Maybe String
     , source : Maybe String
 
+    -- ES document type ("option", "service", "home-manager-option")
+    , docType : String
+
     -- flake
     , flake : Maybe (List String)
     , flakeName : Maybe String
@@ -154,13 +157,17 @@ view :
     -> Model
     -> Html Msg
 view nixosChannels model =
+    let
+        enabledCount =
+            List.length Route.allOptionSources - Set.size model.excludedOptionSources
+    in
     Search.view { categoryName = "options" }
         [ text "Search more than "
         , strong [] [ text "20 000 options" ]
         ]
         nixosChannels
         model
-        viewSuccess
+        (viewSuccess (enabledCount > 1))
         viewBuckets
         SearchMsg
         [ viewIncludeTogglesGroup model.excludedOptionSources ]
@@ -206,16 +213,17 @@ viewBuckets _ _ =
 
 
 viewSuccess :
-    List NixOSChannel
+    Bool
+    -> List NixOSChannel
     -> String
     -> Details
     -> Maybe String
     -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
-viewSuccess nixosChannels channel _ show hits =
+viewSuccess showBadges nixosChannels channel _ show hits =
     ul []
         (List.map
-            (viewResultItem nixosChannels channel show)
+            (viewResultItem nixosChannels channel show showBadges)
             hits
         )
 
@@ -224,9 +232,10 @@ viewResultItem :
     List NixOSChannel
     -> String
     -> Maybe String
+    -> Bool
     -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItem nixosChannels channel show item =
+viewResultItem nixosChannels channel show showBadges item =
     let
         asPre value =
             pre [] [ text value ]
@@ -243,21 +252,17 @@ viewResultItem nixosChannels channel show item =
                         (pre [] [ code [ class "code-block" ] [ text value ] ])
                 ]
 
-        -- Modular-service options are stored with just the short option name
-        -- (e.g. "package") and carry `service_module` metadata. Render the
-        -- full `system.services.<name>.<module>.<option>` path so users can
-        -- see how the option is addressed in configuration.
         isService =
-            item.source.serviceModule /= Nothing || item.source.servicePackage /= Nothing
+            item.source.docType == "service"
 
         nameSegments =
-            optionNameSegments isService item.source
+            optionNameSegments item.source
 
         displayName =
             nameSegments |> List.map Tuple.first |> String.join "."
 
         showDetails =
-            if Just item.source.name == show then
+            if Just (item.source.docType ++ ":" ++ item.source.name) == show then
                 Just <|
                     div [ Html.Attributes.map SearchMsg Search.trapClick ] <|
                         let
@@ -439,48 +444,58 @@ viewResultItem nixosChannels channel show item =
             else
                 Nothing
 
+        itemId =
+            item.source.docType ++ ":" ++ item.source.name
+
         toggle =
-            SearchMsg (Search.ShowDetails item.source.name)
+            SearchMsg (Search.ShowDetails itemId)
 
         isOpen =
-            Just item.source.name == show
+            Just itemId == show
 
-        flakeOrNixpkgs =
-            let
-                mkLink flake url =
-                    a [ href url ] [ text flake ]
-            in
-            case ( item.source.flake, item.source.flakeUrl ) of
-                -- its a flake
-                ( Just (flake :: []), Just url ) ->
-                    [ li [] [ mkLink flake url ]
+        categoryBadge =
+            if showBadges then
+                let
+                    ( badgeText, badgeClass ) =
+                        case item.source.docType of
+                            "option" ->
+                                ( "NixOS", "badge-nixos" )
+
+                            "service" ->
+                                ( "Service", "badge-service" )
+
+                            _ ->
+                                ( "Other", "badge-other" )
+                in
+                [ li []
+                    [ span [ class "option-badge-column" ]
+                        [ span [ class ("option-badge " ++ badgeClass) ]
+                            [ text badgeText ]
+                        ]
                     ]
+                ]
 
-                ( Just (flake :: moduleName :: []), Just url ) ->
-                    [ li [] [ mkLink flake url, text "#", text moduleName ] ]
-
-                _ ->
-                    []
+            else
+                []
     in
     li
         [ class "option"
         , classList [ ( "opened", isOpen ) ]
-        , Search.elementId item.source.name
+        , Search.elementId itemId
         ]
     <|
         List.filterMap identity
             [ Just <|
                 ul [ class "search-result-button" ]
-                    (List.append
-                        flakeOrNixpkgs
-                        [ li []
-                            [ a
-                                [ onClick toggle
-                                , href ""
+                    (categoryBadge
+                        ++ [ li []
+                                [ a
+                                    [ onClick toggle
+                                    , href ""
+                                    ]
+                                    [ text displayName ]
                                 ]
-                                [ text displayName ]
-                            ]
-                        ]
+                           ]
                     )
             , showDetails
             ]
@@ -549,48 +564,21 @@ findSource nixosChannels channel source =
 {-| Segments making up an option's display name. Each `(text, Just q)` becomes
 a clickable link to an options search for `q`; `(text, Nothing)` is static.
 Every non-final dotted segment of the option name links to its own prefix
-(`programs` -> `programs.firefox` -> ...). For modular services the synthetic
-`system.services.<name>.` prefix is prepended as static text followed by the
-service module name, which is clickable on its own.
+(`programs` -> `programs.firefox` -> ...).
 -}
-optionNameSegments : Bool -> ResultItemSource -> List ( String, Maybe String )
-optionNameSegments isService source =
+optionNameSegments : ResultItemSource -> List ( String, Maybe String )
+optionNameSegments source =
     let
-        -- Split a dotted name into segments, attaching the dot-prefix up to
-        -- and including each segment as its search query. Every segment
-        -- becomes clickable; the leaf's query just equals the full name.
-        dottedSegments name =
-            let
-                parts =
-                    String.split "." name
-            in
-            parts
-                |> List.indexedMap
-                    (\idx part ->
-                        ( part
-                        , parts |> List.take (idx + 1) |> String.join "." |> Just
-                        )
-                    )
-
-        servicePrefix =
-            if isService then
-                [ ( "system", Nothing ), ( "services", Nothing ), ( "<name>", Nothing ) ]
-                    ++ (source.serviceModule
-                            |> Maybe.andThen
-                                (\m ->
-                                    if m == "default" then
-                                        Nothing
-
-                                    else
-                                        Just (dottedSegments m)
-                                )
-                            |> Maybe.withDefault []
-                       )
-
-            else
-                []
+        parts =
+            String.split "." source.name
     in
-    servicePrefix ++ dottedSegments source.name
+    parts
+        |> List.indexedMap
+            (\idx part ->
+                ( part
+                , parts |> List.take (idx + 1) |> String.join "." |> Just
+                )
+            )
 
 
 viewOptionNamePath : String -> List ( String, Maybe String ) -> Html Msg
@@ -691,8 +679,9 @@ makeRequestBody types query from size sort =
         []
         []
         []
-        "option_name"
+        [ "option_name", "option_name_query" ]
         [ ( "option_name", 6.0 )
+        , ( "option_name_query", 6.0 )
         , ( "option_description", 1.0 )
         , ( "flake_name", 0.5 )
         , ( "service_package", 3.0 )
@@ -713,6 +702,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "option_default" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "option_example" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "option_source" (Json.Decode.map Just Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.required "type" Json.Decode.string
         |> Json.Decode.Pipeline.optional "option_flake"
             (Json.Decode.map Just <| Json.Decode.list Json.Decode.string)
             Nothing

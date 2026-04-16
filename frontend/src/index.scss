@@ -955,3 +955,32 @@ a:focus-visible {
 .badge {
   background-color: var(--badge-background)
 }
+
+// Fixed-width column for category badges so option names align.
+// The width accommodates the longest label ("Service") plus padding.
+.option-badge-column {
+  display: inline-block;
+  width: 4.5em;
+  text-align: center;
+  vertical-align: baseline;
+}
+
+.option-badge {
+  display: inline-block;
+  padding: 0.1em 0.4em;
+  border-radius: 999px;
+  font-size: 0.7em;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #fff;
+
+  &.badge-nixos { background-color: #5277c3; }
+  &.badge-service { background-color: #6e56a0; }
+  &.badge-other { background-color: #888; }
+}
+
+// When a badge column is the first child in search-result-button,
+// suppress the arrow separator that normally follows the first li.
+.search-result-button > li:has(.option-badge-column):first-child:not(:last-child):after {
+  content: none;
+}
