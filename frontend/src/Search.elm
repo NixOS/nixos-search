@@ -107,7 +107,7 @@ type alias Model a b =
     , showInstallDetails : Details
     , searchType : Route.SearchType
     , redirectedChannel : Maybe String
-    , excludedOptionSources : Set String
+    , includedOptionSources : Set String
     }
 
 
@@ -345,7 +345,7 @@ init args defaultNixOSChannel nixosChannels maybeModel =
       , searchType =
             args.type_
                 |> Maybe.withDefault defaultSearchArgs.searchType
-      , excludedOptionSources = args.excludedOptionSources
+      , includedOptionSources = args.includedOptionSources
       }
         |> ensureLoading nixosChannels
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
@@ -488,7 +488,6 @@ update toRoute navKey msg model nixosChannels =
                 | channel = channel
                 , redirectedChannel = Nothing
                 , show = Nothing
-                , buckets = Nothing
                 , from = 0
             }
                 |> ensureLoading nixosChannels
@@ -513,7 +512,6 @@ update toRoute navKey msg model nixosChannels =
             { model
                 | from = 0
                 , show = Nothing
-                , buckets = Nothing
             }
                 |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
@@ -550,15 +548,15 @@ update toRoute navKey msg model nixosChannels =
                 id =
                     Route.optionSourceId source
 
-                excluded =
+                newIncluded =
                     if included then
-                        Set.remove id model.excludedOptionSources
+                        Set.insert id model.includedOptionSources
 
                     else
-                        Set.insert id model.excludedOptionSources
+                        Set.remove id model.includedOptionSources
             in
             { model
-                | excludedOptionSources = excluded
+                | includedOptionSources = newIncluded
                 , show = Nothing
                 , from = 0
             }
@@ -603,7 +601,7 @@ createUrl toRoute model =
                 justIfNotDefault model.sort defaultSearchArgs.sort
                     |> Maybe.map toSortId
             , type_ = justIfNotDefault model.searchType defaultSearchArgs.searchType
-            , excludedOptionSources = model.excludedOptionSources
+            , includedOptionSources = model.includedOptionSources
             }
 
 
@@ -884,7 +882,13 @@ viewResult :
 viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searchBuckets =
     case model.result of
         RemoteData.NotAsked ->
-            div [] []
+            if List.isEmpty searchBuckets then
+                div [] []
+
+            else
+                div [ class "search-results" ]
+                    [ ul [ class "search-sidebar" ] searchBuckets
+                    ]
 
         RemoteData.Loading ->
             div [ class "loader-wrapper" ]
