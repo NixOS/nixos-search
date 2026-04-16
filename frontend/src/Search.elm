@@ -1338,10 +1338,10 @@ filterByType types =
 
 searchFields :
     List String
-    -> String
+    -> List String
     -> List ( String, Float )
     -> List (List ( String, Json.Encode.Value ))
-searchFields positiveWords mainField fields =
+searchFields positiveWords mainFields fields =
     let
         allFields : List String
         allFields =
@@ -1374,7 +1374,7 @@ searchFields positiveWords mainField fields =
               )
             ]
     in
-    multiMatch :: List.map (toWildcardQuery mainField) queryWordsWildCard
+    multiMatch :: List.concatMap (\mf -> List.map (toWildcardQuery mf) queryWordsWildCard) mainFields
 
 
 makeRequestBody :
@@ -1387,10 +1387,10 @@ makeRequestBody :
     -> List String
     -> List Terms
     -> List ( String, Json.Encode.Value )
-    -> String
+    -> List String
     -> List ( String, Float )
     -> Http.Body
-makeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets mainField fields =
+makeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets mainFields fields =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -1437,7 +1437,7 @@ makeRequestBody query from sizeRaw sort types sortField otherSortFields terms fi
                                     (negativeWords
                                         |> List.concatMap dashUnderscoreVariants
                                         |> List.Extra.unique
-                                        |> List.map (toWildcardQuery mainField)
+                                        |> List.concatMap (\w -> List.map (\mf -> toWildcardQuery mf w) mainFields)
                                     )
                               )
                             , ( "must"
@@ -1447,7 +1447,7 @@ makeRequestBody query from sizeRaw sort types sortField otherSortFields terms fi
                                             [ ( "tie_breaker", Json.Encode.float 0.7 )
                                             , ( "queries"
                                               , Json.Encode.list Json.Encode.object
-                                                    (searchFields positiveWords mainField fields)
+                                                    (searchFields positiveWords mainFields fields)
                                               )
                                             ]
                                         )
