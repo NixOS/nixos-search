@@ -8,5 +8,5 @@
     Frontend index version used by the UI when querying Elasticsearch
     Keep this at the old version while 'import' populates a new index, then update to switch traffic
   */
-  frontend = "45";
+  frontend = "46";
 }
