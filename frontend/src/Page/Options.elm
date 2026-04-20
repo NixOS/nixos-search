@@ -85,6 +85,7 @@ type alias ResultItemSource =
     , flakeName : Maybe String
     , flakeDescription : Maybe String
     , flakeUrl : Maybe String
+    , flakeRevision : Maybe String
 
     -- modular service metadata (populated only for `service` docs)
     , servicePackage : Maybe String
@@ -529,6 +530,29 @@ findSource nixosChannels channel source =
 
                 Nothing ->
                     text <| cleanPosition value
+
+        asFlakeSourceLink flakeUrl_ value =
+            let
+                looksLikePath v =
+                    not (String.isEmpty v)
+                        && not (String.contains " " v)
+                        && not (String.contains "," v)
+
+                ref =
+                    Maybe.withDefault "HEAD" source.flakeRevision
+
+                positionWithLine =
+                    cleanPosition value |> String.replace ":" "#L"
+            in
+            if looksLikePath value && String.startsWith "https://github.com/" flakeUrl_ then
+                a
+                    [ href (flakeUrl_ ++ "/blob/" ++ ref ++ "/" ++ positionWithLine)
+                    , target "_blank"
+                    ]
+                    [ text value ]
+
+            else
+                text value
     in
     case ( source.flake, source.flakeUrl, source.source ) of
         -- its a flake
@@ -544,7 +568,7 @@ findSource nixosChannels channel source =
                 (source.source
                     |> Maybe.map
                         (\source_ ->
-                            [ asGithubLink source_
+                            [ asFlakeSourceLink flakeUrl_ source_
                             , span [] [ text " in " ]
                             ]
                         )
@@ -709,6 +733,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "flake_name" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_description" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_resolved" (Json.Decode.map Just decodeResolvedFlake) Nothing
+        |> Json.Decode.Pipeline.optional "revision" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "service_package" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "service_module" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "service_packages" (Json.Decode.list Json.Decode.string) []
