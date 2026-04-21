@@ -276,7 +276,7 @@ impl Elasticsearch {
     ) -> Result<(), ElasticsearchError> {
         // let exports: Result<Vec<Value>, serde_json::Error> = exports.iter().map(serde_json::to_value).collect();
         // let exports = exports?;
-        let bodies = exports.chunks(10_000).map(|chunk| {
+        let bodies = exports.chunks(7_000).map(|chunk| {
             chunk
                 .iter()
                 .map(|e| BulkOperation::from(BulkOperation::index(e)))
