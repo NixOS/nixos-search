@@ -19,13 +19,14 @@ pub fn get_nixpkgs_info(nixpkgs: &Source, attribute: &Option<String>) -> Result<
         "--arg",
         "config",
         "import <nixpkgs/pkgs/top-level/packages-config.nix>",
-        "-qa",
     ]);
     match attribute {
         Some(attr) => {
-            command.add_arg(attr);
+            command.add_args(&["-qaA", attr]);
         }
-        None => {}
+        None => {
+            command.add_arg("-qa");
+        }
     }
     command.add_arg("--meta");
 
