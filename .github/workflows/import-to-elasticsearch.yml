@@ -74,7 +74,7 @@ jobs:
         run: |
           for i in 1 2 3
           do
-            curl -sS ${{ secrets.ELASTICSEARCH_URL2 }}/latest-$(nix eval --raw --file ./version.nix import)-nixos-${{ matrix.channel }}/_search | jq -c '.took // .'
+            curl -sS ${{ secrets.ELASTICSEARCH_URL2 }}/latest-$(nix eval --raw --file ./version.nix import)-nixos-${{ matrix.channel }}/_search | jq -ce '.took // error'
           done
 
       - name: Create issue if failed
