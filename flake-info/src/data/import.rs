@@ -47,6 +47,9 @@ pub enum FlakeEntry {
     },
     /// an option defined in a module of a flake
     Option(NixOption),
+    /// a home-manager option extracted from a flake's module system
+    #[serde(rename = "home-manager-option")]
+    HomeManagerOption(NixOption),
 }
 
 /// The representation of an option that is part of some module and can be used
@@ -201,7 +204,6 @@ pub enum NixpkgsEntry {
     },
     Option(NixOption),
     Service(NixOption),
-    HomeManagerOption(NixOption),
 }
 
 /// Most information about packages in nixpkgs is contained in the meta key
