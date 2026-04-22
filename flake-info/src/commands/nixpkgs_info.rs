@@ -171,33 +171,3 @@ pub fn get_nixpkgs_services(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
 
     Ok(attr_set.into_iter().map(NixpkgsEntry::Service).collect())
 }
-
-/// Home-manager flake reference used to evaluate HM options alongside
-/// each nixpkgs channel import.
-const HOME_MANAGER_FLAKE_REF: &str = "github:nix-community/home-manager";
-
-pub fn get_home_manager_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
-    let mut command = Command::with_args("nix", &["eval", "--json", "--no-write-lock-file"]);
-    command.add_arg_pair("-f", super::EXTRACT_SCRIPT.clone());
-    command.add_arg_pair("-I", format!("nixpkgs={}", nixpkgs.to_flake_ref()));
-    command.add_args(["--override-flake", "input-flake", HOME_MANAGER_FLAKE_REF].iter());
-    command.add_arg("home-manager-options");
-
-    command.enable_capture();
-    command.log_to = LogTo::Log;
-    command.log_output_on_error = true;
-
-    let cow = command
-        .run()
-        .with_context(|| "Failed to gather information about home-manager options")?;
-
-    let output = &*cow.stdout_string_lossy();
-    let de = &mut Deserializer::from_str(output);
-    let attr_set: Vec<NixOption> = serde_path_to_error::deserialize(de)
-        .with_context(|| "Could not parse home-manager options")?;
-
-    Ok(attr_set
-        .into_iter()
-        .map(NixpkgsEntry::HomeManagerOption)
-        .collect())
-}

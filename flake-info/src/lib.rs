@@ -68,16 +68,9 @@ pub fn process_nixpkgs(
         Vec::new()
     };
 
-    let mut hm_options = if matches!(kind, Kind::All | Kind::HomeManagerOption) {
-        commands::get_home_manager_options(nixpkgs)?
-    } else {
-        Vec::new()
-    };
-
     let mut all = drvs;
     all.append(&mut options);
     all.append(&mut services);
-    all.append(&mut hm_options);
 
     let exports = all
         .into_iter()
