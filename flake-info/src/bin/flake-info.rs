@@ -62,6 +62,14 @@ enum Command {
             help = "Restrict to importing a single attribute. Implies --kind package"
         )]
         attribute: Option<String>,
+
+        #[structopt(
+            long = "packages-json-url",
+            help = "Override URL to fetch `packages.json` (or `packages.json.br`) from. \
+                    Defaults to https://channels.nixos.org/nixos-<channel>/packages.json.br. \
+                    Useful for testing a fix against a custom-built file from a nixpkgs branch"
+        )]
+        packages_json_url: Option<String>,
     },
 
     #[structopt(about = "Import nixpkgs channel from archive or local git path")]
@@ -243,7 +251,11 @@ async fn run_command(
 
             Ok((Box::new(|| Ok(exports)), ident))
         }
-        Command::Nixpkgs { channel, attribute } => {
+        Command::Nixpkgs {
+            channel,
+            attribute,
+            packages_json_url,
+        } => {
             let nixpkgs = Source::nixpkgs(channel)
                 .await
                 .map_err(FlakeInfoError::Nixpkgs)?;
@@ -263,8 +275,13 @@ async fn run_command(
 
             Ok((
                 Box::new(move || {
-                    flake_info::process_nixpkgs(&Source::Nixpkgs(nixpkgs), &kind, &attribute)
-                        .map_err(FlakeInfoError::Nixpkgs)
+                    flake_info::process_nixpkgs(
+                        &Source::Nixpkgs(nixpkgs),
+                        &kind,
+                        &attribute,
+                        &packages_json_url,
+                    )
+                    .map_err(FlakeInfoError::Nixpkgs)
                 }),
                 ident,
             ))
@@ -290,8 +307,13 @@ async fn run_command(
 
             Ok((
                 Box::new(move || {
-                    flake_info::process_nixpkgs(&Source::Git { url: source }, &kind, &attribute)
-                        .map_err(FlakeInfoError::Nixpkgs)
+                    flake_info::process_nixpkgs(
+                        &Source::Git { url: source },
+                        &kind,
+                        &attribute,
+                        &None,
+                    )
+                    .map_err(FlakeInfoError::Nixpkgs)
                 }),
                 ident,
             ))
@@ -312,11 +334,16 @@ async fn run_command(
             let (exports_and_hashes, errors) = sources
                 .iter()
                 .map(|source| match source {
-                    Source::Nixpkgs(nixpkgs) => flake_info::process_nixpkgs(source, &kind, &None)
-                        .with_context(|| {
-                            format!("While processing nixpkgs archive {}", source.to_flake_ref())
-                        })
-                        .map(|result| (result, nixpkgs.git_ref.to_owned())),
+                    Source::Nixpkgs(nixpkgs) => {
+                        flake_info::process_nixpkgs(source, &kind, &None, &None)
+                            .with_context(|| {
+                                format!(
+                                    "While processing nixpkgs archive {}",
+                                    source.to_flake_ref()
+                                )
+                            })
+                            .map(|result| (result, nixpkgs.git_ref.to_owned()))
+                    }
                     _ => flake_info::process_flake(source, &kind, temp_store, &extra, with_gc)
                         .with_context(|| {
                             format!("While processing flake {}", source.to_flake_ref())
