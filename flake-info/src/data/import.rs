@@ -326,7 +326,21 @@ impl Platforms {
     }
 }
 
-/// Different representations of the licence attribute
+/// Different representations of the licence attribute.
+///
+/// Variant ordering matters for `#[serde(untagged)]`: serde tries each variant
+/// top-to-bottom and picks the first one whose required fields are all present.
+///
+///  - `None` / `Simple` match degenerate cases (null, bare string via
+///    `StringOrStruct`).
+///  - `Compound` needs `licenses` (a Vec) -- unique among variants.
+///  - `Exception` needs both `license` **and** `exception` -- must come before
+///    `Plus` whose fields are a subset.
+///  - `Plus` needs `license` + `operator` (but not `exception`).
+///  - `Full` has only `Option` fields, so it acts as the catch-all for any
+///    license object.
+///
+/// See NixOS/nixpkgs#468378 for the upstream compound-license proposal.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum License {
@@ -337,12 +351,127 @@ pub enum License {
     Simple {
         license: String,
     },
+    /// `lib.licenses.AND [...]` / `lib.licenses.OR [...]`
+    #[allow(non_snake_case)]
+    Compound {
+        licenseType: String,
+        operator: String,
+        licenses: Vec<StringOrStruct<License>>,
+    },
+    /// `lib.licenses.WITH license exception`
+    #[allow(non_snake_case)]
+    Exception {
+        licenseType: String,
+        operator: String,
+        license: Box<StringOrStruct<License>>,
+        exception: Box<StringOrStruct<License>>,
+    },
+    /// `lib.licenses.PLUS license`
+    #[allow(non_snake_case)]
+    Plus {
+        licenseType: String,
+        operator: String,
+        license: Box<StringOrStruct<License>>,
+    },
     #[allow(non_snake_case)]
     Full {
         fullName: Option<String>,
         shortName: Option<String>,
+        spdxId: Option<String>,
         url: Option<String>,
     },
+}
+
+impl License {
+    /// Whether this license is a compound expression (AND, OR, WITH, PLUS)
+    /// rather than a simple/full leaf license.
+    pub fn is_compound(&self) -> bool {
+        matches!(
+            self,
+            License::Compound { .. } | License::Exception { .. } | License::Plus { .. }
+        )
+    }
+
+    /// Recursively collect all leaf (simple/full) licenses from a compound
+    /// expression.  A leaf license returns itself.
+    pub fn flatten(self) -> Vec<License> {
+        match self {
+            License::Compound { licenses, .. } => {
+                licenses.into_iter().flat_map(|l| l.0.flatten()).collect()
+            }
+            License::Exception {
+                license, exception, ..
+            } => {
+                let mut out = license.0.flatten();
+                out.extend(exception.0.flatten());
+                out
+            }
+            License::Plus { license, .. } => license.0.flatten(),
+            other => vec![other],
+        }
+    }
+
+    /// Short display name suitable for use in SPDX-style expressions.
+    fn display_name(&self) -> String {
+        match self {
+            License::Full {
+                spdxId,
+                shortName,
+                fullName,
+                ..
+            } => spdxId
+                .clone()
+                .or_else(|| shortName.clone())
+                .or_else(|| fullName.clone())
+                .unwrap_or_else(|| "custom".into()),
+            License::Simple { license } => license.clone(),
+            License::None { .. } => String::new(),
+            // Compound variants delegate to spdx_expression()
+            _ => self.spdx_expression(),
+        }
+    }
+
+    /// Build an SPDX-style expression string (e.g. "MIT AND (Apache-2.0 WITH
+    /// LLVM-exception)").
+    pub fn spdx_expression(&self) -> String {
+        match self {
+            License::Compound {
+                operator, licenses, ..
+            } => {
+                let parts: Vec<String> = licenses
+                    .iter()
+                    .map(|l| {
+                        if l.0.is_compound() {
+                            format!("({})", l.0.spdx_expression())
+                        } else {
+                            l.0.display_name()
+                        }
+                    })
+                    .collect();
+                parts.join(&format!(" {} ", operator))
+            }
+            License::Exception {
+                license, exception, ..
+            } => {
+                let lic = if license.0.is_compound() {
+                    format!("({})", license.0.spdx_expression())
+                } else {
+                    license.0.display_name()
+                };
+                let exc = exception.0.display_name();
+                format!("{} WITH {}", lic, exc)
+            }
+            License::Plus { license, .. } => {
+                let lic = if license.0.is_compound() {
+                    format!("({})", license.0.spdx_expression())
+                } else {
+                    license.0.display_name()
+                };
+                format!("{}+", lic)
+            }
+            other => other.display_name(),
+        }
+    }
 }
 
 impl Default for License {
