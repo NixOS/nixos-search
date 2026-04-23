@@ -48,11 +48,111 @@ impl From<import::License> for License {
                 fullName,
                 shortName,
                 url,
+                ..
             } => License {
                 url,
                 fullName: fullName.unwrap_or(shortName.unwrap_or("custom".into())),
             },
+            // Compound variants should be flattened before reaching this point;
+            // if one slips through, use its SPDX expression as the display name.
+            other => License {
+                url: None,
+                fullName: other.spdx_expression(),
+            },
         }
+    }
+}
+
+/// A tree representation of a compound license expression, preserving the
+/// structural AND/OR/WITH/PLUS operators so the frontend can distinguish
+/// licenses that are jointly required from licenses the user may choose
+/// between.  Leaves carry the displayable fullName and (optional) URL so they
+/// can still render as links.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "lowercase")]
+pub enum LicenseExpression {
+    Leaf {
+        #[serde(rename = "fullName")]
+        full_name: String,
+        url: Option<String>,
+    },
+    And {
+        licenses: Vec<LicenseExpression>,
+    },
+    Or {
+        licenses: Vec<LicenseExpression>,
+    },
+    With {
+        license: Box<LicenseExpression>,
+        exception: Box<LicenseExpression>,
+    },
+    Plus {
+        license: Box<LicenseExpression>,
+    },
+}
+
+impl From<import::License> for LicenseExpression {
+    fn from(license: import::License) -> Self {
+        match license {
+            import::License::None { .. } => LicenseExpression::Leaf {
+                full_name: "no license specified".to_string(),
+                url: None,
+            },
+            import::License::Simple { license } => LicenseExpression::Leaf {
+                full_name: license,
+                url: None,
+            },
+            import::License::Full {
+                fullName,
+                shortName,
+                url,
+                ..
+            } => LicenseExpression::Leaf {
+                full_name: fullName
+                    .or(shortName)
+                    .unwrap_or_else(|| "custom".to_string()),
+                url,
+            },
+            import::License::Compound {
+                operator, licenses, ..
+            } => {
+                let children: Vec<LicenseExpression> =
+                    licenses.into_iter().map(|l| l.0.into()).collect();
+                if operator == "OR" {
+                    LicenseExpression::Or { licenses: children }
+                } else {
+                    LicenseExpression::And { licenses: children }
+                }
+            }
+            import::License::Exception {
+                license, exception, ..
+            } => LicenseExpression::With {
+                license: Box::new((*license).0.into()),
+                exception: Box::new((*exception).0.into()),
+            },
+            import::License::Plus { license, .. } => LicenseExpression::Plus {
+                license: Box::new((*license).0.into()),
+            },
+        }
+    }
+}
+
+/// Build an optional license-expression tree from a list of top-level licenses.
+/// Returns `None` if no license in the list uses compound operators (the flat
+/// `package_license` list is sufficient in that case).  Multiple top-level
+/// licenses are implicitly joined with AND, matching the historical nixpkgs
+/// convention that a list of licenses means "all of them apply".
+fn build_license_expression(
+    licenses: &[import::StringOrStruct<import::License>],
+) -> Option<LicenseExpression> {
+    if !licenses.iter().any(|l| l.0.is_compound()) {
+        return None;
+    }
+    let items: Vec<LicenseExpression> = licenses.iter().map(|l| l.0.clone().into()).collect();
+    if items.len() == 1 {
+        items.into_iter().next()
+    } else {
+        Some(LicenseExpression::And { licenses: items })
     }
 }
 
@@ -75,6 +175,7 @@ pub enum Derivation {
         package_mainProgram: Option<String>,
         package_license: Vec<License>,
         package_license_set: Vec<String>,
+        package_license_expression: Option<LicenseExpression>,
         package_maintainers: Vec<Maintainer>,
         package_maintainers_set: Vec<String>,
         package_teams: Vec<Team>,
@@ -164,15 +265,17 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
 
                 let long_description = long_description.map(|s| s.render_markdown()).transpose()?;
 
-                let package_license: Vec<License> = license
-                    .map(OneOrMany::into_list)
-                    .unwrap_or_default()
+                let license_list = license.map(OneOrMany::into_list).unwrap_or_default();
+
+                let package_license_expression = build_license_expression(&license_list);
+
+                let package_license: Vec<License> = license_list
                     .into_iter()
-                    .map(|sos| sos.0.into())
+                    .flat_map(|sos| sos.0.flatten())
+                    .map(|l| l.into())
                     .collect();
                 let package_license_set: Vec<String> = package_license
                     .iter()
-                    .clone()
                     .map(|l| l.fullName.to_owned())
                     .collect();
 
@@ -190,6 +293,7 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                     package_mainProgram: None,
                     package_license,
                     package_license_set,
+                    package_license_expression,
                     package_description: description.clone(),
                     package_maintainers: vec![maintainer.clone()],
                     package_maintainers_set: maintainer.name.map_or(vec![], |n| vec![n]),
@@ -256,12 +360,17 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                 })
                 .into();
 
-                let package_license: Vec<License> = package
+                let license_list = package
                     .meta
                     .license
-                    .map_or(Default::default(), OneOrMany::into_list)
+                    .map_or(Default::default(), OneOrMany::into_list);
+
+                let package_license_expression = build_license_expression(&license_list);
+
+                let package_license: Vec<License> = license_list
                     .into_iter()
-                    .map(|sos| sos.0.into())
+                    .flat_map(|sos| sos.0.flatten())
+                    .map(|l| l.into())
                     .collect();
 
                 let package_license_set = package_license
@@ -330,6 +439,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     package_mainProgram: package.meta.mainProgram,
                     package_license,
                     package_license_set,
+                    package_license_expression,
                     package_maintainers,
                     package_maintainers_set,
                     package_teams,
