@@ -487,6 +487,11 @@ repo = "neuropil"
 
 [[sources]]
 type = "gitlab"
+owner = "pinage404"
+repo = "nix-sandboxes"
+
+[[sources]]
+type = "gitlab"
 owner = "simple-nixos-mailserver"
 repo = "nixos-mailserver"
 
