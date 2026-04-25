@@ -484,7 +484,9 @@ viewNavigation route =
             , ( Route.Options searchArgs, text "Options" )
             , ( Route.Flakes searchArgs, text "3rd-party Flakes" )
             ]
-        ++ [ li [] [ a [ href "https://wiki.nixos.org" ] [ text "NixOS Wiki" ] ] ]
+        ++ [ li [] [ a [ href "https://noogle.dev" ] [ text "Functions" ] ]
+           , li [] [ a [ href "https://wiki.nixos.org" ] [ text "NixOS Wiki" ] ]
+           ]
 
 
 viewNavigationItem :
