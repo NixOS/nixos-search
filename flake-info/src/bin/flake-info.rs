@@ -175,6 +175,14 @@ struct ElasticOpts {
 
 type LazyExports = Box<dyn FnOnce() -> Result<Vec<Export>, FlakeInfoError>>;
 
+struct SpillGuard<'a>(&'a std::path::Path);
+
+impl Drop for SpillGuard<'_> {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(self.0);
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init();
@@ -424,10 +432,43 @@ async fn push_to_elastic(
         ensure?;
     }
 
-    let successes = exports()?;
+    let spill_path = {
+        let mut p = std::env::temp_dir();
+        p.push(format!(
+            "flake-info-exports-{}-{}.ndjson",
+            std::process::id(),
+            &index,
+        ));
+        p
+    };
+
+    {
+        use std::io::Write;
+        let successes = exports()?;
+        info!(
+            "Spilling {} exports to {} before push",
+            successes.len(),
+            spill_path.display()
+        );
+        let file = std::fs::File::create(&spill_path)
+            .with_context(|| format!("Failed to create spill file {}", spill_path.display()))?;
+        let mut writer = std::io::BufWriter::new(file);
+        for export in &successes {
+            serde_json::to_writer(&mut writer, export)
+                .with_context(|| "Failed to serialize export to spill file")?;
+            writer
+                .write_all(b"\n")
+                .with_context(|| "Failed to write spill file separator")?;
+        }
+        writer
+            .flush()
+            .with_context(|| "Failed to flush spill file")?;
+    } // `successes` dropped here, freeing memory before the push phase
+
+    let _spill_guard = SpillGuard(&spill_path);
 
     info!("Pushing to elastic");
-    es.push_exports(&config, &successes)
+    es.push_exports_ndjson(&config, &spill_path)
         .await
         .with_context(|| "Failed to push results to elasticsearch".to_string())?;
 

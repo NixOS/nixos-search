@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::io::{BufRead, BufReader};
+use std::path::Path;
 
 use clap::arg_enum;
 pub use elasticsearch::http::transport::Transport;
@@ -253,6 +255,9 @@ pub enum ElasticsearchError {
     #[error("Failed to serialize exported data: {0}")]
     SerializationError(#[from] serde_json::Error),
 
+    #[error("Failed to read NDJSON spill file: {0}")]
+    NdjsonIoError(std::io::Error),
+
     #[error("An index with the name \"{0}\" already exists and the (default) stategy is abort")]
     IndexExistsError(String),
 }
@@ -274,82 +279,11 @@ impl Elasticsearch {
         config: &Config<'_>,
         exports: &[Export],
     ) -> Result<(), ElasticsearchError> {
-        // let exports: Result<Vec<Value>, serde_json::Error> = exports.iter().map(serde_json::to_value).collect();
-        // let exports = exports?;
-        let bodies = exports.chunks(7_000).map(|chunk| {
-            chunk
-                .iter()
-                .map(|e| BulkOperation::from(BulkOperation::index(e)))
-        });
-
         let mut had_failures = false;
-
-        for body in bodies {
-            let response = self
-                .client
-                .bulk(elasticsearch::BulkParts::Index(config.index))
-                .body(body.collect())
-                .send()
-                .await
-                .map_err(ElasticsearchError::PushError)?;
-
-            let response = dbg!(response);
-            if response.status_code().is_client_error() || response.status_code().is_server_error()
-            {
-                return response
-                    .exception()
-                    .await
-                    .map_err(ElasticsearchError::ClientError)?
-                    .map(ElasticsearchError::PushResponseError)
-                    .map_or(Ok(()), Err);
-            }
-
-            // Elasticsearch bulk API returns HTTP 200 even when some items fail
-            // Reference: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html
-            let response_body: serde_json::Value = response
-                .json()
-                .await
-                .map_err(ElasticsearchError::ClientError)?;
-
-            // Warn if any items in the bulk request failed
-            if let Some(true) = response_body.get("errors").and_then(|v| v.as_bool()) {
-                if let Some(items) = response_body.get("items").and_then(|v| v.as_array()) {
-                    let mut failed_count = 0;
-
-                    for (idx, item) in items.iter().enumerate() {
-                        if let Some(index_result) = item.get("index") {
-                            if let Some(status) =
-                                index_result.get("status").and_then(|s| s.as_u64())
-                            {
-                                if status >= 400 {
-                                    failed_count += 1;
-                                    let error_type = index_result
-                                        .get("error")
-                                        .and_then(|e| e.get("type"))
-                                        .and_then(|t| t.as_str())
-                                        .unwrap_or("unknown");
-                                    let error_reason = index_result
-                                        .get("error")
-                                        .and_then(|e| e.get("reason"))
-                                        .and_then(|r| r.as_str())
-                                        .unwrap_or("");
-                                    warn!(
-                                        "  Item {}: status {}, type: {}, reason: {}",
-                                        idx, status, error_type, error_reason
-                                    );
-                                }
-                            }
-                        }
-                    }
-
-                    warn!(
-                        "Bulk request had {} failed items out of {}",
-                        failed_count,
-                        items.len()
-                    );
-                    had_failures = true;
-                }
-            }
+        for chunk in exports.chunks(7_000) {
+            let body: Vec<BulkOperation<_>> =
+                chunk.iter().map(|e| BulkOperation::index(e).into()).collect();
+            had_failures |= self.push_bulk_body(config, body).await?;
         }
 
         if had_failures {
@@ -357,6 +291,122 @@ impl Elasticsearch {
         }
 
         Ok(())
+    }
+
+    /// Stream a newline-delimited JSON file of `Export` entries to Elasticsearch
+    /// without loading the whole corpus into memory. Each line must be a single
+    /// serialized `Export`.
+    pub async fn push_exports_ndjson(
+        &self,
+        config: &Config<'_>,
+        path: &Path,
+    ) -> Result<(), ElasticsearchError> {
+        let file = std::fs::File::open(path).map_err(ElasticsearchError::NdjsonIoError)?;
+        let mut reader = BufReader::new(file);
+        let mut had_failures = false;
+        let mut buf = String::new();
+        let mut chunk: Vec<BulkOperation<Value>> = Vec::with_capacity(7_000);
+
+        loop {
+            buf.clear();
+            let n = reader
+                .read_line(&mut buf)
+                .map_err(ElasticsearchError::NdjsonIoError)?;
+            if n == 0 {
+                break;
+            }
+            let trimmed = buf.trim_end();
+            if trimmed.is_empty() {
+                continue;
+            }
+            let value: Value = serde_json::from_str(trimmed)?;
+            chunk.push(BulkOperation::index(value).into());
+            if chunk.len() >= 7_000 {
+                let body = std::mem::replace(&mut chunk, Vec::with_capacity(7_000));
+                had_failures |= self.push_bulk_body(config, body).await?;
+            }
+        }
+
+        if !chunk.is_empty() {
+            had_failures |= self.push_bulk_body(config, chunk).await?;
+        }
+
+        if had_failures {
+            return Err(ElasticsearchError::BulkRequestPartialFailure);
+        }
+
+        Ok(())
+    }
+
+    async fn push_bulk_body<B>(
+        &self,
+        config: &Config<'_>,
+        body: Vec<BulkOperation<B>>,
+    ) -> Result<bool, ElasticsearchError>
+    where
+        B: serde::Serialize,
+    {
+        let response = self
+            .client
+            .bulk(elasticsearch::BulkParts::Index(config.index))
+            .body(body)
+            .send()
+            .await
+            .map_err(ElasticsearchError::PushError)?;
+
+        if response.status_code().is_client_error() || response.status_code().is_server_error() {
+            return Err(response
+                .exception()
+                .await
+                .map_err(ElasticsearchError::ClientError)?
+                .map(ElasticsearchError::PushResponseError)
+                .unwrap_or(ElasticsearchError::BulkRequestPartialFailure));
+        }
+
+        // Elasticsearch bulk API returns HTTP 200 even when some items fail.
+        // Reference: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html
+        let response_body: serde_json::Value = response
+            .json()
+            .await
+            .map_err(ElasticsearchError::ClientError)?;
+
+        let mut had_failures = false;
+        if let Some(true) = response_body.get("errors").and_then(|v| v.as_bool()) {
+            if let Some(items) = response_body.get("items").and_then(|v| v.as_array()) {
+                let mut failed_count = 0;
+                for (idx, item) in items.iter().enumerate() {
+                    if let Some(index_result) = item.get("index") {
+                        if let Some(status) = index_result.get("status").and_then(|s| s.as_u64()) {
+                            if status >= 400 {
+                                failed_count += 1;
+                                let error_type = index_result
+                                    .get("error")
+                                    .and_then(|e| e.get("type"))
+                                    .and_then(|t| t.as_str())
+                                    .unwrap_or("unknown");
+                                let error_reason = index_result
+                                    .get("error")
+                                    .and_then(|e| e.get("reason"))
+                                    .and_then(|r| r.as_str())
+                                    .unwrap_or("");
+                                warn!(
+                                    "  Item {}: status {}, type: {}, reason: {}",
+                                    idx, status, error_type, error_reason
+                                );
+                            }
+                        }
+                    }
+                }
+                warn!(
+                    "Bulk request had {} failed items out of {}",
+                    failed_count,
+                    items.len()
+                );
+                had_failures = true;
+            }
+        }
+
+        Ok(had_failures)
     }
 
     pub async fn ensure_index(&self, config: &Config<'_>) -> Result<(), ElasticsearchError> {
