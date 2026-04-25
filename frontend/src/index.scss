@@ -121,6 +121,11 @@
     outline-offset: 0 !important;
   }
 
+  // `j` / `k` keyboard navigation between search results.
+  .result-selected {
+    @include outline-visible;
+  }
+
   .label-warning {
     background: transparent;
     color: var(--text-color-warning);
