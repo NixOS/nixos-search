@@ -23,8 +23,10 @@ module Search exposing
     , makeRequest
     , makeRequestBody
     , onClickStop
+    , resultSelectedClass
     , shouldLoad
     , showMoreButton
+    , subscriptions
     , trapClick
     , update
     , view
@@ -37,6 +39,7 @@ module Search exposing
 import Array
 import Base64
 import Browser.Dom
+import Browser.Events
 import Browser.Navigation
 import Html
     exposing
@@ -108,6 +111,7 @@ type alias Model a b =
     , searchType : Route.SearchType
     , redirectedChannel : Maybe String
     , excludedOptionSources : Set String
+    , selectedResultId : Maybe String
     }
 
 
@@ -346,6 +350,7 @@ init args defaultNixOSChannel nixosChannels maybeModel =
             args.type_
                 |> Maybe.withDefault defaultSearchArgs.searchType
       , excludedOptionSources = args.excludedOptionSources
+      , selectedResultId = getField .selectedResultId Nothing
       }
         |> ensureLoading nixosChannels
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
@@ -395,6 +400,11 @@ elementId str =
     Html.Attributes.id <| "result-" ++ str
 
 
+resultSelectedClass : String
+resultSelectedClass =
+    "result-selected"
+
+
 
 -- ---------------------------
 -- UPDATE
@@ -415,6 +425,8 @@ type Msg a b
     | ChangePage Int
     | ShowInstallDetails Details
     | SetOptionSourceIncluded OptionSource Bool
+    | SelectResult (Maybe String)
+    | ActivateSelected
 
 
 type Details
@@ -521,6 +533,7 @@ update toRoute navKey msg model nixosChannels =
         QueryResponse result ->
             ( { model
                 | result = result
+                , selectedResultId = Nothing
               }
             , scrollToEntry model.show
             )
@@ -564,6 +577,165 @@ update toRoute navKey msg model nixosChannels =
             }
                 |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
+
+        SelectResult maybeId ->
+            ( { model | selectedResultId = maybeId }
+            , Maybe.withDefault Cmd.none (Maybe.map scrollSelectedIntoView maybeId)
+            )
+
+        ActivateSelected ->
+            case model.selectedResultId of
+                Just selected ->
+                    { model
+                        | show =
+                            if model.show == Just selected then
+                                Nothing
+
+                            else
+                                Just selected
+                    }
+                        |> pushUrl toRoute navKey
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+
+
+-- `j` / `k` move the selection between search results, `Enter` activates
+-- the selected one. Selection is tracked in the model rather than via
+-- browser focus, since the result `<li>`s are not focusable by default
+-- and the global `*:focus { outline-width: 0 }` rule would hide any
+-- focus ring anyway.
+
+
+subscriptions : (a -> String) -> Model a b -> Sub (Msg a b)
+subscriptions idForItem model =
+    Browser.Events.onKeyDown (keyDecoder idForItem model)
+
+
+keyDecoder : (a -> String) -> Model a b -> Json.Decode.Decoder (Msg a b)
+keyDecoder idForItem model =
+    Json.Decode.map5
+        (\key ctrl alt meta tagName ->
+            { key = key, ctrl = ctrl, alt = alt, meta = meta, tagName = tagName }
+        )
+        (Json.Decode.field "key" Json.Decode.string)
+        (Json.Decode.field "ctrlKey" Json.Decode.bool)
+        (Json.Decode.field "altKey" Json.Decode.bool)
+        (Json.Decode.field "metaKey" Json.Decode.bool)
+        (Json.Decode.at [ "target", "tagName" ] Json.Decode.string)
+        |> Json.Decode.andThen
+            (\ev ->
+                if ev.ctrl || ev.alt || ev.meta then
+                    Json.Decode.fail "modifier"
+
+                else if isTypingTag ev.tagName then
+                    Json.Decode.fail "typing target"
+
+                else
+                    case ev.key of
+                        "j" ->
+                            Json.Decode.succeed (moveSelection idForItem 1 model)
+
+                        "k" ->
+                            Json.Decode.succeed (moveSelection idForItem -1 model)
+
+                        "Enter" ->
+                            case model.selectedResultId of
+                                Just _ ->
+                                    Json.Decode.succeed ActivateSelected
+
+                                Nothing ->
+                                    Json.Decode.fail "no selection"
+
+                        _ ->
+                            Json.Decode.fail "ignored"
+            )
+
+
+isTypingTag : String -> Bool
+isTypingTag tagName =
+    List.member tagName [ "INPUT", "TEXTAREA", "SELECT" ]
+
+
+moveSelection : (a -> String) -> Int -> Model a b -> Msg a b
+moveSelection idForItem delta model =
+    case model.result of
+        RemoteData.Success r ->
+            let
+                ids =
+                    List.map (.source >> idForItem) r.hits.hits
+
+                array =
+                    Array.fromList ids
+            in
+            case Array.get 0 array of
+                Nothing ->
+                    NoOp
+
+                Just first ->
+                    case model.selectedResultId of
+                        Nothing ->
+                            SelectResult (Just first)
+
+                        Just current ->
+                            case findIndex ((==) current) ids of
+                                Nothing ->
+                                    SelectResult (Just first)
+
+                                Just i ->
+                                    let
+                                        target =
+                                            clamp 0 (Array.length array - 1) (i + delta)
+                                    in
+                                    SelectResult (Array.get target array)
+
+        _ ->
+            NoOp
+
+
+findIndex : (a -> Bool) -> List a -> Maybe Int
+findIndex pred =
+    let
+        go i list =
+            case list of
+                [] ->
+                    Nothing
+
+                head :: rest ->
+                    if pred head then
+                        Just i
+
+                    else
+                        go (i + 1) rest
+    in
+    go 0
+
+
+scrollSelectedIntoView : String -> Cmd (Msg a b)
+scrollSelectedIntoView id =
+    -- Mirror `scrollIntoView({ block: "nearest" })`: only scroll if the
+    -- element is outside the viewport, and only by enough to bring it in.
+    Browser.Dom.getElement ("result-" ++ id)
+        |> Task.andThen
+            (\{ element, viewport } ->
+                let
+                    elementBottom =
+                        element.y + element.height
+
+                    viewportBottom =
+                        viewport.y + viewport.height
+                in
+                if element.y < viewport.y then
+                    Browser.Dom.setViewport viewport.x element.y
+
+                else if elementBottom > viewportBottom then
+                    Browser.Dom.setViewport viewport.x (elementBottom - viewport.height)
+
+                else
+                    Task.succeed ()
+            )
+        |> Task.attempt (always NoOp)
 
 
 pushUrl :
@@ -777,6 +949,7 @@ view :
          -> String
          -> Details
          -> Maybe String
+         -> Maybe String
          -> List (ResultItem a)
          -> Html c
         )
@@ -870,6 +1043,7 @@ viewResult :
         (List NixOSChannel
          -> String
          -> Details
+         -> Maybe String
          -> Maybe String
          -> List (ResultItem a)
          -> Html c
@@ -1106,6 +1280,7 @@ viewResults :
          -> String
          -> Details
          -> Maybe String
+         -> Maybe String
          -> List (ResultItem a)
          -> Html c
         )
@@ -1174,7 +1349,7 @@ viewResults nixosChannels model result viewSuccess outMsg categoryName =
                             ]
             )
         )
-    , viewSuccess nixosChannels model.channel model.showInstallDetails model.show result.hits.hits
+    , viewSuccess nixosChannels model.channel model.showInstallDetails model.show model.selectedResultId result.hits.hits
     , Html.map outMsg <| viewPager model result.hits.total.value
     ]
 

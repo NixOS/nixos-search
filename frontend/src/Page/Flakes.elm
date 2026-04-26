@@ -3,6 +3,7 @@ module Page.Flakes exposing
     , Msg
     , init
     , makeRequest
+    , subscriptions
     , update
     , view
     )
@@ -92,6 +93,16 @@ init searchArgs defaultNixOSChannel nixosChannels model =
 type Msg
     = OptionsMsg Page.Options.Msg
     | PackagesMsg Page.Packages.Msg
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    case model of
+        OptionModel m ->
+            Sub.map OptionsMsg (Page.Options.subscriptions m)
+
+        PackagesModel m ->
+            Sub.map PackagesMsg (Page.Packages.subscriptions m)
 
 
 update :

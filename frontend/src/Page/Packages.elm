@@ -11,9 +11,11 @@ module Page.Packages exposing
     , ResultPackageTeam
     , decodeResultAggregations
     , decodeResultItemSource
+    , idForItem
     , init
     , makeRequest
     , makeRequestBody
+    , subscriptions
     , update
     , view
     , viewBuckets
@@ -217,6 +219,16 @@ type Msg
     = SearchMsg (Search.Msg ResultItemSource ResultAggregations)
 
 
+idForItem : ResultItemSource -> String
+idForItem source =
+    source.attr_name
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.map SearchMsg (Search.subscriptions idForItem model)
+
+
 update :
     Browser.Navigation.Key
     -> Msg
@@ -318,12 +330,13 @@ viewSuccess :
     -> String
     -> Details
     -> Maybe String
+    -> Maybe String
     -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
-viewSuccess nixosChannels channel showInstallDetails show hits =
+viewSuccess nixosChannels channel showInstallDetails show selectedResultId hits =
     ul []
         (List.map
-            (viewResultItem nixosChannels channel showInstallDetails show)
+            (viewResultItem nixosChannels channel showInstallDetails show selectedResultId)
             hits
         )
 
@@ -333,9 +346,10 @@ viewResultItem :
     -> String
     -> Details
     -> Maybe String
+    -> Maybe String
     -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItem nixosChannels channel showInstallDetails show item =
+viewResultItem nixosChannels channel showInstallDetails show selectedResultId item =
     let
         optionals b l =
             if b then
@@ -924,7 +938,10 @@ viewResultItem nixosChannels channel showInstallDetails show item =
     in
     li
         [ class "package"
-        , classList [ ( "opened", isOpen ) ]
+        , classList
+            [ ( "opened", isOpen )
+            , ( Search.resultSelectedClass, Just item.source.attr_name == selectedResultId )
+            ]
         , Search.elementId item.source.attr_name
         ]
         ([ span [] flakeOrNixpkgs

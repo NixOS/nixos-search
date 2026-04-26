@@ -6,9 +6,11 @@ module Page.Options exposing
     , ResultItemSource
     , decodeResultAggregations
     , decodeResultItemSource
+    , idForItem
     , init
     , makeRequest
     , makeRequestBody
+    , subscriptions
     , update
     , view
     , viewBuckets
@@ -128,6 +130,16 @@ type Msg
     = SearchMsg (Search.Msg ResultItemSource ResultAggregations)
 
 
+idForItem : ResultItemSource -> String
+idForItem source =
+    source.docType ++ ":" ++ source.name
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.map SearchMsg (Search.subscriptions idForItem model)
+
+
 update :
     Browser.Navigation.Key
     -> Msg
@@ -219,12 +231,13 @@ viewSuccess :
     -> String
     -> Details
     -> Maybe String
+    -> Maybe String
     -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
-viewSuccess showBadges nixosChannels channel _ show hits =
+viewSuccess showBadges nixosChannels channel _ show selectedResultId hits =
     ul []
         (List.map
-            (viewResultItem nixosChannels channel show showBadges)
+            (viewResultItem nixosChannels channel show showBadges selectedResultId)
             hits
         )
 
@@ -234,9 +247,10 @@ viewResultItem :
     -> String
     -> Maybe String
     -> Bool
+    -> Maybe String
     -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItem nixosChannels channel show showBadges item =
+viewResultItem nixosChannels channel show showBadges selectedResultId item =
     let
         asPre value =
             pre [] [ text value ]
@@ -481,7 +495,10 @@ viewResultItem nixosChannels channel show showBadges item =
     in
     li
         [ class "option"
-        , classList [ ( "opened", isOpen ) ]
+        , classList
+            [ ( "opened", isOpen )
+            , ( Search.resultSelectedClass, Just itemId == selectedResultId )
+            ]
         , Search.elementId itemId
         ]
     <|

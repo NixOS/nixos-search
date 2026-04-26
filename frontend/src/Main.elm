@@ -518,8 +518,19 @@ viewPage model =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.none
+subscriptions model =
+    case model.page of
+        NotFound ->
+            Sub.none
+
+        Packages m ->
+            Sub.map PackagesMsg (Page.Packages.subscriptions m)
+
+        Options m ->
+            Sub.map OptionsMsg (Page.Options.subscriptions m)
+
+        Flakes m ->
+            Sub.map FlakesMsg (Page.Flakes.subscriptions m)
 
 
 
