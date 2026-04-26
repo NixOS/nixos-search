@@ -115,6 +115,11 @@ repo = "eza"
 
 [[sources]]
 type = "github"
+owner = "felbinger"
+repo = "srsran.nix"
+
+[[sources]]
+type = "github"
 owner = "fort-nix"
 repo = "nix-bitcoin"
 
