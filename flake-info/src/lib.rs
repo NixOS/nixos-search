@@ -49,9 +49,10 @@ pub fn process_nixpkgs(
     nixpkgs: &Source,
     kind: &Kind,
     attribute: &Option<String>,
+    packages_json_url: &Option<String>,
 ) -> Result<Vec<Export>, anyhow::Error> {
     let drvs = if matches!(kind, Kind::All | Kind::Package) {
-        commands::get_nixpkgs_info(nixpkgs, attribute)?
+        commands::get_nixpkgs_info(nixpkgs, attribute, packages_json_url)?
     } else {
         Vec::new()
     };
