@@ -184,17 +184,19 @@ initBuckets bucketsAsString =
 
 
 init :
-    Route.SearchArgs
+    Search.Options
+    -> Bool
+    -> Route.SearchArgs
     -> String
     -> List NixOSChannel
     -> Maybe Model
     -> ( Model, Cmd Msg )
-init searchArgs defaultNixOSChannel nixosChannels model =
+init options typeaheadEnabled searchArgs defaultNixOSChannel nixosChannels model =
     let
         ( newModel, newCmd ) =
-            Search.init searchArgs defaultNixOSChannel nixosChannels model
+            Search.init options typeaheadEnabled searchArgs defaultNixOSChannel nixosChannels model
     in
-    ( newModel
+    ( { newModel | searchType = Route.PackageSearch }
     , Cmd.map SearchMsg newCmd
     )
 

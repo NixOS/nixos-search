@@ -5,6 +5,16 @@ require("elm-keyboard-shortcut");
 
 const { Elm } = require("./Main");
 
+// Honor the user's data-saver preference so the typeahead can disable
+// itself on metered or slow connections. Falsy default for browsers
+// without the Network Information API.
+const saveData = Boolean(
+    typeof navigator !== "undefined" &&
+        navigator.connection &&
+        (navigator.connection.saveData ||
+            ["slow-2g", "2g"].includes(navigator.connection.effectiveType)),
+);
+
 Elm.Main.init({
     flags: {
         elasticsearchMappingSchemaVersion: parseInt(
@@ -16,6 +26,7 @@ Elm.Main.init({
         elasticsearchPassword:
             process.env.ELASTICSEARCH_PASSWORD || "X8gPHnzL52wFEekuxsfQ9cSh",
         nixosChannels: JSON.parse(process.env.NIXOS_CHANNELS),
+        saveData: saveData,
     },
 });
 

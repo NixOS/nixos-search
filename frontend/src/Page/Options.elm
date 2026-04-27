@@ -105,17 +105,22 @@ type alias AggregationsAll =
 
 
 init :
-    Route.SearchArgs
+    Search.Options
+    -> Bool
+    -> Route.SearchArgs
     -> String
     -> List NixOSChannel
     -> Maybe Model
     -> ( Model, Cmd Msg )
-init searchArgs defaultNixOSChannel nixosChannels model =
+init options typeaheadEnabled searchArgs defaultNixOSChannel nixosChannels model =
     let
         ( newModel, newCmd ) =
-            Search.init searchArgs defaultNixOSChannel nixosChannels model
+            Search.init options typeaheadEnabled searchArgs defaultNixOSChannel nixosChannels model
     in
-    ( newModel
+    -- The Options page always queries options, regardless of `args.type_`
+    -- (which defaults to `PackageSearch`). Pin `searchType` so the typeahead
+    -- targets option fields.
+    ( { newModel | searchType = Route.OptionSearch }
     , Cmd.map SearchMsg newCmd
     )
 
