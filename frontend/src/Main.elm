@@ -55,6 +55,7 @@ type alias Flags =
     , elasticsearchUsername : String
     , elasticsearchPassword : String
     , nixosChannels : Json.Decode.Value
+    , saveData : Bool
     }
 
 
@@ -65,6 +66,7 @@ type alias Model =
     , defaultNixOSChannel : String
     , nixosChannels : List NixOSChannel
     , page : Page
+    , typeaheadEnabled : Bool
     }
 
 
@@ -107,6 +109,7 @@ init flags url navKey =
             , nixosChannels = nixosChannels.channels
             , page = NotFound
             , route = Route.Home
+            , typeaheadEnabled = not flags.saveData
             }
     in
     changeRouteTo model url
@@ -225,20 +228,20 @@ pageMatch m1 m2 =
             True
 
         ( Packages model_a, Packages model_b ) ->
-            { model_a | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
-                == { model_b | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+            { model_a | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing, typeahead = model_b.typeahead }
+                == { model_b | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing, typeahead = model_b.typeahead }
 
         ( Options model_a, Options model_b ) ->
-            { model_a | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
-                == { model_b | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+            { model_a | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing, typeahead = model_b.typeahead }
+                == { model_b | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing, typeahead = model_b.typeahead }
 
         ( Flakes (OptionModel model_a), Flakes (OptionModel model_b) ) ->
-            { model_a | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
-                == { model_b | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+            { model_a | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing, typeahead = model_b.typeahead }
+                == { model_b | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing, typeahead = model_b.typeahead }
 
         ( Flakes (PackagesModel model_a), Flakes (PackagesModel model_b) ) ->
-            { model_a | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
-                == { model_b | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+            { model_a | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing, typeahead = model_b.typeahead }
+                == { model_b | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing, typeahead = model_b.typeahead }
 
         _ ->
             False
@@ -283,7 +286,7 @@ changeRouteTo currentModel url =
                         _ ->
                             Nothing
             in
-            Page.Packages.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
+            Page.Packages.init currentModel.elasticsearch currentModel.typeaheadEnabled searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
                 |> updateWith Packages PackagesMsg model
                 |> avoidReinit
                 |> attemptQuery
@@ -298,7 +301,7 @@ changeRouteTo currentModel url =
                         _ ->
                             Nothing
             in
-            Page.Options.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
+            Page.Options.init currentModel.elasticsearch currentModel.typeaheadEnabled searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
                 |> updateWith Options OptionsMsg model
                 |> avoidReinit
                 |> attemptQuery
@@ -313,7 +316,7 @@ changeRouteTo currentModel url =
                         _ ->
                             Nothing
             in
-            Page.Flakes.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
+            Page.Flakes.init currentModel.elasticsearch currentModel.typeaheadEnabled searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
                 |> updateWith Flakes FlakesMsg model
                 |> avoidReinit
                 |> attemptQuery
