@@ -267,6 +267,53 @@
         border-left: 1px solid var(--line-color);
       }
     }
+
+    .search-input-with-typeahead {
+      position: relative;
+    }
+
+    .typeahead-suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      margin: 4px 0 0;
+      padding: 4px 0;
+      list-style: none;
+      background: var(--background-color);
+      border: 1px solid var(--line-color);
+      border-radius: 4px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+      z-index: 1000;
+      max-height: 50vh;
+      overflow-y: auto;
+
+      .typeahead-item {
+        a {
+          display: flex;
+          flex-direction: column;
+          padding: 6px 12px;
+          color: var(--text-color);
+          text-decoration: none;
+
+          &:hover, &:focus {
+            background: var(--button-active-background);
+          }
+        }
+
+        .typeahead-primary {
+          font-weight: 600;
+        }
+
+        .typeahead-secondary {
+          font-size: 0.85em;
+          color: var(--text-color-light);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+      }
+    }
   }
 
   // Override bootstrap styles for the header bar

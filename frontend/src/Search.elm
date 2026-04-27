@@ -72,7 +72,10 @@ import Html.Attributes
         )
 import Html.Events
     exposing
-        ( onClick
+        ( on
+        , onBlur
+        , onClick
+        , onFocus
         , onInput
         , onSubmit
         )
@@ -89,6 +92,7 @@ import Route
         , allTypes
         , searchTypeToTitle
         )
+import Search.Typeahead as Typeahead
 import Set exposing (Set)
 import Task
 
@@ -108,6 +112,8 @@ type alias Model a b =
     , searchType : Route.SearchType
     , redirectedChannel : Maybe String
     , excludedOptionSources : Set String
+    , options : Options
+    , typeahead : Typeahead.Model
     }
 
 
@@ -287,12 +293,14 @@ decodeResolvedFlake =
 
 
 init :
-    Route.SearchArgs
+    Options
+    -> Bool
+    -> Route.SearchArgs
     -> String
     -> List NixOSChannel
     -> Maybe (Model a b)
     -> ( Model a b, Cmd (Msg a b) )
-init args defaultNixOSChannel nixosChannels maybeModel =
+init options typeaheadEnabled args defaultNixOSChannel nixosChannels maybeModel =
     let
         getField getFn default =
             maybeModel
@@ -346,6 +354,8 @@ init args defaultNixOSChannel nixosChannels maybeModel =
             args.type_
                 |> Maybe.withDefault defaultSearchArgs.searchType
       , excludedOptionSources = args.excludedOptionSources
+      , options = options
+      , typeahead = Typeahead.init typeaheadEnabled
       }
         |> ensureLoading nixosChannels
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
@@ -415,6 +425,9 @@ type Msg a b
     | ChangePage Int
     | ShowInstallDetails Details
     | SetOptionSourceIncluded OptionSource Bool
+    | TypeaheadMsg Typeahead.Msg
+    | TypeaheadBlur
+    | TypeaheadFocus
 
 
 type Details
@@ -505,8 +518,18 @@ update toRoute navKey msg model nixosChannels =
                 |> pushUrl toRoute navKey
 
         QueryInput query ->
-            ( { model | query = query }
-            , Cmd.none
+            let
+                ( typeaheadModel, typeaheadCmd ) =
+                    Typeahead.queryChanged
+                        model.options
+                        nixosChannels
+                        model.searchType
+                        model.channel
+                        query
+                        model.typeahead
+            in
+            ( { model | query = query, typeahead = typeaheadModel }
+            , Cmd.map TypeaheadMsg typeaheadCmd
             )
 
         QueryInputSubmit ->
@@ -514,6 +537,7 @@ update toRoute navKey msg model nixosChannels =
                 | from = 0
                 , show = Nothing
                 , buckets = Nothing
+                , typeahead = Typeahead.hideModel model.typeahead
             }
                 |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
@@ -544,6 +568,30 @@ update toRoute navKey msg model nixosChannels =
         ShowInstallDetails details ->
             { model | showInstallDetails = details }
                 |> pushUrl toRoute navKey
+
+        TypeaheadBlur ->
+            ( model, Cmd.map TypeaheadMsg Typeahead.hideAfterBlur )
+
+        TypeaheadFocus ->
+            ( { model | typeahead = Typeahead.focusModel model.typeahead }
+            , Cmd.none
+            )
+
+        TypeaheadMsg subMsg ->
+            let
+                ( typeaheadModel, typeaheadCmd ) =
+                    Typeahead.update
+                        model.options
+                        nixosChannels
+                        model.searchType
+                        model.channel
+                        model.query
+                        subMsg
+                        model.typeahead
+            in
+            ( { model | typeahead = typeaheadModel }
+            , Cmd.map TypeaheadMsg typeaheadCmd
+            )
 
         SetOptionSourceIncluded source included ->
             let
@@ -815,7 +863,7 @@ view { categoryName } title nixosChannels model viewSuccess viewBuckets outMsg s
             )
         )
         ([ h1 [] title
-         , viewSearchInput nixosChannels outMsg categoryName (Just model.channel) model.query
+         , viewSearchInput nixosChannels outMsg categoryName (Just model.channel) model.query (Just model.typeahead)
          ]
             ++ (case model.redirectedChannel of
                     Just oldChannel ->
@@ -1028,23 +1076,33 @@ viewSearchInput :
     -> String
     -> Maybe String
     -> String
+    -> Maybe Typeahead.Model
     -> Html c
-viewSearchInput nixosChannels outMsg categoryName selectedChannel searchQuery =
+viewSearchInput nixosChannels outMsg categoryName selectedChannel searchQuery typeahead =
     form
         [ onSubmit (outMsg QueryInputSubmit)
         , class "search-input"
         ]
         (div []
-            [ div []
+            [ div [ class "search-input-with-typeahead" ]
                 [ input
                     [ type_ "text"
                     , id "search-query-input"
                     , autofocus True
                     , placeholder <| "Search for " ++ categoryName
                     , onInput (outMsg << QueryInput)
+                    , onFocus (outMsg TypeaheadFocus)
+                    , onBlur (outMsg TypeaheadBlur)
+                    , on "keydown" (escapeKeyDecoder (outMsg (TypeaheadMsg Typeahead.hide)))
                     , value searchQuery
                     ]
                     []
+                , case typeahead of
+                    Just t ->
+                        Typeahead.viewDropdown t
+
+                    Nothing ->
+                        text ""
                 ]
             , button [ class "btn", type_ "submit" ]
                 [ text "Search" ]
@@ -1621,3 +1679,19 @@ trapClick : Html.Attribute (Msg a b)
 trapClick =
     Html.Events.stopPropagationOn "click" <|
         Json.Decode.succeed ( NoOp, True )
+
+
+{-| Resolves to the supplied message when the Escape key is pressed; fails
+the decoder otherwise so other keystrokes pass through unchanged.
+-}
+escapeKeyDecoder : c -> Json.Decode.Decoder c
+escapeKeyDecoder msg =
+    Json.Decode.field "key" Json.Decode.string
+        |> Json.Decode.andThen
+            (\k ->
+                if k == "Escape" then
+                    Json.Decode.succeed msg
+
+                else
+                    Json.Decode.fail "not Escape"
+            )
