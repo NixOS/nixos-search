@@ -555,7 +555,9 @@ update toRoute navKey msg model nixosChannels =
         QueryInput query ->
             let
                 ( typeaheadModel, typeaheadCmd ) =
-                    Typeahead.queryChanged model.searchType
+                    Typeahead.queryChanged model.options
+                        nixosChannels
+                        model.searchType
                         model.activeOptionSource
                         model.channel
                         query
@@ -655,7 +657,9 @@ update toRoute navKey msg model nixosChannels =
         TypeaheadMsg subMsg ->
             let
                 ( typeaheadModel, typeaheadCmd ) =
-                    Typeahead.update model.searchType
+                    Typeahead.update model.options
+                        nixosChannels
+                        model.searchType
                         model.activeOptionSource
                         model.channel
                         model.query
