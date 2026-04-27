@@ -144,6 +144,9 @@ lazy_static! {
                 "package_homepage": {
                     "type": "keyword"
                 },
+                "package_modular_services": {
+                    "type": "keyword"
+                },
                 // Options fields
                 "option_name": {
                     "type": "keyword",
@@ -162,6 +165,20 @@ lazy_static! {
                 "option_default": {"type": "text"},
                 "option_example": {"type": "text"},
                 "option_source": {"type": "keyword"},
+                // Modular service fields
+                "service_package": {
+                    "type": "keyword",
+                    "fields": {
+                        "edge": {"type": "text", "analyzer": "edge"}
+                    },
+                },
+                "service_module": {"type": "keyword"},
+                "service_packages": {
+                    "type": "keyword",
+                    "fields": {
+                        "edge": {"type": "text", "analyzer": "edge"}
+                    },
+                },
             }
         },
         "settings": {
@@ -259,7 +276,7 @@ impl Elasticsearch {
     ) -> Result<(), ElasticsearchError> {
         // let exports: Result<Vec<Value>, serde_json::Error> = exports.iter().map(serde_json::to_value).collect();
         // let exports = exports?;
-        let bodies = exports.chunks(10_000).map(|chunk| {
+        let bodies = exports.chunks(7_000).map(|chunk| {
             chunk
                 .iter()
                 .map(|e| BulkOperation::from(BulkOperation::index(e)))

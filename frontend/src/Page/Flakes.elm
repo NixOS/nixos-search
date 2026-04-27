@@ -163,7 +163,7 @@ view nixosChannels model =
             , strong []
                 [ a
                     [ href "https://github.com/NixOS/nixos-search/blob/main/flakes/manual.toml" ]
-                    [ text "public flakes" ]
+                    [ text "3rd-party Flakes" ]
                 ]
             ]
 
@@ -186,10 +186,10 @@ view nixosChannels model =
     in
     case model of
         OptionModel model_ ->
-            Html.map OptionsMsg <| mkBody "Options" model_ Page.Options.viewSuccess Page.Options.viewBuckets Page.Options.SearchMsg
+            Html.map OptionsMsg <| mkBody "3rd-party flake options" model_ (Page.Options.viewSuccess False) Page.Options.viewBuckets Page.Options.SearchMsg
 
         PackagesModel model_ ->
-            Html.map PackagesMsg <| mkBody "Packages" model_ Page.Packages.viewSuccess Page.Packages.viewBuckets Page.Packages.SearchMsg
+            Html.map PackagesMsg <| mkBody "3rd-party flake packages" model_ Page.Packages.viewSuccess Page.Packages.viewBuckets Page.Packages.SearchMsg
 
 
 
@@ -240,7 +240,7 @@ makeRequestBody : SearchType -> String -> Int -> Int -> Maybe String -> Search.S
 makeRequestBody searchType query from size maybeBuckets sort =
     case searchType of
         OptionSearch ->
-            Page.Options.makeRequestBody query from size sort
+            Page.Options.makeRequestBody [ "option" ] query from size sort
 
         PackageSearch ->
             Page.Packages.makeRequestBody query from size maybeBuckets sort

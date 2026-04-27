@@ -13,6 +13,7 @@ module Search exposing
     , ResultItem
     , SearchResult
     , Sort
+    , Terms
     , decodeAggregation
     , decodeNixOSChannels
     , decodeResolvedFlake
@@ -83,10 +84,12 @@ import List.Extra
 import RemoteData
 import Route
     exposing
-        ( SearchType
+        ( OptionSource
+        , SearchType
         , allTypes
         , searchTypeToTitle
         )
+import Set exposing (Set)
 import Task
 
 
@@ -103,6 +106,8 @@ type alias Model a b =
     , showSort : Bool
     , showInstallDetails : Details
     , searchType : Route.SearchType
+    , redirectedChannel : Maybe String
+    , excludedOptionSources : Set String
     }
 
 
@@ -296,10 +301,23 @@ init args defaultNixOSChannel nixosChannels maybeModel =
 
         modelChannel =
             getField .channel defaultNixOSChannel
-    in
-    ( { channel =
+
+        requestedChannel =
             args.channel
                 |> Maybe.withDefault modelChannel
+
+        isValidChannel ch =
+            List.any (\c -> c.id == ch) nixosChannels
+
+        ( validChannel, redirected ) =
+            if isValidChannel requestedChannel then
+                ( requestedChannel, Nothing )
+
+            else
+                ( defaultNixOSChannel, args.channel )
+    in
+    ( { channel = validChannel
+      , redirectedChannel = redirected
       , flake = defaultFlakeId
       , query =
             case args.query of
@@ -327,6 +345,7 @@ init args defaultNixOSChannel nixosChannels maybeModel =
       , searchType =
             args.type_
                 |> Maybe.withDefault defaultSearchArgs.searchType
+      , excludedOptionSources = args.excludedOptionSources
       }
         |> ensureLoading nixosChannels
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
@@ -395,6 +414,7 @@ type Msg a b
     | ShowDetails String
     | ChangePage Int
     | ShowInstallDetails Details
+    | SetOptionSourceIncluded OptionSource Bool
 
 
 type Details
@@ -466,6 +486,7 @@ update toRoute navKey msg model nixosChannels =
         ChannelChange channel ->
             { model
                 | channel = channel
+                , redirectedChannel = Nothing
                 , show = Nothing
                 , buckets = Nothing
                 , from = 0
@@ -524,6 +545,26 @@ update toRoute navKey msg model nixosChannels =
             { model | showInstallDetails = details }
                 |> pushUrl toRoute navKey
 
+        SetOptionSourceIncluded source included ->
+            let
+                id =
+                    Route.optionSourceId source
+
+                excluded =
+                    if included then
+                        Set.remove id model.excludedOptionSources
+
+                    else
+                        Set.insert id model.excludedOptionSources
+            in
+            { model
+                | excludedOptionSources = excluded
+                , show = Nothing
+                , from = 0
+            }
+                |> ensureLoading nixosChannels
+                |> pushUrl toRoute navKey
+
 
 pushUrl :
     Route.SearchRoute
@@ -562,6 +603,7 @@ createUrl toRoute model =
                 justIfNotDefault model.sort defaultSearchArgs.sort
                     |> Maybe.map toSortId
             , type_ = justIfNotDefault model.searchType defaultSearchArgs.searchType
+            , excludedOptionSources = model.excludedOptionSources
             }
 
 
@@ -582,46 +624,64 @@ sortBy =
     ]
 
 
+type alias Terms =
+    { field : String
+    , size : Int
+    , include : Maybe (List String)
+    }
+
+
 toAggregations :
-    List String
+    List Terms
     -> ( String, Json.Encode.Value )
-toAggregations bucketsFields =
+toAggregations terms =
     let
-        fields =
+        aggs =
             List.map
-                (\field ->
-                    ( field
+                (\term ->
+                    ( term.field
                     , Json.Encode.object
                         [ ( "terms"
                           , Json.Encode.object
-                                [ ( "field"
-                                  , Json.Encode.string field
-                                  )
-                                , ( "size"
-                                  , Json.Encode.int 20
-                                  )
-                                ]
+                                ([ ( "field"
+                                   , Json.Encode.string term.field
+                                   )
+                                 , ( "size"
+                                   , Json.Encode.int term.size
+                                   )
+                                 ]
+                                    ++ (case term.include of
+                                            Just include ->
+                                                [ ( "include"
+                                                  , Json.Encode.list Json.Encode.string include
+                                                  )
+                                                ]
+
+                                            Nothing ->
+                                                []
+                                       )
+                                )
                           )
                         ]
                     )
                 )
-                bucketsFields
+                terms
 
-        allFields =
+        allAggs =
             [ ( "all"
               , Json.Encode.object
                     [ ( "global"
                       , Json.Encode.object []
                       )
                     , ( "aggregations"
-                      , Json.Encode.object fields
+                      , Json.Encode.object aggs
                       )
                     ]
               )
             ]
     in
     ( "aggs"
-    , Json.Encode.object <| fields ++ allFields
+    , Json.Encode.object <| aggs ++ allAggs
     )
 
 
@@ -650,11 +710,15 @@ toSortQuery sort field fields =
                 ]
 
         Relevance ->
+            -- When scores tie, fall back to ascending alphabetical order on the
+            -- main field (and any secondary fields). Using asc gives a natural
+            -- reading order, e.g. `php-fpm.package` before `php-fpm.settings`,
+            -- instead of the reverse order you get with desc.
             Json.Encode.list Json.Encode.object
                 [ ( "_score", Json.Encode.string "desc" )
-                    :: ( field, Json.Encode.string "desc" )
+                    :: ( field, Json.Encode.string "asc" )
                     :: List.map
-                        (\x -> ( x, Json.Encode.string "desc" ))
+                        (\x -> ( x, Json.Encode.string "asc" ))
                         fields
                 ]
     )
@@ -750,10 +814,21 @@ view { categoryName } title nixosChannels model viewSuccess viewBuckets outMsg s
                 []
             )
         )
-        [ h1 [] title
-        , viewSearchInput nixosChannels outMsg categoryName (Just model.channel) model.query
-        , viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searchBuckets
-        ]
+        ([ h1 [] title
+         , viewSearchInput nixosChannels outMsg categoryName (Just model.channel) model.query
+         ]
+            ++ (case model.redirectedChannel of
+                    Just oldChannel ->
+                        [ p [ class "alert alert-info" ]
+                            [ text <| "Channel \"" ++ oldChannel ++ "\" is no longer available. Showing results for \"" ++ model.channel ++ "\" instead."
+                            ]
+                        ]
+
+                    Nothing ->
+                        []
+               )
+            ++ [ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searchBuckets ]
+        )
 
 
 viewFlakes :
@@ -864,8 +939,7 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
             in
             div []
                 [ div [ class "alert alert-error" ]
-                    [ ul [ class "search-sidebar" ] searchBuckets
-                    , h4 [] [ text errorTitle ]
+                    [ h4 [] [ text errorTitle ]
                     , text errorMessage
                     ]
                 ]
@@ -877,13 +951,23 @@ viewNoResults :
     -> Html c
 viewNoResults categoryName query =
     div [ class "search-no-results" ]
-        [ h2 [] [ text <| "No " ++ categoryName ++ " found!" ]
-        , text "You might want to "
-        , Html.a [ href "https://github.com/NixOS/nixpkgs/blob/master/pkgs/README.md#quick-start-to-adding-a-package" ] [ text "add a package" ]
-        , text " or "
-        , Html.a [ href ("https://github.com/NixOS/nixpkgs/issues?q=" ++ query) ] [ text "search nixpkgs issues" ]
-        , text "."
-        ]
+        ([ h2 [] [ text <| "No " ++ categoryName ++ " found!" ]
+         ]
+            ++ (if categoryName == "modular services" then
+                    [ text "Not all packages provide modular services. You might want to "
+                    , Html.a [ href ("https://github.com/NixOS/nixpkgs/issues?q=" ++ query) ] [ text "search nixpkgs issues" ]
+                    , text "."
+                    ]
+
+                else
+                    [ text "You might want to "
+                    , Html.a [ href "https://github.com/NixOS/nixpkgs/blob/master/pkgs/README.md#quick-start-to-adding-a-package" ] [ text "add a package" ]
+                    , text " or "
+                    , Html.a [ href ("https://github.com/NixOS/nixpkgs/issues?q=" ++ query) ] [ text "search nixpkgs issues" ]
+                    , text "."
+                    ]
+               )
+        )
 
 
 closeButton : Html a
@@ -1225,28 +1309,39 @@ type alias Options =
 
 
 filterByType :
-    String
+    List String
     -> List ( String, Json.Encode.Value )
-filterByType type_ =
-    [ ( "term"
-      , Json.Encode.object
-            [ ( "type"
+filterByType types =
+    case types of
+        [ type_ ] ->
+            [ ( "term"
               , Json.Encode.object
-                    [ ( "value", Json.Encode.string type_ )
-                    , ( "_name", Json.Encode.string <| "filter_" ++ type_ ++ "s" )
+                    [ ( "type"
+                      , Json.Encode.object
+                            [ ( "value", Json.Encode.string type_ )
+                            , ( "_name", Json.Encode.string <| "filter_" ++ type_ ++ "s" )
+                            ]
+                      )
                     ]
               )
             ]
-      )
-    ]
+
+        _ ->
+            [ ( "terms"
+              , Json.Encode.object
+                    [ ( "type", Json.Encode.list Json.Encode.string types )
+                    , ( "_name", Json.Encode.string <| "filter_" ++ String.join "_" types )
+                    ]
+              )
+            ]
 
 
 searchFields :
     List String
-    -> String
+    -> List String
     -> List ( String, Float )
     -> List (List ( String, Json.Encode.Value ))
-searchFields positiveWords mainField fields =
+searchFields positiveWords mainFields fields =
     let
         allFields : List String
         allFields =
@@ -1279,7 +1374,7 @@ searchFields positiveWords mainField fields =
               )
             ]
     in
-    multiMatch :: List.map (toWildcardQuery mainField) queryWordsWildCard
+    multiMatch :: List.concatMap (\mf -> List.map (toWildcardQuery mf) queryWordsWildCard) mainFields
 
 
 makeRequestBody :
@@ -1287,15 +1382,15 @@ makeRequestBody :
     -> Int
     -> Int
     -> Sort
-    -> String
+    -> List String
     -> String
     -> List String
-    -> List String
+    -> List Terms
     -> List ( String, Json.Encode.Value )
-    -> String
+    -> List String
     -> List ( String, Float )
     -> Http.Body
-makeRequestBody query from sizeRaw sort type_ sortField otherSortFields bucketsFields filterByBuckets mainField fields =
+makeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets mainFields fields =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -1320,7 +1415,7 @@ makeRequestBody query from sizeRaw sort type_ sortField otherSortFields bucketsF
               , Json.Encode.int size
               )
             , toSortQuery sort sortField otherSortFields
-            , toAggregations bucketsFields
+            , toAggregations terms
             , ( "query"
               , Json.Encode.object
                     [ ( "bool"
@@ -1328,7 +1423,7 @@ makeRequestBody query from sizeRaw sort type_ sortField otherSortFields bucketsF
                             [ ( "filter"
                               , Json.Encode.list Json.Encode.object
                                     (List.append
-                                        [ filterByType type_ ]
+                                        [ filterByType types ]
                                         (if List.isEmpty filterByBuckets then
                                             []
 
@@ -1342,7 +1437,7 @@ makeRequestBody query from sizeRaw sort type_ sortField otherSortFields bucketsF
                                     (negativeWords
                                         |> List.concatMap dashUnderscoreVariants
                                         |> List.Extra.unique
-                                        |> List.map (toWildcardQuery mainField)
+                                        |> List.concatMap (\w -> List.map (\mf -> toWildcardQuery mf w) mainFields)
                                     )
                               )
                             , ( "must"
@@ -1352,7 +1447,7 @@ makeRequestBody query from sizeRaw sort type_ sortField otherSortFields bucketsF
                                             [ ( "tie_breaker", Json.Encode.float 0.7 )
                                             , ( "queries"
                                               , Json.Encode.list Json.Encode.object
-                                                    (searchFields positiveWords mainField fields)
+                                                    (searchFields positiveWords mainFields fields)
                                               )
                                             ]
                                         )

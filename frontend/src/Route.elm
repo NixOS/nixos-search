@@ -1,11 +1,16 @@
 module Route exposing
-    ( Route(..)
+    ( OptionSource(..)
+    , Route(..)
     , SearchArgs
     , SearchRoute
     , SearchType(..)
+    , allOptionSources
     , allTypes
     , fromUrl
     , href
+    , optionSourceDocType
+    , optionSourceId
+    , optionSourceLabel
     , routeToString
     , searchTypeToTitle
     )
@@ -15,6 +20,7 @@ import Dict
 import Html
 import Html.Attributes
 import Maybe.Extra
+import Set exposing (Set)
 import Url
 
 
@@ -31,7 +37,63 @@ type alias SearchArgs =
     , buckets : Maybe String
     , sort : Maybe String
     , type_ : Maybe SearchType
+    , excludedOptionSources : Set String
     }
+
+
+{-| Kinds of options that can be shown on the Options page. Each source maps
+to an Elasticsearch document `type` and has its own checkbox in the UI.
+Add a new variant here (plus its cases below) to expose it to the page.
+-}
+type OptionSource
+    = NixosOptions
+    | ModularServiceOptions
+
+
+allOptionSources : List OptionSource
+allOptionSources =
+    [ NixosOptions, ModularServiceOptions ]
+
+
+{-| Stable identifier used in URL parameter names and the excluded-sources set.
+-}
+optionSourceId : OptionSource -> String
+optionSourceId source =
+    case source of
+        NixosOptions ->
+            "nixos"
+
+        ModularServiceOptions ->
+            "modular_service"
+
+
+{-| Elasticsearch document `type` field value.
+-}
+optionSourceDocType : OptionSource -> String
+optionSourceDocType source =
+    case source of
+        NixosOptions ->
+            "option"
+
+        ModularServiceOptions ->
+            "service"
+
+
+{-| Human-readable checkbox label.
+-}
+optionSourceLabel : OptionSource -> String
+optionSourceLabel source =
+    case source of
+        NixosOptions ->
+            "NixOS"
+
+        ModularServiceOptions ->
+            "Modular services"
+
+
+optionSourceUrlParam : OptionSource -> String
+optionSourceUrlParam source =
+    "include_" ++ optionSourceId source ++ "_options"
 
 
 type SearchType
@@ -41,6 +103,7 @@ type SearchType
 
 
 -- | FlakeSearch
+-- Sub-navigation inside the 3rd-party Flakes page.
 
 
 allTypes : List SearchType
@@ -126,6 +189,18 @@ searchQueryParser appUrl =
     , buckets = string "buckets"
     , sort = string "sort"
     , type_ = Maybe.andThen searchTypeFromString (string "type")
+    , excludedOptionSources =
+        -- Each source defaults to included; URL explicitly says "0" to exclude.
+        allOptionSources
+            |> List.filterMap
+                (\source ->
+                    if string (optionSourceUrlParam source) == Just "0" then
+                        Just (optionSourceId source)
+
+                    else
+                        Nothing
+                )
+            |> Set.fromList
     }
 
 
@@ -149,6 +224,19 @@ searchArgsToUrl args =
     , string "type" <| Maybe.map searchTypeToString args.type_
     , string "query" args.query
     ]
+        ++ List.map
+            (\source ->
+                let
+                    value =
+                        if Set.member (optionSourceId source) args.excludedOptionSources then
+                            "0"
+
+                        else
+                            "1"
+                in
+                string (optionSourceUrlParam source) (Just value)
+            )
+            allOptionSources
         |> Maybe.Extra.values
         |> Dict.fromList
 

@@ -35,6 +35,15 @@ type = "git"
 url = "git+https://github.com/TamtamHero/fw-fanctrl?ref=packaging/nix"
 
 [[sources]]
+type = "git"
+url = "git+https://github.com/xddxdd/nix-cachyos-kernel?ref=release"
+
+[[sources]]
+type = "github"
+owner = "4JX"
+repo = "L5P-Keyboard-RGB"
+
+[[sources]]
 type = "github"
 owner = "abathur"
 repo = "resholve"
@@ -78,6 +87,91 @@ repo = "fleet"
 type = "github"
 owner = "chaotic-cx"
 repo = "nyx"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "bonk"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "cpiotools"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "determinate"
+
+# [[sources]]
+# type = "github"
+# owner = "DeterminateSystems"
+# repo = "dhcpv6macd"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "fh"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "flake-checker"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "flake-iter"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "flake-schemas"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "flake-templates"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "magic-nix-cache"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "nix-config-parser"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "nix-installer"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "nix-netboot-serve"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "nix-src"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "nixos-vault-service"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "update-flake-lock"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "zpool-auto-expand-partitions"
 
 [[sources]]
 type = "github"
@@ -178,6 +272,11 @@ repo = "nix-security"
 type = "github"
 owner = "kashw2"
 repo = "bitbucket-runner-nix"
+
+[[sources]]
+type = "github"
+owner = "linyinfeng"
+repo = "angrr"
 
 [[sources]]
 type = "github"
@@ -399,6 +498,11 @@ repo = "napalm"
 type = "github"
 owner = "nix-community"
 repo = "neovim-nightly-overlay"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "nixvim"
 
 [[sources]]
 type = "github"
@@ -785,10 +889,11 @@ type = "github"
 owner = "nix-systems"
 repo = "x86_64-linux"
 
-[[sources]]
-type = "github"
-owner = "NixOS"
-repo = "hydra"
+# https://github.com/NixOS/nixos-search/issues/1175
+#[[sources]]
+#type = "github"
+#owner = "NixOS"
+#repo = "hydra"
 
 [[sources]]
 type = "github"
@@ -823,12 +928,67 @@ repo = "agenix"
 [[sources]]
 type = "github"
 owner = "snowfallorg"
-repo = "nixos-conf-editor"
+repo = "drift"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "frost"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "icehouse"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "icicle"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "lib"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "nix-data"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "nix-editor"
 
 [[sources]]
 type = "github"
 owner = "snowfallorg"
 repo = "nix-software-center"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "nixos-conf-editor"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "snow"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "templates"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "thaw"
+
+[[sources]]
+type = "github"
+owner = "snowfallorg"
+repo = "whats-in-my-store"
 
 [[sources]]
 type = "github"
@@ -904,6 +1064,11 @@ repo = "zed"
 type = "gitlab"
 owner = "pi-lar"
 repo = "neuropil"
+
+[[sources]]
+type = "gitlab"
+owner = "simple-nixos-mailserver"
+repo = "nixos-mailserver"
 
 [[sources]]
 type = "sourcehut"

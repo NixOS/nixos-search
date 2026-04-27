@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use serde_json::Deserializer;
+use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 
 use command_run::{Command, LogTo};
@@ -8,44 +8,56 @@ use crate::Source;
 use crate::data::Nixpkgs;
 use crate::data::import::{NixOption, NixpkgsEntry, Package};
 
-pub fn get_nixpkgs_info(nixpkgs: &Source, attribute: &Option<String>) -> Result<Vec<NixpkgsEntry>> {
-    let mut command = Command::new("nix-env");
-    command.add_args(&[
-        "--json",
-        "-f",
-        "<nixpkgs>",
-        "-I",
-        format!("nixpkgs={}", nixpkgs.to_flake_ref()).as_str(),
-        "--arg",
-        "config",
-        "import <nixpkgs/pkgs/top-level/packages-config.nix>",
-        "-qa",
-    ]);
-    match attribute {
-        Some(attr) => {
-            command.add_arg(attr);
-        }
-        None => {}
-    }
-    command.add_arg("--meta");
+/// Wrapper for the channel `packages.json` format.
+#[derive(Deserialize)]
+struct PackagesInfo {
+    packages: HashMap<String, Package>,
+}
 
-    command.enable_capture();
-    command.log_to = LogTo::Log;
-    command.log_output_on_error = true;
-
-    let cow = command
-        .run()
-        .with_context(|| "Failed to gather information about nixpkgs packages")?;
-
-    let output = &*cow.stdout_string_lossy();
-    let de = &mut Deserializer::from_str(output);
-    let attr_set: HashMap<String, Package> =
-        serde_path_to_error::deserialize(de).with_context(|| "Could not parse packages")?;
-
-    let mut programs = match nixpkgs {
-        Source::Nixpkgs(nixpkgs) => get_nixpkgs_programs(nixpkgs)?,
-        _ => Default::default(),
+pub fn get_nixpkgs_info(
+    nixpkgs: &Source,
+    attribute: &Option<String>,
+    packages_json_url: &Option<String>,
+) -> Result<Vec<NixpkgsEntry>> {
+    let nixpkgs = match nixpkgs {
+        Source::Nixpkgs(nixpkgs) => nixpkgs,
+        other => anyhow::bail!(
+            "package import requires a nixpkgs channel, got {}",
+            other.to_flake_ref(),
+        ),
     };
+
+    let url = packages_json_url.clone().unwrap_or_else(|| {
+        format!(
+            "https://channels.nixos.org/nixos-{}/packages.json.br",
+            nixpkgs.channel,
+        )
+    });
+    log::info!("Fetching packages from {}", url);
+
+    let response = reqwest::blocking::Client::new()
+        .get(&url)
+        .send()
+        .with_context(|| format!("Failed to download {}", url))?
+        .error_for_status()
+        .with_context(|| format!("HTTP error fetching {}", url))?;
+
+    let body = response.bytes()?;
+    let info: PackagesInfo =
+        serde_json::from_slice(&body).with_context(|| "Could not parse channel packages.json")?;
+
+    let attr_set: HashMap<String, Package> = match attribute {
+        Some(prefix) => info
+            .packages
+            .into_iter()
+            .filter(|(key, _)| key.starts_with(prefix.as_str()))
+            .collect(),
+        None => info.packages,
+    };
+
+    let mut programs = get_nixpkgs_programs(nixpkgs)?;
+    let mut package_services =
+        get_nixpkgs_package_services(&Source::Nixpkgs(nixpkgs.clone())).unwrap_or_default();
 
     Ok(attr_set
         .into_iter()
@@ -55,13 +67,35 @@ pub fn get_nixpkgs_info(nixpkgs: &Source, attribute: &Option<String>) -> Result<
                 .unwrap_or_default()
                 .into_iter()
                 .collect();
+            let modular_services = package_services.remove(&attribute).unwrap_or_default();
             NixpkgsEntry::Derivation {
                 attribute,
                 package,
                 programs,
+                modular_services,
             }
         })
         .collect())
+}
+
+pub fn get_nixpkgs_package_services(nixpkgs: &Source) -> Result<HashMap<String, Vec<String>>> {
+    let mut command = Command::with_args("nix", &["eval", "--json"]);
+    command.add_arg_pair("-f", super::EXTRACT_SCRIPT.clone());
+    command.add_arg_pair("-I", format!("nixpkgs={}", nixpkgs.to_flake_ref()));
+    command.add_arg("nixos-package-services");
+
+    command.enable_capture();
+    command.log_to = LogTo::Log;
+    command.log_output_on_error = true;
+
+    let cow = command
+        .run()
+        .with_context(|| "Failed to gather modular service mapping for packages")?;
+
+    let output = &*cow.stdout_string_lossy();
+    let map: HashMap<String, Vec<String>> =
+        serde_json::from_str(output).with_context(|| "Could not parse package-services map")?;
+    Ok(map)
 }
 
 pub fn get_nixpkgs_programs(nixpkgs: &Nixpkgs) -> Result<HashMap<String, HashSet<String>>> {
@@ -118,9 +152,78 @@ pub fn get_nixpkgs_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
         .with_context(|| "Failed to gather information about nixpkgs options")?;
 
     let output = &*cow.stdout_string_lossy();
-    let de = &mut Deserializer::from_str(output);
+    let de = &mut serde_json::Deserializer::from_str(output);
     let attr_set: Vec<NixOption> =
         serde_path_to_error::deserialize(de).with_context(|| "Could not parse options")?;
 
     Ok(attr_set.into_iter().map(NixpkgsEntry::Option).collect())
+}
+
+pub fn get_nixpkgs_services(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
+    let mut command = Command::with_args("nix", &["eval", "--json"]);
+    command.add_arg_pair("-f", super::EXTRACT_SCRIPT.clone());
+    command.add_arg_pair("-I", format!("nixpkgs={}", nixpkgs.to_flake_ref()));
+    command.add_arg("nixos-services");
+
+    command.enable_capture();
+    command.log_to = LogTo::Log;
+    command.log_output_on_error = true;
+
+    let cow = command
+        .run()
+        .with_context(|| "Failed to gather information about nixpkgs modular services")?;
+
+    let output = &*cow.stdout_string_lossy();
+    let de = &mut serde_json::Deserializer::from_str(output);
+    let attr_set: Vec<NixOption> =
+        serde_path_to_error::deserialize(de).with_context(|| "Could not parse services")?;
+
+    Ok(attr_set.into_iter().map(NixpkgsEntry::Service).collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_packages_info_deserialize() {
+        // Regression test for https://github.com/NixOS/nixos-search/issues/770:
+        // `pname` and `version` must come straight from the channel's
+        // `packages.json`, not be re-derived by splitting `name`. These
+        // attribute names historically tripped up the `nix-env` heuristic.
+        let json = r#"
+        {
+            "version": "2",
+            "packages": {
+                "librecast": {
+                    "name": "librecast-X",
+                    "pname": "librecast",
+                    "version": "X",
+                    "system": "x86_64-linux",
+                    "outputName": "out",
+                    "outputs": { "out": null },
+                    "meta": {}
+                },
+                "SP800-90B_EntropyAssessment": {
+                    "name": "SP800-90B_EntropyAssessment-Y",
+                    "pname": "SP800-90B_EntropyAssessment",
+                    "version": "Y",
+                    "system": "x86_64-linux",
+                    "outputName": "out",
+                    "outputs": { "out": null },
+                    "meta": {}
+                }
+            }
+        }
+        "#;
+
+        let info: PackagesInfo = serde_json::from_str(json).unwrap();
+
+        assert_eq!(info.packages.len(), 2);
+        assert_eq!(info.packages["librecast"].pname, "librecast");
+        assert_eq!(
+            info.packages["SP800-90B_EntropyAssessment"].pname,
+            "SP800-90B_EntropyAssessment",
+        );
+    }
 }

@@ -49,9 +49,10 @@ pub fn process_nixpkgs(
     nixpkgs: &Source,
     kind: &Kind,
     attribute: &Option<String>,
+    packages_json_url: &Option<String>,
 ) -> Result<Vec<Export>, anyhow::Error> {
     let drvs = if matches!(kind, Kind::All | Kind::Package) {
-        commands::get_nixpkgs_info(nixpkgs, attribute)?
+        commands::get_nixpkgs_info(nixpkgs, attribute, packages_json_url)?
     } else {
         Vec::new()
     };
@@ -62,8 +63,15 @@ pub fn process_nixpkgs(
         Vec::new()
     };
 
+    let mut services = if matches!(kind, Kind::All | Kind::ModularService) {
+        commands::get_nixpkgs_services(nixpkgs)?
+    } else {
+        Vec::new()
+    };
+
     let mut all = drvs;
     all.append(&mut options);
+    all.append(&mut services);
 
     let exports = all
         .into_iter()
