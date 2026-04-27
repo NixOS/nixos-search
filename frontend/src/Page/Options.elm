@@ -22,6 +22,8 @@ import Html
         , a
         , code
         , div
+        , input
+        , label
         , li
         , pre
         , span
@@ -31,26 +33,30 @@ import Html
         )
 import Html.Attributes
     exposing
-        ( class
+        ( checked
+        , class
         , classList
         , href
         , target
+        , type_
         )
 import Html.Events
     exposing
-        ( onClick
+        ( onCheck
+        , onClick
         )
 import Http exposing (Body)
 import Json.Decode
 import Json.Decode.Pipeline
 import List.Extra
-import Route exposing (SearchType)
+import Route exposing (OptionSource, SearchType)
 import Search
     exposing
         ( Details
         , NixOSChannel
         , decodeResolvedFlake
         )
+import Set exposing (Set)
 import SyntaxHighlight exposing (elm, oneDark, toBlockHtml, useTheme)
 import Utils
 
@@ -71,11 +77,20 @@ type alias ResultItemSource =
     , example : Maybe String
     , source : Maybe String
 
+    -- ES document type ("option", "service", "home-manager-option")
+    , docType : String
+
     -- flake
     , flake : Maybe (List String)
     , flakeName : Maybe String
     , flakeDescription : Maybe String
     , flakeUrl : Maybe String
+    , flakeRevision : Maybe String
+
+    -- modular service metadata (populated only for `service` docs)
+    , servicePackage : Maybe String
+    , serviceModule : Maybe String
+    , servicePackages : List String
     }
 
 
@@ -143,16 +158,51 @@ view :
     -> Model
     -> Html Msg
 view nixosChannels model =
+    let
+        enabledCount =
+            List.length Route.allOptionSources - Set.size model.excludedOptionSources
+    in
     Search.view { categoryName = "options" }
         [ text "Search more than "
         , strong [] [ text "20 000 options" ]
         ]
         nixosChannels
         model
-        viewSuccess
+        (viewSuccess (enabledCount > 1))
         viewBuckets
         SearchMsg
-        []
+        [ viewIncludeTogglesGroup model.excludedOptionSources ]
+
+
+viewIncludeTogglesGroup : Set String -> Html Msg
+viewIncludeTogglesGroup excluded =
+    li [ class "search-include-toggles" ]
+        [ ul [] <|
+            li [ class "header" ] [ text "Show" ]
+                :: List.map (viewIncludeToggle excluded) Route.allOptionSources
+        ]
+
+
+viewIncludeToggle : Set String -> OptionSource -> Html Msg
+viewIncludeToggle excluded source =
+    let
+        id =
+            Route.optionSourceId source
+
+        isChecked =
+            not (Set.member id excluded)
+    in
+    li [ class ("search-include-" ++ id ++ "-options") ]
+        [ label []
+            [ input
+                [ type_ "checkbox"
+                , checked isChecked
+                , onCheck (\b -> SearchMsg (Search.SetOptionSourceIncluded source b))
+                ]
+                []
+            , text (" " ++ Route.optionSourceLabel source)
+            ]
+        ]
 
 
 viewBuckets :
@@ -164,16 +214,17 @@ viewBuckets _ _ =
 
 
 viewSuccess :
-    List NixOSChannel
+    Bool
+    -> List NixOSChannel
     -> String
     -> Details
     -> Maybe String
     -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
-viewSuccess nixosChannels channel _ show hits =
+viewSuccess showBadges nixosChannels channel _ show hits =
     ul []
         (List.map
-            (viewResultItem nixosChannels channel show)
+            (viewResultItem nixosChannels channel show showBadges)
             hits
         )
 
@@ -182,9 +233,10 @@ viewResultItem :
     List NixOSChannel
     -> String
     -> Maybe String
+    -> Bool
     -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItem nixosChannels channel show item =
+viewResultItem nixosChannels channel show showBadges item =
     let
         asPre value =
             pre [] [ text value ]
@@ -201,12 +253,27 @@ viewResultItem nixosChannels channel show item =
                         (pre [] [ code [ class "code-block" ] [ text value ] ])
                 ]
 
+        isService =
+            item.source.docType == "service"
+
+        nameSegments =
+            optionNameSegments item.source
+
+        displayName =
+            nameSegments |> List.map Tuple.first |> String.join "."
+
         showDetails =
-            if Just item.source.name == show then
+            if Just (item.source.docType ++ ":" ++ item.source.name) == show then
                 Just <|
                     div [ Html.Attributes.map SearchMsg Search.trapClick ] <|
+                        let
+                            pkgLink pkg =
+                                a
+                                    [ href ("/packages?channel=" ++ channel ++ "&query=" ++ pkg ++ "&show=" ++ pkg) ]
+                                    [ code [] [ text pkg ] ]
+                        in
                         [ div [] [ text "Name" ]
-                        , div [] [ asPreCode item.source.name ]
+                        , div [] [ viewOptionNamePath channel nameSegments ]
                         ]
                             ++ (item.source.description
                                     |> Maybe.andThen Utils.showHtml
@@ -245,6 +312,132 @@ viewResultItem nixosChannels channel show item =
                                         )
                                     |> Maybe.withDefault []
                                )
+                            ++ (if isService then
+                                    [ div [] [ text "About" ]
+                                    , div []
+                                        [ a
+                                            [ href "https://nixos.org/manual/nixos/stable/#modular-services"
+                                            , Html.Attributes.target "_blank"
+                                            ]
+                                            [ text "What are modular services?" ]
+                                        ]
+                                    ]
+
+                                else
+                                    []
+                               )
+                            ++ (if isService then
+                                    case item.source.servicePackages of
+                                        [] ->
+                                            item.source.servicePackage
+                                                |> Maybe.map
+                                                    (\pkg ->
+                                                        [ div [] [ text "Provided by package" ]
+                                                        , div [] [ pkgLink pkg ]
+                                                        ]
+                                                    )
+                                                |> Maybe.withDefault []
+
+                                        [ single ] ->
+                                            [ div [] [ text "Provided by package" ]
+                                            , div [] [ pkgLink single ]
+                                            ]
+
+                                        many ->
+                                            [ div [] [ text "Provided by packages" ]
+                                            , div []
+                                                (List.intersperse (text ", ") (List.map pkgLink many))
+                                            ]
+
+                                else
+                                    []
+                               )
+                            ++ (if isService then
+                                    case ( item.source.servicePackage, item.source.serviceModule ) of
+                                        ( Just pkg, Just mod_ ) ->
+                                            let
+                                                -- Re-indent a (possibly multi-line) value so
+                                                -- every line after the first aligns with `indent`.
+                                                indentValue indent val =
+                                                    case String.split "\n" val of
+                                                        [] ->
+                                                            val
+
+                                                        first :: rest ->
+                                                            first
+                                                                ++ String.concat
+                                                                    (List.map (\l -> "\n" ++ indent ++ l) rest)
+
+                                                -- Only use defaults that look like plain Nix
+                                                -- expressions (from `literalExpression`).
+                                                -- Rendered HTML/markdown defaults are not
+                                                -- useful in a code snippet.
+                                                isNixLiteral val =
+                                                    not (String.contains "<" val)
+
+                                                leafValue indent =
+                                                    item.source.default
+                                                        |> Maybe.andThen
+                                                            (\val ->
+                                                                if isNixLiteral val then
+                                                                    Just (indentValue indent val)
+
+                                                                else
+                                                                    Nothing
+                                                            )
+                                                        |> Maybe.withDefault "..."
+
+                                                -- Expand "php-fpm.settings" into nested:
+                                                --   php-fpm = {
+                                                --     settings = <default>;
+                                                --   };
+                                                nestOption parts indent =
+                                                    case parts of
+                                                        [] ->
+                                                            ""
+
+                                                        [ leaf ] ->
+                                                            indent ++ leaf ++ " = " ++ leafValue indent ++ ";\n"
+
+                                                        head_ :: rest ->
+                                                            indent
+                                                                ++ head_
+                                                                ++ " = {\n"
+                                                                ++ nestOption rest (indent ++ "  ")
+                                                                ++ indent
+                                                                ++ "};\n"
+
+                                                optionParts =
+                                                    String.split "." item.source.name
+
+                                                nestedOption =
+                                                    nestOption optionParts "  "
+                                            in
+                                            [ div [] [ text "Usage" ]
+                                            , div []
+                                                [ pre []
+                                                    [ code [ class "code-block" ]
+                                                        [ text
+                                                            ("system.services.<name> = {\n"
+                                                                ++ "  imports = [ pkgs."
+                                                                ++ pkg
+                                                                ++ ".services."
+                                                                ++ mod_
+                                                                ++ " ];\n"
+                                                                ++ nestedOption
+                                                                ++ "};"
+                                                            )
+                                                        ]
+                                                    ]
+                                                ]
+                                            ]
+
+                                        _ ->
+                                            []
+
+                                else
+                                    []
+                               )
                             ++ [ div [] [ text "Declared in" ]
                                , div [] <| findSource nixosChannels channel item.source
                                ]
@@ -252,48 +445,58 @@ viewResultItem nixosChannels channel show item =
             else
                 Nothing
 
+        itemId =
+            item.source.docType ++ ":" ++ item.source.name
+
         toggle =
-            SearchMsg (Search.ShowDetails item.source.name)
+            SearchMsg (Search.ShowDetails itemId)
 
         isOpen =
-            Just item.source.name == show
+            Just itemId == show
 
-        flakeOrNixpkgs =
-            let
-                mkLink flake url =
-                    a [ href url ] [ text flake ]
-            in
-            case ( item.source.flake, item.source.flakeUrl ) of
-                -- its a flake
-                ( Just (flake :: []), Just url ) ->
-                    [ li [] [ mkLink flake url ]
+        categoryBadge =
+            if showBadges then
+                let
+                    ( badgeText, badgeClass ) =
+                        case item.source.docType of
+                            "option" ->
+                                ( "NixOS", "badge-nixos" )
+
+                            "service" ->
+                                ( "Service", "badge-service" )
+
+                            _ ->
+                                ( "Other", "badge-other" )
+                in
+                [ li []
+                    [ span [ class "option-badge-column" ]
+                        [ span [ class ("option-badge " ++ badgeClass) ]
+                            [ text badgeText ]
+                        ]
                     ]
+                ]
 
-                ( Just (flake :: moduleName :: []), Just url ) ->
-                    [ li [] [ mkLink flake url, text "#", text moduleName ] ]
-
-                _ ->
-                    []
+            else
+                []
     in
     li
         [ class "option"
         , classList [ ( "opened", isOpen ) ]
-        , Search.elementId item.source.name
+        , Search.elementId itemId
         ]
     <|
         List.filterMap identity
             [ Just <|
                 ul [ class "search-result-button" ]
-                    (List.append
-                        flakeOrNixpkgs
-                        [ li []
-                            [ a
-                                [ onClick toggle
-                                , href ""
+                    (categoryBadge
+                        ++ [ li []
+                                [ a
+                                    [ onClick toggle
+                                    , href ""
+                                    ]
+                                    [ text displayName ]
                                 ]
-                                [ text item.source.name ]
-                            ]
-                        ]
+                           ]
                     )
             , showDetails
             ]
@@ -327,6 +530,29 @@ findSource nixosChannels channel source =
 
                 Nothing ->
                     text <| cleanPosition value
+
+        asFlakeSourceLink flakeUrl_ value =
+            let
+                looksLikePath v =
+                    not (String.isEmpty v)
+                        && not (String.contains " " v)
+                        && not (String.contains "," v)
+
+                ref =
+                    Maybe.withDefault "HEAD" source.flakeRevision
+
+                positionWithLine =
+                    cleanPosition value |> String.replace ":" "#L"
+            in
+            if looksLikePath value && String.startsWith "https://github.com/" flakeUrl_ then
+                a
+                    [ href (flakeUrl_ ++ "/blob/" ++ ref ++ "/" ++ positionWithLine)
+                    , target "_blank"
+                    ]
+                    [ text value ]
+
+            else
+                text value
     in
     case ( source.flake, source.flakeUrl, source.source ) of
         -- its a flake
@@ -342,7 +568,7 @@ findSource nixosChannels channel source =
                 (source.source
                     |> Maybe.map
                         (\source_ ->
-                            [ asGithubLink source_
+                            [ asFlakeSourceLink flakeUrl_ source_
                             , span [] [ text " in " ]
                             ]
                         )
@@ -359,6 +585,74 @@ findSource nixosChannels channel source =
             [ span [] [ text "Not Found" ] ]
 
 
+{-| Segments making up an option's display name. Each `(text, Just q)` becomes
+a clickable link to an options search for `q`; `(text, Nothing)` is static.
+Every non-final dotted segment of the option name links to its own prefix
+(`programs` -> `programs.firefox` -> ...).
+-}
+optionNameSegments : ResultItemSource -> List ( String, Maybe String )
+optionNameSegments source =
+    let
+        parts =
+            String.split "." source.name
+    in
+    parts
+        |> List.indexedMap
+            (\idx part ->
+                ( part
+                , parts |> List.take (idx + 1) |> String.join "." |> Just
+                )
+            )
+
+
+viewOptionNamePath : String -> List ( String, Maybe String ) -> Html Msg
+viewOptionNamePath channel segments =
+    let
+        lastIndex =
+            List.length segments - 1
+
+        groupRoute q =
+            Route.Options
+                { query = Just q
+                , channel = Just channel
+                , show = Nothing
+                , from = Nothing
+                , size = Nothing
+                , buckets = Nothing
+                , sort = Nothing
+                , type_ = Nothing
+                , excludedOptionSources = Set.empty
+                }
+
+        renderSegment idx ( segText, query ) =
+            let
+                element =
+                    case query of
+                        Just q ->
+                            a
+                                [ Route.href (groupRoute q), class "option-name-group" ]
+                                [ text segText ]
+
+                        Nothing ->
+                            text segText
+
+                separator =
+                    if idx < lastIndex then
+                        [ text "." ]
+
+                    else
+                        []
+            in
+            element :: separator
+    in
+    div []
+        [ pre []
+            [ code [ class "code-block" ]
+                (segments |> List.indexedMap renderSegment |> List.concat)
+            ]
+        ]
+
+
 
 -- API
 
@@ -373,10 +667,20 @@ makeRequest :
     -> Int
     -> Maybe String
     -> Search.Sort
+    -> Set String
     -> Cmd Msg
-makeRequest options nixosChannels _ channel query from size _ sort =
+makeRequest options nixosChannels _ channel query from size _ sort excludedOptionSources =
+    let
+        types =
+            Route.allOptionSources
+                |> List.filter
+                    (\source ->
+                        not (Set.member (Route.optionSourceId source) excludedOptionSources)
+                    )
+                |> List.map Route.optionSourceDocType
+    in
     Search.makeRequest
-        (makeRequestBody query from size sort)
+        (makeRequestBody types query from size sort)
         nixosChannels
         channel
         decodeResultItemSource
@@ -387,22 +691,25 @@ makeRequest options nixosChannels _ channel query from size _ sort =
         |> Cmd.map SearchMsg
 
 
-makeRequestBody : String -> Int -> Int -> Search.Sort -> Body
-makeRequestBody query from size sort =
+makeRequestBody : List String -> String -> Int -> Int -> Search.Sort -> Body
+makeRequestBody types query from size sort =
     Search.makeRequestBody
         (String.trim query)
         from
         size
         sort
-        "option"
+        types
         "option_name"
         []
         []
         []
-        "option_name"
+        [ "option_name", "option_name_query" ]
         [ ( "option_name", 6.0 )
+        , ( "option_name_query", 6.0 )
         , ( "option_description", 1.0 )
         , ( "flake_name", 0.5 )
+        , ( "service_package", 3.0 )
+        , ( "service_packages", 3.0 )
         ]
 
 
@@ -419,12 +726,17 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "option_default" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "option_example" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "option_source" (Json.Decode.map Just Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.required "type" Json.Decode.string
         |> Json.Decode.Pipeline.optional "option_flake"
             (Json.Decode.map Just <| Json.Decode.list Json.Decode.string)
             Nothing
         |> Json.Decode.Pipeline.optional "flake_name" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_description" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_resolved" (Json.Decode.map Just decodeResolvedFlake) Nothing
+        |> Json.Decode.Pipeline.optional "revision" (Json.Decode.map Just Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "service_package" (Json.Decode.map Just Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "service_module" (Json.Decode.map Just Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "service_packages" (Json.Decode.list Json.Decode.string) []
 
 
 decodeResultAggregations : Json.Decode.Decoder ResultAggregations

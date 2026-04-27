@@ -85,6 +85,7 @@ pub enum Derivation {
         package_system: String,
         package_homepage: Vec<String>,
         package_position: Option<String>,
+        package_modular_services: Vec<String>,
     },
     #[serde(rename = "app")]
     App {
@@ -108,6 +109,29 @@ pub enum Derivation {
 
         option_example: Option<DocValue>,
 
+        option_flake: Option<ModulePath>,
+    },
+    #[serde(rename = "service")]
+    Service {
+        option_source: Option<String>,
+        option_name: String,
+        option_description: Option<DocString>,
+        option_type: Option<String>,
+        option_default: Option<DocValue>,
+        option_example: Option<DocValue>,
+        option_flake: Option<ModulePath>,
+        service_package: Option<String>,
+        service_module: Option<String>,
+        service_packages: Vec<String>,
+    },
+    #[serde(rename = "home-manager-option")]
+    HomeManagerOption {
+        option_source: Option<String>,
+        option_name: String,
+        option_description: Option<DocString>,
+        option_type: Option<String>,
+        option_default: Option<DocValue>,
+        option_example: Option<DocValue>,
         option_flake: Option<ModulePath>,
     },
 }
@@ -176,6 +200,7 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                     package_system: String::new(),
                     package_homepage: Vec::new(),
                     package_position: None,
+                    package_modular_services: Vec::new(),
                 }
             }
             import::FlakeEntry::App {
@@ -190,6 +215,24 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                 app_type,
             },
             import::FlakeEntry::Option(option) => option.try_into()?,
+            import::FlakeEntry::HomeManagerOption(NixOption {
+                declarations,
+                description,
+                name,
+                option_type,
+                default,
+                example,
+                flake,
+                ..
+            }) => Derivation::HomeManagerOption {
+                option_source: declarations.get(0).map(Clone::clone),
+                option_name: name,
+                option_description: description,
+                option_default: default,
+                option_example: example,
+                option_flake: flake,
+                option_type,
+            },
         })
     }
 }
@@ -203,6 +246,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                 attribute,
                 package,
                 programs,
+                modular_services,
             } => {
                 let package_attr_set: Vec<_> = attribute.split(".").collect();
                 let package_attr_set: String = (if package_attr_set.len() > 1 {
@@ -299,9 +343,36 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                         .homepage
                         .map_or(Default::default(), OneOrMany::into_list),
                     package_position: position,
+                    package_modular_services: modular_services,
                 }
             }
             import::NixpkgsEntry::Option(option) => option.try_into()?,
+            import::NixpkgsEntry::Service(option) => {
+                let NixOption {
+                    declarations,
+                    description,
+                    name,
+                    option_type,
+                    default,
+                    example,
+                    flake,
+                    service_package,
+                    service_module,
+                    service_packages,
+                } = option;
+                Derivation::Service {
+                    option_source: declarations.get(0).map(Clone::clone),
+                    option_name: name,
+                    option_description: description,
+                    option_default: default,
+                    option_example: example,
+                    option_flake: flake,
+                    option_type,
+                    service_package,
+                    service_module,
+                    service_packages,
+                }
+            }
         })
     }
 }
@@ -318,6 +389,7 @@ impl TryFrom<import::NixOption> for Derivation {
             default,
             example,
             flake,
+            ..
         }: import::NixOption,
     ) -> Result<Self, Self::Error> {
         Ok(Derivation::Option {

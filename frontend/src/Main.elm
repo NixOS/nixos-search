@@ -39,6 +39,7 @@ import Search
         , decodeNixOSChannels
         , defaultFlakeId
         )
+import Set
 import Shortcut
 import Task
 import Url
@@ -176,7 +177,25 @@ attemptQuery (( model, _ ) as pair) =
 
         Options searchModel ->
             if Search.shouldLoad searchModel then
-                submitQuery OptionsMsg Page.Options.makeRequest { searchModel | searchType = OptionSearch }
+                Tuple.mapSecond
+                    (\cmd ->
+                        Cmd.batch
+                            [ cmd
+                            , Cmd.map OptionsMsg <|
+                                Page.Options.makeRequest
+                                    model.elasticsearch
+                                    model.nixosChannels
+                                    OptionSearch
+                                    searchModel.channel
+                                    searchModel.query
+                                    searchModel.from
+                                    searchModel.size
+                                    searchModel.buckets
+                                    searchModel.sort
+                                    searchModel.excludedOptionSources
+                            ]
+                    )
+                    pair
 
             else
                 noEffects pair
@@ -377,7 +396,7 @@ view model =
                     "NixOS Search - Options" ++ maybeQuery m.query
 
                 Flakes m ->
-                    "NixOS Search - Flakes (Experimental)" ++ maybeFlakeQuery m
+                    "NixOS Search - 3rd-party Flakes" ++ maybeFlakeQuery m
 
                 _ ->
                     "NixOS Search"
@@ -456,16 +475,18 @@ viewNavigation route =
                         args
 
                     _ ->
-                        Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+                        Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Set.empty
     in
     li [] [ a [ href "https://nixos.org" ] [ text "Back to nixos.org" ] ]
         :: List.map
             (viewNavigationItem route)
             [ ( Route.Packages searchArgs, text "Packages" )
-            , ( Route.Options searchArgs, text "NixOS options" )
-            , ( Route.Flakes searchArgs, span [] [ text "Flakes", sup [] [ span [ class "label label-info" ] [ small [] [ text "Experimental" ] ] ] ] )
+            , ( Route.Options searchArgs, text "Options" )
+            , ( Route.Flakes searchArgs, text "3rd-party Flakes" )
             ]
-        ++ [ li [] [ a [ href "https://wiki.nixos.org" ] [ text "NixOS Wiki" ] ] ]
+        ++ [ li [] [ a [ href "https://noogle.dev" ] [ text "Functions" ] ]
+           , li [] [ a [ href "https://wiki.nixos.org" ] [ text "NixOS Wiki" ] ]
+           ]
 
 
 viewNavigationItem :

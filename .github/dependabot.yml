@@ -11,3 +11,14 @@ updates:
   commit-message:
     prefix: "Dependabot"
     include: "scope"
+
+- package-ecosystem: "nix"
+  directory: "/"
+  schedule:
+    interval: weekly
+    time: '00:00'
+    timezone: UTC
+  open-pull-requests-limit: 10
+  commit-message:
+    prefix: "Dependabot"
+    include: "scope"

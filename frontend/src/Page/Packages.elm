@@ -91,6 +91,7 @@ type alias ResultItemSource =
     , flakeName : Maybe String
     , flakeDescription : Maybe String
     , flakeUrl : Maybe ( String, String )
+    , modularServices : List String
     }
 
 
@@ -307,14 +308,9 @@ viewBuckets bucketsAsString result =
             selectedBucket.teams
         |> viewBucket
             "Platforms"
-            (result.aggregations.package_platforms.buckets |> sortBuckets |> filterPlatformsBucket)
+            (result.aggregations.package_platforms.buckets |> sortBuckets)
             (createBucketsMsg .platforms (\s v -> { s | platforms = v }))
             selectedBucket.platforms
-
-
-filterPlatformsBucket : List { a | key : String } -> List { a | key : String }
-filterPlatformsBucket =
-    List.filter (\a -> List.member a.key platforms)
 
 
 viewSuccess :
@@ -858,6 +854,41 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                 ]
                     , programs
                     , maintainersTeamsAndPlatforms
+                    , if List.isEmpty item.source.modularServices then
+                        text ""
+
+                      else
+                        div []
+                            [ h4 []
+                                [ text "Modular Services"
+                                , text " "
+                                , a
+                                    [ href "https://nixos.org/manual/nixos/stable/#modular-services"
+                                    , Html.Attributes.target "_blank"
+                                    , Html.Attributes.title "What are modular services?"
+                                    ]
+                                    [ text "(?)" ]
+                                ]
+                            , ul []
+                                (List.map
+                                    (\mod_ ->
+                                        let
+                                            suffix =
+                                                if mod_ == "default" then
+                                                    ""
+
+                                                else
+                                                    "." ++ mod_
+                                        in
+                                        li []
+                                            [ a
+                                                [ href ("/options?channel=" ++ channel ++ "&query=" ++ item.source.attr_name ++ "&include_nixos_options=0") ]
+                                                [ code [] [ text ("pkgs." ++ item.source.attr_name ++ ".services" ++ suffix) ] ]
+                                            ]
+                                    )
+                                    item.source.modularServices
+                                )
+                            ]
                     ]
                 ]
 
@@ -1031,17 +1062,17 @@ makeRequestBody query from size maybeBuckets sort =
         from
         size
         sort
-        "package"
+        [ "package" ]
         "package_attr_name"
         [ "package_pversion" ]
-        [ "package_attr_set"
-        , "package_license_set"
-        , "package_maintainers_set"
-        , "package_teams_set"
-        , "package_platforms"
+        [ { field = "package_attr_set", size = 20, include = Nothing }
+        , { field = "package_license_set", size = 20, include = Nothing }
+        , { field = "package_maintainers_set", size = 20, include = Nothing }
+        , { field = "package_teams_set", size = 20, include = Nothing }
+        , { field = "package_platforms", size = 20, include = Just platforms }
         ]
         filterByBuckets
-        "package_attr_name"
+        [ "package_attr_name" ]
         [ ( "package_attr_name", 9.0 )
         , ( "package_programs", 9.0 )
         , ( "package_pname", 6.0 )
@@ -1099,6 +1130,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "flake_name" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_description" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_resolved" (Json.Decode.map Just decodeResolvedFlake) Nothing
+        |> Json.Decode.Pipeline.optional "package_modular_services" (Json.Decode.list Json.Decode.string) []
 
 
 type alias ResolvedFlake =
