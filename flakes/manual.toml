@@ -501,6 +501,11 @@ repo = "whats-in-my-store"
 
 [[sources]]
 type = "github"
+owner = "slendidev"
+repo = "yavsrg-flake"
+
+[[sources]]
+type = "github"
 owner = "stackbuilders"
 repo = "nixpkgs-terraform"
 
