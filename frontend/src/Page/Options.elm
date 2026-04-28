@@ -160,7 +160,7 @@ view :
 view nixosChannels model =
     let
         enabledCount =
-            List.length Route.allOptionSources - Set.size model.excludedOptionSources
+            Set.size model.includedOptionSources
     in
     Search.view { categoryName = "options" }
         [ text "Search more than "
@@ -171,26 +171,26 @@ view nixosChannels model =
         (viewSuccess (enabledCount > 1))
         viewBuckets
         SearchMsg
-        [ viewIncludeTogglesGroup model.excludedOptionSources ]
+        [ viewIncludeTogglesGroup model.includedOptionSources ]
 
 
 viewIncludeTogglesGroup : Set String -> Html Msg
-viewIncludeTogglesGroup excluded =
+viewIncludeTogglesGroup included =
     li [ class "search-include-toggles" ]
         [ ul [] <|
             li [ class "header" ] [ text "Show" ]
-                :: List.map (viewIncludeToggle excluded) Route.allOptionSources
+                :: List.map (viewIncludeToggle included) Route.allOptionSources
         ]
 
 
 viewIncludeToggle : Set String -> OptionSource -> Html Msg
-viewIncludeToggle excluded source =
+viewIncludeToggle included source =
     let
         id =
             Route.optionSourceId source
 
         isChecked =
-            not (Set.member id excluded)
+            Set.member id included
     in
     li [ class ("search-include-" ++ id ++ "-options") ]
         [ label []
@@ -256,22 +256,27 @@ viewResultItem nixosChannels channel show showBadges item =
         isService =
             item.source.docType == "service"
 
+        isHomeManager =
+            item.source.docType == "home-manager-option"
+
         nameSegments =
             optionNameSegments item.source
 
         displayName =
             nameSegments |> List.map Tuple.first |> String.join "."
 
+        itemId =
+            item.source.docType ++ ":" ++ item.source.name
+
+        pkgLink pkg =
+            a
+                [ href ("/packages?channel=" ++ channel ++ "&query=" ++ pkg ++ "&show=" ++ pkg) ]
+                [ code [] [ text pkg ] ]
+
         showDetails =
-            if Just (item.source.docType ++ ":" ++ item.source.name) == show then
+            if Just itemId == show then
                 Just <|
                     div [ Html.Attributes.map SearchMsg Search.trapClick ] <|
-                        let
-                            pkgLink pkg =
-                                a
-                                    [ href ("/packages?channel=" ++ channel ++ "&query=" ++ pkg ++ "&show=" ++ pkg) ]
-                                    [ code [] [ text pkg ] ]
-                        in
                         [ div [] [ text "Name" ]
                         , div [] [ viewOptionNamePath channel nameSegments ]
                         ]
@@ -287,9 +292,9 @@ viewResultItem nixosChannels channel show showBadges item =
                                )
                             ++ (item.source.type_
                                     |> Maybe.map
-                                        (\type_ ->
+                                        (\t ->
                                             [ div [] [ text "Type" ]
-                                            , div [] [ asPre type_ ]
+                                            , div [] [ asPre t ]
                                             ]
                                         )
                                     |> Maybe.withDefault []
@@ -352,101 +357,13 @@ viewResultItem nixosChannels channel show showBadges item =
                                 else
                                     []
                                )
-                            ++ (if isService then
-                                    case ( item.source.servicePackage, item.source.serviceModule ) of
-                                        ( Just pkg, Just mod_ ) ->
-                                            let
-                                                -- Re-indent a (possibly multi-line) value so
-                                                -- every line after the first aligns with `indent`.
-                                                indentValue indent val =
-                                                    case String.split "\n" val of
-                                                        [] ->
-                                                            val
-
-                                                        first :: rest ->
-                                                            first
-                                                                ++ String.concat
-                                                                    (List.map (\l -> "\n" ++ indent ++ l) rest)
-
-                                                -- Only use defaults that look like plain Nix
-                                                -- expressions (from `literalExpression`).
-                                                -- Rendered HTML/markdown defaults are not
-                                                -- useful in a code snippet.
-                                                isNixLiteral val =
-                                                    not (String.contains "<" val)
-
-                                                leafValue indent =
-                                                    item.source.default
-                                                        |> Maybe.andThen
-                                                            (\val ->
-                                                                if isNixLiteral val then
-                                                                    Just (indentValue indent val)
-
-                                                                else
-                                                                    Nothing
-                                                            )
-                                                        |> Maybe.withDefault "..."
-
-                                                -- Expand "php-fpm.settings" into nested:
-                                                --   php-fpm = {
-                                                --     settings = <default>;
-                                                --   };
-                                                nestOption parts indent =
-                                                    case parts of
-                                                        [] ->
-                                                            ""
-
-                                                        [ leaf ] ->
-                                                            indent ++ leaf ++ " = " ++ leafValue indent ++ ";\n"
-
-                                                        head_ :: rest ->
-                                                            indent
-                                                                ++ head_
-                                                                ++ " = {\n"
-                                                                ++ nestOption rest (indent ++ "  ")
-                                                                ++ indent
-                                                                ++ "};\n"
-
-                                                optionParts =
-                                                    String.split "." item.source.name
-
-                                                nestedOption =
-                                                    nestOption optionParts "  "
-                                            in
-                                            [ div [] [ text "Usage" ]
-                                            , div []
-                                                [ pre []
-                                                    [ code [ class "code-block" ]
-                                                        [ text
-                                                            ("system.services.<name> = {\n"
-                                                                ++ "  imports = [ pkgs."
-                                                                ++ pkg
-                                                                ++ ".services."
-                                                                ++ mod_
-                                                                ++ " ];\n"
-                                                                ++ nestedOption
-                                                                ++ "};"
-                                                            )
-                                                        ]
-                                                    ]
-                                                ]
-                                            ]
-
-                                        _ ->
-                                            []
-
-                                else
-                                    []
-                               )
+                            ++ viewUsageSnippet item.source
                             ++ [ div [] [ text "Declared in" ]
                                , div [] <| findSource nixosChannels channel item.source
                                ]
 
             else
                 Nothing
-
-        itemId =
-            item.source.docType ++ ":" ++ item.source.name
 
         toggle =
             SearchMsg (Search.ShowDetails itemId)
@@ -464,6 +381,9 @@ viewResultItem nixosChannels channel show showBadges item =
 
                             "service" ->
                                 ( "Service", "badge-service" )
+
+                            "home-manager-option" ->
+                                ( "HM", "badge-home-manager" )
 
                             _ ->
                                 ( "Other", "badge-other" )
@@ -500,6 +420,131 @@ viewResultItem nixosChannels channel show showBadges item =
                     )
             , showDetails
             ]
+
+
+{-| Render a "Usage" section showing how to use this option in the appropriate
+context, including `_class` to clarify which module system it belongs to.
+-}
+viewUsageSnippet : ResultItemSource -> List (Html msg)
+viewUsageSnippet source =
+    let
+        -- Re-indent a (possibly multi-line) value so every line after the
+        -- first aligns with `indent`.
+        indentValue indent val =
+            case String.split "\n" val of
+                [] ->
+                    val
+
+                first :: rest ->
+                    first ++ String.concat (List.map (\l -> "\n" ++ indent ++ l) rest)
+
+        -- Only use defaults that look like plain Nix expressions (from
+        -- `literalExpression`). Rendered HTML/markdown defaults are not
+        -- useful in a code snippet.
+        isNixLiteral val =
+            not (String.contains "<" val)
+
+        leafValue indent =
+            source.default
+                |> Maybe.andThen
+                    (\val ->
+                        if isNixLiteral val then
+                            Just (indentValue indent val)
+
+                        else
+                            Nothing
+                    )
+                |> Maybe.withDefault "..."
+
+        -- Expand "php-fpm.settings" into nested:
+        --   php-fpm = {
+        --     settings = <default>;
+        --   };
+        nestOption parts indent =
+            case parts of
+                [] ->
+                    ""
+
+                [ leaf ] ->
+                    indent ++ leaf ++ " = " ++ leafValue indent ++ ";\n"
+
+                head_ :: rest ->
+                    indent
+                        ++ head_
+                        ++ " = {\n"
+                        ++ nestOption rest (indent ++ "  ")
+                        ++ indent
+                        ++ "};\n"
+
+        optionParts =
+            String.split "." source.name
+
+        nestedOption indent =
+            nestOption optionParts indent
+    in
+    case source.docType of
+        "service" ->
+            case ( source.servicePackage, source.serviceModule ) of
+                ( Just pkg, Just mod_ ) ->
+                    [ div [] [ text "Usage" ]
+                    , div []
+                        [ pre []
+                            [ code [ class "code-block" ]
+                                [ text
+                                    ("system.services.<name> = {\n"
+                                        ++ "  _class = \"service\";\n"
+                                        ++ "  imports = [ pkgs."
+                                        ++ pkg
+                                        ++ ".services."
+                                        ++ mod_
+                                        ++ " ];\n"
+                                        ++ nestedOption "  "
+                                        ++ "};"
+                                    )
+                                ]
+                            ]
+                        ]
+                    ]
+
+                _ ->
+                    []
+
+        "option" ->
+            [ div [] [ text "Usage" ]
+            , div []
+                [ pre []
+                    [ code [ class "code-block" ]
+                        [ text
+                            ("# configuration.nix\n"
+                                ++ "{\n"
+                                ++ "  _class = \"nixos\";\n"
+                                ++ nestedOption "  "
+                                ++ "}"
+                            )
+                        ]
+                    ]
+                ]
+            ]
+
+        "home-manager-option" ->
+            [ div [] [ text "Usage" ]
+            , div []
+                [ pre []
+                    [ code [ class "code-block" ]
+                        [ text
+                            ("# home.nix\n"
+                                ++ "{\n"
+                                ++ "  _class = \"homeManager\";\n"
+                                ++ nestedOption "  "
+                                ++ "}"
+                            )
+                        ]
+                    ]
+                ]
+            ]
+
+        _ ->
+            []
 
 
 findSource :
@@ -621,7 +666,7 @@ viewOptionNamePath channel segments =
                 , buckets = Nothing
                 , sort = Nothing
                 , type_ = Nothing
-                , excludedOptionSources = Set.empty
+                , includedOptionSources = Set.fromList (List.map Route.optionSourceId Route.allOptionSources)
                 }
 
         renderSegment idx ( segText, query ) =
@@ -669,13 +714,13 @@ makeRequest :
     -> Search.Sort
     -> Set String
     -> Cmd Msg
-makeRequest options nixosChannels _ channel query from size _ sort excludedOptionSources =
+makeRequest options nixosChannels _ channel query from size _ sort includedSources =
     let
         types =
             Route.allOptionSources
                 |> List.filter
                     (\source ->
-                        not (Set.member (Route.optionSourceId source) excludedOptionSources)
+                        Set.member (Route.optionSourceId source) includedSources
                     )
                 |> List.map Route.optionSourceDocType
     in
