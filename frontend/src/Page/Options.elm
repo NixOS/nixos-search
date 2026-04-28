@@ -1,9 +1,10 @@
-module Page.Options exposing
+port module Page.Options exposing
     ( AggregationsAll
     , Model
     , Msg(..)
     , ResultAggregations
     , ResultItemSource
+    , copyToClipboard
     , decodeResultAggregations
     , decodeResultItemSource
     , init
@@ -20,6 +21,7 @@ import Html
     exposing
         ( Html
         , a
+        , button
         , code
         , div
         , input
@@ -38,6 +40,7 @@ import Html.Attributes
         , classList
         , href
         , target
+        , title
         , type_
         )
 import Html.Events
@@ -121,11 +124,21 @@ init searchArgs defaultNixOSChannel nixosChannels model =
 
 
 
+-- PORTS
+
+
+{-| Ask the JS side to copy the given text to the clipboard.
+-}
+port copyToClipboard : String -> Cmd msg
+
+
+
 -- UPDATE
 
 
 type Msg
     = SearchMsg (Search.Msg ResultItemSource ResultAggregations)
+    | CopyOptionName String
 
 
 update :
@@ -148,6 +161,9 @@ update navKey msg model nixosChannels =
             in
             ( newModel, Cmd.map SearchMsg newCmd )
 
+        CopyOptionName name ->
+            ( model, copyToClipboard name )
+
 
 
 -- VIEW
@@ -168,7 +184,7 @@ view nixosChannels model =
         ]
         nixosChannels
         model
-        (viewSuccess (enabledCount > 1))
+        (viewSuccess (enabledCount > 1) model.includedOptionSources)
         viewBuckets
         SearchMsg
         [ viewIncludeTogglesGroup model.includedOptionSources ]
@@ -215,16 +231,17 @@ viewBuckets _ _ =
 
 viewSuccess :
     Bool
+    -> Set String
     -> List NixOSChannel
     -> String
     -> Details
     -> Maybe String
     -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
-viewSuccess showBadges nixosChannels channel _ show hits =
+viewSuccess showBadges includedSources nixosChannels channel _ show hits =
     ul []
         (List.map
-            (viewResultItem nixosChannels channel show showBadges)
+            (viewResultItem nixosChannels channel show showBadges includedSources)
             hits
         )
 
@@ -234,9 +251,10 @@ viewResultItem :
     -> String
     -> Maybe String
     -> Bool
+    -> Set String
     -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItem nixosChannels channel show showBadges item =
+viewResultItem nixosChannels channel show showBadges includedSources item =
     let
         asPre value =
             pre [] [ text value ]
@@ -278,7 +296,7 @@ viewResultItem nixosChannels channel show showBadges item =
                 Just <|
                     div [ Html.Attributes.map SearchMsg Search.trapClick ] <|
                         [ div [] [ text "Name" ]
-                        , div [] [ viewOptionNamePath channel nameSegments ]
+                        , div [] [ viewOptionNamePath channel includedSources item.source.name nameSegments ]
                         ]
                             ++ (item.source.description
                                     |> Maybe.andThen Utils.showHtml
@@ -632,7 +650,7 @@ findSource nixosChannels channel source =
 
 {-| Segments making up an option's display name. Each `(text, Just q)` becomes
 a clickable link to an options search for `q`; `(text, Nothing)` is static.
-Every non-final dotted segment of the option name links to its own prefix
+Every dotted segment of the option name links to its own prefix
 (`programs` -> `programs.firefox` -> ...).
 -}
 optionNameSegments : ResultItemSource -> List ( String, Maybe String )
@@ -650,8 +668,8 @@ optionNameSegments source =
             )
 
 
-viewOptionNamePath : String -> List ( String, Maybe String ) -> Html Msg
-viewOptionNamePath channel segments =
+viewOptionNamePath : String -> Set String -> String -> List ( String, Maybe String ) -> Html Msg
+viewOptionNamePath channel includedSources optionName segments =
     let
         lastIndex =
             List.length segments - 1
@@ -666,7 +684,7 @@ viewOptionNamePath channel segments =
                 , buckets = Nothing
                 , sort = Nothing
                 , type_ = Nothing
-                , includedOptionSources = Set.fromList (List.map Route.optionSourceId Route.allOptionSources)
+                , includedOptionSources = includedSources
                 }
 
         renderSegment idx ( segText, query ) =
@@ -690,11 +708,18 @@ viewOptionNamePath channel segments =
             in
             element :: separator
     in
-    div []
+    div [ class "option-name-path" ]
         [ pre []
             [ code [ class "code-block" ]
                 (segments |> List.indexedMap renderSegment |> List.concat)
             ]
+        , button
+            [ type_ "button"
+            , class "option-copy-button"
+            , title "Copy option name"
+            , onClick (CopyOptionName optionName)
+            ]
+            [ text "Copy" ]
         ]
 
 

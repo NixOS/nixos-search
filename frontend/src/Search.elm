@@ -484,14 +484,18 @@ update toRoute navKey msg model nixosChannels =
                 |> pushUrl toRoute navKey
 
         ChannelChange channel ->
-            { model
-                | channel = channel
-                , redirectedChannel = Nothing
-                , show = Nothing
-                , from = 0
-            }
-                |> ensureLoading nixosChannels
-                |> pushUrl toRoute navKey
+            if channel == model.channel then
+                ( model, Cmd.none )
+
+            else
+                { model
+                    | channel = channel
+                    , redirectedChannel = Nothing
+                    , show = Nothing
+                    , from = 0
+                }
+                    |> ensureLoading nixosChannels
+                    |> pushUrl toRoute navKey
 
         SubjectChange subject ->
             { model
@@ -1143,7 +1147,8 @@ viewResults nixosChannels model result viewSuccess outMsg categoryName =
                     ]
                     (if result.hits.total.value == 10000 then
                         [ text "more than 10000."
-                        , p [] [ text "Please provide more precise search terms." ]
+                        , p [ class "search-refine-hint" ]
+                            [ text "Please provide more precise search terms." ]
                         ]
 
                      else
