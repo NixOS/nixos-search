@@ -984,3 +984,11 @@ a:focus-visible {
 .search-result-button > li:has(.option-badge-column):first-child:not(:last-child):after {
   content: none;
 }
+
+// SPDX operators in compound license expressions -- bold weight to
+// distinguish AND / OR / WITH from license names.
+.license-operator {
+  font-weight: bold;
+  font-size: 0.85em;
+  opacity: 0.75;
+}
