@@ -327,11 +327,10 @@ type = "github"
 owner = "nix-community"
 repo = "autofirma-nix"
 
-# error: attribute 'outputName' missing
-#[[sources]]
-#type = "github"
-#owner = "nix-community"
-#repo = "fenix"
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "fenix"
 
 [[sources]]
 type = "github"
