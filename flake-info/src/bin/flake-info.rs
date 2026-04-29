@@ -194,12 +194,18 @@ async fn main() -> Result<()> {
         "at least one of --push or --json must be specified"
     );
 
-    let (exports, ident) = run_command(args.command, args.kind, &args.extra).await?;
+    let (exports, ident, partial_error) = run_command(args.command, args.kind, &args.extra).await?;
 
     if args.elastic.enable {
         push_to_elastic(&args.elastic, exports, ident).await?;
     } else if args.elastic.json {
         println!("{}", serde_json::to_string(&exports()?)?);
+    }
+
+    // Surface partial failures (e.g. some group members failed to evaluate) as a
+    // non-zero exit so CI does not report success while data is missing.
+    if let Some(error) = partial_error {
+        return Err(error.into());
     }
     Ok(())
 }
@@ -223,7 +229,14 @@ async fn run_command(
     command: Command,
     kind: Kind,
     extra: &[String],
-) -> Result<(LazyExports, (String, String, String)), FlakeInfoError> {
+) -> Result<
+    (
+        LazyExports,
+        (String, String, String),
+        Option<FlakeInfoError>,
+    ),
+    FlakeInfoError,
+> {
     flake_info::commands::check_nix_version(env!("MIN_NIX_VERSION"))?;
 
     match command {
@@ -249,7 +262,7 @@ async fn run_command(
                 info.revision.unwrap_or("latest".into()),
             );
 
-            Ok((Box::new(|| Ok(exports)), ident))
+            Ok((Box::new(|| Ok(exports)), ident, None))
         }
         Command::Nixpkgs {
             channel,
@@ -284,6 +297,7 @@ async fn run_command(
                     .map_err(FlakeInfoError::Nixpkgs)
                 }),
                 ident,
+                None,
             ))
         }
         Command::NixpkgsArchive {
@@ -316,6 +330,7 @@ async fn run_command(
                     .map_err(FlakeInfoError::Nixpkgs)
                 }),
                 ident,
+                None,
             ))
         }
         Command::Group {
@@ -369,7 +384,7 @@ async fn run_command(
                 .map(Result::unwrap_err) // each result is_err
                 .collect::<Vec<_>>();
 
-            if !errors.is_empty() {
+            let partial_error = if !errors.is_empty() {
                 let error = FlakeInfoError::Group(name.clone(), errors);
                 if exports.is_empty() {
                     return Err(error);
@@ -383,7 +398,11 @@ async fn run_command(
                     let mut file = File::create("report.txt").await?;
                     file.write_all(format!("{}", error).as_bytes()).await?;
                 }
-            }
+
+                Some(error)
+            } else {
+                None
+            };
 
             let hash = {
                 let mut sha = sha2::Sha256::new();
@@ -395,7 +414,7 @@ async fn run_command(
 
             let ident = ("group".to_owned(), name, hash);
 
-            Ok((Box::new(|| Ok(exports)), ident))
+            Ok((Box::new(|| Ok(exports)), ident, partial_error))
         }
     }
 }
