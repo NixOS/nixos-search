@@ -575,6 +575,12 @@ findSource nixosChannels channel source =
         githubUrlPrefix branch =
             "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/"
 
+        -- Home Manager options are imported from `github:nix-community/home-manager`
+        -- at master (see `flake-info/src/commands/nixpkgs_info.rs`), so their
+        -- `option_source` paths resolve against that repo, not nixpkgs.
+        homeManagerUrlPrefix =
+            "https://github.com/nix-community/home-manager/blob/master/"
+
         cleanPosition value =
             if String.startsWith "source/" value then
                 String.dropLeft 7 value
@@ -583,16 +589,24 @@ findSource nixosChannels channel source =
                 value
 
         asGithubLink value =
-            case List.Extra.find (\x -> x.id == channel) nixosChannels of
-                Just channelDetails ->
-                    a
-                        [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L")
-                        , target "_blank"
-                        ]
-                        [ text value ]
+            if source.docType == "home-manager-option" then
+                a
+                    [ href <| homeManagerUrlPrefix ++ (value |> String.replace ":" "#L")
+                    , target "_blank"
+                    ]
+                    [ text value ]
 
-                Nothing ->
-                    text <| cleanPosition value
+            else
+                case List.Extra.find (\x -> x.id == channel) nixosChannels of
+                    Just channelDetails ->
+                        a
+                            [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L")
+                            , target "_blank"
+                            ]
+                            [ text value ]
+
+                    Nothing ->
+                        text <| cleanPosition value
 
         asFlakeSourceLink flakeUrl_ value =
             let
