@@ -189,7 +189,7 @@ view nixosChannels model =
     in
     case model of
         OptionModel model_ ->
-            Html.map OptionsMsg <| mkBody "3rd-party flake options" model_ (Page.Options.viewSuccess False model_.includedOptionSources) Page.Options.viewBuckets Page.Options.SearchMsg
+            Html.map OptionsMsg <| mkBody "3rd-party flake options" model_ (Page.Options.viewSuccess model_.activeOptionSource) Page.Options.viewBuckets Page.Options.SearchMsg
 
         PackagesModel model_ ->
             Html.map PackagesMsg <| mkBody "3rd-party flake packages" model_ Page.Packages.viewSuccess Page.Packages.viewBuckets Page.Packages.SearchMsg

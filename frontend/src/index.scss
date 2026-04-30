@@ -969,29 +969,68 @@ a:focus-visible {
   background-color: var(--badge-background)
 }
 
-// Fixed-width column for category badges so option names align.
-// The width accommodates the longest label ("Service") plus padding.
-.option-badge-column {
+// Stale-while-loading indicator. When a fresh query is in flight but a
+// previous result is still being shown (e.g. during a tab switch), the
+// `.search-results` container also gets `.loading-overlay`. A small
+// spinner appears next to the result-count header without blanking the
+// page.
+.search-results.loading-overlay h2::after {
+  content: "";
   display: inline-block;
-  width: 4.5em;
-  text-align: center;
-  vertical-align: baseline;
+  width: 0.9em;
+  height: 0.9em;
+  margin-left: 0.5em;
+  vertical-align: -0.1em;
+  border: 2px solid var(--text-color-light, currentColor);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin-overlay 0.8s linear infinite;
 }
 
-// Align checkboxes vertically with their labels and stop them inheriting
-// stray bootstrap margins that produce a jagged column.
-.search-include-toggles {
-  ul > li > label {
-    display: flex;
-    align-items: center;
-    gap: 0.4em;
-    margin: 0;
-    cursor: pointer;
+@keyframes spin-overlay {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Tab strip in the Options sidebar — one tab per option source. Active
+// tab inherits the `.selected` background/foreground from the sidebar's
+// generic styling; the rules below diverge from the bucket-style sidebar
+// in two ways:
+//
+// 1. The bucket layout uses `display: grid` + `:last-child { text-align:
+//    right }`, which right-aligns the lone label whenever a tab's count
+//    badge is missing (e.g. while a fresh query is loading). Flex with
+//    `margin-left: auto` on the badge keeps the label left-aligned
+//    regardless of whether a badge is present.
+// 2. The bucket pattern hides the *last child* of `.selected` because
+//    the count is duplicated above the result list — that rule hides
+//    both the badge (when present) and the lone label (when not),
+//    which means the active tab disappears entirely while loading.
+//    We re-show last-child for tabs.
+//
+// Nested inside `.search-page` to match the specificity of the rule
+// being overridden (which is also `.search-page`-prefixed via outer
+// nesting), so the override actually wins the cascade.
+.search-page ul.search-sidebar > li.search-source-tabs > ul > li > a {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+  text-decoration: none;
+
+  & > span {
+    text-align: left;
   }
 
-  ul > li > label > input[type="checkbox"] {
-    margin: 0;
-    flex: 0 0 auto;
+  & > .badge {
+    margin-left: auto;
+  }
+
+  // Counter the bucket-pattern `&.selected > span:last-child {
+  // display: none }` rule — applies to both the badge (when present)
+  // and the lone label (when counts are still loading).
+  &.selected > span:last-child {
+    display: inline-block;
   }
 }
 
@@ -1044,17 +1083,3 @@ a:focus-visible {
   font-weight: bold;
 }
 
-.option-badge {
-  display: inline-block;
-  padding: 0.1em 0.4em;
-  border-radius: 999px;
-  font-size: 0.7em;
-  font-weight: 600;
-  line-height: 1.4;
-  color: #fff;
-
-  &.badge-nixos { background-color: #5277c3; }
-  &.badge-service { background-color: #6e56a0; }
-  &.badge-home-manager { background-color: #e07020; }
-  &.badge-other { background-color: #888; }
-}

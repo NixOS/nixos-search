@@ -6,9 +6,11 @@ module Route exposing
     , SearchType(..)
     , allOptionSources
     , allTypes
+    , defaultOptionSource
     , fromUrl
     , href
     , optionSourceDocType
+    , optionSourceFromId
     , optionSourceId
     , optionSourceLabel
     , routeToString
@@ -20,7 +22,6 @@ import Dict
 import Html
 import Html.Attributes
 import Maybe.Extra
-import Set exposing (Set)
 import Url
 
 
@@ -37,7 +38,7 @@ type alias SearchArgs =
     , buckets : Maybe String
     , sort : Maybe String
     , type_ : Maybe SearchType
-    , includedOptionSources : Set String
+    , activeOptionSource : OptionSource
     }
 
 
@@ -56,7 +57,14 @@ allOptionSources =
     [ NixosOptions, ModularServiceOptions, HomeManagerOptionSource ]
 
 
-{-| Stable identifier used in URL parameter names and the excluded-sources set.
+{-| Default tab when no source is specified in the URL.
+-}
+defaultOptionSource : OptionSource
+defaultOptionSource =
+    NixosOptions
+
+
+{-| Stable identifier used in the `source=` URL parameter.
 -}
 optionSourceId : OptionSource -> String
 optionSourceId source =
@@ -69,6 +77,16 @@ optionSourceId source =
 
         HomeManagerOptionSource ->
             "home_manager"
+
+
+{-| Inverse of `optionSourceId`. Returns `Nothing` for unknown identifiers
+so URL parsing can fall back to the default tab.
+-}
+optionSourceFromId : String -> Maybe OptionSource
+optionSourceFromId id =
+    allOptionSources
+        |> List.filter (\s -> optionSourceId s == id)
+        |> List.head
 
 
 {-| Elasticsearch document `type` field value.
@@ -99,11 +117,6 @@ optionSourceLabel source =
 
         HomeManagerOptionSource ->
             "Home Manager"
-
-
-optionSourceUrlParam : OptionSource -> String
-optionSourceUrlParam source =
-    "include_" ++ optionSourceId source ++ "_options"
 
 
 type SearchType
@@ -199,18 +212,10 @@ searchQueryParser appUrl =
     , buckets = string "buckets"
     , sort = string "sort"
     , type_ = Maybe.andThen searchTypeFromString (string "type")
-    , includedOptionSources =
-        -- Each source defaults to included; URL says "0" to exclude.
-        allOptionSources
-            |> List.filterMap
-                (\source ->
-                    if string (optionSourceUrlParam source) == Just "0" then
-                        Nothing
-
-                    else
-                        Just (optionSourceId source)
-                )
-            |> Set.fromList
+    , activeOptionSource =
+        string "source"
+            |> Maybe.andThen optionSourceFromId
+            |> Maybe.withDefault defaultOptionSource
     }
 
 
@@ -233,20 +238,15 @@ searchArgsToUrl args =
     , string "sort" args.sort
     , string "type" <| Maybe.map searchTypeToString args.type_
     , string "query" args.query
-    ]
-        ++ List.map
-            (\source ->
-                let
-                    value =
-                        if Set.member (optionSourceId source) args.includedOptionSources then
-                            "1"
+    , string "source"
+        (if args.activeOptionSource == defaultOptionSource then
+            -- Keep the default tab off the URL for clean bookmarks.
+            Nothing
 
-                        else
-                            "0"
-                in
-                string (optionSourceUrlParam source) (Just value)
-            )
-            allOptionSources
+         else
+            Just (optionSourceId args.activeOptionSource)
+        )
+    ]
         |> Maybe.Extra.values
         |> Dict.fromList
 

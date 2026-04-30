@@ -39,8 +39,14 @@ searchArgsFuzzer =
         |> Fuzz.andMap (Fuzz.maybe Fuzz.string)
         |> Fuzz.andMap (Fuzz.maybe Fuzz.string)
         |> Fuzz.andMap (Fuzz.maybe searchTypeFuzzer)
+        |> Fuzz.andMap optionSourceFuzzer
 
 
 searchTypeFuzzer : Fuzzer SearchType
 searchTypeFuzzer =
     Fuzz.oneOfValues [ Route.OptionSearch, Route.PackageSearch ]
+
+
+optionSourceFuzzer : Fuzzer Route.OptionSource
+optionSourceFuzzer =
+    Fuzz.oneOfValues Route.allOptionSources
