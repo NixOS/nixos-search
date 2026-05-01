@@ -17,6 +17,7 @@ port module Page.Options exposing
     )
 
 import Browser.Navigation
+import Dict exposing (Dict)
 import Html
     exposing
         ( Html
@@ -52,6 +53,7 @@ import Http exposing (Body)
 import Json.Decode
 import Json.Decode.Pipeline
 import List.Extra
+import RemoteData
 import Route exposing (OptionSource, SearchType)
 import Search
     exposing
@@ -59,8 +61,8 @@ import Search
         , NixOSChannel
         , decodeResolvedFlake
         )
-import Set exposing (Set)
 import SyntaxHighlight exposing (elm, oneDark, toBlockHtml, useTheme)
+import Task
 import Utils
 
 
@@ -174,51 +176,86 @@ view :
     -> Model
     -> Html Msg
 view nixosChannels model =
-    let
-        enabledCount =
-            Set.size model.includedOptionSources
-    in
     Search.view { categoryName = "options" }
         [ text "Search more than "
         , strong [] [ text "20 000 options" ]
         ]
         nixosChannels
         model
-        (viewSuccess (enabledCount > 1) model.includedOptionSources)
+        (viewSuccess model.activeOptionSource)
         viewBuckets
         SearchMsg
-        [ viewIncludeTogglesGroup model.includedOptionSources ]
+        [ viewSourceTabs model.activeOptionSource model.sourceCounts ]
 
 
-viewIncludeTogglesGroup : Set String -> Html Msg
-viewIncludeTogglesGroup included =
-    li [ class "search-include-toggles" ]
+{-| Tab strip: one tab per option source. Each tab pulls its count from
+the shared `sourceCounts` dict (the active tab's count is mirrored
+there on `QueryResponse`, inactive ones come from `size: 0` queries
+fired alongside the main one). Pulling counts uniformly from one place
+means the badges survive a tab switch unchanged — the previous tab's
+count stays visible until a fresh count for the new tab arrives.
+-}
+viewSourceTabs : OptionSource -> Dict String Int -> Html Msg
+viewSourceTabs activeSource sourceCounts =
+    li [ class "search-source-tabs" ]
         [ ul [] <|
-            li [ class "header" ] [ text "Show" ]
-                :: List.map (viewIncludeToggle included) Route.allOptionSources
+            li [ class "header" ] [ text "Source" ]
+                :: List.map
+                    (\source ->
+                        viewSourceTab
+                            activeSource
+                            (Dict.get (Route.optionSourceId source) sourceCounts)
+                            source
+                    )
+                    Route.allOptionSources
         ]
 
 
-viewIncludeToggle : Set String -> OptionSource -> Html Msg
-viewIncludeToggle included source =
+viewSourceTab : OptionSource -> Maybe Int -> OptionSource -> Html Msg
+viewSourceTab activeSource count source =
     let
+        isActive =
+            source == activeSource
+
         id =
             Route.optionSourceId source
 
-        isChecked =
-            Set.member id included
+        badge =
+            case count of
+                Just n ->
+                    [ span [ class "badge" ] [ text (formatCount n) ] ]
+
+                Nothing ->
+                    []
     in
-    li [ class ("search-include-" ++ id ++ "-options") ]
-        [ label []
-            [ input
-                [ type_ "checkbox"
-                , checked isChecked
-                , onCheck (\b -> SearchMsg (Search.SetOptionSourceIncluded source b))
-                ]
-                []
-            , text (" " ++ Route.optionSourceLabel source)
+    li
+        [ class ("search-source-" ++ id) ]
+        [ a
+            -- The sidebar's existing `&.selected` styling targets `a`,
+            -- not `li`, so the active-tab highlight class lives on the
+            -- anchor.
+            [ classList [ ( "selected", isActive ) ]
+            , href "#"
+            , Html.Events.onClick (SearchMsg (Search.SetActiveOptionSource source))
             ]
+            (span [] [ text (Route.optionSourceLabel source) ] :: badge)
         ]
+
+
+{-| Compact rendering of a hit count for the tab badge: 1.2k, 23k, etc.
+ES returns counts up to 10 000 as exact and beyond that as a >=10000
+sentinel; render the latter as "10k+" so we don't lie about precision.
+-}
+formatCount : Int -> String
+formatCount n =
+    if n >= 10000 then
+        "10k+"
+
+    else if n >= 1000 then
+        String.fromInt (n // 1000) ++ "." ++ String.fromInt (modBy 10 (n // 100)) ++ "k"
+
+    else
+        String.fromInt n
 
 
 viewBuckets :
@@ -230,18 +267,17 @@ viewBuckets _ _ =
 
 
 viewSuccess :
-    Bool
-    -> Set String
+    OptionSource
     -> List NixOSChannel
     -> String
     -> Details
     -> Maybe String
     -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
-viewSuccess showBadges includedSources nixosChannels channel _ show hits =
+viewSuccess activeSource nixosChannels channel _ show hits =
     ul []
         (List.map
-            (viewResultItem nixosChannels channel show showBadges includedSources)
+            (viewResultItem nixosChannels channel show activeSource)
             hits
         )
 
@@ -250,11 +286,10 @@ viewResultItem :
     List NixOSChannel
     -> String
     -> Maybe String
-    -> Bool
-    -> Set String
+    -> OptionSource
     -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItem nixosChannels channel show showBadges includedSources item =
+viewResultItem nixosChannels channel show activeSource item =
     let
         asPre value =
             pre [] [ text value ]
@@ -296,7 +331,7 @@ viewResultItem nixosChannels channel show showBadges includedSources item =
                 Just <|
                     div [ Html.Attributes.map SearchMsg Search.trapClick ] <|
                         [ div [] [ text "Name" ]
-                        , div [] [ viewOptionNamePath channel includedSources item.source.name nameSegments ]
+                        , div [] [ viewOptionNamePath channel activeSource item.source.name nameSegments ]
                         ]
                             ++ (item.source.description
                                     |> Maybe.andThen Utils.showHtml
@@ -388,34 +423,6 @@ viewResultItem nixosChannels channel show showBadges includedSources item =
 
         isOpen =
             Just itemId == show
-
-        categoryBadge =
-            if showBadges then
-                let
-                    ( badgeText, badgeClass ) =
-                        case item.source.docType of
-                            "option" ->
-                                ( "NixOS", "badge-nixos" )
-
-                            "service" ->
-                                ( "Service", "badge-service" )
-
-                            "home-manager-option" ->
-                                ( "HM", "badge-home-manager" )
-
-                            _ ->
-                                ( "Other", "badge-other" )
-                in
-                [ li []
-                    [ span [ class "option-badge-column" ]
-                        [ span [ class ("option-badge " ++ badgeClass) ]
-                            [ text badgeText ]
-                        ]
-                    ]
-                ]
-
-            else
-                []
     in
     li
         [ class "option"
@@ -426,16 +433,14 @@ viewResultItem nixosChannels channel show showBadges includedSources item =
         List.filterMap identity
             [ Just <|
                 ul [ class "search-result-button" ]
-                    (categoryBadge
-                        ++ [ li []
-                                [ a
-                                    [ onClick toggle
-                                    , href ""
-                                    ]
-                                    [ text displayName ]
-                                ]
-                           ]
-                    )
+                    [ li []
+                        [ a
+                            [ onClick toggle
+                            , href ""
+                            ]
+                            [ text displayName ]
+                        ]
+                    ]
             , showDetails
             ]
 
@@ -682,8 +687,8 @@ optionNameSegments source =
             )
 
 
-viewOptionNamePath : String -> Set String -> String -> List ( String, Maybe String ) -> Html Msg
-viewOptionNamePath channel includedSources optionName segments =
+viewOptionNamePath : String -> OptionSource -> String -> List ( String, Maybe String ) -> Html Msg
+viewOptionNamePath channel activeSource optionName segments =
     let
         lastIndex =
             List.length segments - 1
@@ -698,7 +703,7 @@ viewOptionNamePath channel includedSources optionName segments =
                 , buckets = Nothing
                 , sort = Nothing
                 , type_ = Nothing
-                , includedOptionSources = includedSources
+                , activeOptionSource = activeSource
                 }
 
         renderSegment idx ( segText, query ) =
@@ -741,6 +746,13 @@ viewOptionNamePath channel includedSources optionName segments =
 -- API
 
 
+{-| Issue a single ES query restricted to the active tab's source plus
+one tiny `size: 0` count query per inactive source so the tabs can
+display hit-count badges. Active-tab body and count bodies are all
+byte-stable across users on identical input, so `request_cache` hits
+amortize the cost; size:0 in particular is the workload that cache
+was designed for.
+-}
 makeRequest :
     Search.Options
     -> List NixOSChannel
@@ -751,27 +763,63 @@ makeRequest :
     -> Int
     -> Maybe String
     -> Search.Sort
-    -> Set String
+    -> OptionSource
     -> Cmd Msg
-makeRequest options nixosChannels _ channel query from size _ sort includedSources =
+makeRequest options nixosChannels _ channel query from size _ sort activeSource =
     let
-        types =
-            Route.allOptionSources
-                |> List.filter
-                    (\source ->
-                        Set.member (Route.optionSourceId source) includedSources
+        activeQuery : Cmd (Search.Msg ResultItemSource ResultAggregations)
+        activeQuery =
+            Search.makeRequestTask
+                (makeRequestBody
+                    [ Route.optionSourceDocType activeSource ]
+                    query
+                    from
+                    size
+                    sort
+                )
+                nixosChannels
+                channel
+                decodeResultItemSource
+                decodeResultAggregations
+                options
+                |> Task.attempt (RemoteData.fromResult >> Search.QueryResponse)
+
+        countQuery : OptionSource -> Cmd (Search.Msg ResultItemSource ResultAggregations)
+        countQuery source =
+            Search.makeRequestTask
+                (makeRequestBody
+                    [ Route.optionSourceDocType source ]
+                    query
+                    0
+                    0
+                    sort
+                )
+                nixosChannels
+                channel
+                decodeResultItemSource
+                decodeResultAggregations
+                options
+                |> Task.attempt
+                    (\result ->
+                        case result of
+                            Ok r ->
+                                Search.SourceCount
+                                    (Route.optionSourceId source)
+                                    r.hits.total.value
+
+                            Err _ ->
+                                -- Swallow the error; the badge just won't
+                                -- appear for that tab. The active tab's
+                                -- own failure mode is handled by `result`.
+                                Search.NoOp
                     )
-                |> List.map Route.optionSourceDocType
+
+        inactiveSources =
+            Route.allOptionSources
+                |> List.filter (\s -> s /= activeSource)
     in
-    Search.makeRequest
-        (makeRequestBody types query from size sort)
-        nixosChannels
-        channel
-        decodeResultItemSource
-        decodeResultAggregations
-        options
-        Search.QueryResponse
-        (Just "query-options")
+    (activeQuery :: List.map countQuery inactiveSources)
+        |> Cmd.batch
         |> Cmd.map SearchMsg
 
 
