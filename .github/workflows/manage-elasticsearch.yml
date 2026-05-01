@@ -20,7 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL2 }}
+      FI_ES_METHOD: ${{ inputs.method }}
+      FI_ES_PATH: ${{ inputs.path }}
     steps:
       - name: Manage ElasticSearch
         run: |
-            curl -sS -X ${{ inputs.method }} ${{ secrets.ELASTICSEARCH_URL2 }}/${{ inputs.path }}
+            curl -sS -X "$FI_ES_METHOD" "$FI_ES_URL/$FI_ES_PATH"
