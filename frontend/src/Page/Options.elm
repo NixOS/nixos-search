@@ -580,11 +580,20 @@ findSource nixosChannels channel source =
         githubUrlPrefix branch =
             "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/"
 
-        -- Home Manager options are imported from `github:nix-community/home-manager`
-        -- at master (see `flake-info/src/commands/nixpkgs_info.rs`), so their
-        -- `option_source` paths resolve against that repo, not nixpkgs.
-        homeManagerUrlPrefix =
-            "https://github.com/nix-community/home-manager/blob/master/"
+        -- Home Manager options are imported from the `release-XX.YY` branch of
+        -- `nix-community/home-manager` matching the nixpkgs channel
+        -- (see `flake-info/src/commands/nixpkgs_info.rs`), or `master` for
+        -- `nixos-unstable`. Their `option_source` paths resolve against that
+        -- repo, not nixpkgs.
+        homeManagerBranch nixpkgsBranch =
+            if nixpkgsBranch == "nixos-unstable" then
+                "master"
+
+            else
+                "release-" ++ String.dropLeft (String.length "nixos-") nixpkgsBranch
+
+        homeManagerUrlPrefix branch =
+            "https://github.com/nix-community/home-manager/blob/" ++ branch ++ "/"
 
         cleanPosition value =
             if String.startsWith "source/" value then
@@ -594,24 +603,24 @@ findSource nixosChannels channel source =
                 value
 
         asGithubLink value =
-            if source.docType == "home-manager-option" then
-                a
-                    [ href <| homeManagerUrlPrefix ++ (value |> String.replace ":" "#L")
-                    , target "_blank"
-                    ]
-                    [ text value ]
+            case List.Extra.find (\x -> x.id == channel) nixosChannels of
+                Just channelDetails ->
+                    let
+                        prefix =
+                            if source.docType == "home-manager-option" then
+                                homeManagerUrlPrefix (homeManagerBranch channelDetails.branch)
 
-            else
-                case List.Extra.find (\x -> x.id == channel) nixosChannels of
-                    Just channelDetails ->
-                        a
-                            [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L")
-                            , target "_blank"
-                            ]
-                            [ text value ]
+                            else
+                                githubUrlPrefix channelDetails.branch
+                    in
+                    a
+                        [ href <| prefix ++ (value |> String.replace ":" "#L")
+                        , target "_blank"
+                        ]
+                        [ text value ]
 
-                    Nothing ->
-                        text <| cleanPosition value
+                Nothing ->
+                    text <| cleanPosition value
 
         asFlakeSourceLink flakeUrl_ value =
             let
