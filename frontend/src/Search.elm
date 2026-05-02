@@ -449,6 +449,7 @@ type Msg a b
 
 type Details
     = ViaNixShell
+    | ViaFlakeNix
     | ViaNixOS
     | ViaNixProfile
     | ViaNixEnv
