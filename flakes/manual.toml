@@ -435,6 +435,76 @@ repo = "agenix"
 
 [[sources]]
 type = "github"
+owner = "serokell"
+repo = "deploy-rs"
+
+[[sources]]
+type = "github"
+owner = "serokell"
+repo = "gemini-infra"
+
+[[sources]]
+type = "github"
+owner = "serokell"
+repo = "haskell-nix-weeder"
+
+[[sources]]
+type = "github"
+owner = "serokell"
+repo = "mix-to-nix"
+
+[[sources]]
+type = "github"
+owner = "serokell"
+repo = "nix-npm-buildpackage"
+
+[[sources]]
+type = "github"
+owner = "serokell"
+repo = "nix-pandoc"
+
+[[sources]]
+type = "github"
+owner = "serokell"
+repo = "nix-templates"
+
+[[sources]]
+type = "github"
+owner = "serokell"
+repo = "serokell.nix"
+
+[[sources]]
+type = "github"
+owner = "serokell"
+repo = "stack-to-nix"
+
+[[sources]]
+type = "github"
+owner = "serokell"
+repo = "systemd-nix"
+
+[[sources]]
+type = "github"
+owner = "serokell"
+repo = "ton.nix"
+
+[[sources]]
+type = "github"
+owner = "serokell"
+repo = "update-daemon"
+
+[[sources]]
+type = "github"
+owner = "serokell"
+repo = "upload-daemon"
+
+[[sources]]
+type = "github"
+owner = "serokell"
+repo = "vault-secrets"
+
+[[sources]]
+type = "github"
 owner = "snowfallorg"
 repo = "drift"
 
