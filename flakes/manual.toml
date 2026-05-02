@@ -54,6 +54,11 @@ repo = "resholve"
 
 [[sources]]
 type = "github"
+owner = "acevif"
+repo = "swiftformat-nix"
+
+[[sources]]
+type = "github"
 owner = "anpandey"
 repo = "numen-nix"
 
