@@ -10,6 +10,10 @@ url = "git+https://codeberg.org/eicas/omeka-s-flake"
 
 [[sources]]
 type = "git"
+url = "git+https://codeberg.org/raboof/browserify?ref=nix"
+
+[[sources]]
+type = "git"
 url = "git+https://codeberg.org/wolfangaukang/python-trovo?ref=main"
 
 # wolfangaukang is no longer in 'maintainers'
