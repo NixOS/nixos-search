@@ -1,0 +1,55 @@
+name: "Weekly prune of old Elasticsearch indices"
+
+# Deletes concrete Elasticsearch indices that are not pointed to by any
+# alias. Each import run creates a new versioned index (e.g.
+# `nixos-47-unstable-<hash>`) and repoints the corresponding `latest-*`
+# alias; previous runs are left behind and accumulate over time. Anything
+# still aliased is in active use, so the alias set is the authoritative
+# "keep" list and everything else is safe to drop.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  prune-indices:
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+
+    env:
+      FI_ES_URL: ${{ secrets.ELASTICSEARCH_URL2 }}
+
+    steps:
+      - name: Checking out the repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Prune unaliased indices
+        if: github.repository_owner == 'NixOS'
+        shell: sh
+        run: |
+          set -eu
+
+          curl -fsS "${FI_ES_URL}/_cat/indices?h=index" \
+            | awk '{print $1}' | sort -u > /tmp/all.txt
+          curl -fsS "${FI_ES_URL}/_cat/aliases?h=index" \
+            | awk '{print $1}' | sort -u > /tmp/keep.txt
+
+          echo "Aliased (keeping):"
+          cat /tmp/keep.txt
+          echo
+
+          comm -23 /tmp/all.txt /tmp/keep.txt > /tmp/del.txt
+          echo "Stale (deleting):"
+          cat /tmp/del.txt
+          echo
+
+          while IFS= read -r idx; do
+            [ -z "$idx" ] && continue
+            curl -fsS -X DELETE "${FI_ES_URL}/${idx}" >/dev/null
+          done < /tmp/del.txt
