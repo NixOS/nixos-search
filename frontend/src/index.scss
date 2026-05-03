@@ -1083,3 +1083,13 @@ a:focus-visible {
   font-weight: bold;
 }
 
+@media (max-width: 760px) {
+  .search-page {
+    & .search-results {
+      flex-direction: column;
+    }
+    & ul.search-sidebar {
+      width: 100%;
+    }
+  }
+}
