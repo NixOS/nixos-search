@@ -1,7 +1,6 @@
 module Search.Typeahead exposing
     ( Model
     , Msg
-    , disabled
     , focusModel
     , hide
     , hideAfterBlur
@@ -12,30 +11,60 @@ module Search.Typeahead exposing
     , viewDropdown
     )
 
-{-| Per-keystroke suggestion dropdown backed by static JSON corpora.
+{-| Per-keystroke suggestion dropdown.
 
-Fetches `/autocomplete/<category>-<channel>.json` once per session and
-searches client-side with multi-word ranking. Currently covers Modular
-Services and Home Manager options.
+Supports two backends, selected per `(searchType, activeOptionSource)`:
 
-When `enabled` is `False` (save-data / slow connection) every call is a
-no-op and `viewDropdown` renders nothing.
+  - `EsBacked` — debounced request to ES `*.edge` subfields; used for
+    NixOS options, packages, and any source without a static corpus.
+  - `StaticBacked` — one-time JSON fetch from `/autocomplete/<key>.json`,
+    then pure client-side multi-word ranking; used for Modular Services
+    and Home Manager options to avoid per-keystroke ES queries.
+
+When `preferStatic` is `False` (save-data / slow connection), Modular
+Services and Home Manager sources fall back to `EsBacked` instead of
+fetching a multi-MB corpus; per-keystroke ES bytes are lower than one
+large download for users who run only a handful of searches.
 
 -}
 
+import Base64
 import Dict exposing (Dict)
 import Html exposing (Html, a, li, span, text, ul)
 import Html.Attributes exposing (class, href)
 import Http
 import Json.Decode
+import Json.Decode.Pipeline
+import Json.Encode
 import Process
-import Route exposing (OptionSource(..), SearchType(..))
+import Route exposing (OptionSource(..), SearchType(..), optionSourceDocType, optionSourceId)
 import Set exposing (Set)
 import Task
 
 
 
 -- TYPES
+--
+-- Row-polymorphic `Options` and `Channel` avoid importing the concrete
+-- `Search` module (which would form an import cycle).
+
+
+type alias Options r =
+    { r
+        | mappingSchemaVersion : Int
+        , url : String
+        , username : String
+        , password : String
+    }
+
+
+type alias Channel r =
+    { r | id : String, branch : String }
+
+
+type Backend
+    = EsBacked
+    | StaticBacked StaticKey
 
 
 {-| Cache key: category name ("services", "hm") × channel id.
@@ -66,7 +95,8 @@ type alias Suggestion =
 
 
 type alias Model =
-    { suggestions : List Suggestion
+    { token : Int
+    , suggestions : List Suggestion
     , preferStatic : Bool
     , visible : Bool
     , corpora : Dict StaticKey Corpus
@@ -76,7 +106,8 @@ type alias Model =
 
 init : Bool -> Model
 init preferStatic =
-    { suggestions = []
+    { token = 0
+    , suggestions = []
     , preferStatic = preferStatic
     , visible = False
     , corpora = Dict.empty
@@ -84,13 +115,16 @@ init preferStatic =
     }
 
 
-disabled : Model -> Bool
-disabled m =
-    not m.preferStatic
+
+-- DEBOUNCE
+--
+-- Longer debounce and 3-char minimum keep load on the shared ES instance
+-- modest. Static-backed sources ignore the debounce (no network cost).
 
 
-
--- CONSTANTS
+debounceMs : Float
+debounceMs =
+    250
 
 
 minQueryLength : Int
@@ -107,17 +141,17 @@ maxResults =
 -- BACKEND SELECTION
 
 
-staticKeyFor : SearchType -> OptionSource -> String -> Maybe StaticKey
-staticKeyFor searchType source channel =
-    case ( searchType, source ) of
-        ( OptionSearch, ModularServiceOptions ) ->
-            Just ( "services", channel )
+backendFor : Bool -> SearchType -> OptionSource -> String -> Backend
+backendFor preferStatic searchType source channel =
+    case ( preferStatic, searchType, source ) of
+        ( True, OptionSearch, ModularServiceOptions ) ->
+            StaticBacked ( "services", channel )
 
-        ( OptionSearch, HomeManagerOptionSource ) ->
-            Just ( "hm", channel )
+        ( True, OptionSearch, HomeManagerOptionSource ) ->
+            StaticBacked ( "hm", channel )
 
         _ ->
-            Nothing
+            EsBacked
 
 
 
@@ -125,7 +159,9 @@ staticKeyFor searchType source channel =
 
 
 type Msg
-    = Loaded StaticKey (Result Http.Error Corpus)
+    = Fire Int
+    | Response Int (Result Http.Error (List Suggestion))
+    | Loaded StaticKey (Result Http.Error Corpus)
     | Hide
 
 
@@ -141,7 +177,7 @@ hideModel m =
 
 focusModel : Model -> Model
 focusModel m =
-    if m.preferStatic && not (List.isEmpty m.suggestions) then
+    if not (List.isEmpty m.suggestions) then
         { m | visible = True }
 
     else
@@ -154,69 +190,97 @@ hideAfterBlur =
 
 
 queryChanged :
-    SearchType
+    Options r
+    -> List (Channel c)
+    -> SearchType
     -> OptionSource
     -> String
     -> String
     -> Model
     -> ( Model, Cmd Msg )
-queryChanged searchType activeSource channel query model =
-    if not model.preferStatic then
-        ( model, Cmd.none )
+queryChanged options nixosChannels searchType activeSource channel query model =
+    let
+        trimmed =
+            String.trim query
+
+        nextToken =
+            model.token + 1
+    in
+    if String.length trimmed < minQueryLength then
+        ( { model | token = nextToken, suggestions = [], visible = False }
+        , Cmd.none
+        )
 
     else
-        let
-            trimmed =
-                String.trim query
-        in
-        if String.length trimmed < minQueryLength then
-            ( { model | suggestions = [], visible = False }
-            , Cmd.none
-            )
+        case backendFor model.preferStatic searchType activeSource channel of
+            EsBacked ->
+                ( { model | token = nextToken, visible = True }
+                , Process.sleep debounceMs |> Task.perform (\_ -> Fire nextToken)
+                )
 
-        else
-            case staticKeyFor searchType activeSource channel of
-                Nothing ->
-                    ( { model | suggestions = [], visible = False }, Cmd.none )
+            StaticBacked key ->
+                case Dict.get key model.corpora of
+                    Just corpus ->
+                        let
+                            ranked =
+                                rankCorpus trimmed corpus
+                        in
+                        ( { model
+                            | token = nextToken
+                            , suggestions = ranked
+                            , visible = not (List.isEmpty ranked)
+                          }
+                        , Cmd.none
+                        )
 
-                Just key ->
-                    case Dict.get key model.corpora of
-                        Just corpus ->
-                            let
-                                ranked =
-                                    rankCorpus trimmed corpus
-                            in
-                            ( { model
-                                | suggestions = ranked
-                                , visible = not (List.isEmpty ranked)
-                              }
-                            , Cmd.none
-                            )
+                    Nothing ->
+                        let
+                            fetchCmd =
+                                if Set.member key model.loading then
+                                    Cmd.none
 
-                        Nothing ->
-                            let
-                                fetchCmd =
-                                    if Set.member key model.loading then
-                                        Cmd.none
-
-                                    else
-                                        fetchCorpus key
-                            in
-                            ( { model | loading = Set.insert key model.loading }
-                            , fetchCmd
-                            )
+                                else
+                                    fetchCorpus key
+                        in
+                        ( { model
+                            | token = nextToken
+                            , loading = Set.insert key model.loading
+                          }
+                        , fetchCmd
+                        )
 
 
 update :
-    SearchType
+    Options r
+    -> List (Channel c)
+    -> SearchType
     -> OptionSource
     -> String
     -> String
     -> Msg
     -> Model
     -> ( Model, Cmd Msg )
-update searchType activeSource channel query msg model =
+update options nixosChannels searchType activeSource channel query msg model =
     case msg of
+        Fire token ->
+            if token /= model.token then
+                ( model, Cmd.none )
+
+            else
+                ( model, fetch options nixosChannels searchType activeSource channel query token )
+
+        Response token result ->
+            if token /= model.token then
+                ( model, Cmd.none )
+
+            else
+                case result of
+                    Ok suggestions ->
+                        ( { model | suggestions = suggestions, visible = True }, Cmd.none )
+
+                    Err _ ->
+                        ( { model | suggestions = [], visible = False }, Cmd.none )
+
         Loaded key result ->
             let
                 corpus =
@@ -232,7 +296,7 @@ update searchType activeSource channel query msg model =
                     String.trim query
             in
             -- Re-rank immediately if this corpus is the one the current query would use.
-            if String.length trimmed >= minQueryLength && staticKeyFor searchType activeSource channel == Just key then
+            if String.length trimmed >= minQueryLength && backendFor model.preferStatic searchType activeSource channel == StaticBacked key then
                 let
                     ranked =
                         rankCorpus trimmed corpus
@@ -254,7 +318,7 @@ update searchType activeSource channel query msg model =
 
 viewDropdown : Model -> Html msg
 viewDropdown model =
-    if not model.preferStatic || not model.visible || List.isEmpty model.suggestions then
+    if not model.visible || List.isEmpty model.suggestions then
         text ""
 
     else
@@ -279,22 +343,44 @@ fetchCorpus : StaticKey -> Cmd Msg
 fetchCorpus (( category, channel ) as key) =
     Http.get
         { url = "/autocomplete/" ++ category ++ "-" ++ channel ++ ".json"
-        , expect = Http.expectJson (Loaded key) (decodeCorpus channel)
+        , expect = Http.expectJson (Loaded key) (decodeCorpus category channel)
         }
 
 
-decodeCorpus : String -> Json.Decode.Decoder Corpus
-decodeCorpus channel =
-    Json.Decode.list (decodeItem channel)
+decodeCorpus : String -> String -> Json.Decode.Decoder Corpus
+decodeCorpus category channel =
+    Json.Decode.list (decodeItem category channel)
 
 
-decodeItem : String -> Json.Decode.Decoder Item
-decodeItem channel =
+decodeItem : String -> String -> Json.Decode.Decoder Item
+decodeItem category channel =
     Json.Decode.map
         (\name ->
+            let
+                src =
+                    case category of
+                        "services" ->
+                            ModularServiceOptions
+
+                        "hm" ->
+                            HomeManagerOptionSource
+
+                        _ ->
+                            NixosOptions
+
+                sourceSuffix =
+                    if src == NixosOptions then
+                        ""
+
+                    else
+                        "&source=" ++ optionSourceId src
+
+                showPrefix =
+                    optionSourceDocType src ++ ":"
+            in
             { name = name
             , navigateTo =
-                "/options?channel=" ++ channel ++ "&show=" ++ name ++ "&query=" ++ name
+                "/options?channel=" ++ channel ++ "&show=" ++ showPrefix ++ name ++ "&query=" ++ name ++ sourceSuffix
             }
         )
         (Json.Decode.field "name" Json.Decode.string)
@@ -371,3 +457,225 @@ prefixOfSegment : String -> String -> Bool
 prefixOfSegment tok name =
     String.split "." name
         |> List.any (String.startsWith tok)
+
+
+
+-- ES-BACKED HTTP
+
+
+fetch :
+    Options r
+    -> List (Channel c)
+    -> SearchType
+    -> OptionSource
+    -> String
+    -> String
+    -> Int
+    -> Cmd Msg
+fetch options nixosChannels searchType source channel query token =
+    let
+        branch =
+            nixosChannels
+                |> List.filter (\c -> c.id == channel)
+                |> List.head
+                |> Maybe.map .branch
+                |> Maybe.withDefault channel
+
+        index =
+            "latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ branch
+
+        body =
+            requestBody searchType (String.trim query)
+    in
+    Http.riskyRequest
+        { method = "POST"
+        , headers =
+            [ Http.header "Authorization"
+                ("Basic " ++ Base64.encode (options.username ++ ":" ++ options.password))
+
+            -- Tag typeahead traffic so it can be split from main search in
+            -- nginx logs / ES audits and rate-limited without a redeploy.
+            , Http.header "X-Typeahead" "1"
+            ]
+        , url = options.url ++ "/" ++ index ++ "/_search"
+        , body = body
+        , expect = Http.expectJson (Response token) (decodeSuggestions searchType source channel)
+        , timeout = Just 4000
+        , tracker = Just "typeahead"
+        }
+
+
+requestBody : SearchType -> String -> Http.Body
+requestBody searchType query =
+    let
+        ( typeFilter, mainFields, fields ) =
+            case searchType of
+                PackageSearch ->
+                    ( "package"
+                    , [ "package_attr_name" ]
+                    , [ ( "package_attr_name", 9.0 )
+                      , ( "package_pname", 6.0 )
+                      , ( "package_programs", 6.0 )
+                      ]
+                    )
+
+                OptionSearch ->
+                    ( "option"
+                    , [ "option_name", "option_name_query" ]
+                    , [ ( "option_name", 6.0 )
+                      , ( "option_name_query", 6.0 )
+                      ]
+                    )
+
+        ( negativeWords, positiveWords ) =
+            String.toLower query
+                |> String.words
+                |> List.partition (String.startsWith "-")
+                |> Tuple.mapFirst (List.map (String.dropLeft 1))
+
+        dashUnderscoreVariants word =
+            Set.toList
+                (Set.fromList
+                    [ String.replace "_" "-" word
+                    , String.replace "-" "_" word
+                    , word
+                    ]
+                )
+
+        toWildcardQuery mainField queryWord =
+            [ ( "wildcard"
+              , Json.Encode.object
+                    [ ( mainField
+                      , Json.Encode.object
+                            [ ( "value", Json.Encode.string ("*" ++ queryWord ++ "*") )
+                            , ( "case_insensitive", Json.Encode.bool True )
+                            ]
+                      )
+                    ]
+              )
+            ]
+
+        allFields =
+            List.concatMap
+                (\( field, boost ) ->
+                    [ field ++ "^" ++ String.fromFloat boost
+                    , field ++ ".*^" ++ String.fromFloat (boost * 0.6)
+                    ]
+                )
+                fields
+
+        queryWordsWildCard =
+            positiveWords
+                |> List.concatMap dashUnderscoreVariants
+                |> Set.fromList
+                |> Set.toList
+
+        multiMatchQuery =
+            [ ( "multi_match"
+              , Json.Encode.object
+                    [ ( "type", Json.Encode.string "cross_fields" )
+                    , ( "query", Json.Encode.string (String.join " " positiveWords) )
+                    , ( "analyzer", Json.Encode.string "whitespace" )
+                    , ( "auto_generate_synonyms_phrase_query", Json.Encode.bool False )
+                    , ( "operator", Json.Encode.string "and" )
+                    , ( "_name", Json.Encode.string ("multi_match_" ++ String.join "_" positiveWords) )
+                    , ( "fields", Json.Encode.list Json.Encode.string allFields )
+                    ]
+              )
+            ]
+
+        searchQueries =
+            multiMatchQuery
+                :: List.concatMap
+                    (\mf -> List.map (toWildcardQuery mf) queryWordsWildCard)
+                    mainFields
+
+        mustNotQueries =
+            negativeWords
+                |> List.concatMap dashUnderscoreVariants
+                |> Set.fromList
+                |> Set.toList
+                |> List.concatMap (\w -> List.map (\mf -> toWildcardQuery mf w) mainFields)
+    in
+    Http.jsonBody
+        (Json.Encode.object
+            [ ( "from", Json.Encode.int 0 )
+            , ( "size", Json.Encode.int maxResults )
+            , ( "query"
+              , Json.Encode.object
+                    [ ( "bool"
+                      , Json.Encode.object
+                            [ ( "filter"
+                              , Json.Encode.list Json.Encode.object
+                                    [ [ ( "term"
+                                        , Json.Encode.object
+                                            [ ( "type", Json.Encode.string typeFilter ) ]
+                                        )
+                                      ]
+                                    ]
+                              )
+                            , ( "must_not"
+                              , Json.Encode.list Json.Encode.object mustNotQueries
+                              )
+                            , ( "must"
+                              , Json.Encode.list Json.Encode.object
+                                    [ [ ( "dis_max"
+                                        , Json.Encode.object
+                                            [ ( "tie_breaker", Json.Encode.float 0.7 )
+                                            , ( "queries"
+                                              , Json.Encode.list Json.Encode.object searchQueries
+                                              )
+                                            ]
+                                        )
+                                      ]
+                                    ]
+                              )
+                            ]
+                      )
+                    ]
+              )
+            ]
+        )
+
+
+decodeSuggestions : SearchType -> OptionSource -> String -> Json.Decode.Decoder (List Suggestion)
+decodeSuggestions searchType source channel =
+    Json.Decode.at [ "hits", "hits" ]
+        (Json.Decode.list (decodeHit searchType source channel))
+
+
+decodeHit : SearchType -> OptionSource -> String -> Json.Decode.Decoder Suggestion
+decodeHit searchType source channel =
+    Json.Decode.field "_source" (decodeSource searchType source channel)
+
+
+decodeSource : SearchType -> OptionSource -> String -> Json.Decode.Decoder Suggestion
+decodeSource searchType source channel =
+    case searchType of
+        PackageSearch ->
+            Json.Decode.map
+                (\attr ->
+                    { primary = attr
+                    , navigateTo =
+                        "/packages?channel=" ++ channel ++ "&show=" ++ attr ++ "&query=" ++ attr
+                    }
+                )
+                (Json.Decode.field "package_attr_name" Json.Decode.string)
+
+        OptionSearch ->
+            let
+                sourceSuffix =
+                    if source == NixosOptions then
+                        ""
+
+                    else
+                        "&source=" ++ optionSourceId source
+            in
+            Json.Decode.map
+                (\name ->
+                    { primary = name
+                    , navigateTo =
+                        "/options?channel=" ++ channel ++ "&show=" ++ optionSourceDocType source ++ ":" ++ name ++ "&query=" ++ name ++ sourceSuffix
+                    }
+                )
+                (Json.Decode.field "option_name" Json.Decode.string)

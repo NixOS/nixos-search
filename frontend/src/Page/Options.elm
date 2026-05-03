@@ -122,7 +122,7 @@ init options preferStatic searchArgs defaultNixOSChannel nixosChannels model =
         ( newModel, newCmd ) =
             Search.init options preferStatic searchArgs defaultNixOSChannel nixosChannels model
     in
-    ( newModel
+    ( { newModel | searchType = Route.OptionSearch }
     , Cmd.map SearchMsg newCmd
     )
 
