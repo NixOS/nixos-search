@@ -1,9 +1,10 @@
-module Page.Options exposing
+port module Page.Options exposing
     ( AggregationsAll
     , Model
     , Msg(..)
     , ResultAggregations
     , ResultItemSource
+    , copyToClipboard
     , decodeResultAggregations
     , decodeResultItemSource
     , init
@@ -16,10 +17,12 @@ module Page.Options exposing
     )
 
 import Browser.Navigation
+import Dict exposing (Dict)
 import Html
     exposing
         ( Html
         , a
+        , button
         , code
         , div
         , input
@@ -38,6 +41,7 @@ import Html.Attributes
         , classList
         , href
         , target
+        , title
         , type_
         )
 import Html.Events
@@ -49,6 +53,7 @@ import Http exposing (Body)
 import Json.Decode
 import Json.Decode.Pipeline
 import List.Extra
+import RemoteData
 import Route exposing (OptionSource, SearchType)
 import Search
     exposing
@@ -56,8 +61,8 @@ import Search
         , NixOSChannel
         , decodeResolvedFlake
         )
-import Set exposing (Set)
 import SyntaxHighlight exposing (elm, oneDark, toBlockHtml, useTheme)
+import Task
 import Utils
 
 
@@ -121,11 +126,21 @@ init searchArgs defaultNixOSChannel nixosChannels model =
 
 
 
+-- PORTS
+
+
+{-| Ask the JS side to copy the given text to the clipboard.
+-}
+port copyToClipboard : String -> Cmd msg
+
+
+
 -- UPDATE
 
 
 type Msg
     = SearchMsg (Search.Msg ResultItemSource ResultAggregations)
+    | CopyOptionName String
 
 
 update :
@@ -148,6 +163,9 @@ update navKey msg model nixosChannels =
             in
             ( newModel, Cmd.map SearchMsg newCmd )
 
+        CopyOptionName name ->
+            ( model, copyToClipboard name )
+
 
 
 -- VIEW
@@ -158,51 +176,86 @@ view :
     -> Model
     -> Html Msg
 view nixosChannels model =
-    let
-        enabledCount =
-            List.length Route.allOptionSources - Set.size model.excludedOptionSources
-    in
     Search.view { categoryName = "options" }
         [ text "Search more than "
         , strong [] [ text "20 000 options" ]
         ]
         nixosChannels
         model
-        (viewSuccess (enabledCount > 1))
+        (viewSuccess model.activeOptionSource)
         viewBuckets
         SearchMsg
-        [ viewIncludeTogglesGroup model.excludedOptionSources ]
+        [ viewSourceTabs model.activeOptionSource model.sourceCounts ]
 
 
-viewIncludeTogglesGroup : Set String -> Html Msg
-viewIncludeTogglesGroup excluded =
-    li [ class "search-include-toggles" ]
+{-| Tab strip: one tab per option source. Each tab pulls its count from
+the shared `sourceCounts` dict (the active tab's count is mirrored
+there on `QueryResponse`, inactive ones come from `size: 0` queries
+fired alongside the main one). Pulling counts uniformly from one place
+means the badges survive a tab switch unchanged — the previous tab's
+count stays visible until a fresh count for the new tab arrives.
+-}
+viewSourceTabs : OptionSource -> Dict String Int -> Html Msg
+viewSourceTabs activeSource sourceCounts =
+    li [ class "search-source-tabs" ]
         [ ul [] <|
-            li [ class "header" ] [ text "Show" ]
-                :: List.map (viewIncludeToggle excluded) Route.allOptionSources
+            li [ class "header" ] [ text "Source" ]
+                :: List.map
+                    (\source ->
+                        viewSourceTab
+                            activeSource
+                            (Dict.get (Route.optionSourceId source) sourceCounts)
+                            source
+                    )
+                    Route.allOptionSources
         ]
 
 
-viewIncludeToggle : Set String -> OptionSource -> Html Msg
-viewIncludeToggle excluded source =
+viewSourceTab : OptionSource -> Maybe Int -> OptionSource -> Html Msg
+viewSourceTab activeSource count source =
     let
+        isActive =
+            source == activeSource
+
         id =
             Route.optionSourceId source
 
-        isChecked =
-            not (Set.member id excluded)
+        badge =
+            case count of
+                Just n ->
+                    [ span [ class "badge" ] [ text (formatCount n) ] ]
+
+                Nothing ->
+                    []
     in
-    li [ class ("search-include-" ++ id ++ "-options") ]
-        [ label []
-            [ input
-                [ type_ "checkbox"
-                , checked isChecked
-                , onCheck (\b -> SearchMsg (Search.SetOptionSourceIncluded source b))
-                ]
-                []
-            , text (" " ++ Route.optionSourceLabel source)
+    li
+        [ class ("search-source-" ++ id) ]
+        [ a
+            -- The sidebar's existing `&.selected` styling targets `a`,
+            -- not `li`, so the active-tab highlight class lives on the
+            -- anchor.
+            [ classList [ ( "selected", isActive ) ]
+            , href "#"
+            , Html.Events.onClick (SearchMsg (Search.SetActiveOptionSource source))
             ]
+            (span [] [ text (Route.optionSourceLabel source) ] :: badge)
         ]
+
+
+{-| Compact rendering of a hit count for the tab badge: 1.2k, 23k, etc.
+ES returns counts up to 10 000 as exact and beyond that as a >=10000
+sentinel; render the latter as "10k+" so we don't lie about precision.
+-}
+formatCount : Int -> String
+formatCount n =
+    if n >= 10000 then
+        "10k+"
+
+    else if n >= 1000 then
+        String.fromInt (n // 1000) ++ "." ++ String.fromInt (modBy 10 (n // 100)) ++ "k"
+
+    else
+        String.fromInt n
 
 
 viewBuckets :
@@ -214,17 +267,17 @@ viewBuckets _ _ =
 
 
 viewSuccess :
-    Bool
+    OptionSource
     -> List NixOSChannel
     -> String
     -> Details
     -> Maybe String
     -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
-viewSuccess showBadges nixosChannels channel _ show hits =
+viewSuccess activeSource nixosChannels channel _ show hits =
     ul []
         (List.map
-            (viewResultItem nixosChannels channel show showBadges)
+            (viewResultItem nixosChannels channel show activeSource)
             hits
         )
 
@@ -233,10 +286,10 @@ viewResultItem :
     List NixOSChannel
     -> String
     -> Maybe String
-    -> Bool
+    -> OptionSource
     -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItem nixosChannels channel show showBadges item =
+viewResultItem nixosChannels channel show activeSource item =
     let
         asPre value =
             pre [] [ text value ]
@@ -256,24 +309,29 @@ viewResultItem nixosChannels channel show showBadges item =
         isService =
             item.source.docType == "service"
 
+        isHomeManager =
+            item.source.docType == "home-manager-option"
+
         nameSegments =
             optionNameSegments item.source
 
         displayName =
             nameSegments |> List.map Tuple.first |> String.join "."
 
+        itemId =
+            item.source.docType ++ ":" ++ item.source.name
+
+        pkgLink pkg =
+            a
+                [ href ("/packages?channel=" ++ channel ++ "&query=" ++ pkg ++ "&show=" ++ pkg) ]
+                [ code [] [ text pkg ] ]
+
         showDetails =
-            if Just (item.source.docType ++ ":" ++ item.source.name) == show then
+            if Just itemId == show then
                 Just <|
                     div [ Html.Attributes.map SearchMsg Search.trapClick ] <|
-                        let
-                            pkgLink pkg =
-                                a
-                                    [ href ("/packages?channel=" ++ channel ++ "&query=" ++ pkg ++ "&show=" ++ pkg) ]
-                                    [ code [] [ text pkg ] ]
-                        in
                         [ div [] [ text "Name" ]
-                        , div [] [ viewOptionNamePath channel nameSegments ]
+                        , div [] [ viewOptionNamePath channel activeSource item.source.name nameSegments ]
                         ]
                             ++ (item.source.description
                                     |> Maybe.andThen Utils.showHtml
@@ -287,9 +345,9 @@ viewResultItem nixosChannels channel show showBadges item =
                                )
                             ++ (item.source.type_
                                     |> Maybe.map
-                                        (\type_ ->
+                                        (\t ->
                                             [ div [] [ text "Type" ]
-                                            , div [] [ asPre type_ ]
+                                            , div [] [ asPre t ]
                                             ]
                                         )
                                     |> Maybe.withDefault []
@@ -352,92 +410,7 @@ viewResultItem nixosChannels channel show showBadges item =
                                 else
                                     []
                                )
-                            ++ (if isService then
-                                    case ( item.source.servicePackage, item.source.serviceModule ) of
-                                        ( Just pkg, Just mod_ ) ->
-                                            let
-                                                -- Re-indent a (possibly multi-line) value so
-                                                -- every line after the first aligns with `indent`.
-                                                indentValue indent val =
-                                                    case String.split "\n" val of
-                                                        [] ->
-                                                            val
-
-                                                        first :: rest ->
-                                                            first
-                                                                ++ String.concat
-                                                                    (List.map (\l -> "\n" ++ indent ++ l) rest)
-
-                                                -- Only use defaults that look like plain Nix
-                                                -- expressions (from `literalExpression`).
-                                                -- Rendered HTML/markdown defaults are not
-                                                -- useful in a code snippet.
-                                                isNixLiteral val =
-                                                    not (String.contains "<" val)
-
-                                                leafValue indent =
-                                                    item.source.default
-                                                        |> Maybe.andThen
-                                                            (\val ->
-                                                                if isNixLiteral val then
-                                                                    Just (indentValue indent val)
-
-                                                                else
-                                                                    Nothing
-                                                            )
-                                                        |> Maybe.withDefault "..."
-
-                                                -- Expand "php-fpm.settings" into nested:
-                                                --   php-fpm = {
-                                                --     settings = <default>;
-                                                --   };
-                                                nestOption parts indent =
-                                                    case parts of
-                                                        [] ->
-                                                            ""
-
-                                                        [ leaf ] ->
-                                                            indent ++ leaf ++ " = " ++ leafValue indent ++ ";\n"
-
-                                                        head_ :: rest ->
-                                                            indent
-                                                                ++ head_
-                                                                ++ " = {\n"
-                                                                ++ nestOption rest (indent ++ "  ")
-                                                                ++ indent
-                                                                ++ "};\n"
-
-                                                optionParts =
-                                                    String.split "." item.source.name
-
-                                                nestedOption =
-                                                    nestOption optionParts "  "
-                                            in
-                                            [ div [] [ text "Usage" ]
-                                            , div []
-                                                [ pre []
-                                                    [ code [ class "code-block" ]
-                                                        [ text
-                                                            ("system.services.<name> = {\n"
-                                                                ++ "  imports = [ pkgs."
-                                                                ++ pkg
-                                                                ++ ".services."
-                                                                ++ mod_
-                                                                ++ " ];\n"
-                                                                ++ nestedOption
-                                                                ++ "};"
-                                                            )
-                                                        ]
-                                                    ]
-                                                ]
-                                            ]
-
-                                        _ ->
-                                            []
-
-                                else
-                                    []
-                               )
+                            ++ viewUsageSnippet item.source
                             ++ [ div [] [ text "Declared in" ]
                                , div [] <| findSource nixosChannels channel item.source
                                ]
@@ -445,39 +418,11 @@ viewResultItem nixosChannels channel show showBadges item =
             else
                 Nothing
 
-        itemId =
-            item.source.docType ++ ":" ++ item.source.name
-
         toggle =
             SearchMsg (Search.ShowDetails itemId)
 
         isOpen =
             Just itemId == show
-
-        categoryBadge =
-            if showBadges then
-                let
-                    ( badgeText, badgeClass ) =
-                        case item.source.docType of
-                            "option" ->
-                                ( "NixOS", "badge-nixos" )
-
-                            "service" ->
-                                ( "Service", "badge-service" )
-
-                            _ ->
-                                ( "Other", "badge-other" )
-                in
-                [ li []
-                    [ span [ class "option-badge-column" ]
-                        [ span [ class ("option-badge " ++ badgeClass) ]
-                            [ text badgeText ]
-                        ]
-                    ]
-                ]
-
-            else
-                []
     in
     li
         [ class "option"
@@ -488,18 +433,141 @@ viewResultItem nixosChannels channel show showBadges item =
         List.filterMap identity
             [ Just <|
                 ul [ class "search-result-button" ]
-                    (categoryBadge
-                        ++ [ li []
-                                [ a
-                                    [ onClick toggle
-                                    , href ""
-                                    ]
-                                    [ text displayName ]
-                                ]
-                           ]
-                    )
+                    [ li []
+                        [ a
+                            [ onClick toggle
+                            , href ""
+                            ]
+                            [ text displayName ]
+                        ]
+                    ]
             , showDetails
             ]
+
+
+{-| Render a "Usage" section showing how to use this option in the appropriate
+context, including `_class` to clarify which module system it belongs to.
+-}
+viewUsageSnippet : ResultItemSource -> List (Html msg)
+viewUsageSnippet source =
+    let
+        -- Re-indent a (possibly multi-line) value so every line after the
+        -- first aligns with `indent`.
+        indentValue indent val =
+            case String.split "\n" val of
+                [] ->
+                    val
+
+                first :: rest ->
+                    first ++ String.concat (List.map (\l -> "\n" ++ indent ++ l) rest)
+
+        -- Only use defaults that look like plain Nix expressions (from
+        -- `literalExpression`). Rendered HTML/markdown defaults are not
+        -- useful in a code snippet.
+        isNixLiteral val =
+            not (String.contains "<" val)
+
+        leafValue indent =
+            source.default
+                |> Maybe.andThen
+                    (\val ->
+                        if isNixLiteral val then
+                            Just (indentValue indent val)
+
+                        else
+                            Nothing
+                    )
+                |> Maybe.withDefault "..."
+
+        -- Expand "php-fpm.settings" into nested:
+        --   php-fpm = {
+        --     settings = <default>;
+        --   };
+        nestOption parts indent =
+            case parts of
+                [] ->
+                    ""
+
+                [ leaf ] ->
+                    indent ++ leaf ++ " = " ++ leafValue indent ++ ";\n"
+
+                head_ :: rest ->
+                    indent
+                        ++ head_
+                        ++ " = {\n"
+                        ++ nestOption rest (indent ++ "  ")
+                        ++ indent
+                        ++ "};\n"
+
+        optionParts =
+            String.split "." source.name
+
+        nestedOption indent =
+            nestOption optionParts indent
+    in
+    case source.docType of
+        "service" ->
+            case ( source.servicePackage, source.serviceModule ) of
+                ( Just pkg, Just mod_ ) ->
+                    [ div [] [ text "Usage" ]
+                    , div []
+                        [ pre []
+                            [ code [ class "code-block" ]
+                                [ text
+                                    ("system.services.<name> = {\n"
+                                        ++ "  _class = \"service\";\n"
+                                        ++ "  imports = [ pkgs."
+                                        ++ pkg
+                                        ++ ".services."
+                                        ++ mod_
+                                        ++ " ];\n"
+                                        ++ nestedOption "  "
+                                        ++ "};"
+                                    )
+                                ]
+                            ]
+                        ]
+                    ]
+
+                _ ->
+                    []
+
+        "option" ->
+            [ div [] [ text "Usage" ]
+            , div []
+                [ pre []
+                    [ code [ class "code-block" ]
+                        [ text
+                            ("# configuration.nix\n"
+                                ++ "{\n"
+                                ++ "  _class = \"nixos\";\n"
+                                ++ nestedOption "  "
+                                ++ "}"
+                            )
+                        ]
+                    ]
+                ]
+            ]
+
+        "home-manager-option" ->
+            [ div [] [ text "Usage" ]
+            , div []
+                [ pre []
+                    [ code [ class "code-block" ]
+                        [ text
+                            ("# home.nix\n"
+                                ++ "{\n"
+                                ++ "  _class = \"homeManager\";\n"
+                                ++ nestedOption "  "
+                                ++ "}"
+                            )
+                        ]
+                    ]
+                ]
+            ]
+
+        _ ->
+            []
 
 
 findSource :
@@ -512,6 +580,21 @@ findSource nixosChannels channel source =
         githubUrlPrefix branch =
             "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/"
 
+        -- Home Manager options are imported from the `release-XX.YY` branch of
+        -- `nix-community/home-manager` matching the nixpkgs channel
+        -- (see `flake-info/src/commands/nixpkgs_info.rs`), or `master` for
+        -- `nixos-unstable`. Their `option_source` paths resolve against that
+        -- repo, not nixpkgs.
+        homeManagerBranch nixpkgsBranch =
+            if nixpkgsBranch == "nixos-unstable" then
+                "master"
+
+            else
+                "release-" ++ String.dropLeft (String.length "nixos-") nixpkgsBranch
+
+        homeManagerUrlPrefix branch =
+            "https://github.com/nix-community/home-manager/blob/" ++ branch ++ "/"
+
         cleanPosition value =
             if String.startsWith "source/" value then
                 String.dropLeft 7 value
@@ -522,8 +605,16 @@ findSource nixosChannels channel source =
         asGithubLink value =
             case List.Extra.find (\x -> x.id == channel) nixosChannels of
                 Just channelDetails ->
+                    let
+                        prefix =
+                            if source.docType == "home-manager-option" then
+                                homeManagerUrlPrefix (homeManagerBranch channelDetails.branch)
+
+                            else
+                                githubUrlPrefix channelDetails.branch
+                    in
                     a
-                        [ href <| githubUrlPrefix channelDetails.branch ++ (value |> String.replace ":" "#L")
+                        [ href <| prefix ++ (value |> String.replace ":" "#L")
                         , target "_blank"
                         ]
                         [ text value ]
@@ -587,7 +678,7 @@ findSource nixosChannels channel source =
 
 {-| Segments making up an option's display name. Each `(text, Just q)` becomes
 a clickable link to an options search for `q`; `(text, Nothing)` is static.
-Every non-final dotted segment of the option name links to its own prefix
+Every dotted segment of the option name links to its own prefix
 (`programs` -> `programs.firefox` -> ...).
 -}
 optionNameSegments : ResultItemSource -> List ( String, Maybe String )
@@ -605,8 +696,8 @@ optionNameSegments source =
             )
 
 
-viewOptionNamePath : String -> List ( String, Maybe String ) -> Html Msg
-viewOptionNamePath channel segments =
+viewOptionNamePath : String -> OptionSource -> String -> List ( String, Maybe String ) -> Html Msg
+viewOptionNamePath channel activeSource optionName segments =
     let
         lastIndex =
             List.length segments - 1
@@ -621,7 +712,7 @@ viewOptionNamePath channel segments =
                 , buckets = Nothing
                 , sort = Nothing
                 , type_ = Nothing
-                , excludedOptionSources = Set.empty
+                , activeOptionSource = activeSource
                 }
 
         renderSegment idx ( segText, query ) =
@@ -645,11 +736,18 @@ viewOptionNamePath channel segments =
             in
             element :: separator
     in
-    div []
+    div [ class "option-name-path" ]
         [ pre []
             [ code [ class "code-block" ]
                 (segments |> List.indexedMap renderSegment |> List.concat)
             ]
+        , button
+            [ type_ "button"
+            , class "option-copy-button"
+            , title "Copy option name"
+            , onClick (CopyOptionName optionName)
+            ]
+            [ text "Copy" ]
         ]
 
 
@@ -657,6 +755,13 @@ viewOptionNamePath channel segments =
 -- API
 
 
+{-| Issue a single ES query restricted to the active tab's source plus
+one tiny `size: 0` count query per inactive source so the tabs can
+display hit-count badges. Active-tab body and count bodies are all
+byte-stable across users on identical input, so `request_cache` hits
+amortize the cost; size:0 in particular is the workload that cache
+was designed for.
+-}
 makeRequest :
     Search.Options
     -> List NixOSChannel
@@ -667,27 +772,63 @@ makeRequest :
     -> Int
     -> Maybe String
     -> Search.Sort
-    -> Set String
+    -> OptionSource
     -> Cmd Msg
-makeRequest options nixosChannels _ channel query from size _ sort excludedOptionSources =
+makeRequest options nixosChannels _ channel query from size _ sort activeSource =
     let
-        types =
-            Route.allOptionSources
-                |> List.filter
-                    (\source ->
-                        not (Set.member (Route.optionSourceId source) excludedOptionSources)
+        activeQuery : Cmd (Search.Msg ResultItemSource ResultAggregations)
+        activeQuery =
+            Search.makeRequestTask
+                (makeRequestBody
+                    [ Route.optionSourceDocType activeSource ]
+                    query
+                    from
+                    size
+                    sort
+                )
+                nixosChannels
+                channel
+                decodeResultItemSource
+                decodeResultAggregations
+                options
+                |> Task.attempt (RemoteData.fromResult >> Search.QueryResponse)
+
+        countQuery : OptionSource -> Cmd (Search.Msg ResultItemSource ResultAggregations)
+        countQuery source =
+            Search.makeRequestTask
+                (makeRequestBody
+                    [ Route.optionSourceDocType source ]
+                    query
+                    0
+                    0
+                    sort
+                )
+                nixosChannels
+                channel
+                decodeResultItemSource
+                decodeResultAggregations
+                options
+                |> Task.attempt
+                    (\result ->
+                        case result of
+                            Ok r ->
+                                Search.SourceCount
+                                    (Route.optionSourceId source)
+                                    r.hits.total.value
+
+                            Err _ ->
+                                -- Swallow the error; the badge just won't
+                                -- appear for that tab. The active tab's
+                                -- own failure mode is handled by `result`.
+                                Search.NoOp
                     )
-                |> List.map Route.optionSourceDocType
+
+        inactiveSources =
+            Route.allOptionSources
+                |> List.filter (\s -> s /= activeSource)
     in
-    Search.makeRequest
-        (makeRequestBody types query from size sort)
-        nixosChannels
-        channel
-        decodeResultItemSource
-        decodeResultAggregations
-        options
-        Search.QueryResponse
-        (Just "query-options")
+    (activeQuery :: List.map countQuery inactiveSources)
+        |> Cmd.batch
         |> Cmd.map SearchMsg
 
 

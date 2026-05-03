@@ -5,7 +5,7 @@ require("elm-keyboard-shortcut");
 
 const { Elm } = require("./Main");
 
-Elm.Main.init({
+const app = Elm.Main.init({
     flags: {
         elasticsearchMappingSchemaVersion: parseInt(
             process.env.ELASTICSEARCH_MAPPING_SCHEMA_VERSION,
@@ -18,6 +18,13 @@ Elm.Main.init({
         nixosChannels: JSON.parse(process.env.NIXOS_CHANNELS),
     },
 });
+
+if (app.ports && app.ports.copyToClipboard) {
+    app.ports.copyToClipboard.subscribe((text) => {
+        if (!text || !navigator.clipboard) return;
+        navigator.clipboard.writeText(text).catch(() => {});
+    });
+}
 
 document.addEventListener("DOMContentLoaded", function () {
     const shortcutEl = document.getElementById("shortcut-list-el");

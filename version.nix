@@ -2,11 +2,11 @@
   /**
     Backend index version used by import jobs when writing data to Elasticsearch
   */
-  import = "46";
+  import = "47";
 
   /**
     Frontend index version used by the UI when querying Elasticsearch
     Keep this at the old version while 'import' populates a new index, then update to switch traffic
   */
-  frontend = "46";
+  frontend = "47";
 }

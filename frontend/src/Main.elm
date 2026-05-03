@@ -3,6 +3,7 @@ module Main exposing (Flags, Model, Msg, Page, main)
 import Browser
 import Browser.Dom
 import Browser.Navigation
+import Dict
 import Html
     exposing
         ( Html
@@ -39,7 +40,6 @@ import Search
         , decodeNixOSChannels
         , defaultFlakeId
         )
-import Set
 import Shortcut
 import Task
 import Url
@@ -192,7 +192,7 @@ attemptQuery (( model, _ ) as pair) =
                                     searchModel.size
                                     searchModel.buckets
                                     searchModel.sort
-                                    searchModel.excludedOptionSources
+                                    searchModel.activeOptionSource
                             ]
                     )
                     pair
@@ -225,17 +225,20 @@ pageMatch m1 m2 =
             True
 
         ( Packages model_a, Packages model_b ) ->
-            { model_a | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked }
-                == { model_b | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked }
+            { model_a | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+                == { model_b | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
 
         ( Options model_a, Options model_b ) ->
-            { model_a | show = Nothing, result = NotAsked } == { model_b | show = Nothing, result = NotAsked }
+            { model_a | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+                == { model_b | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
 
         ( Flakes (OptionModel model_a), Flakes (OptionModel model_b) ) ->
-            { model_a | show = Nothing, result = NotAsked } == { model_b | show = Nothing, result = NotAsked }
+            { model_a | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+                == { model_b | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
 
         ( Flakes (PackagesModel model_a), Flakes (PackagesModel model_b) ) ->
-            { model_a | show = Nothing, result = NotAsked } == { model_b | show = Nothing, result = NotAsked }
+            { model_a | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+                == { model_b | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
 
         _ ->
             False
@@ -475,7 +478,7 @@ viewNavigation route =
                         args
 
                     _ ->
-                        Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Set.empty
+                        Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Route.defaultOptionSource
     in
     li [] [ a [ href "https://nixos.org" ] [ text "Back to nixos.org" ] ]
         :: List.map
