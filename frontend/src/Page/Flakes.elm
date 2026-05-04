@@ -51,12 +51,14 @@ type Model
 
 
 init :
-    Route.SearchArgs
+    Search.Options
+    -> Bool
+    -> Route.SearchArgs
     -> String
     -> List NixOSChannel
     -> Maybe Model
     -> ( Model, Cmd Msg )
-init searchArgs defaultNixOSChannel nixosChannels model =
+init options preferStatic searchArgs defaultNixOSChannel nixosChannels model =
     let
         --  init with respective module or with packages by default
         searchType : SearchType
@@ -66,7 +68,7 @@ init searchArgs defaultNixOSChannel nixosChannels model =
     case searchType of
         OptionSearch ->
             Tuple.mapBoth OptionModel (Cmd.map OptionsMsg) <|
-                Page.Options.init searchArgs defaultNixOSChannel nixosChannels <|
+                Page.Options.init options preferStatic searchArgs defaultNixOSChannel nixosChannels <|
                     case model of
                         Just (OptionModel model_) ->
                             Just model_
@@ -76,7 +78,7 @@ init searchArgs defaultNixOSChannel nixosChannels model =
 
         PackageSearch ->
             Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg) <|
-                Page.Packages.init searchArgs defaultNixOSChannel nixosChannels <|
+                Page.Packages.init options preferStatic searchArgs defaultNixOSChannel nixosChannels <|
                     case model of
                         Just (PackagesModel model_) ->
                             Just model_
@@ -182,7 +184,7 @@ view nixosChannels model =
                     )
                 )
                 [ h1 [] bodyTitle
-                , viewSearchInput nixosChannels outMsg categoryName Nothing model_.query
+                , viewSearchInput nixosChannels outMsg categoryName Nothing model_.query Nothing
                 , viewResult nixosChannels outMsg categoryName model_ viewSuccess viewBuckets <|
                     viewFlakes outMsg model_.searchType
                 ]

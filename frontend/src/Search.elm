@@ -74,7 +74,10 @@ import Html.Attributes
         )
 import Html.Events
     exposing
-        ( onClick
+        ( on
+        , onBlur
+        , onClick
+        , onFocus
         , onInput
         , onSubmit
         )
@@ -91,6 +94,7 @@ import Route
         , allTypes
         , searchTypeToTitle
         )
+import Search.Typeahead as Typeahead
 import Task
 
 
@@ -121,6 +125,8 @@ type alias Model a b =
     -- so the UI can keep showing it (with a spinner) instead of
     -- flashing the full loader. Cleared once the new response lands.
     , previousResult : Maybe (SearchResult a b)
+    , options : Options
+    , typeahead : Typeahead.Model
     }
 
 
@@ -300,12 +306,14 @@ decodeResolvedFlake =
 
 
 init :
-    Route.SearchArgs
+    Options
+    -> Bool
+    -> Route.SearchArgs
     -> String
     -> List NixOSChannel
     -> Maybe (Model a b)
     -> ( Model a b, Cmd (Msg a b) )
-init args defaultNixOSChannel nixosChannels maybeModel =
+init options preferStatic args defaultNixOSChannel nixosChannels maybeModel =
     let
         getField getFn default =
             maybeModel
@@ -361,6 +369,8 @@ init args defaultNixOSChannel nixosChannels maybeModel =
       , activeOptionSource = args.activeOptionSource
       , sourceCounts = Dict.empty
       , previousResult = Nothing
+      , options = options
+      , typeahead = Typeahead.init preferStatic
       }
         |> ensureLoading nixosChannels
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
@@ -445,6 +455,9 @@ type Msg a b
     | ShowInstallDetails Details
     | SetActiveOptionSource OptionSource
     | SourceCount String Int
+    | TypeaheadMsg Typeahead.Msg
+    | TypeaheadBlur
+    | TypeaheadFocus
 
 
 type Details
@@ -538,14 +551,20 @@ update toRoute navKey msg model nixosChannels =
                 |> pushUrl toRoute navKey
 
         QueryInput query ->
-            ( { model | query = query }
-            , Cmd.none
+            let
+                ( typeaheadModel, typeaheadCmd ) =
+                    Typeahead.queryChanged model.searchType
+                        model.activeOptionSource model.channel query model.typeahead
+            in
+            ( { model | query = query, typeahead = typeaheadModel }
+            , Cmd.map TypeaheadMsg typeaheadCmd
             )
 
         QueryInputSubmit ->
             { model
                 | from = 0
                 , show = Nothing
+                , typeahead = Typeahead.hideModel model.typeahead
             }
                 |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
@@ -626,6 +645,20 @@ update toRoute navKey msg model nixosChannels =
             }
                 |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
+
+        TypeaheadMsg subMsg ->
+            let
+                ( typeaheadModel, typeaheadCmd ) =
+                    Typeahead.update model.searchType
+                        model.activeOptionSource model.channel model.query subMsg model.typeahead
+            in
+            ( { model | typeahead = typeaheadModel }, Cmd.map TypeaheadMsg typeaheadCmd )
+
+        TypeaheadBlur ->
+            ( model, Cmd.map TypeaheadMsg Typeahead.hideAfterBlur )
+
+        TypeaheadFocus ->
+            ( { model | typeahead = Typeahead.focusModel model.typeahead }, Cmd.none )
 
 
 pushUrl :
@@ -877,7 +910,7 @@ view { categoryName } title nixosChannels model viewSuccess viewBuckets outMsg s
             )
         )
         ([ h1 [] title
-         , viewSearchInput nixosChannels outMsg categoryName (Just model.channel) model.query
+         , viewSearchInput nixosChannels outMsg categoryName (Just model.channel) model.query (Just model.typeahead)
          ]
             ++ (case model.redirectedChannel of
                     Just oldChannel ->
@@ -1113,23 +1146,43 @@ viewSearchInput :
     -> String
     -> Maybe String
     -> String
+    -> Maybe Typeahead.Model
     -> Html c
-viewSearchInput nixosChannels outMsg categoryName selectedChannel searchQuery =
+viewSearchInput nixosChannels outMsg categoryName selectedChannel searchQuery maybeTypeahead =
     form
         [ onSubmit (outMsg QueryInputSubmit)
         , class "search-input"
         ]
         (div []
-            [ div []
+            [ div [ class "search-input-with-typeahead" ]
                 [ input
                     [ type_ "text"
                     , id "search-query-input"
                     , autofocus True
                     , placeholder <| "Search for " ++ categoryName
                     , onInput (outMsg << QueryInput)
+                    , onFocus (outMsg TypeaheadFocus)
+                    , onBlur (outMsg TypeaheadBlur)
+                    , on "keydown"
+                        (Json.Decode.field "key" Json.Decode.string
+                            |> Json.Decode.andThen
+                                (\key ->
+                                    if key == "Escape" then
+                                        Json.Decode.succeed (outMsg (TypeaheadMsg Typeahead.hide))
+
+                                    else
+                                        Json.Decode.fail "not Escape"
+                                )
+                        )
                     , value searchQuery
                     ]
                     []
+                , case maybeTypeahead of
+                    Just typeaheadModel ->
+                        Html.map (outMsg << TypeaheadMsg) (Typeahead.viewDropdown typeaheadModel)
+
+                    Nothing ->
+                        text ""
                 ]
             , button [ class "btn", type_ "submit" ]
                 [ text "Search" ]

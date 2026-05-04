@@ -1098,3 +1098,42 @@ a:focus-visible {
     }
   }
 }
+
+.search-input-with-typeahead {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.typeahead-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--search-sidebar-container-border-color, #ccc);
+  background: var(--background-color, #fff);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.typeahead-item {
+  a {
+    display: flex;
+    flex-direction: column;
+    padding: 0.4em 0.7em;
+    text-decoration: none;
+    color: var(--text-color);
+
+    &:hover {
+      background: var(--search-sidebar-hovered-link-background, #eee);
+    }
+  }
+}
+
+.typeahead-primary {
+  font-weight: bold;
+  font-size: 0.95em;
+}
