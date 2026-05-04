@@ -12,7 +12,8 @@
     "scripts": {
         "analyse": "elm-analyse -s -p 3001 -o",
         "build": "rsbuild build",
-        "dev": "rsbuild dev --port 3000",
+        "build:autocomplete": "node scripts/build-autocomplete-corpus.mjs",
+        "dev": "node scripts/build-autocomplete-corpus.mjs && rsbuild dev --port 3000",
         "nodebug": "NODEBUG=true rsbuild dev --port 3000",
         "prod": "rsbuild build",
         "start": "npm run dev",

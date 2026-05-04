@@ -18,6 +18,11 @@ function applyTheme(theme) {
 const initialTheme = normalizeTheme(localStorage.getItem("theme"));
 applyTheme(initialTheme);
 
+const connection = navigator.connection || navigator.webkitConnection;
+const saveData =
+    (connection && connection.saveData) ||
+    (connection && connection.type === "cellular");
+
 const app = Elm.Main.init({
     flags: {
         elasticsearchMappingSchemaVersion: parseInt(
@@ -31,6 +36,7 @@ const app = Elm.Main.init({
         nixosChannels: JSON.parse(process.env.NIXOS_CHANNELS),
         theme: initialTheme,
         isPrideMonth: new Date().getMonth() === 5,
+        saveData: Boolean(saveData),
     },
 });
 
