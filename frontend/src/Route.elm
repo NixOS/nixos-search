@@ -183,9 +183,54 @@ type alias SearchRoute =
     SearchArgs -> Route
 
 
+fragmentParameters : Maybe String -> Dict.Dict String String
+fragmentParameters maybeFragment =
+    case maybeFragment of
+        Nothing ->
+            Dict.empty
+
+        Just frag ->
+            frag
+                |> String.split "&"
+                |> List.filterMap
+                    (\pair ->
+                        case String.indexes "=" pair of
+                            [] ->
+                                Nothing
+
+                            idx :: _ ->
+                                let
+                                    k =
+                                        String.left idx pair
+
+                                    v =
+                                        String.dropLeft (idx + 1) pair
+                                in
+                                Just ( k, Maybe.withDefault v (Url.percentDecode v) )
+                    )
+                |> Dict.fromList
+
+
+fragmentToString : Dict.Dict String String -> Maybe String
+fragmentToString dict =
+    if Dict.isEmpty dict then
+        Nothing
+
+    else
+        dict
+            |> Dict.toList
+            |> List.map (\( k, v ) -> k ++ "=" ++ Url.percentEncode v)
+            |> String.join "&"
+            |> Just
+
+
 searchQueryParser : AppUrl -> SearchArgs
 searchQueryParser appUrl =
     let
+        fragmentDict : Dict.Dict String String
+        fragmentDict =
+            fragmentParameters appUrl.fragment
+
         string : String -> Maybe String
         string k =
             case Dict.get k appUrl.queryParameters of
@@ -206,7 +251,13 @@ searchQueryParser appUrl =
     in
     { query = string "query"
     , channel = string "channel"
-    , show = string "show"
+    , show =
+        case Dict.get "show" fragmentDict of
+            Just v ->
+                Just v
+
+            Nothing ->
+                string "show"
     , from = int "from"
     , size = int "size"
     , buckets = string "buckets"
@@ -231,7 +282,6 @@ searchArgsToUrl args =
             Maybe.map (\i -> ( k, [ String.fromInt i ] )) v
     in
     [ string "channel" args.channel
-    , string "show" args.show
     , int "from" args.from
     , int "size" args.size
     , string "buckets" args.buckets
@@ -249,6 +299,16 @@ searchArgsToUrl args =
     ]
         |> Maybe.Extra.values
         |> Dict.fromList
+
+
+searchArgsToFragment : SearchArgs -> Maybe String
+searchArgsToFragment args =
+    case args.show of
+        Nothing ->
+            Nothing
+
+        Just v ->
+            fragmentToString (Dict.fromList [ ( "show", v ) ])
 
 
 type Route
@@ -299,21 +359,21 @@ href targetRoute =
 routeToString : Route -> String
 routeToString route =
     let
-        ( path, queryParameters ) =
+        ( path, queryParameters, fragment ) =
             case route of
                 Home ->
-                    ( [], Dict.empty )
+                    ( [], Dict.empty, Nothing )
 
                 NotFound ->
-                    ( [ "not-found" ], Dict.empty )
+                    ( [ "not-found" ], Dict.empty, Nothing )
 
                 Packages searchArgs ->
-                    ( [ "packages" ], searchArgsToUrl searchArgs )
+                    ( [ "packages" ], searchArgsToUrl searchArgs, searchArgsToFragment searchArgs )
 
                 Options searchArgs ->
-                    ( [ "options" ], searchArgsToUrl searchArgs )
+                    ( [ "options" ], searchArgsToUrl searchArgs, searchArgsToFragment searchArgs )
 
                 Flakes searchArgs ->
-                    ( [ "flakes" ], searchArgsToUrl searchArgs )
+                    ( [ "flakes" ], searchArgsToUrl searchArgs, searchArgsToFragment searchArgs )
     in
-    AppUrl.toString { path = path, queryParameters = queryParameters, fragment = Nothing }
+    AppUrl.toString { path = path, queryParameters = queryParameters, fragment = fragment }

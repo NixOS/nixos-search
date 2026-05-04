@@ -10,7 +10,7 @@ function Link(elem)
     option_name = option_name:gsub('%._name_%.', '.<name>.')
     option_name = option_name:gsub('%._%.', '.*.')
 
-    elem.target = 'https://search.nixos.org/options?channel=unstable&show=' .. option_name .. '&query=' .. option_name
+    elem.target = 'https://search.nixos.org/options?channel=unstable&query=' .. option_name .. '#show=' .. option_name
 
     if #elem.content == 0 or (#elem.content == 1 and elem.content[1].tag == 'Str' and elem.content[1].text == '???') then
       elem.content = option_name
