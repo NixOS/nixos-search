@@ -15,7 +15,14 @@ const dev = {
             publicPath: "/",
             stats: "errors-only",
         },
-        historyApiFallback: true,
+        historyApiFallback: {
+            rewrites: [
+                {
+                    from: /^\/autocomplete\//,
+                    to: (ctx) => ctx.parsedUrl.pathname,
+                },
+            ],
+        },
         proxy: {
             "/backend": {
                 target: "https://nixos-search-7-1733963800.us-east-1.bonsaisearch.net/",

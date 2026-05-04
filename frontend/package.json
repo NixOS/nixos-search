@@ -12,7 +12,8 @@
     "scripts": {
         "analyse": "elm-analyse -s -p 3001 -o",
         "build": "webpack",
-        "dev": "webpack serve --port 3000 --config config/webpack.dev.js",
+        "build:autocomplete": "node scripts/build-autocomplete-corpus.mjs",
+        "dev": "node scripts/build-autocomplete-corpus.mjs && webpack serve --port 3000 --config config/webpack.dev.js",
         "nodebug": "webpack serve --port 3000 --config config/webpack.dev.js --env nodebug",
         "prod": "NODE_ENV=production webpack --config config/webpack.prod.js",
         "start": "npm run dev",
