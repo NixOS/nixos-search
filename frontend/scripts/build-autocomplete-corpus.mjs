@@ -12,12 +12,16 @@ import { dirname, join } from "path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = join(__dirname, "../src/assets/autocomplete");
 
+// Defaults must stay in sync with webpack.dev.js (URL) and webpack.common.js (creds).
 const ELASTICSEARCH_URL =
-    process.env.ELASTICSEARCH_URL || "http://localhost:9200";
+    process.env.ELASTICSEARCH_URL ||
+    "https://nixos-search-7-1733963800.us-east-1.bonsaisearch.net";
 const ELASTICSEARCH_MAPPING_SCHEMA_VERSION =
     process.env.ELASTICSEARCH_MAPPING_SCHEMA_VERSION || "0";
-const ELASTICSEARCH_USERNAME = process.env.ELASTICSEARCH_USERNAME || "";
-const ELASTICSEARCH_PASSWORD = process.env.ELASTICSEARCH_PASSWORD || "";
+const ELASTICSEARCH_USERNAME =
+    process.env.ELASTICSEARCH_USERNAME || "aWVSALXpZv";
+const ELASTICSEARCH_PASSWORD =
+    process.env.ELASTICSEARCH_PASSWORD || "X8gPHnzL52wFEekuxsfQ9cSh";
 const NIXOS_CHANNELS_RAW = process.env.NIXOS_CHANNELS;
 
 if (!NIXOS_CHANNELS_RAW) {

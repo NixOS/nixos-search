@@ -30,7 +30,7 @@ jobs:
       - name: Building search.nixos.org
         shell: sh
         run: |
-          nix -vL build .#frontend
+          nix -vL build --extra-experimental-features impure-derivations .#frontend
           mkdir ./dist
           cp -RL ./result/* ./dist/
 

@@ -2,9 +2,9 @@
   pkgs ? import <nixpkgs> { },
   nixosChannels,
   version,
-  elasticsearchUrl ? "",
-  elasticsearchUsername ? "",
-  elasticsearchPassword ? "",
+  elasticsearchUrl ? "https://nixos-search-7-1733963800.us-east-1.bonsaisearch.net",
+  elasticsearchUsername ? "aWVSALXpZv",
+  elasticsearchPassword ? "X8gPHnzL52wFEekuxsfQ9cSh",
 }:
 let
   # One JSON file per (category, channel) pair, served at
@@ -12,10 +12,7 @@ let
   # Each file is an array of { name, description? } objects.
   # Falls back to [] if ES is unreachable so the build never fails.
   autocompleteAssets =
-    if elasticsearchUrl == "" then
-      null
-    else
-      pkgs.runCommand "autocomplete-assets"
+    pkgs.runCommand "autocomplete-assets"
         {
           __impure = true;
           nativeBuildInputs = [
@@ -87,7 +84,7 @@ pkgs.npmlock2nix.v1.build {
     cp -R dist/* $out/
     cp netlify.toml $out/
     mkdir -p $out/autocomplete
-    ${if autocompleteAssets != null then "cp ${autocompleteAssets}/* $out/autocomplete/" else ""}
+    cp ${autocompleteAssets}/* $out/autocomplete/
   '';
   postConfigure = pkgs.elmPackages.fetchElmDeps {
     elmPackages = import ./elm-srcs.nix;
