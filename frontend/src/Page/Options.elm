@@ -63,6 +63,7 @@ import Search
         )
 import SyntaxHighlight exposing (elm, oneDark, toBlockHtml, useTheme)
 import Task
+import Url
 import Utils
 
 
@@ -323,7 +324,7 @@ viewResultItem nixosChannels channel show activeSource item =
 
         pkgLink pkg =
             a
-                [ href ("/packages?channel=" ++ channel ++ "&query=" ++ pkg ++ "&show=" ++ pkg) ]
+                [ href ("/packages?channel=" ++ channel ++ "&query=" ++ pkg ++ "#show=" ++ Url.percentEncode pkg) ]
                 [ code [] [ text pkg ] ]
 
         showDetails =
