@@ -76,7 +76,15 @@ Then you can upload information with something like:
 flake-info --elastic-schema-version 43 --elastic-index-name=nixos-unstable --push --elastic-exists recreate nixpkgs unstable
 ```
 
-To point the frontend to the local index, `export ELASTICSEARCH_URL=http://localhost:9200` before running the frontend.
+To point the frontend to the local index, set these environment variables
+before running the frontend:
+
+```
+export ELASTICSEARCH_URL=http://localhost:9200
+export ELASTICSEARCH_USERNAME=""
+export ELASTICSEARCH_PASSWORD=""
+```
+
 You may need to manually edit `frontend/src/Search.elm` to use the right index.
 
 ## Deploying
