@@ -1098,3 +1098,11 @@ a:focus-visible {
     }
   }
 }
+
+// SPDX operators in compound license expressions -- bold weight to
+// distinguish AND / OR / WITH from license names.
+.license-operator {
+  font-weight: bold;
+  font-size: 0.85em;
+  opacity: 0.75;
+}
