@@ -3,6 +3,7 @@ module Main exposing (Flags, Model, Msg, Page, main)
 import Browser
 import Browser.Dom
 import Browser.Navigation
+import Dict
 import Html
     exposing
         ( Html
@@ -176,7 +177,25 @@ attemptQuery (( model, _ ) as pair) =
 
         Options searchModel ->
             if Search.shouldLoad searchModel then
-                submitQuery OptionsMsg Page.Options.makeRequest { searchModel | searchType = OptionSearch }
+                Tuple.mapSecond
+                    (\cmd ->
+                        Cmd.batch
+                            [ cmd
+                            , Cmd.map OptionsMsg <|
+                                Page.Options.makeRequest
+                                    model.elasticsearch
+                                    model.nixosChannels
+                                    OptionSearch
+                                    searchModel.channel
+                                    searchModel.query
+                                    searchModel.from
+                                    searchModel.size
+                                    searchModel.buckets
+                                    searchModel.sort
+                                    searchModel.activeOptionSource
+                            ]
+                    )
+                    pair
 
             else
                 noEffects pair
@@ -206,17 +225,20 @@ pageMatch m1 m2 =
             True
 
         ( Packages model_a, Packages model_b ) ->
-            { model_a | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked }
-                == { model_b | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked }
+            { model_a | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+                == { model_b | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
 
         ( Options model_a, Options model_b ) ->
-            { model_a | show = Nothing, result = NotAsked } == { model_b | show = Nothing, result = NotAsked }
+            { model_a | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+                == { model_b | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
 
         ( Flakes (OptionModel model_a), Flakes (OptionModel model_b) ) ->
-            { model_a | show = Nothing, result = NotAsked } == { model_b | show = Nothing, result = NotAsked }
+            { model_a | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+                == { model_b | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
 
         ( Flakes (PackagesModel model_a), Flakes (PackagesModel model_b) ) ->
-            { model_a | show = Nothing, result = NotAsked } == { model_b | show = Nothing, result = NotAsked }
+            { model_a | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+                == { model_b | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
 
         _ ->
             False
@@ -456,16 +478,18 @@ viewNavigation route =
                         args
 
                     _ ->
-                        Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+                        Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Route.defaultOptionSource
     in
     li [] [ a [ href "https://nixos.org" ] [ text "Back to nixos.org" ] ]
         :: List.map
             (viewNavigationItem route)
             [ ( Route.Packages searchArgs, text "Packages" )
-            , ( Route.Options searchArgs, text "NixOS options" )
+            , ( Route.Options searchArgs, text "Options" )
             , ( Route.Flakes searchArgs, text "3rd-party Flakes" )
             ]
-        ++ [ li [] [ a [ href "https://wiki.nixos.org" ] [ text "NixOS Wiki" ] ] ]
+        ++ [ li [] [ a [ href "https://noogle.dev" ] [ text "Functions" ] ]
+           , li [] [ a [ href "https://wiki.nixos.org" ] [ text "NixOS Wiki" ] ]
+           ]
 
 
 viewNavigationItem :

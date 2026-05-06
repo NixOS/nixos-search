@@ -22,6 +22,7 @@ module Search exposing
     , init
     , makeRequest
     , makeRequestBody
+    , makeRequestTask
     , onClickStop
     , shouldLoad
     , showMoreButton
@@ -38,6 +39,7 @@ import Array
 import Base64
 import Browser.Dom
 import Browser.Navigation
+import Dict exposing (Dict)
 import Html
     exposing
         ( Html
@@ -84,7 +86,8 @@ import List.Extra
 import RemoteData
 import Route
     exposing
-        ( SearchType
+        ( OptionSource
+        , SearchType
         , allTypes
         , searchTypeToTitle
         )
@@ -105,6 +108,19 @@ type alias Model a b =
     , showInstallDetails : Details
     , searchType : Route.SearchType
     , redirectedChannel : Maybe String
+    , activeOptionSource : Route.OptionSource
+
+    -- Hit counts per option source, keyed by `Route.optionSourceId`.
+    -- The active source's count is written here on `QueryResponse`,
+    -- inactive sources' counts arrive via `SourceCount`. Surviving
+    -- across tab switches keeps the badges visible while the new
+    -- tab's full query is in flight.
+    , sourceCounts : Dict String Int
+
+    -- Last successful result, retained while a new query is in flight
+    -- so the UI can keep showing it (with a spinner) instead of
+    -- flashing the full loader. Cleared once the new response lands.
+    , previousResult : Maybe (SearchResult a b)
     }
 
 
@@ -342,6 +358,9 @@ init args defaultNixOSChannel nixosChannels maybeModel =
       , searchType =
             args.type_
                 |> Maybe.withDefault defaultSearchArgs.searchType
+      , activeOptionSource = args.activeOptionSource
+      , sourceCounts = Dict.empty
+      , previousResult = Nothing
       }
         |> ensureLoading nixosChannels
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
@@ -380,7 +399,21 @@ ensureLoading nixosChannels model =
         not (String.isEmpty model.query)
             && List.any (\channel -> channel.id == model.channel) nixosChannels
     then
-        { model | result = RemoteData.Loading }
+        -- Save the current Success result so views can keep showing it
+        -- (with a spinner overlay) while the new response is in flight,
+        -- rather than flashing the full loader. Source counts are left
+        -- alone: they get overwritten as new responses arrive, which
+        -- avoids tab badges blanking on every tab switch.
+        { model
+            | result = RemoteData.Loading
+            , previousResult =
+                case model.result of
+                    RemoteData.Success r ->
+                        Just r
+
+                    _ ->
+                        model.previousResult
+        }
 
     else
         model
@@ -410,6 +443,8 @@ type Msg a b
     | ShowDetails String
     | ChangePage Int
     | ShowInstallDetails Details
+    | SetActiveOptionSource OptionSource
+    | SourceCount String Int
 
 
 type Details
@@ -479,15 +514,18 @@ update toRoute navKey msg model nixosChannels =
                 |> pushUrl toRoute navKey
 
         ChannelChange channel ->
-            { model
-                | channel = channel
-                , redirectedChannel = Nothing
-                , show = Nothing
-                , buckets = Nothing
-                , from = 0
-            }
-                |> ensureLoading nixosChannels
-                |> pushUrl toRoute navKey
+            if channel == model.channel then
+                ( model, Cmd.none )
+
+            else
+                { model
+                    | channel = channel
+                    , redirectedChannel = Nothing
+                    , show = Nothing
+                    , from = 0
+                }
+                    |> ensureLoading nixosChannels
+                    |> pushUrl toRoute navKey
 
         SubjectChange subject ->
             { model
@@ -508,14 +546,46 @@ update toRoute navKey msg model nixosChannels =
             { model
                 | from = 0
                 , show = Nothing
-                , buckets = Nothing
             }
                 |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
 
         QueryResponse result ->
+            let
+                activeSourceId =
+                    Route.optionSourceId model.activeOptionSource
+
+                -- Mirror the active tab's count into the per-source dict
+                -- so tabs read uniformly from one place. Pages that don't
+                -- use option-source tabs (Packages, Flakes) just write
+                -- into a dict no one reads.
+                updatedCounts =
+                    case result of
+                        RemoteData.Success r ->
+                            Dict.insert
+                                activeSourceId
+                                r.hits.total.value
+                                model.sourceCounts
+
+                        _ ->
+                            model.sourceCounts
+
+                -- A fresh Success replaces the stale-while-loading copy.
+                -- Failure keeps the previous result available so the user
+                -- sees the prior data alongside an error rather than a
+                -- blank page.
+                clearedPrevious =
+                    case result of
+                        RemoteData.Success _ ->
+                            Nothing
+
+                        _ ->
+                            model.previousResult
+            in
             ( { model
                 | result = result
+                , sourceCounts = updatedCounts
+                , previousResult = clearedPrevious
               }
             , scrollToEntry model.show
             )
@@ -538,6 +608,23 @@ update toRoute navKey msg model nixosChannels =
 
         ShowInstallDetails details ->
             { model | showInstallDetails = details }
+                |> pushUrl toRoute navKey
+
+        SourceCount sourceId count ->
+            ( { model
+                | sourceCounts =
+                    Dict.insert sourceId count model.sourceCounts
+              }
+            , Cmd.none
+            )
+
+        SetActiveOptionSource source ->
+            { model
+                | activeOptionSource = source
+                , show = Nothing
+                , from = 0
+            }
+                |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
 
 
@@ -578,6 +665,7 @@ createUrl toRoute model =
                 justIfNotDefault model.sort defaultSearchArgs.sort
                     |> Maybe.map toSortId
             , type_ = justIfNotDefault model.searchType defaultSearchArgs.searchType
+            , activeOptionSource = model.activeOptionSource
             }
 
 
@@ -684,11 +772,15 @@ toSortQuery sort field fields =
                 ]
 
         Relevance ->
+            -- When scores tie, fall back to ascending alphabetical order on the
+            -- main field (and any secondary fields). Using asc gives a natural
+            -- reading order, e.g. `php-fpm.package` before `php-fpm.settings`,
+            -- instead of the reverse order you get with desc.
             Json.Encode.list Json.Encode.object
                 [ ( "_score", Json.Encode.string "desc" )
-                    :: ( field, Json.Encode.string "desc" )
+                    :: ( field, Json.Encode.string "asc" )
                     :: List.map
-                        (\x -> ( x, Json.Encode.string "desc" ))
+                        (\x -> ( x, Json.Encode.string "asc" ))
                         fields
                 ]
     )
@@ -854,14 +946,37 @@ viewResult :
 viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searchBuckets =
     case model.result of
         RemoteData.NotAsked ->
-            div [] []
+            if List.isEmpty searchBuckets then
+                div [] []
+
+            else
+                div [ class "search-results" ]
+                    [ ul [ class "search-sidebar" ] searchBuckets
+                    ]
 
         RemoteData.Loading ->
-            div [ class "loader-wrapper" ]
-                [ ul [ class "search-sidebar" ] searchBuckets
-                , div [ class "loader" ] [ text "Loading..." ]
-                , h2 [] [ text "Searching..." ]
-                ]
+            case model.previousResult of
+                Just prev ->
+                    -- Stale-while-revalidating: keep the previous result
+                    -- on screen and overlay a small spinner so the page
+                    -- doesn't blank out on every re-fetch (e.g. tab
+                    -- switch). The view path is the same as Success.
+                    let
+                        buckets =
+                            viewBuckets model.buckets prev
+                    in
+                    div [ class "search-results", class "loading-overlay" ]
+                        [ ul [ class "search-sidebar" ] (searchBuckets ++ buckets)
+                        , div []
+                            (viewResults nixosChannels model prev viewSuccess outMsg categoryName)
+                        ]
+
+                Nothing ->
+                    div [ class "loader-wrapper" ]
+                        [ ul [ class "search-sidebar" ] searchBuckets
+                        , div [ class "loader" ] [ text "Loading..." ]
+                        , h2 [] [ text "Searching..." ]
+                        ]
 
         RemoteData.Success result ->
             let
@@ -909,8 +1024,7 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
             in
             div []
                 [ div [ class "alert alert-error" ]
-                    [ ul [ class "search-sidebar" ] searchBuckets
-                    , h4 [] [ text errorTitle ]
+                    [ h4 [] [ text errorTitle ]
                     , text errorMessage
                     ]
                 ]
@@ -922,13 +1036,23 @@ viewNoResults :
     -> Html c
 viewNoResults categoryName query =
     div [ class "search-no-results" ]
-        [ h2 [] [ text <| "No " ++ categoryName ++ " found!" ]
-        , text "You might want to "
-        , Html.a [ href "https://github.com/NixOS/nixpkgs/blob/master/pkgs/README.md#quick-start-to-adding-a-package" ] [ text "add a package" ]
-        , text " or "
-        , Html.a [ href ("https://github.com/NixOS/nixpkgs/issues?q=" ++ query) ] [ text "search nixpkgs issues" ]
-        , text "."
-        ]
+        ([ h2 [] [ text <| "No " ++ categoryName ++ " found!" ]
+         ]
+            ++ (if categoryName == "modular services" then
+                    [ text "Not all packages provide modular services. You might want to "
+                    , Html.a [ href ("https://github.com/NixOS/nixpkgs/issues?q=" ++ query) ] [ text "search nixpkgs issues" ]
+                    , text "."
+                    ]
+
+                else
+                    [ text "You might want to "
+                    , Html.a [ href "https://github.com/NixOS/nixpkgs/blob/master/pkgs/README.md#quick-start-to-adding-a-package" ] [ text "add a package" ]
+                    , text " or "
+                    , Html.a [ href ("https://github.com/NixOS/nixpkgs/issues?q=" ++ query) ] [ text "search nixpkgs issues" ]
+                    , text "."
+                    ]
+               )
+        )
 
 
 closeButton : Html a
@@ -1100,7 +1224,8 @@ viewResults nixosChannels model result viewSuccess outMsg categoryName =
                     ]
                     (if result.hits.total.value == 10000 then
                         [ text "more than 10000."
-                        , p [] [ text "Please provide more precise search terms." ]
+                        , p [ class "search-refine-hint" ]
+                            [ text "Please provide more precise search terms." ]
                         ]
 
                      else
@@ -1270,28 +1395,39 @@ type alias Options =
 
 
 filterByType :
-    String
+    List String
     -> List ( String, Json.Encode.Value )
-filterByType type_ =
-    [ ( "term"
-      , Json.Encode.object
-            [ ( "type"
+filterByType types =
+    case types of
+        [ type_ ] ->
+            [ ( "term"
               , Json.Encode.object
-                    [ ( "value", Json.Encode.string type_ )
-                    , ( "_name", Json.Encode.string <| "filter_" ++ type_ ++ "s" )
+                    [ ( "type"
+                      , Json.Encode.object
+                            [ ( "value", Json.Encode.string type_ )
+                            , ( "_name", Json.Encode.string <| "filter_" ++ type_ ++ "s" )
+                            ]
+                      )
                     ]
               )
             ]
-      )
-    ]
+
+        _ ->
+            [ ( "terms"
+              , Json.Encode.object
+                    [ ( "type", Json.Encode.list Json.Encode.string types )
+                    , ( "_name", Json.Encode.string <| "filter_" ++ String.join "_" types )
+                    ]
+              )
+            ]
 
 
 searchFields :
     List String
-    -> String
+    -> List String
     -> List ( String, Float )
     -> List (List ( String, Json.Encode.Value ))
-searchFields positiveWords mainField fields =
+searchFields positiveWords mainFields fields =
     let
         allFields : List String
         allFields =
@@ -1324,7 +1460,7 @@ searchFields positiveWords mainField fields =
               )
             ]
     in
-    multiMatch :: List.map (toWildcardQuery mainField) queryWordsWildCard
+    multiMatch :: List.concatMap (\mf -> List.map (toWildcardQuery mf) queryWordsWildCard) mainFields
 
 
 makeRequestBody :
@@ -1332,15 +1468,15 @@ makeRequestBody :
     -> Int
     -> Int
     -> Sort
-    -> String
+    -> List String
     -> String
     -> List String
     -> List Terms
     -> List ( String, Json.Encode.Value )
-    -> String
+    -> List String
     -> List ( String, Float )
     -> Http.Body
-makeRequestBody query from sizeRaw sort type_ sortField otherSortFields terms filterByBuckets mainField fields =
+makeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets mainFields fields =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -1373,7 +1509,7 @@ makeRequestBody query from sizeRaw sort type_ sortField otherSortFields terms fi
                             [ ( "filter"
                               , Json.Encode.list Json.Encode.object
                                     (List.append
-                                        [ filterByType type_ ]
+                                        [ filterByType types ]
                                         (if List.isEmpty filterByBuckets then
                                             []
 
@@ -1387,7 +1523,7 @@ makeRequestBody query from sizeRaw sort type_ sortField otherSortFields terms fi
                                     (negativeWords
                                         |> List.concatMap dashUnderscoreVariants
                                         |> List.Extra.unique
-                                        |> List.map (toWildcardQuery mainField)
+                                        |> List.concatMap (\w -> List.map (\mf -> toWildcardQuery mf w) mainFields)
                                     )
                               )
                             , ( "must"
@@ -1397,7 +1533,7 @@ makeRequestBody query from sizeRaw sort type_ sortField otherSortFields terms fi
                                             [ ( "tie_breaker", Json.Encode.float 0.7 )
                                             , ( "queries"
                                               , Json.Encode.list Json.Encode.object
-                                                    (searchFields positiveWords mainField fields)
+                                                    (searchFields positiveWords mainFields fields)
                                               )
                                             ]
                                         )
@@ -1473,6 +1609,70 @@ makeRequest body nixosChannels channel decodeResultItemSource decodeResultAggreg
                 (decodeResult decodeResultItemSource decodeResultAggregations)
         , timeout = Nothing
         , tracker = tracker
+        }
+
+
+{-| Task-returning variant of `makeRequest` so callers can combine several
+HTTP requests into a single Cmd via `Task.sequence` / `Task.map`. Used by
+the Options page to fan out one ES request per included source and merge
+the responses into a single `SearchResult` before delivering it to the
+search update flow.
+-}
+makeRequestTask :
+    Http.Body
+    -> List NixOSChannel
+    -> String
+    -> Json.Decode.Decoder a
+    -> Json.Decode.Decoder b
+    -> Options
+    -> Task.Task Http.Error (SearchResult a b)
+makeRequestTask body nixosChannels channel decodeResultItemSource decodeResultAggregations options =
+    let
+        branch : String
+        branch =
+            nixosChannels
+                |> List.filter (\x -> x.id == channel)
+                |> List.head
+                |> Maybe.map (\x -> x.branch)
+                |> Maybe.withDefault channel
+
+        index =
+            "latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ branch
+    in
+    -- `request_cache=true` opts these federated per-source queries into ES's
+    -- shard request cache. The cache is normally only used for `size:0`
+    -- aggregations; opting in is safe here because each query body is
+    -- byte-stable across users (only the user query varies), making cache
+    -- hits real and useful. Index refreshes invalidate automatically.
+    Http.riskyTask
+        { method = "POST"
+        , headers =
+            [ Http.header "Authorization" ("Basic " ++ Base64.encode (options.username ++ ":" ++ options.password))
+            ]
+        , url = options.url ++ "/" ++ index ++ "/_search?request_cache=true"
+        , body = body
+        , resolver =
+            Http.stringResolver <|
+                \response ->
+                    case response of
+                        Http.GoodStatus_ _ s ->
+                            Json.Decode.decodeString
+                                (decodeResult decodeResultItemSource decodeResultAggregations)
+                                s
+                                |> Result.mapError (Json.Decode.errorToString >> Http.BadBody)
+
+                        Http.BadStatus_ meta _ ->
+                            Err (Http.BadStatus meta.statusCode)
+
+                        Http.NetworkError_ ->
+                            Err Http.NetworkError
+
+                        Http.Timeout_ ->
+                            Err Http.Timeout
+
+                        Http.BadUrl_ url ->
+                            Err (Http.BadUrl url)
+        , timeout = Nothing
         }
 
 
