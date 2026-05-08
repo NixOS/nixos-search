@@ -44,9 +44,10 @@
         "type": "github"
       },
       "original": {
-        "id": "nixpkgs",
+        "owner": "NixOS",
         "ref": "nixos-unstable",
-        "type": "indirect"
+        "repo": "nixpkgs",
+        "type": "github"
       }
     },
     "nixpkgs-npmlock2nix": {
@@ -59,9 +60,10 @@
         "type": "github"
       },
       "original": {
-        "id": "nixpkgs",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
         "rev": "c5ed8beb478a8ca035f033f659b60c89500a3034",
-        "type": "indirect"
+        "type": "github"
       }
     },
     "npmlock2nix": {
