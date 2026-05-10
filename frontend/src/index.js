@@ -5,6 +5,21 @@ require("elm-keyboard-shortcut");
 
 const { Elm } = require("./Main");
 
+function normalizeTheme(value) {
+    return value === "light" || value === "dark" ? value : "auto";
+}
+
+function applyTheme(theme) {
+    if (theme === "auto") {
+        delete document.documentElement.dataset.theme;
+    } else {
+        document.documentElement.dataset.theme = theme;
+    }
+}
+
+const initialTheme = normalizeTheme(localStorage.getItem("theme"));
+applyTheme(initialTheme);
+
 const app = Elm.Main.init({
     flags: {
         elasticsearchMappingSchemaVersion: parseInt(
@@ -16,8 +31,19 @@ const app = Elm.Main.init({
         elasticsearchPassword:
             process.env.ELASTICSEARCH_PASSWORD || "X8gPHnzL52wFEekuxsfQ9cSh",
         nixosChannels: JSON.parse(process.env.NIXOS_CHANNELS),
+        theme: initialTheme,
     },
 });
+
+if (app.ports && app.ports.setTheme) {
+    app.ports.setTheme.subscribe((value) => {
+        const theme = normalizeTheme(value);
+        try {
+            localStorage.setItem("theme", theme);
+        } catch (_) {}
+        applyTheme(theme);
+    });
+}
 
 if (app.ports && app.ports.copyToClipboard) {
     app.ports.copyToClipboard.subscribe((text) => {

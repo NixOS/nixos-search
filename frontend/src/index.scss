@@ -33,10 +33,17 @@
 /* -- Darkmode specific styles --------------------------------------------- */
 /* ------------------------------------------------------------------------- */
 
-@media (prefers-color-scheme: dark) {
+@mixin outline-visible() {
+  border-radius: 4px !important;
+  outline-color: var(--light-blue) !important;
+  outline-style: solid !important;
+  outline-width: 2px !important;
+  outline-offset: -2px !important;
+}
 
+@mixin dark-theme {
   // Define darkmode colors
-  :root {
+  & {
     --text-color: rgba(255, 255, 255, 0.85);
     --text-color-light: rgba(255, 255, 255, 0.5);
     --text-color-warning: #f8e45c;
@@ -99,14 +106,6 @@
 
   * {
     transition: background 0.2s;
-  }
-
-  @mixin outline-visible() {
-    border-radius: 4px !important;
-    outline-color: var(--light-blue) !important;
-    outline-style: solid !important;
-    outline-width: 2px !important;
-    outline-offset: -2px !important;
   }
 
   *:focus {
@@ -358,6 +357,16 @@
   }
 }
 
+:root[data-theme="dark"] {
+  @include dark-theme;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    @include dark-theme;
+  }
+}
+
 /* ------------------------------------------------------------------------- */
 /* -- Utils ---------------------------------------------------------------- */
 /* ------------------------------------------------------------------------- */
@@ -430,6 +439,11 @@ footer {
   bottom: 0;
   width: 100%;
   height: 4rem;
+}
+
+.theme-toggle .theme-icon {
+  font-size: 1.4em;
+  line-height: 1;
 }
 
 header .navbar.navbar-static-top {
