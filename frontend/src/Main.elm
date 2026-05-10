@@ -283,7 +283,7 @@ changeRouteTo currentModel url =
                         _ ->
                             Nothing
             in
-            Page.Packages.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
+            Page.Packages.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels True modelPage
                 |> updateWith Packages PackagesMsg model
                 |> avoidReinit
                 |> attemptQuery
@@ -298,7 +298,7 @@ changeRouteTo currentModel url =
                         _ ->
                             Nothing
             in
-            Page.Options.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
+            Page.Options.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels True modelPage
                 |> updateWith Options OptionsMsg model
                 |> avoidReinit
                 |> attemptQuery

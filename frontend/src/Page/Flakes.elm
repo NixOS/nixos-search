@@ -66,7 +66,7 @@ init searchArgs defaultNixOSChannel nixosChannels model =
     case searchType of
         OptionSearch ->
             Tuple.mapBoth OptionModel (Cmd.map OptionsMsg) <|
-                Page.Options.init searchArgs defaultNixOSChannel nixosChannels <|
+                Page.Options.init searchArgs defaultNixOSChannel nixosChannels False <|
                     case model of
                         Just (OptionModel model_) ->
                             Just model_
@@ -76,7 +76,7 @@ init searchArgs defaultNixOSChannel nixosChannels model =
 
         PackageSearch ->
             Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg) <|
-                Page.Packages.init searchArgs defaultNixOSChannel nixosChannels <|
+                Page.Packages.init searchArgs defaultNixOSChannel nixosChannels False <|
                     case model of
                         Just (PackagesModel model_) ->
                             Just model_

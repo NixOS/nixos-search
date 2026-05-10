@@ -114,14 +114,22 @@ init :
     Route.SearchArgs
     -> String
     -> List NixOSChannel
+    -> Bool
     -> Maybe Model
     -> ( Model, Cmd Msg )
-init searchArgs defaultNixOSChannel nixosChannels model =
+init searchArgs defaultNixOSChannel nixosChannels includeChannelInUrl model =
     let
         ( newModel, newCmd ) =
             Search.init searchArgs defaultNixOSChannel nixosChannels model
+
+        finalModel =
+            if includeChannelInUrl then
+                { newModel | urlChannel = Just newModel.channel }
+
+            else
+                newModel
     in
-    ( newModel
+    ( finalModel
     , Cmd.map SearchMsg newCmd
     )
 

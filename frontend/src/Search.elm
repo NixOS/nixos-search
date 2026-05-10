@@ -108,6 +108,7 @@ type alias Model a b =
     , showInstallDetails : Details
     , searchType : Route.SearchType
     , redirectedChannel : Maybe String
+    , urlChannel : Maybe String
     , activeOptionSource : Route.OptionSource
 
     -- Hit counts per option source, keyed by `Route.optionSourceId`.
@@ -361,6 +362,7 @@ init args defaultNixOSChannel nixosChannels maybeModel =
       , activeOptionSource = args.activeOptionSource
       , sourceCounts = Dict.empty
       , previousResult = Nothing
+      , urlChannel = args.channel
       }
         |> ensureLoading nixosChannels
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
@@ -520,6 +522,7 @@ update toRoute navKey msg model nixosChannels =
             else
                 { model
                     | channel = channel
+                    , urlChannel = Just channel
                     , redirectedChannel = Nothing
                     , show = Nothing
                     , from = 0
@@ -655,7 +658,7 @@ createUrl toRoute model =
     in
     Route.routeToString <|
         toRoute
-            { channel = Just model.channel
+            { channel = model.urlChannel
             , query = justIfNotDefault model.query defaultSearchArgs.query
             , show = model.show
             , from = justIfNotDefault model.from defaultSearchArgs.from
