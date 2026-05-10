@@ -312,6 +312,17 @@
         }
 
       }
+
+      li.external > a {
+        color: var(--light-blue);
+        background: transparent;
+        border-radius: 0;
+
+        &:hover {
+          background: transparent;
+          text-decoration: underline;
+        }
+      }
     }
   }
 
@@ -446,6 +457,26 @@ header .navbar.navbar-static-top {
     line-height: 20px;
     sup {
       margin-left: 0.5em;
+    }
+  }
+}
+
+header .navbar.navbar-static-top ul.nav > li.external {
+
+  > a {
+    color: var(--link-color);
+    text-decoration: none;
+    background: none !important;
+    border-radius: 0;
+
+    &:hover {
+      text-decoration: underline;
+      background: none !important;
+    }
+
+    &::after {
+      content: " \2197";
+      font-size: 0.75em;
     }
   }
 }

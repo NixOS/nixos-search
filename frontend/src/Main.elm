@@ -27,6 +27,7 @@ import Html.Attributes
         , href
         , id
         , src
+        , target
         )
 import Json.Decode
 import Page.Flakes exposing (Model(..))
@@ -487,8 +488,8 @@ viewNavigation route =
             , ( Route.Options searchArgs, text "Options" )
             , ( Route.Flakes searchArgs, text "3rd-party Flakes" )
             ]
-        ++ [ li [] [ a [ href "https://noogle.dev" ] [ text "Functions" ] ]
-           , li [] [ a [ href "https://wiki.nixos.org" ] [ text "NixOS Wiki" ] ]
+        ++ [ li [ class "external" ] [ a [ href "https://noogle.dev", target "_blank", Html.Attributes.rel "noopener noreferrer" ] [ text "Functions" ] ]
+           , li [ class "external" ] [ a [ href "https://wiki.nixos.org", target "_blank", Html.Attributes.rel "noopener noreferrer" ] [ text "NixOS Wiki" ] ]
            ]
 
 
