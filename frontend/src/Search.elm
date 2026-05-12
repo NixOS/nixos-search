@@ -334,13 +334,8 @@ init args defaultNixOSChannel nixosChannels maybeModel =
       , redirectedChannel = redirected
       , flake = defaultFlakeId
       , query =
-            case args.query of
-                Just q ->
-                    q
-
-                Nothing ->
-                    args.show
-                        |> Maybe.withDefault defaultSearchArgs.query
+            args.query
+                |> Maybe.withDefault defaultSearchArgs.query
       , result = getField .result RemoteData.NotAsked
       , show = args.show
       , from =

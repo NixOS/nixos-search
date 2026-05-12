@@ -285,7 +285,7 @@ pageMatch m1 m2 =
                 == { model_b | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
 
         ( Options model_a, Options model_b ) ->
-            { model_a | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+            { model_a | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing, activeOptionSource = model_b.activeOptionSource }
                 == { model_b | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
 
         ( Flakes (OptionModel model_a), Flakes (OptionModel model_b) ) ->

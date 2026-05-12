@@ -245,7 +245,7 @@ viewSourceTab activeSource count source =
             -- anchor.
             [ classList [ ( "selected", isActive ) ]
             , href "#"
-            , Html.Events.onClick (SearchMsg (Search.SetActiveOptionSource source))
+            , Html.Events.preventDefaultOn "click" (Json.Decode.succeed ( SearchMsg (Search.SetActiveOptionSource source), True ))
             ]
             (span [] [ text (Route.optionSourceLabel source) ] :: badge)
         ]
@@ -435,7 +435,7 @@ viewResultItem nixosChannels channel show activeSource item =
                 ul [ class "search-result-button" ]
                     [ li []
                         [ a
-                            [ onClick toggle
+                            [ Html.Events.preventDefaultOn "click" (Json.Decode.succeed ( toggle, True ))
                             , href ""
                             ]
                             [ text displayName ]
