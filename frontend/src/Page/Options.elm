@@ -114,14 +114,22 @@ init :
     Route.SearchArgs
     -> String
     -> List NixOSChannel
+    -> Bool
     -> Maybe Model
     -> ( Model, Cmd Msg )
-init searchArgs defaultNixOSChannel nixosChannels model =
+init searchArgs defaultNixOSChannel nixosChannels includeChannelInUrl model =
     let
         ( newModel, newCmd ) =
             Search.init searchArgs defaultNixOSChannel nixosChannels model
+
+        finalModel =
+            if includeChannelInUrl then
+                { newModel | urlChannel = Just newModel.channel }
+
+            else
+                newModel
     in
-    ( newModel
+    ( finalModel
     , Cmd.map SearchMsg newCmd
     )
 
@@ -480,31 +488,8 @@ viewUsageSnippet source =
                     )
                 |> Maybe.withDefault "..."
 
-        -- Expand "php-fpm.settings" into nested:
-        --   php-fpm = {
-        --     settings = <default>;
-        --   };
-        nestOption parts indent =
-            case parts of
-                [] ->
-                    ""
-
-                [ leaf ] ->
-                    indent ++ leaf ++ " = " ++ leafValue indent ++ ";\n"
-
-                head_ :: rest ->
-                    indent
-                        ++ head_
-                        ++ " = {\n"
-                        ++ nestOption rest (indent ++ "  ")
-                        ++ indent
-                        ++ "};\n"
-
-        optionParts =
-            String.split "." source.name
-
         nestedOption indent =
-            nestOption optionParts indent
+            indent ++ source.name ++ " = " ++ leafValue indent ++ ";\n"
     in
     case source.docType of
         "service" ->

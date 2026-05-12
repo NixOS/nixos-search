@@ -1,4 +1,4 @@
-module Main exposing (Flags, Model, Msg, Page, main)
+port module Main exposing (Flags, Model, Msg, Page, main)
 
 import Browser
 import Browser.Dom
@@ -8,6 +8,7 @@ import Html
     exposing
         ( Html
         , a
+        , button
         , div
         , footer
         , header
@@ -22,13 +23,16 @@ import Html
 import Html.Attributes
     exposing
         ( alt
+        , attribute
         , class
         , classList
         , href
         , id
         , src
         , target
+        , title
         )
+import Html.Events exposing (onClick)
 import Json.Decode
 import Page.Flakes exposing (Model(..))
 import Page.Options
@@ -56,7 +60,53 @@ type alias Flags =
     , elasticsearchUsername : String
     , elasticsearchPassword : String
     , nixosChannels : Json.Decode.Value
+    , theme : String
     }
+
+
+type Theme
+    = Auto
+    | Light
+    | Dark
+
+
+themeFromString : String -> Theme
+themeFromString s =
+    case s of
+        "light" ->
+            Light
+
+        "dark" ->
+            Dark
+
+        _ ->
+            Auto
+
+
+themeToString : Theme -> String
+themeToString t =
+    case t of
+        Auto ->
+            "auto"
+
+        Light ->
+            "light"
+
+        Dark ->
+            "dark"
+
+
+themeLabel : Theme -> String
+themeLabel t =
+    case t of
+        Auto ->
+            "Auto"
+
+        Light ->
+            "Light"
+
+        Dark ->
+            "Dark"
 
 
 type alias Model =
@@ -66,7 +116,11 @@ type alias Model =
     , defaultNixOSChannel : String
     , nixosChannels : List NixOSChannel
     , page : Page
+    , theme : Theme
     }
+
+
+port setTheme : String -> Cmd msg
 
 
 type Page
@@ -108,6 +162,7 @@ init flags url navKey =
             , nixosChannels = nixosChannels.channels
             , page = NotFound
             , route = Route.Home
+            , theme = themeFromString flags.theme
             }
     in
     changeRouteTo model url
@@ -125,6 +180,7 @@ type Msg
     | FlakesMsg Page.Flakes.Msg
     | CtrlKRegistered
     | SearchFocusResult
+    | SetTheme Theme
 
 
 updateWith :
@@ -284,7 +340,7 @@ changeRouteTo currentModel url =
                         _ ->
                             Nothing
             in
-            Page.Packages.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
+            Page.Packages.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels True modelPage
                 |> updateWith Packages PackagesMsg model
                 |> avoidReinit
                 |> attemptQuery
@@ -299,7 +355,7 @@ changeRouteTo currentModel url =
                         _ ->
                             Nothing
             in
-            Page.Options.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
+            Page.Options.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels True modelPage
                 |> updateWith Options OptionsMsg model
                 |> avoidReinit
                 |> attemptQuery
@@ -358,6 +414,11 @@ update msg model =
 
         ( CtrlKRegistered, _ ) ->
             ( model, Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> SearchFocusResult) )
+
+        ( SetTheme theme, _ ) ->
+            ( { model | theme = theme }
+            , setTheme (themeToString theme)
+            )
 
         _ ->
             -- Disregard messages that arrived for the wrong page.
@@ -431,6 +492,7 @@ view model =
                                 , div []
                                     [ ul [ class "nav pull-left" ]
                                         (viewNavigation model.route)
+                                    , viewThemeSelector model.theme
                                     ]
                                 ]
                             ]
@@ -501,6 +563,48 @@ viewNavigationItem currentRoute ( route, title ) =
     li
         [ classList [ ( "active", currentRoute == route ) ] ]
         [ a [ Route.href route ] [ title ] ]
+
+
+themeIcon : Theme -> String
+themeIcon t =
+    case t of
+        Auto ->
+            "◐"
+
+        Light ->
+            "☀"
+
+        Dark ->
+            "☾"
+
+
+viewThemeSelector : Theme -> Html Msg
+viewThemeSelector currentTheme =
+    div
+        [ class "btn-group pull-right theme-toggle"
+        , attribute "role" "group"
+        , attribute "aria-label" "Theme"
+        ]
+        (List.map
+            (\t ->
+                button
+                    [ class "btn"
+                    , classList [ ( "active", t == currentTheme ) ]
+                    , title (themeLabel t)
+                    , attribute "aria-label" (themeLabel t)
+                    , attribute "aria-pressed"
+                        (if t == currentTheme then
+                            "true"
+
+                         else
+                            "false"
+                        )
+                    , onClick (SetTheme t)
+                    ]
+                    [ span [ class "theme-icon" ] [ text (themeIcon t) ] ]
+            )
+            [ Auto, Light, Dark ]
+        )
 
 
 viewPage : Model -> Html Msg
