@@ -55,7 +55,17 @@ http.createServer((req, res) => {
   if (!fs.existsSync(filePath)) filePath = path.join(DIST, 'index.html');
 
   const ext = path.extname(filePath);
-  res.writeHead(200, { 'Content-Type': MIME.get(ext) ?? 'application/octet-stream' });
+  const headers = { 'Content-Type': MIME.get(ext) ?? 'application/octet-stream' };
+  if (ext === '.html' && req.headers['save-data'] === 'on') {
+    fs.readFile(filePath, 'utf8', (err, data) => {
+      if (err) { res.writeHead(500); res.end(String(err)); return; }
+      const rewritten = data.replace('<html', '<html data-save-data="on"');
+      res.writeHead(200, headers);
+      res.end(rewritten);
+    });
+    return;
+  }
+  res.writeHead(200, headers);
   fs.createReadStream(filePath).pipe(res, { end: true });
 }).listen(PORT, () => {
   console.log(`Serving ${DIST} at http://localhost:${PORT}`);

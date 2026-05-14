@@ -1,3 +1,7 @@
+[[edge_functions]]
+  function = "save-data"
+  path = "/*"
+
 [[redirects]]
   # Use a proxy because bonsai doesn't support IPv6.
   from = "/backend/*"

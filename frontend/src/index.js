@@ -19,7 +19,9 @@ const initialTheme = normalizeTheme(localStorage.getItem("theme"));
 applyTheme(initialTheme);
 
 const connection = navigator.connection || navigator.webkitConnection;
+const saveDataAttr = document.documentElement.dataset.saveData === "on";
 const saveData =
+    saveDataAttr ||
     (connection && connection.saveData) ||
     (connection && connection.type === "cellular");
 
