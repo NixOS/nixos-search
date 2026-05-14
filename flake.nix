@@ -113,6 +113,7 @@
             inherit nixosChannels version;
           };
           nixosChannels = nixosChannelsFile;
+          nixosChannelsJson = pkgs.writeText "nixosChannels.json" (builtins.toJSON nixosChannels);
         };
 
         formatter = treefmt;
