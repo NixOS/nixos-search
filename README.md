@@ -91,23 +91,23 @@ You may need to manually edit `frontend/src/Search.elm` to use the right index.
 
 ## Adding flakes
 
-To add your own flakes to the search index edit [./flakes/manual.toml](./flakes/manual.toml), keeping the alphabetical ordering.
+To add your own flakes to the search index edit [./flakes/flake-registry.json](./flakes/flake-registry.json), keeping the alphabetical ordering.
 
-Possible types are `github`, `gitlab`, `sourcehut`, and `git` (which is the fallback for any kind of git repository but requires to set a revision key manually as of now).
+This registry currently contains `github`, `gitlab`, and `sourcehut` entries.
 
 To test whether your flake is compatible with nix flake-info you can try running `flake-info` against it
 
 ```
-$ nix run github:nixos/nixos-search#flake-info -- --json flake <your flake handle>
+nix run github:nixos/nixos-search#flake-info -- --json flake <your flake handle>
 ```
 
 E.g.
 
 ```
-$ nix run github:nixos/nixos-search#flake-info -- --json flake git+https://codeberg.org/wolfangaukang/python-trovo?ref=main
-$ nix run github:nixos/nixos-search#flake-info -- --json flake github:CertainLach/fleet
-$ nix run github:nixos/nixos-search#flake-info -- --json flake gitlab:pi-lar/neuropil
-$ nix run github:nixos/nixos-search#flake-info -- --json flake sourcehut:~munksgaard/geomyidae-flake
+nix run github:nixos/nixos-search#flake-info -- --json flake git+https://codeberg.org/wolfangaukang/python-trovo?ref=main
+nix run github:nixos/nixos-search#flake-info -- --json flake github:CertainLach/fleet
+nix run github:nixos/nixos-search#flake-info -- --json flake gitlab:pi-lar/neuropil
+nix run github:nixos/nixos-search#flake-info -- --json flake sourcehut:~munksgaard/geomyidae-flake
 ```
 
 ### Criteria for inclusion
@@ -130,9 +130,9 @@ We generally try to include a wide range of flakes that could be of interest to 
 - You can send a PRs without opening an issue first, but if you're planning significant work it might be good to discuss your ideas beforehand to avoid disappointment later.
 - Reviews by people without write access are welcome.
 - Every PR requires at least one approval by someone (other than the author) with write access. They can either:
-  - approve and merge immediately;
-  - approve and leave feedback - the author can merge after considering the feedback;
-  - add comments without approving.
+ - approve and merge immediately;
+ - approve and leave feedback - the author can merge after considering the feedback;
+ - add comments without approving.
 
 ## Maintenance
 
