@@ -11,10 +11,6 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    # https://github.com/nix-community/npmlock2nix/blob/master/nix/sources.json
-    nixpkgs-npmlock2nix.url = "github:NixOS/nixpkgs/c5ed8beb478a8ca035f033f659b60c89500a3034";
-    npmlock2nix.url = "github:nix-community/npmlock2nix";
-    npmlock2nix.flake = false;
     nixos-infra.url = "github:NixOS/infra";
     nixos-infra.flake = false;
     treefmt-nix = {
@@ -27,9 +23,7 @@
     {
       self,
       nixpkgs,
-      nixpkgs-npmlock2nix,
       flake-utils,
-      npmlock2nix,
       nixos-infra,
       treefmt-nix,
     }:
@@ -37,14 +31,6 @@
       system:
       let
         pkgs = import nixpkgs { inherit system; };
-        pkgsNpmlock2nix = import nixpkgs-npmlock2nix {
-          inherit system;
-          overlays = [
-            (self: super: {
-              npmlock2nix = super.callPackage npmlock2nix { };
-            })
-          ];
-        };
         lib = nixpkgs.lib;
         treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
         warnToUpgradeNix = lib.warn "Please upgrade Nix to 2.7 or later.";
@@ -106,10 +92,7 @@
         packages = {
           default = packages.flake-info;
           flake-info = import ./flake-info { inherit pkgs; };
-          frontend = import ./frontend {
-            pkgs = pkgs // {
-              inherit (pkgsNpmlock2nix) npmlock2nix;
-            };
+          frontend = pkgs.callPackage ./frontend {
             inherit nixosChannels version;
           };
           nixosChannels = nixosChannelsFile;
