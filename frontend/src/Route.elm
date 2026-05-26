@@ -116,7 +116,7 @@ optionSourceLabel source =
             "Modular services"
 
         HomeManagerOptionSource ->
-            "Home Manager"
+            "nix-community/home-manager"
 
 
 type SearchType
