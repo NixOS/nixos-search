@@ -1,0 +1,1301 @@
+{
+	"flakes": [
+		{
+			"from": {
+				"owner": "4JX",
+				"repo": "L5P-Keyboard-RGB",
+				"type": "github"
+			},
+			"to": {
+				"owner": "4JX",
+				"repo": "L5P-Keyboard-RGB",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "abathur",
+				"repo": "resholve",
+				"type": "github"
+			},
+			"to": {
+				"owner": "abathur",
+				"repo": "resholve",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "anpandey",
+				"repo": "numen-nix",
+				"type": "github"
+			},
+			"to": {
+				"owner": "anpandey",
+				"repo": "numen-nix",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "astro",
+				"repo": "deadnix",
+				"type": "github"
+			},
+			"to": {
+				"owner": "astro",
+				"repo": "deadnix",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "atuinsh",
+				"repo": "atuin",
+				"type": "github"
+			},
+			"to": {
+				"owner": "atuinsh",
+				"repo": "atuin",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "bobvanderlinden",
+				"repo": "nixpkgs-ruby",
+				"type": "github"
+			},
+			"to": {
+				"owner": "bobvanderlinden",
+				"repo": "nixpkgs-ruby",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "bohdantkachenko",
+				"repo": "chromium-pwa-wmclass-sync",
+				"type": "github"
+			},
+			"to": {
+				"owner": "bohdantkachenko",
+				"repo": "chromium-pwa-wmclass-sync",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "brizzbuzz",
+				"repo": "opnix",
+				"type": "github"
+			},
+			"to": {
+				"owner": "brizzbuzz",
+				"repo": "opnix",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "CertainLach",
+				"repo": "fleet",
+				"type": "github"
+			},
+			"to": {
+				"owner": "CertainLach",
+				"repo": "fleet",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "chaotic-cx",
+				"repo": "nyx",
+				"type": "github"
+			},
+			"to": {
+				"owner": "chaotic-cx",
+				"repo": "nyx",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "DeterminateSystems",
+				"repo": "bonk",
+				"type": "github"
+			},
+			"to": {
+				"owner": "DeterminateSystems",
+				"repo": "bonk",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "DeterminateSystems",
+				"repo": "cpiotools",
+				"type": "github"
+			},
+			"to": {
+				"owner": "DeterminateSystems",
+				"repo": "cpiotools",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "DeterminateSystems",
+				"repo": "determinate",
+				"type": "github"
+			},
+			"to": {
+				"owner": "DeterminateSystems",
+				"repo": "determinate",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "DeterminateSystems",
+				"repo": "fh",
+				"type": "github"
+			},
+			"to": {
+				"owner": "DeterminateSystems",
+				"repo": "fh",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "DeterminateSystems",
+				"repo": "flake-checker",
+				"type": "github"
+			},
+			"to": {
+				"owner": "DeterminateSystems",
+				"repo": "flake-checker",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "DeterminateSystems",
+				"repo": "flake-iter",
+				"type": "github"
+			},
+			"to": {
+				"owner": "DeterminateSystems",
+				"repo": "flake-iter",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "DeterminateSystems",
+				"repo": "flake-schemas",
+				"type": "github"
+			},
+			"to": {
+				"owner": "DeterminateSystems",
+				"repo": "flake-schemas",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "DeterminateSystems",
+				"repo": "flake-templates",
+				"type": "github"
+			},
+			"to": {
+				"owner": "DeterminateSystems",
+				"repo": "flake-templates",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "DeterminateSystems",
+				"repo": "magic-nix-cache",
+				"type": "github"
+			},
+			"to": {
+				"owner": "DeterminateSystems",
+				"repo": "magic-nix-cache",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "DeterminateSystems",
+				"repo": "nix-config-parser",
+				"type": "github"
+			},
+			"to": {
+				"owner": "DeterminateSystems",
+				"repo": "nix-config-parser",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "DeterminateSystems",
+				"repo": "nix-installer",
+				"type": "github"
+			},
+			"to": {
+				"owner": "DeterminateSystems",
+				"repo": "nix-installer",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "DeterminateSystems",
+				"repo": "nix-netboot-serve",
+				"type": "github"
+			},
+			"to": {
+				"owner": "DeterminateSystems",
+				"repo": "nix-netboot-serve",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "DeterminateSystems",
+				"repo": "nix-src",
+				"type": "github"
+			},
+			"to": {
+				"owner": "DeterminateSystems",
+				"repo": "nix-src",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "DeterminateSystems",
+				"repo": "nixos-vault-service",
+				"type": "github"
+			},
+			"to": {
+				"owner": "DeterminateSystems",
+				"repo": "nixos-vault-service",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "DeterminateSystems",
+				"repo": "update-flake-lock",
+				"type": "github"
+			},
+			"to": {
+				"owner": "DeterminateSystems",
+				"repo": "update-flake-lock",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "DeterminateSystems",
+				"repo": "zpool-auto-expand-partitions",
+				"type": "github"
+			},
+			"to": {
+				"owner": "DeterminateSystems",
+				"repo": "zpool-auto-expand-partitions",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "dgollings",
+				"repo": "nix-atlas",
+				"type": "github"
+			},
+			"to": {
+				"owner": "dgollings",
+				"repo": "nix-atlas",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "divnix",
+				"repo": "nosys",
+				"type": "github"
+			},
+			"to": {
+				"owner": "divnix",
+				"repo": "nosys",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "divnix",
+				"repo": "std",
+				"type": "github"
+			},
+			"to": {
+				"owner": "divnix",
+				"repo": "std",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "edolstra",
+				"repo": "flake-compat",
+				"type": "github"
+			},
+			"to": {
+				"owner": "edolstra",
+				"repo": "flake-compat",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "eza-community",
+				"repo": "eza",
+				"type": "github"
+			},
+			"to": {
+				"owner": "eza-community",
+				"repo": "eza",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "fort-nix",
+				"repo": "nix-bitcoin",
+				"type": "github"
+			},
+			"to": {
+				"owner": "fort-nix",
+				"repo": "nix-bitcoin",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "gmodena",
+				"repo": "nix-flatpak",
+				"type": "github"
+			},
+			"to": {
+				"owner": "gmodena",
+				"repo": "nix-flatpak",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "gytis-ivaskevicius",
+				"repo": "flake-utils-plus",
+				"type": "github"
+			},
+			"to": {
+				"owner": "gytis-ivaskevicius",
+				"repo": "flake-utils-plus",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "helix-editor",
+				"repo": "helix",
+				"type": "github"
+			},
+			"to": {
+				"owner": "helix-editor",
+				"repo": "helix",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "hellwolf",
+				"repo": "solc.nix",
+				"type": "github"
+			},
+			"to": {
+				"owner": "hellwolf",
+				"repo": "solc.nix",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "hercules-ci",
+				"repo": "flake-parts",
+				"type": "github"
+			},
+			"to": {
+				"owner": "hercules-ci",
+				"repo": "flake-parts",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "hyprwm",
+				"repo": "hyprland",
+				"type": "github"
+			},
+			"to": {
+				"owner": "hyprwm",
+				"repo": "hyprland",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "Hythera",
+				"repo": "nix-waterfox",
+				"type": "github"
+			},
+			"to": {
+				"owner": "Hythera",
+				"repo": "nix-waterfox",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "Infinidoge",
+				"repo": "nix-minecraft",
+				"type": "github"
+			},
+			"to": {
+				"owner": "Infinidoge",
+				"repo": "nix-minecraft",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "in-a-dil-emma",
+				"repo": "declarative-flatpak",
+				"type": "github"
+			},
+			"to": {
+				"owner": "in-a-dil-emma",
+				"repo": "declarative-flatpak",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "input-output-hk",
+				"repo": "haskell.nix",
+				"type": "github"
+			},
+			"to": {
+				"owner": "input-output-hk",
+				"repo": "haskell.nix",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "jj-vcs",
+				"repo": "jj",
+				"type": "github"
+			},
+			"to": {
+				"owner": "jj-vcs",
+				"repo": "jj",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "jonahbron",
+				"repo": "micropython-builder",
+				"type": "github"
+			},
+			"to": {
+				"owner": "jonahbron",
+				"repo": "micropython-builder",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "juliosueiras-nix",
+				"repo": "nix-security",
+				"type": "github"
+			},
+			"to": {
+				"owner": "juliosueiras-nix",
+				"repo": "nix-security",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "kashw2",
+				"repo": "bitbucket-runner-nix",
+				"type": "github"
+			},
+			"to": {
+				"owner": "kashw2",
+				"repo": "bitbucket-runner-nix",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "linyinfeng",
+				"repo": "angrr",
+				"type": "github"
+			},
+			"to": {
+				"owner": "linyinfeng",
+				"repo": "angrr",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "lnbits",
+				"repo": "lnbits-legend",
+				"type": "github"
+			},
+			"to": {
+				"owner": "lnbits",
+				"repo": "lnbits-legend",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "matthewcroughan",
+				"repo": "filestash-nix",
+				"type": "github"
+			},
+			"to": {
+				"owner": "matthewcroughan",
+				"repo": "filestash-nix",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "Mic92",
+				"repo": "sops-nix",
+				"type": "github"
+			},
+			"to": {
+				"owner": "Mic92",
+				"repo": "sops-nix",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "mirrexagon",
+				"repo": "nixpkgs-esp-dev",
+				"type": "github"
+			},
+			"to": {
+				"owner": "mirrexagon",
+				"repo": "nixpkgs-esp-dev",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "ngi-nix",
+				"repo": "lightmeter",
+				"type": "github"
+			},
+			"to": {
+				"owner": "ngi-nix",
+				"repo": "lightmeter",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "ngi-nix",
+				"repo": "offen",
+				"type": "github"
+			},
+			"to": {
+				"owner": "ngi-nix",
+				"repo": "offen",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "ngi-nix",
+				"repo": "openpgp-ca",
+				"type": "github"
+			},
+			"to": {
+				"owner": "ngi-nix",
+				"repo": "openpgp-ca",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "ngi-nix",
+				"repo": "weblate",
+				"type": "github"
+			},
+			"to": {
+				"owner": "ngi-nix",
+				"repo": "weblate",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "nix-community",
+				"repo": "autofirma-nix",
+				"type": "github"
+			},
+			"to": {
+				"owner": "nix-community",
+				"repo": "autofirma-nix",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "nix-community",
+				"repo": "fenix",
+				"type": "github"
+			},
+			"to": {
+				"owner": "nix-community",
+				"repo": "fenix",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "nix-community",
+				"repo": "home-manager",
+				"type": "github"
+			},
+			"to": {
+				"owner": "nix-community",
+				"repo": "home-manager",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "nix-community",
+				"repo": "nixvim",
+				"type": "github"
+			},
+			"to": {
+				"owner": "nix-community",
+				"repo": "nixvim",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "nix-community",
+				"repo": "nix-vscode-extensions",
+				"type": "github"
+			},
+			"to": {
+				"owner": "nix-community",
+				"repo": "nix-vscode-extensions",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "nix-systems",
+				"repo": "aarch64-darwin",
+				"type": "github"
+			},
+			"to": {
+				"owner": "nix-systems",
+				"repo": "aarch64-darwin",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "nix-systems",
+				"repo": "aarch64-linux",
+				"type": "github"
+			},
+			"to": {
+				"owner": "nix-systems",
+				"repo": "aarch64-linux",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "nix-systems",
+				"repo": "current-system",
+				"type": "github"
+			},
+			"to": {
+				"owner": "nix-systems",
+				"repo": "current-system",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "nix-systems",
+				"repo": "default",
+				"type": "github"
+			},
+			"to": {
+				"owner": "nix-systems",
+				"repo": "default",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "nix-systems",
+				"repo": "default-darwin",
+				"type": "github"
+			},
+			"to": {
+				"owner": "nix-systems",
+				"repo": "default-darwin",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "nix-systems",
+				"repo": "default-linux",
+				"type": "github"
+			},
+			"to": {
+				"owner": "nix-systems",
+				"repo": "default-linux",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "nix-systems",
+				"repo": "flake-outputs",
+				"type": "github"
+			},
+			"to": {
+				"owner": "nix-systems",
+				"repo": "flake-outputs",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "nix-systems",
+				"repo": "riscv64-linux",
+				"type": "github"
+			},
+			"to": {
+				"owner": "nix-systems",
+				"repo": "riscv64-linux",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "nix-systems",
+				"repo": "x86_64-darwin",
+				"type": "github"
+			},
+			"to": {
+				"owner": "nix-systems",
+				"repo": "x86_64-darwin",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "nix-systems",
+				"repo": "x86_64-linux",
+				"type": "github"
+			},
+			"to": {
+				"owner": "nix-systems",
+				"repo": "x86_64-linux",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "numtide",
+				"repo": "flake-utils",
+				"type": "github"
+			},
+			"to": {
+				"owner": "numtide",
+				"repo": "flake-utils",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "PaddiM8",
+				"repo": "kalker",
+				"type": "github"
+			},
+			"to": {
+				"owner": "PaddiM8",
+				"repo": "kalker",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "PrismLauncher",
+				"repo": "PrismLauncher",
+				"type": "github"
+			},
+			"to": {
+				"owner": "PrismLauncher",
+				"repo": "PrismLauncher",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "pyproject-nix",
+				"repo": "pyproject.nix",
+				"type": "github"
+			},
+			"to": {
+				"owner": "pyproject-nix",
+				"repo": "pyproject.nix",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "pyproject-nix",
+				"repo": "uv2nix",
+				"type": "github"
+			},
+			"to": {
+				"owner": "pyproject-nix",
+				"repo": "uv2nix",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "ryantm",
+				"repo": "agenix",
+				"type": "github"
+			},
+			"to": {
+				"owner": "ryantm",
+				"repo": "agenix",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "snowfallorg",
+				"repo": "drift",
+				"type": "github"
+			},
+			"to": {
+				"owner": "snowfallorg",
+				"repo": "drift",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "snowfallorg",
+				"repo": "frost",
+				"type": "github"
+			},
+			"to": {
+				"owner": "snowfallorg",
+				"repo": "frost",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "snowfallorg",
+				"repo": "icehouse",
+				"type": "github"
+			},
+			"to": {
+				"owner": "snowfallorg",
+				"repo": "icehouse",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "snowfallorg",
+				"repo": "icicle",
+				"type": "github"
+			},
+			"to": {
+				"owner": "snowfallorg",
+				"repo": "icicle",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "snowfallorg",
+				"repo": "lib",
+				"type": "github"
+			},
+			"to": {
+				"owner": "snowfallorg",
+				"repo": "lib",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "snowfallorg",
+				"repo": "nix-data",
+				"type": "github"
+			},
+			"to": {
+				"owner": "snowfallorg",
+				"repo": "nix-data",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "snowfallorg",
+				"repo": "nix-editor",
+				"type": "github"
+			},
+			"to": {
+				"owner": "snowfallorg",
+				"repo": "nix-editor",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "snowfallorg",
+				"repo": "nix-software-center",
+				"type": "github"
+			},
+			"to": {
+				"owner": "snowfallorg",
+				"repo": "nix-software-center",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "snowfallorg",
+				"repo": "nixos-conf-editor",
+				"type": "github"
+			},
+			"to": {
+				"owner": "snowfallorg",
+				"repo": "nixos-conf-editor",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "snowfallorg",
+				"repo": "snow",
+				"type": "github"
+			},
+			"to": {
+				"owner": "snowfallorg",
+				"repo": "snow",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "snowfallorg",
+				"repo": "templates",
+				"type": "github"
+			},
+			"to": {
+				"owner": "snowfallorg",
+				"repo": "templates",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "snowfallorg",
+				"repo": "thaw",
+				"type": "github"
+			},
+			"to": {
+				"owner": "snowfallorg",
+				"repo": "thaw",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "snowfallorg",
+				"repo": "whats-in-my-store",
+				"type": "github"
+			},
+			"to": {
+				"owner": "snowfallorg",
+				"repo": "whats-in-my-store",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "stackbuilders",
+				"repo": "nixpkgs-terraform",
+				"type": "github"
+			},
+			"to": {
+				"owner": "stackbuilders",
+				"repo": "nixpkgs-terraform",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "StardustXR",
+				"repo": "telescope",
+				"type": "github"
+			},
+			"to": {
+				"owner": "StardustXR",
+				"repo": "telescope",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "surrealdb",
+				"repo": "surrealdb",
+				"type": "github"
+			},
+			"to": {
+				"owner": "surrealdb",
+				"repo": "surrealdb",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "Svenum",
+				"repo": "Solaar-Flake",
+				"type": "github"
+			},
+			"to": {
+				"owner": "Svenum",
+				"repo": "Solaar-Flake",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "synalice",
+				"repo": "kconfq",
+				"type": "github"
+			},
+			"to": {
+				"owner": "synalice",
+				"repo": "kconfq",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "TraceMachina",
+				"repo": "nativelink",
+				"type": "github"
+			},
+			"to": {
+				"owner": "TraceMachina",
+				"repo": "nativelink",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "utensils",
+				"repo": "mcp-nixos",
+				"type": "github"
+			},
+			"to": {
+				"owner": "utensils",
+				"repo": "mcp-nixos",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "viperML",
+				"repo": "wrapper-manager",
+				"type": "github"
+			},
+			"to": {
+				"owner": "viperML",
+				"repo": "wrapper-manager",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "vorburger",
+				"repo": "bazel-nix",
+				"type": "github"
+			},
+			"to": {
+				"owner": "vorburger",
+				"repo": "bazel-nix",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "Wazzaps",
+				"repo": "fingerpaint",
+				"type": "github"
+			},
+			"to": {
+				"owner": "Wazzaps",
+				"repo": "fingerpaint",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "YaLTeR",
+				"repo": "niri",
+				"type": "github"
+			},
+			"to": {
+				"owner": "YaLTeR",
+				"repo": "niri",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "yusdacra",
+				"repo": "nix-cargo-integration",
+				"type": "github"
+			},
+			"to": {
+				"owner": "yusdacra",
+				"repo": "nix-cargo-integration",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "yusdacra",
+				"repo": "rust-nix-templater",
+				"type": "github"
+			},
+			"to": {
+				"owner": "yusdacra",
+				"repo": "rust-nix-templater",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "zed-industries",
+				"repo": "zed",
+				"type": "github"
+			},
+			"to": {
+				"owner": "zed-industries",
+				"repo": "zed",
+				"type": "github"
+			}
+		},
+		{
+			"from": {
+				"owner": "pi-lar",
+				"repo": "neuropil",
+				"type": "gitlab"
+			},
+			"to": {
+				"owner": "pi-lar",
+				"repo": "neuropil",
+				"type": "gitlab"
+			}
+		},
+		{
+			"from": {
+				"owner": "simple-nixos-mailserver",
+				"repo": "nixos-mailserver",
+				"type": "gitlab"
+			},
+			"to": {
+				"owner": "simple-nixos-mailserver",
+				"repo": "nixos-mailserver",
+				"type": "gitlab"
+			}
+		},
+		{
+			"from": {
+				"owner": "~alexdavid",
+				"repo": "jail.nix",
+				"type": "sourcehut"
+			},
+			"to": {
+				"owner": "~alexdavid",
+				"repo": "jail.nix",
+				"type": "sourcehut"
+			}
+		},
+		{
+			"from": {
+				"owner": "~kerstin",
+				"repo": "sway-timetracker",
+				"type": "sourcehut"
+			},
+			"to": {
+				"owner": "~kerstin",
+				"repo": "sway-timetracker",
+				"type": "sourcehut"
+			}
+		},
+		{
+			"from": {
+				"owner": "~munksgaard",
+				"repo": "geomyidae-flake",
+				"type": "sourcehut"
+			},
+			"to": {
+				"owner": "~munksgaard",
+				"repo": "geomyidae-flake",
+				"type": "sourcehut"
+			}
+		}
+	],
+	"version": 2
+}
