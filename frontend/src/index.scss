@@ -1082,6 +1082,19 @@ a:focus-visible {
   &.selected > span:last-child {
     display: inline-block;
   }
+
+  // Nested inside the source label so it travels with the label text
+  // rather than affecting the flex layout of the tab row.
+  .experimental-badge {
+    margin-left: 0.3em;
+  }
+
+  // The selected-tab background is already saturated blue; flip the
+  // experimental badge to read against it instead of blending in.
+  &.selected .experimental-badge {
+    background: var(--search-sidebar-selected-link-color);
+    color: var(--search-sidebar-selected-link-background);
+  }
 }
 
 // The Name code block in the expanded option view hosts a floating copy

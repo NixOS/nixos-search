@@ -229,6 +229,16 @@ viewSourceTab activeSource count source =
         id =
             Route.optionSourceId source
 
+        labelChildren =
+            text (Route.optionSourceLabel source)
+                :: (case source of
+                        Route.ModularServiceOptions ->
+                            [ span [ class "label label-info experimental-badge" ] [ text "Experimental" ] ]
+
+                        _ ->
+                            []
+                   )
+
         badge =
             case count of
                 Just n ->
@@ -247,7 +257,7 @@ viewSourceTab activeSource count source =
             , href "#"
             , Html.Events.onClick (SearchMsg (Search.SetActiveOptionSource source))
             ]
-            (span [] [ text (Route.optionSourceLabel source) ] :: badge)
+            (span [ class "source-label" ] labelChildren :: badge)
         ]
 
 
