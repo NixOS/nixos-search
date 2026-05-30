@@ -181,6 +181,46 @@ pub fn get_nixpkgs_services(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
     Ok(attr_set.into_iter().map(NixpkgsEntry::Service).collect())
 }
 
+/// Home-manager flake reference matching a given nixpkgs channel. Stable
+/// nixpkgs channels (`nixos-XX.YY`) get the corresponding `release-XX.YY`
+/// branch in `nix-community/home-manager`; `nixos-unstable` gets `master`.
+fn home_manager_flake_ref(nixpkgs: &Source) -> String {
+    let base = "github:nix-community/home-manager";
+    match nixpkgs {
+        Source::Nixpkgs(Nixpkgs { channel, .. }) if channel != "unstable" => {
+            format!("{base}/release-{channel}")
+        }
+        _ => base.to_string(),
+    }
+}
+
+pub fn get_home_manager_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
+    let hm_flake_ref = home_manager_flake_ref(nixpkgs);
+    let mut command = Command::with_args("nix", &["eval", "--json", "--no-write-lock-file"]);
+    command.add_arg_pair("-f", super::EXTRACT_SCRIPT.clone());
+    command.add_arg_pair("-I", format!("nixpkgs={}", nixpkgs.to_flake_ref()));
+    command.add_args(["--override-flake", "input-flake", &hm_flake_ref].iter());
+    command.add_arg("home-manager-options");
+
+    command.enable_capture();
+    command.log_to = LogTo::Log;
+    command.log_output_on_error = true;
+
+    let cow = command
+        .run()
+        .with_context(|| "Failed to gather information about home-manager options")?;
+
+    let output = &*cow.stdout_string_lossy();
+    let de = &mut serde_json::Deserializer::from_str(output);
+    let attr_set: Vec<NixOption> = serde_path_to_error::deserialize(de)
+        .with_context(|| "Could not parse home-manager options")?;
+
+    Ok(attr_set
+        .into_iter()
+        .map(NixpkgsEntry::HomeManagerOption)
+        .collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
