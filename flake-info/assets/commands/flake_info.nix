@@ -299,8 +299,9 @@ let
     dedup raw;
 
   # Extract options from home-manager's module system.
-  # Only produces output when `resolved` points to a home-manager flake
-  # (detected by the presence of `modules/modules.nix`).
+  # Evaluated separately during the nixpkgs channel import (via
+  # `--override-flake input-flake github:nix-community/home-manager`) so that
+  # home-manager options land in the channel index alongside NixOS options.
   readHomeManagerOptions =
     let
       # Home-manager modules use `lib.hm.*` helpers; extend nixpkgs' lib with
@@ -518,10 +519,18 @@ rec {
   options = readFlakeOptions;
   home-manager-options =
     let
-      hasHmModules = builtins.tryEval (builtins.pathExists "${resolved}/modules/modules.nix");
+      # Require both `modules/modules.nix` and `modules/lib/stdlib-extended.nix`
+      # to avoid false positives. Other flakes (e.g. `nix-bitcoin`) ship a
+      # `modules/modules.nix` that is unrelated to home-manager; only
+      # home-manager itself also provides the `stdlib-extended.nix` helper
+      # that `readHomeManagerOptions` imports.
+      isHomeManager = builtins.tryEval (
+        builtins.pathExists "${resolved}/modules/modules.nix"
+        && builtins.pathExists "${resolved}/modules/lib/stdlib-extended.nix"
+      );
     in
-    if hasHmModules.success && hasHmModules.value then readHomeManagerOptions else [ ];
-  all = packages ++ apps ++ options ++ home-manager-options;
+    if isHomeManager.success && isHomeManager.value then readHomeManagerOptions else [ ];
+  all = packages ++ apps ++ options;
 
   nixos-options = builtins.filter (opt: !(isServiceOption opt)) nixpkgsAllOpts;
 

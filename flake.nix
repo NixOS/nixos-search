@@ -9,10 +9,10 @@
   };
 
   inputs = {
-    nixpkgs.url = "nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     # https://github.com/nix-community/npmlock2nix/blob/master/nix/sources.json
-    nixpkgs-npmlock2nix.url = "nixpkgs/c5ed8beb478a8ca035f033f659b60c89500a3034";
+    nixpkgs-npmlock2nix.url = "github:NixOS/nixpkgs/c5ed8beb478a8ca035f033f659b60c89500a3034";
     npmlock2nix.url = "github:nix-community/npmlock2nix";
     npmlock2nix.flake = false;
     nixos-infra.url = "github:NixOS/infra";

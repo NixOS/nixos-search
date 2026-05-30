@@ -117,6 +117,7 @@ lazy_static! {
                         "url": {"type": "text"}},
                 },
                 "package_license_set": {"type": "keyword"},
+                "package_license_expression": {"type": "object", "enabled": false},
                 "package_maintainers": {
                     "type": "nested",
                     "properties": {

@@ -6,9 +6,11 @@ module Route exposing
     , SearchType(..)
     , allOptionSources
     , allTypes
+    , defaultOptionSource
     , fromUrl
     , href
     , optionSourceDocType
+    , optionSourceFromId
     , optionSourceId
     , optionSourceLabel
     , routeToString
@@ -20,7 +22,6 @@ import Dict
 import Html
 import Html.Attributes
 import Maybe.Extra
-import Set exposing (Set)
 import Url
 
 
@@ -37,7 +38,7 @@ type alias SearchArgs =
     , buckets : Maybe String
     , sort : Maybe String
     , type_ : Maybe SearchType
-    , excludedOptionSources : Set String
+    , activeOptionSource : OptionSource
     }
 
 
@@ -48,14 +49,22 @@ Add a new variant here (plus its cases below) to expose it to the page.
 type OptionSource
     = NixosOptions
     | ModularServiceOptions
+    | HomeManagerOptionSource
 
 
 allOptionSources : List OptionSource
 allOptionSources =
-    [ NixosOptions, ModularServiceOptions ]
+    [ NixosOptions, ModularServiceOptions, HomeManagerOptionSource ]
 
 
-{-| Stable identifier used in URL parameter names and the excluded-sources set.
+{-| Default tab when no source is specified in the URL.
+-}
+defaultOptionSource : OptionSource
+defaultOptionSource =
+    NixosOptions
+
+
+{-| Stable identifier used in the `source=` URL parameter.
 -}
 optionSourceId : OptionSource -> String
 optionSourceId source =
@@ -65,6 +74,19 @@ optionSourceId source =
 
         ModularServiceOptions ->
             "modular_service"
+
+        HomeManagerOptionSource ->
+            "home_manager"
+
+
+{-| Inverse of `optionSourceId`. Returns `Nothing` for unknown identifiers
+so URL parsing can fall back to the default tab.
+-}
+optionSourceFromId : String -> Maybe OptionSource
+optionSourceFromId id =
+    allOptionSources
+        |> List.filter (\s -> optionSourceId s == id)
+        |> List.head
 
 
 {-| Elasticsearch document `type` field value.
@@ -78,6 +100,9 @@ optionSourceDocType source =
         ModularServiceOptions ->
             "service"
 
+        HomeManagerOptionSource ->
+            "home-manager-option"
+
 
 {-| Human-readable checkbox label.
 -}
@@ -90,10 +115,8 @@ optionSourceLabel source =
         ModularServiceOptions ->
             "Modular services"
 
-
-optionSourceUrlParam : OptionSource -> String
-optionSourceUrlParam source =
-    "include_" ++ optionSourceId source ++ "_options"
+        HomeManagerOptionSource ->
+            "nix-community/home-manager"
 
 
 type SearchType
@@ -160,9 +183,54 @@ type alias SearchRoute =
     SearchArgs -> Route
 
 
+fragmentParameters : Maybe String -> Dict.Dict String String
+fragmentParameters maybeFragment =
+    case maybeFragment of
+        Nothing ->
+            Dict.empty
+
+        Just frag ->
+            frag
+                |> String.split "&"
+                |> List.filterMap
+                    (\pair ->
+                        case String.indexes "=" pair of
+                            [] ->
+                                Nothing
+
+                            idx :: _ ->
+                                let
+                                    k =
+                                        String.left idx pair
+
+                                    v =
+                                        String.dropLeft (idx + 1) pair
+                                in
+                                Just ( k, Maybe.withDefault v (Url.percentDecode v) )
+                    )
+                |> Dict.fromList
+
+
+fragmentToString : Dict.Dict String String -> Maybe String
+fragmentToString dict =
+    if Dict.isEmpty dict then
+        Nothing
+
+    else
+        dict
+            |> Dict.toList
+            |> List.map (\( k, v ) -> k ++ "=" ++ Url.percentEncode v)
+            |> String.join "&"
+            |> Just
+
+
 searchQueryParser : AppUrl -> SearchArgs
 searchQueryParser appUrl =
     let
+        fragmentDict : Dict.Dict String String
+        fragmentDict =
+            fragmentParameters appUrl.fragment
+
         string : String -> Maybe String
         string k =
             case Dict.get k appUrl.queryParameters of
@@ -183,24 +251,22 @@ searchQueryParser appUrl =
     in
     { query = string "query"
     , channel = string "channel"
-    , show = string "show"
+    , show =
+        case Dict.get "show" fragmentDict of
+            Just v ->
+                Just v
+
+            Nothing ->
+                string "show"
     , from = int "from"
     , size = int "size"
     , buckets = string "buckets"
     , sort = string "sort"
     , type_ = Maybe.andThen searchTypeFromString (string "type")
-    , excludedOptionSources =
-        -- Each source defaults to included; URL explicitly says "0" to exclude.
-        allOptionSources
-            |> List.filterMap
-                (\source ->
-                    if string (optionSourceUrlParam source) == Just "0" then
-                        Just (optionSourceId source)
-
-                    else
-                        Nothing
-                )
-            |> Set.fromList
+    , activeOptionSource =
+        string "source"
+            |> Maybe.andThen optionSourceFromId
+            |> Maybe.withDefault defaultOptionSource
     }
 
 
@@ -216,29 +282,33 @@ searchArgsToUrl args =
             Maybe.map (\i -> ( k, [ String.fromInt i ] )) v
     in
     [ string "channel" args.channel
-    , string "show" args.show
     , int "from" args.from
     , int "size" args.size
     , string "buckets" args.buckets
     , string "sort" args.sort
     , string "type" <| Maybe.map searchTypeToString args.type_
     , string "query" args.query
-    ]
-        ++ List.map
-            (\source ->
-                let
-                    value =
-                        if Set.member (optionSourceId source) args.excludedOptionSources then
-                            "0"
+    , string "source"
+        (if args.activeOptionSource == defaultOptionSource then
+            -- Keep the default tab off the URL for clean bookmarks.
+            Nothing
 
-                        else
-                            "1"
-                in
-                string (optionSourceUrlParam source) (Just value)
-            )
-            allOptionSources
+         else
+            Just (optionSourceId args.activeOptionSource)
+        )
+    ]
         |> Maybe.Extra.values
         |> Dict.fromList
+
+
+searchArgsToFragment : SearchArgs -> Maybe String
+searchArgsToFragment args =
+    case args.show of
+        Nothing ->
+            Nothing
+
+        Just v ->
+            fragmentToString (Dict.fromList [ ( "show", v ) ])
 
 
 type Route
@@ -289,21 +359,21 @@ href targetRoute =
 routeToString : Route -> String
 routeToString route =
     let
-        ( path, queryParameters ) =
+        ( path, queryParameters, fragment ) =
             case route of
                 Home ->
-                    ( [], Dict.empty )
+                    ( [], Dict.empty, Nothing )
 
                 NotFound ->
-                    ( [ "not-found" ], Dict.empty )
+                    ( [ "not-found" ], Dict.empty, Nothing )
 
                 Packages searchArgs ->
-                    ( [ "packages" ], searchArgsToUrl searchArgs )
+                    ( [ "packages" ], searchArgsToUrl searchArgs, searchArgsToFragment searchArgs )
 
                 Options searchArgs ->
-                    ( [ "options" ], searchArgsToUrl searchArgs )
+                    ( [ "options" ], searchArgsToUrl searchArgs, searchArgsToFragment searchArgs )
 
                 Flakes searchArgs ->
-                    ( [ "flakes" ], searchArgsToUrl searchArgs )
+                    ( [ "flakes" ], searchArgsToUrl searchArgs, searchArgsToFragment searchArgs )
     in
-    AppUrl.toString { path = path, queryParameters = queryParameters, fragment = Nothing }
+    AppUrl.toString { path = path, queryParameters = queryParameters, fragment = fragment }
