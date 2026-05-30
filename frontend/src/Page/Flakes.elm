@@ -66,7 +66,7 @@ init searchArgs defaultNixOSChannel nixosChannels model =
     case searchType of
         OptionSearch ->
             Tuple.mapBoth OptionModel (Cmd.map OptionsMsg) <|
-                Page.Options.init searchArgs defaultNixOSChannel nixosChannels <|
+                Page.Options.init searchArgs defaultNixOSChannel nixosChannels False <|
                     case model of
                         Just (OptionModel model_) ->
                             Just model_
@@ -76,7 +76,7 @@ init searchArgs defaultNixOSChannel nixosChannels model =
 
         PackageSearch ->
             Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg) <|
-                Page.Packages.init searchArgs defaultNixOSChannel nixosChannels <|
+                Page.Packages.init searchArgs defaultNixOSChannel nixosChannels False <|
                     case model of
                         Just (PackagesModel model_) ->
                             Just model_
@@ -115,6 +115,9 @@ update navKey msg model nixosChannels =
                                 nixosChannels
                     in
                     ( newModel, Cmd.map Page.Options.SearchMsg newCmd ) |> Tuple.mapBoth OptionModel (Cmd.map OptionsMsg)
+
+                Page.Options.CopyOptionName name ->
+                    ( OptionModel model_, Page.Options.copyToClipboard name )
 
         ( PackagesMsg msg_, PackagesModel model_ ) ->
             case msg_ of
@@ -186,7 +189,7 @@ view nixosChannels model =
     in
     case model of
         OptionModel model_ ->
-            Html.map OptionsMsg <| mkBody "3rd-party flake options" model_ Page.Options.viewSuccess Page.Options.viewBuckets Page.Options.SearchMsg
+            Html.map OptionsMsg <| mkBody "3rd-party flake options" model_ (Page.Options.viewSuccess model_.activeOptionSource) Page.Options.viewBuckets Page.Options.SearchMsg
 
         PackagesModel model_ ->
             Html.map PackagesMsg <| mkBody "3rd-party flake packages" model_ Page.Packages.viewSuccess Page.Packages.viewBuckets Page.Packages.SearchMsg
@@ -240,7 +243,7 @@ makeRequestBody : SearchType -> String -> Int -> Int -> Maybe String -> Search.S
 makeRequestBody searchType query from size maybeBuckets sort =
     case searchType of
         OptionSearch ->
-            Page.Options.makeRequestBody query from size sort
+            Page.Options.makeRequestBody [ "option" ] query from size sort
 
         PackageSearch ->
             Page.Packages.makeRequestBody query from size maybeBuckets sort

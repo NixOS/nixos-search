@@ -126,10 +126,53 @@ let
       )
     ) apps;
 
+  # Replace functions by the string <function>
+  substFunction =
+    x:
+    if builtins.isAttrs x then
+      lib.mapAttrs (_: substFunction) x
+    else if builtins.isList x then
+      map substFunction x
+    else if lib.isFunction x then
+      "function"
+    else
+      x;
+
+  # Strip store-path prefix from a declaration path
+  mkDeclaration =
+    decl:
+    let
+      discard = lib.concatStringsSep "/" (lib.take 4 (lib.splitString "/" decl)) + "/";
+      path = if lib.hasPrefix builtins.storeDir decl then lib.removePrefix discard decl else decl;
+    in
+    path;
+
+  # Clean up a raw option attrset for indexing
+  cleanUpOption =
+    extraAttrs: opt:
+    let
+      applyOnAttr = n: f: lib.optionalAttrs (builtins.hasAttr n opt) { ${n} = f opt.${n}; };
+    in
+    opt
+    // {
+      entry_type = extraAttrs.entry_type or "option";
+    }
+    // applyOnAttr "default" substFunction
+    // applyOnAttr "example" substFunction
+    // applyOnAttr "type" substFunction
+    // applyOnAttr "declarations" (map mkDeclaration)
+    // extraAttrs;
+
+  # Filter for user-visible, non-internal options
+  filterOptions = opts: lib.filter (x: x.visible && !x.internal && lib.head x.loc != "_module") opts;
+
   readNixOSOptions =
+    {
+      module,
+      modulePath ? null,
+    }:
     let
       declarations =
-        module:
         (lib.evalModules {
           modules = (if lib.isList module then module else [ module ]) ++ [
             (
@@ -152,53 +195,71 @@ let
           };
         }).options;
 
-      cleanUpOption =
-        extraAttrs: opt:
-        let
-          applyOnAttr = n: f: lib.optionalAttrs (builtins.hasAttr n opt) { ${n} = f opt.${n}; };
-          mkDeclaration =
-            decl:
-            let
-              discard = lib.concatStringsSep "/" (lib.take 4 (lib.splitString "/" decl)) + "/";
-              path = if lib.hasPrefix builtins.storeDir decl then lib.removePrefix discard decl else decl;
-            in
-            path;
-
-          # Replace functions by the string <function>
-          substFunction =
-            x:
-            if builtins.isAttrs x then
-              lib.mapAttrs (_: substFunction) x
-            else if builtins.isList x then
-              map substFunction x
-            else if lib.isFunction x then
-              "function"
-            else
-              x;
-        in
-        opt
-        // {
-          entry_type = "option";
-        }
-        // applyOnAttr "default" substFunction
-        // applyOnAttr "example" substFunction # (_: { __type = "function"; })
-        // applyOnAttr "type" substFunction
-        // applyOnAttr "declarations" (map mkDeclaration)
-        // extraAttrs;
-    in
-    {
-      module,
-      modulePath ? null,
-    }:
-    let
-      opts = lib.optionAttrSetToDocList (declarations module);
+      opts = lib.optionAttrSetToDocList declarations;
       extraAttrs = lib.optionalAttrs (modulePath != null) {
         flake = modulePath;
       };
     in
-    map (cleanUpOption extraAttrs) (
-      lib.filter (x: x.visible && !x.internal && lib.head x.loc != "_module") opts
-    );
+    map (cleanUpOption extraAttrs) (filterOptions opts);
+
+  # Parses the angle-bracket prefix from modular service option names to extract
+  # service_package and service_module, strips the prefix, and tags as entry_type = "service".
+  parseServiceOption =
+    opt:
+    let
+      # Match: <imports = [ pkgs.PKG.services.MODULE ]>.OPTNAME
+      # Group 1: package attrname, group 2: module name, group 3: remaining option path
+      m = builtins.match ".*imports.*pkgs\\.([^.]+)\\.services\\.([^ ]+).*>\\.(.*)" opt.name;
+    in
+    if m != null then
+      opt
+      // {
+        entry_type = "service";
+        name = builtins.elemAt m 2;
+        service_package = builtins.elemAt m 0;
+        service_module = builtins.elemAt m 1;
+      }
+    else
+      # Fallback: keep as-is but still tag as service
+      opt // { entry_type = "service"; };
+
+  # Deduplicate service options that share the same underlying module. When
+  # several packages re-export the same service module (e.g. php, php82..php85
+  # all point to the same pkgs/development/interpreters/php/service.nix), we
+  # end up with identical option entries differing only by service_package.
+  # Group by (declarations, parsed name) and keep a single entry per group,
+  # with a canonical service_package and the full list in service_packages.
+  deduplicateServices =
+    opts:
+    let
+      keyOf =
+        opt:
+        builtins.toJSON [
+          (opt.declarations or [ ])
+          (opt.name or "")
+          (opt.service_module or "")
+        ];
+      addToGroup =
+        acc: opt:
+        let
+          k = keyOf opt;
+        in
+        acc // { ${k} = (acc.${k} or [ ]) ++ [ opt ]; };
+      grouped = lib.foldl' addToGroup { } opts;
+      mergeGroup =
+        entries:
+        let
+          # Sort packages alphabetically; the shortest/unversioned name (e.g.
+          # "php") naturally sorts before versioned variants ("php82").
+          packages = lib.sort (a: b: a < b) (lib.unique (map (e: e.service_package or "") entries));
+        in
+        (builtins.head entries)
+        // {
+          service_package = builtins.head packages;
+          service_packages = packages;
+        };
+    in
+    lib.mapAttrsToList (_: mergeGroup) grouped;
 
   readFlakeOptions =
     let
@@ -219,10 +280,65 @@ let
         module = resolved.nixosModule;
         modulePath = [ flake ];
       });
+
+      raw =
+        # We assume that `nixosModules` includes `nixosModule` when there
+        # are multiple modules
+        if nixosModulesOpts != [ ] then nixosModulesOpts else nixosModuleOpts;
+
+      # When a flake re-exports the same module under multiple names
+      # (e.g. `default` and `home-manager`), deduplicate by option name,
+      # keeping the first occurrence.
+      dedup =
+        opts:
+        let
+          addOnce = acc: opt: if acc ? ${opt.name} then acc else acc // { ${opt.name} = opt; };
+        in
+        lib.attrValues (lib.foldl' addOnce { } opts);
     in
-    # We assume that `nixosModules` includes `nixosModule` when there
-    # are multiple modules
-    if nixosModulesOpts != [ ] then nixosModulesOpts else nixosModuleOpts;
+    dedup raw;
+
+  # Extract options from home-manager's module system.
+  # Evaluated separately during the nixpkgs channel import (via
+  # `--override-flake input-flake github:nix-community/home-manager`) so that
+  # home-manager options land in the channel index alongside NixOS options.
+  readHomeManagerOptions =
+    let
+      # Home-manager modules use `lib.hm.*` helpers; extend nixpkgs' lib with
+      # HM's custom library so module evaluation does not fail.
+      hmLib = import "${resolved}/modules/lib/stdlib-extended.nix" lib;
+
+      hmModulesPath = "${resolved}/modules/modules.nix";
+      hmModuleList =
+        let
+          fn = import hmModulesPath;
+        in
+        if builtins.isFunction fn then
+          fn {
+            lib = hmLib;
+            pkgs = nixpkgs;
+          }
+        else
+          fn;
+
+      declarations =
+        (hmLib.evalModules {
+          modules = hmModuleList ++ [
+            (
+              { lib, ... }:
+              {
+                _module.check = lib.mkForce false;
+              }
+            )
+          ];
+          specialArgs = {
+            pkgs = nixpkgs;
+          };
+        }).options;
+
+      opts = hmLib.optionAttrSetToDocList declarations;
+    in
+    map (cleanUpOption { entry_type = "home-manager-option"; }) (filterOptions opts);
 
   read = reader: set: lib.flatten (lib.attrValues (withSystem reader set));
 
@@ -373,6 +489,27 @@ let
       }
     ) { } list;
 
+  # nixpkgs-specific, doesn't use the flake argument
+  nixpkgsBaseModules = import <nixpkgs/nixos/modules/module-list.nix> ++ [
+    <nixpkgs/nixos/modules/virtualisation/qemu-vm.nix>
+    { nixpkgs.hostPlatform = "x86_64-linux"; }
+  ];
+
+  # Use nixpkgs' hand-maintained modular services list rather than walking all
+  # `pkgs` attributes (which would force shallow evaluation of every package
+  # and is too expensive -- see NixOS/nixpkgs#509117).
+  serviceDocModules =
+    (import <nixpkgs/nixos/modules/misc/documentation/modular-services.nix> {
+      inherit lib;
+      pkgs = nixpkgs;
+    }).documentation.nixos.extraModules;
+
+  # Evaluate base + service documentation modules together (service modules
+  # depend on base option types). Then partition: options whose name starts
+  # with "<" come from modular services.
+  nixpkgsAllOpts = readNixOSOptions { module = nixpkgsBaseModules ++ serviceDocModules; };
+  isServiceOption = opt: lib.hasPrefix "<" opt.name;
+
 in
 
 rec {
@@ -380,13 +517,44 @@ rec {
   packages = lib.attrValues (collectSystems allPackageSets.packages packages');
   apps = lib.attrValues (collectSystems { } apps'); # apps don't need fallback evaluation
   options = readFlakeOptions;
+  home-manager-options =
+    let
+      # Require both `modules/modules.nix` and `modules/lib/stdlib-extended.nix`
+      # to avoid false positives. Other flakes (e.g. `nix-bitcoin`) ship a
+      # `modules/modules.nix` that is unrelated to home-manager; only
+      # home-manager itself also provides the `stdlib-extended.nix` helper
+      # that `readHomeManagerOptions` imports.
+      isHomeManager = builtins.tryEval (
+        builtins.pathExists "${resolved}/modules/modules.nix"
+        && builtins.pathExists "${resolved}/modules/lib/stdlib-extended.nix"
+      );
+    in
+    if isHomeManager.success && isHomeManager.value then readHomeManagerOptions else [ ];
   all = packages ++ apps ++ options;
 
-  # nixpkgs-specific, doesn't use the flake argument
-  nixos-options = readNixOSOptions {
-    module = import <nixpkgs/nixos/modules/module-list.nix> ++ [
-      <nixpkgs/nixos/modules/virtualisation/qemu-vm.nix>
-      { nixpkgs.hostPlatform = "x86_64-linux"; }
-    ];
-  };
+  nixos-options = builtins.filter (opt: !(isServiceOption opt)) nixpkgsAllOpts;
+
+  nixos-services =
+    let
+      parsed = map parseServiceOption (builtins.filter isServiceOption nixpkgsAllOpts);
+      # Filter out top-level submodule container entries (no service_package means regex didn't match)
+      real = builtins.filter (opt: opt ? service_package) parsed;
+    in
+    deduplicateServices real;
+
+  # Map from package attribute name to the list of modular service module
+  # names it exposes. Derived from the parsed service options above so it
+  # stays in sync with nixpkgs' hand-maintained list.
+  nixos-package-services =
+    let
+      parsed = map parseServiceOption (builtins.filter isServiceOption nixpkgsAllOpts);
+      real = builtins.filter (opt: opt ? service_package) parsed;
+    in
+    lib.foldl' (
+      acc: opt:
+      acc
+      // {
+        ${opt.service_package} = lib.unique ((acc.${opt.service_package} or [ ]) ++ [ opt.service_module ]);
+      }
+    ) { } real;
 }
