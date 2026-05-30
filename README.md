@@ -133,3 +133,30 @@ We generally try to include a wide range of flakes that could be of interest to 
   - approve and merge immediately;
   - approve and leave feedback - the author can merge after considering the feedback;
   - add comments without approving.
+
+## Maintenance
+
+This project is low on maintainers. Your help is much
+appreciated!
+
+### ElasticSearch
+
+There is a manage-elasticsearch.yml through which authorized
+users can invoke HTTP requests on ElasticSearch. Errors do
+not produce failed jobs; you need to check the output
+manually.
+
+Get all indices:
+
+    GET _aliases?pretty=true
+
+List old indices in batches of 50:
+
+    cat 0_manage-es.txt | grep group-44 | cut -d '"' -f 2 | head 50 | tr '\n' ','
+    cat 0_manage-es.txt | grep group-44 | cut -d '"' -f 2 | tail -n +51 | head 50 | tr '\n' ','
+    cat 0_manage-es.txt | grep group-44 | cut -d '"' -f 2 | tail -n +101 | head 50 | tr '\n' ','
+    ... etc
+
+Delete old indices:
+
+    DELETE foo,bar,baz

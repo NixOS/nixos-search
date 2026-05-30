@@ -33,10 +33,17 @@
 /* -- Darkmode specific styles --------------------------------------------- */
 /* ------------------------------------------------------------------------- */
 
-@media (prefers-color-scheme: dark) {
+@mixin outline-visible() {
+  border-radius: 4px !important;
+  outline-color: var(--light-blue) !important;
+  outline-style: solid !important;
+  outline-width: 2px !important;
+  outline-offset: -2px !important;
+}
 
+@mixin dark-theme {
   // Define darkmode colors
-  :root {
+  & {
     --text-color: rgba(255, 255, 255, 0.85);
     --text-color-light: rgba(255, 255, 255, 0.5);
     --text-color-warning: #f8e45c;
@@ -101,14 +108,6 @@
     transition: background 0.2s;
   }
 
-  @mixin outline-visible() {
-    border-radius: 4px !important;
-    outline-color: var(--light-blue) !important;
-    outline-style: solid !important;
-    outline-width: 2px !important;
-    outline-offset: -2px !important;
-  }
-
   *:focus {
     outline-width: 0 !important;
   }
@@ -119,6 +118,11 @@
 
   a:focus-visible {
     outline-offset: 0 !important;
+  }
+
+  // `j` / `k` keyboard navigation between search results.
+  .result-selected {
+    @include outline-visible;
   }
 
   .label-warning {
@@ -307,6 +311,17 @@
         }
 
       }
+
+      li.external > a {
+        color: var(--light-blue);
+        background: transparent;
+        border-radius: 0;
+
+        &:hover {
+          background: transparent;
+          text-decoration: underline;
+        }
+      }
     }
   }
 
@@ -350,6 +365,16 @@
         }
       }
     }
+  }
+}
+
+:root[data-theme="dark"] {
+  @include dark-theme;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    @include dark-theme;
   }
 }
 
@@ -427,6 +452,11 @@ footer {
   height: 4rem;
 }
 
+.theme-toggle .theme-icon {
+  font-size: 1.4em;
+  line-height: 1;
+}
+
 header .navbar.navbar-static-top {
   .brand {
     padding-bottom: 0;
@@ -441,6 +471,26 @@ header .navbar.navbar-static-top {
     line-height: 20px;
     sup {
       margin-left: 0.5em;
+    }
+  }
+}
+
+header .navbar.navbar-static-top ul.nav > li.external {
+
+  > a {
+    color: var(--link-color);
+    text-decoration: none;
+    background: none !important;
+    border-radius: 0;
+
+    &:hover {
+      text-decoration: underline;
+      background: none !important;
+    }
+
+    &::after {
+      content: " \2197";
+      font-size: 0.75em;
     }
   }
 }
@@ -536,15 +586,18 @@ header .navbar.navbar-static-top {
     padding: 0;
 
     & > li {
-      display: inline-block;
-
-      &:first-child:not(:last-child):after {
-        content: "→";
-        margin: 0 0.2em;
-      }
-
       & > a:hover {
         text-decoration: underline;
+      }
+
+      // Badge column keeps its fixed width; the name column takes the rest
+      // and lets long unbreakable identifiers wrap instead of pushing onto
+      // the next line beneath the badge. (Display:flex is set on the parent
+      // by the more-specific `:nth-child(1).search-result-button` rule.)
+      &:last-child {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow-wrap: anywhere;
       }
     }
   }
@@ -708,6 +761,16 @@ header .navbar.navbar-static-top {
             display: block;
             a {
               color: inherit !important;
+            }
+
+            // For options, the title row is a flex layout so a long option
+            // name wraps inside its own column instead of dropping below the
+            // category badge. Without this override the surrounding
+            // `:nth-child(1)` rule forces `display: block`.
+            &.search-result-button {
+              display: flex;
+              align-items: baseline;
+              gap: 0.5em;
             }
           }
 
@@ -954,4 +1017,150 @@ a:focus-visible {
 
 .badge {
   background-color: var(--badge-background)
+}
+
+// Stale-while-loading indicator. When a fresh query is in flight but a
+// previous result is still being shown (e.g. during a tab switch), the
+// `.search-results` container also gets `.loading-overlay`. A small
+// spinner appears next to the result-count header without blanking the
+// page.
+.search-results.loading-overlay h2::after {
+  content: "";
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-left: 0.5em;
+  vertical-align: -0.1em;
+  border: 2px solid var(--text-color-light, currentColor);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin-overlay 0.8s linear infinite;
+}
+
+@keyframes spin-overlay {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Tab strip in the Options sidebar — one tab per option source. Active
+// tab inherits the `.selected` background/foreground from the sidebar's
+// generic styling; the rules below diverge from the bucket-style sidebar
+// in two ways:
+//
+// 1. The bucket layout uses `display: grid` + `:last-child { text-align:
+//    right }`, which right-aligns the lone label whenever a tab's count
+//    badge is missing (e.g. while a fresh query is loading). Flex with
+//    `margin-left: auto` on the badge keeps the label left-aligned
+//    regardless of whether a badge is present.
+// 2. The bucket pattern hides the *last child* of `.selected` because
+//    the count is duplicated above the result list — that rule hides
+//    both the badge (when present) and the lone label (when not),
+//    which means the active tab disappears entirely while loading.
+//    We re-show last-child for tabs.
+//
+// Nested inside `.search-page` to match the specificity of the rule
+// being overridden (which is also `.search-page`-prefixed via outer
+// nesting), so the override actually wins the cascade.
+.search-page ul.search-sidebar > li.search-source-tabs > ul > li > a {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+  text-decoration: none;
+
+  & > span {
+    text-align: left;
+  }
+
+  & > .badge {
+    margin-left: auto;
+  }
+
+  // Counter the bucket-pattern `&.selected > span:last-child {
+  // display: none }` rule — applies to both the badge (when present)
+  // and the lone label (when counts are still loading).
+  &.selected > span:last-child {
+    display: inline-block;
+  }
+
+  // Nested inside the source label so it travels with the label text
+  // rather than affecting the flex layout of the tab row.
+  .experimental-badge {
+    margin-left: 0.3em;
+  }
+
+  // The selected-tab background is already saturated blue; flip the
+  // experimental badge to read against it instead of blending in.
+  &.selected .experimental-badge {
+    background: var(--search-sidebar-selected-link-color);
+    color: var(--search-sidebar-selected-link-background);
+  }
+}
+
+// The Name code block in the expanded option view hosts a floating copy
+// button at its right edge. Keep the block as the positioning context so
+// the button overlays the code without jostling its layout.
+.option-name-path {
+  position: relative;
+
+  & > pre {
+    margin: 0;
+  }
+
+  // Reserve space at the right edge of the code block so segment links
+  // never end up underneath the floating button.
+  & > pre > code.code-block {
+    padding-right: 4em;
+  }
+}
+
+.option-copy-button {
+  position: absolute;
+  top: 50%;
+  right: 0.4em;
+  transform: translateY(-50%);
+  padding: 0.3em 0.7em;
+  border-radius: 4px;
+  font-size: 0.85em;
+  line-height: 1.3;
+  cursor: pointer;
+  user-select: none;
+  color: var(--search-result-short-details-color, #666);
+  border: 1px solid var(--search-sidebar-container-border-color, #ccc);
+  background: var(--background-color, #fff);
+
+  &:hover {
+    color: var(--text-color);
+    background: var(--hover-background, rgba(0, 0, 0, 0.05));
+  }
+}
+
+// Make the "Please provide more precise search terms." hint stand out so
+// users notice when their query has been truncated to 10000 results.
+.search-refine-hint {
+  margin-top: 0.3em;
+  padding: 0.4em 0.6em;
+  border-left: 3px solid var(--info-label-background);
+  background: var(--hover-background, rgba(0, 0, 0, 0.05));
+  font-size: 0.7em;
+  font-weight: bold;
+}
+
+@media (max-width: 760px) {
+  .search-page {
+    & .search-results {
+      flex-direction: column;
+    }
+    & ul.search-sidebar {
+      width: 100%;
+    }
+  }
+}
+
+// SPDX operators in compound license expressions -- bold weight to
+// distinguish AND / OR / WITH from license names.
+.license-operator {
+  font-weight: bold;
+  font-size: 0.85em;
+  opacity: 0.75;
 }

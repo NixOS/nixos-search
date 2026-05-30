@@ -62,6 +62,14 @@ enum Command {
             help = "Restrict to importing a single attribute. Implies --kind package"
         )]
         attribute: Option<String>,
+
+        #[structopt(
+            long = "packages-json-url",
+            help = "Override URL to fetch `packages.json` (or `packages.json.br`) from. \
+                    Defaults to https://channels.nixos.org/nixos-<channel>/packages.json.br. \
+                    Useful for testing a fix against a custom-built file from a nixpkgs branch"
+        )]
+        packages_json_url: Option<String>,
     },
 
     #[structopt(about = "Import nixpkgs channel from archive or local git path")]
@@ -186,12 +194,18 @@ async fn main() -> Result<()> {
         "at least one of --push or --json must be specified"
     );
 
-    let (exports, ident) = run_command(args.command, args.kind, &args.extra).await?;
+    let (exports, ident, partial_error) = run_command(args.command, args.kind, &args.extra).await?;
 
     if args.elastic.enable {
         push_to_elastic(&args.elastic, exports, ident).await?;
     } else if args.elastic.json {
         println!("{}", serde_json::to_string(&exports()?)?);
+    }
+
+    // Surface partial failures (e.g. some group members failed to evaluate) as a
+    // non-zero exit so CI does not report success while data is missing.
+    if let Some(error) = partial_error {
+        return Err(error.into());
     }
     Ok(())
 }
@@ -215,7 +229,14 @@ async fn run_command(
     command: Command,
     kind: Kind,
     extra: &[String],
-) -> Result<(LazyExports, (String, String, String)), FlakeInfoError> {
+) -> Result<
+    (
+        LazyExports,
+        (String, String, String),
+        Option<FlakeInfoError>,
+    ),
+    FlakeInfoError,
+> {
     flake_info::commands::check_nix_version(env!("MIN_NIX_VERSION"))?;
 
     match command {
@@ -241,9 +262,13 @@ async fn run_command(
                 info.revision.unwrap_or("latest".into()),
             );
 
-            Ok((Box::new(|| Ok(exports)), ident))
+            Ok((Box::new(|| Ok(exports)), ident, None))
         }
-        Command::Nixpkgs { channel, attribute } => {
+        Command::Nixpkgs {
+            channel,
+            attribute,
+            packages_json_url,
+        } => {
             let nixpkgs = Source::nixpkgs(channel)
                 .await
                 .map_err(FlakeInfoError::Nixpkgs)?;
@@ -263,10 +288,16 @@ async fn run_command(
 
             Ok((
                 Box::new(move || {
-                    flake_info::process_nixpkgs(&Source::Nixpkgs(nixpkgs), &kind, &attribute)
-                        .map_err(FlakeInfoError::Nixpkgs)
+                    flake_info::process_nixpkgs(
+                        &Source::Nixpkgs(nixpkgs),
+                        &kind,
+                        &attribute,
+                        &packages_json_url,
+                    )
+                    .map_err(FlakeInfoError::Nixpkgs)
                 }),
                 ident,
+                None,
             ))
         }
         Command::NixpkgsArchive {
@@ -290,10 +321,16 @@ async fn run_command(
 
             Ok((
                 Box::new(move || {
-                    flake_info::process_nixpkgs(&Source::Git { url: source }, &kind, &attribute)
-                        .map_err(FlakeInfoError::Nixpkgs)
+                    flake_info::process_nixpkgs(
+                        &Source::Git { url: source },
+                        &kind,
+                        &attribute,
+                        &None,
+                    )
+                    .map_err(FlakeInfoError::Nixpkgs)
                 }),
                 ident,
+                None,
             ))
         }
         Command::Group {
@@ -312,11 +349,16 @@ async fn run_command(
             let (exports_and_hashes, errors) = sources
                 .iter()
                 .map(|source| match source {
-                    Source::Nixpkgs(nixpkgs) => flake_info::process_nixpkgs(source, &kind, &None)
-                        .with_context(|| {
-                            format!("While processing nixpkgs archive {}", source.to_flake_ref())
-                        })
-                        .map(|result| (result, nixpkgs.git_ref.to_owned())),
+                    Source::Nixpkgs(nixpkgs) => {
+                        flake_info::process_nixpkgs(source, &kind, &None, &None)
+                            .with_context(|| {
+                                format!(
+                                    "While processing nixpkgs archive {}",
+                                    source.to_flake_ref()
+                                )
+                            })
+                            .map(|result| (result, nixpkgs.git_ref.to_owned()))
+                    }
                     _ => flake_info::process_flake(source, &kind, temp_store, &extra, with_gc)
                         .with_context(|| {
                             format!("While processing flake {}", source.to_flake_ref())
@@ -342,7 +384,7 @@ async fn run_command(
                 .map(Result::unwrap_err) // each result is_err
                 .collect::<Vec<_>>();
 
-            if !errors.is_empty() {
+            let partial_error = if !errors.is_empty() {
                 let error = FlakeInfoError::Group(name.clone(), errors);
                 if exports.is_empty() {
                     return Err(error);
@@ -356,7 +398,11 @@ async fn run_command(
                     let mut file = File::create("report.txt").await?;
                     file.write_all(format!("{}", error).as_bytes()).await?;
                 }
-            }
+
+                Some(error)
+            } else {
+                None
+            };
 
             let hash = {
                 let mut sha = sha2::Sha256::new();
@@ -368,7 +414,7 @@ async fn run_command(
 
             let ident = ("group".to_owned(), name, hash);
 
-            Ok((Box::new(|| Ok(exports)), ident))
+            Ok((Box::new(|| Ok(exports)), ident, partial_error))
         }
     }
 }

@@ -21,6 +21,9 @@ pub fn get_derivation_info<T: AsRef<str> + Display>(
     extra: &[String],
 ) -> Result<Vec<FlakeEntry>> {
     let mut command = Command::with_args("nix", ARGS.iter());
+    command
+        .env
+        .insert("NIXPKGS_ALLOW_UNSUPPORTED_SYSTEM".into(), "1".into());
     command.add_arg_pair("-f", super::EXTRACT_SCRIPT.clone());
     command.add_arg_pair(
         "-I",

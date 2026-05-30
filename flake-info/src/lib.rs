@@ -12,7 +12,7 @@ pub mod data;
 pub mod elastic;
 
 pub use commands::get_flake_info;
-use log::trace;
+use log::{info, trace};
 
 lazy_static! {
     static ref DATADIR: PathBuf =
@@ -28,6 +28,11 @@ pub fn process_flake(
 ) -> Result<(Flake, Vec<Export>)> {
     let mut info = commands::get_flake_info(source.to_flake_ref(), temp_store, extra)?;
     info.source = Some(source.clone());
+    info!(
+        "Resolved {} to revision {}",
+        source.to_flake_ref(),
+        info.revision.as_deref().unwrap_or("(unknown)"),
+    );
     let packages = commands::get_derivation_info(source.to_flake_ref(), *kind, temp_store, extra)?;
 
     if with_gc {
@@ -49,9 +54,10 @@ pub fn process_nixpkgs(
     nixpkgs: &Source,
     kind: &Kind,
     attribute: &Option<String>,
+    packages_json_url: &Option<String>,
 ) -> Result<Vec<Export>, anyhow::Error> {
     let drvs = if matches!(kind, Kind::All | Kind::Package) {
-        commands::get_nixpkgs_info(nixpkgs, attribute)?
+        commands::get_nixpkgs_info(nixpkgs, attribute, packages_json_url)?
     } else {
         Vec::new()
     };
@@ -62,8 +68,22 @@ pub fn process_nixpkgs(
         Vec::new()
     };
 
+    let mut services = if matches!(kind, Kind::All | Kind::ModularService) {
+        commands::get_nixpkgs_services(nixpkgs)?
+    } else {
+        Vec::new()
+    };
+
+    let mut hm_options = if matches!(kind, Kind::All | Kind::HomeManagerOption) {
+        commands::get_home_manager_options(nixpkgs)?
+    } else {
+        Vec::new()
+    };
+
     let mut all = drvs;
     all.append(&mut options);
+    all.append(&mut services);
+    all.append(&mut hm_options);
 
     let exports = all
         .into_iter()
