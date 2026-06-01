@@ -1,6 +1,7 @@
 name: Switch Logo
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "0 0 31 5 *" # Change to pride logo. "At 00:00 on day-of-month 31 in May."
     - cron: "0 0 1 7 *"  # Switch back to normal logo. "At 00:00 on day-of-month 1 in July."
