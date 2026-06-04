@@ -271,7 +271,7 @@ view :
 view nixosChannels model =
     Search.view { categoryName = "packages" }
         [ text "Search more than "
-        , strong [] [ text "120 000 packages" ]
+        , strong [] [ text "140 000 packages" ]
         ]
         nixosChannels
         model
