@@ -25,6 +25,7 @@ import Html
     exposing
         ( Html
         , a
+        , button
         , code
         , div
         , em
@@ -44,6 +45,8 @@ import Html.Attributes
         , href
         , id
         , target
+        , title
+        , type_
         )
 import Html.Events exposing (onClick)
 import Http exposing (Body)
@@ -51,6 +54,7 @@ import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
 import List.Extra
+import Ports
 import Regex
 import Route exposing (SearchType)
 import Search
@@ -237,6 +241,7 @@ platforms =
 
 type Msg
     = SearchMsg (Search.Msg ResultItemSource ResultAggregations)
+    | CopyToClipboard String
 
 
 update :
@@ -258,6 +263,9 @@ update navKey msg model nixosChannels =
                         nixosChannels
             in
             ( newModel, Cmd.map SearchMsg newCmd )
+
+        CopyToClipboard text_ ->
+            ( model, Ports.copyToClipboard text_ )
 
 
 
@@ -348,6 +356,25 @@ viewSuccess nixosChannels channel showInstallDetails show hits =
             (viewResultItem nixosChannels channel showInstallDetails show)
             hits
         )
+
+
+{-| Render an install command or configuration snippet together with a
+button that copies its plain-text form to the clipboard. The package name
+inside the snippet is rendered in bold, so the exact text to copy is passed
+separately from the displayed content.
+-}
+copyableCommand : String -> String -> List (Html Msg) -> Html Msg
+copyableCommand preClass commandText content =
+    div [ class "code-block-wrapper" ]
+        [ pre [ class preClass ] content
+        , button
+            [ type_ "button"
+            , class "code-copy-button"
+            , title "Copy to clipboard"
+            , onClick (CopyToClipboard commandText)
+            ]
+            [ text "Copy" ]
+        ]
 
 
 viewResultItem :
@@ -667,7 +694,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                             , ( "active", True )
                                             ]
                                         ]
-                                        [ pre [ class "code-block shell-command" ]
+                                        [ copyableCommand "code-block shell-command"
+                                            ("nix profile add " ++ flakeUrl ++ "#" ++ item.source.attr_name)
                                             [ text "nix profile add "
                                             , strong [] [ text flakeUrl ]
                                             , text "#"
@@ -783,7 +811,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         , class "tab-pane"
                                         , id "package-details-nixpkgs"
                                         ]
-                                        [ pre [ class "code-block shell-command" ]
+                                        [ copyableCommand "code-block shell-command"
+                                            ("nix-env -iA nixos." ++ item.source.attr_name)
                                             [ text "nix-env -iA nixos."
                                             , strong [] [ text item.source.attr_name ]
                                             ]
@@ -805,7 +834,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         , class "tab-pane"
                                         , id "package-details-nixpkgs"
                                         ]
-                                        [ pre [ class "code-block shell-command" ]
+                                        [ copyableCommand "code-block shell-command"
+                                            ("# without flakes:\nnix-env -iA nixpkgs." ++ item.source.attr_name ++ "\n# with flakes:\nnix profile add nixpkgs#" ++ item.source.attr_name)
                                             [ text "# without flakes:\nnix-env -iA nixpkgs."
                                             , strong [] [ text item.source.attr_name ]
                                             , text "\n# with flakes:\nnix profile add nixpkgs#"
@@ -830,7 +860,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         , class "tab-pane"
                                         , id "package-details-nixpkgs"
                                         ]
-                                        [ pre [ class "code-block" ]
+                                        [ copyableCommand "code-block"
+                                            ("  environment.systemPackages = [\n    pkgs." ++ item.source.attr_name ++ "\n  ];")
                                             [ text <| "  environment.systemPackages = [\n    pkgs."
                                             , strong [] [ text item.source.attr_name ]
                                             , text <| "\n  ];"
@@ -858,7 +889,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                             , ( "active", List.member showInstallDetails [ Search.Unset, Search.ViaNixShell, Search.FromFlake ] )
                                             ]
                                         ]
-                                        [ pre [ class "code-block shell-command" ]
+                                        [ copyableCommand "code-block shell-command"
+                                            ("nix-shell -p " ++ item.source.attr_name)
                                             [ text "nix-shell -p "
                                             , strong [] [ text item.source.attr_name ]
                                             ]
@@ -870,7 +902,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         , class "tab-pane"
                                         , id "package-details-nixpkgs"
                                         ]
-                                        [ pre [ class "code-block shell-command" ]
+                                        [ copyableCommand "code-block shell-command"
+                                            ("nix profile add nixpkgs#" ++ item.source.attr_name)
                                             [ text "nix profile add nixpkgs#"
                                             , strong [] [ text item.source.attr_name ]
                                             ]
