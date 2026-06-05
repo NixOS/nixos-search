@@ -1150,8 +1150,9 @@ a:focus-visible {
 .code-block-wrapper {
   position: relative;
 
-  // Keep the command text clear of the floating button.
-  & > pre.code-block {
+  // Keep the text clear of the button. The block is a bare <pre> for package
+  // commands but a nested <pre> for option values, so match either.
+  & pre {
     padding-right: 4em;
   }
 }
