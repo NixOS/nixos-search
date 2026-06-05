@@ -1,10 +1,9 @@
-port module Page.Options exposing
+module Page.Options exposing
     ( AggregationsAll
     , Model
     , Msg(..)
     , ResultAggregations
     , ResultItemSource
-    , copyToClipboard
     , decodeResultAggregations
     , decodeResultItemSource
     , init
@@ -53,6 +52,7 @@ import Http exposing (Body)
 import Json.Decode
 import Json.Decode.Pipeline
 import List.Extra
+import Ports
 import RemoteData
 import Route exposing (OptionSource, SearchType)
 import Search
@@ -135,15 +135,6 @@ init searchArgs defaultNixOSChannel nixosChannels includeChannelInUrl model =
 
 
 
--- PORTS
-
-
-{-| Ask the JS side to copy the given text to the clipboard.
--}
-port copyToClipboard : String -> Cmd msg
-
-
-
 -- UPDATE
 
 
@@ -173,7 +164,7 @@ update navKey msg model nixosChannels =
             ( newModel, Cmd.map SearchMsg newCmd )
 
         CopyOptionName name ->
-            ( model, copyToClipboard name )
+            ( model, Ports.copyToClipboard name )
 
 
 
