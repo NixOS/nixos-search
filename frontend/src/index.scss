@@ -577,6 +577,13 @@ header .navbar.navbar-static-top ul.nav > li.external {
      & > h2 {
        margin-top: 0;
      }
+
+     // Nudge toward the other search (packages vs options) when a query
+     // comes up empty -- the two tabs are easy to confuse.
+     & > .search-cross-hint {
+       margin: 0.5em 0;
+       font-size: 1.1em;
+     }
   }
 
 
