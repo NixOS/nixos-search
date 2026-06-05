@@ -1176,6 +1176,47 @@ a:focus-visible {
   }
 }
 
+.copy-toast {
+  position: fixed;
+  bottom: 1.5em;
+  left: 50%;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  max-width: calc(100vw - 2em);
+  padding: 0.5em 0.9em;
+  border-radius: 6px;
+  border: 1px solid var(--search-sidebar-container-border-color, #ccc);
+  background: var(--background-color, #fff);
+  color: var(--text-color, #333);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+  font-size: 0.9em;
+
+  opacity: 0;
+  transform: translate(-50%, 0.6em);
+  pointer-events: none;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+
+  &::before {
+    content: "✓";
+    font-weight: bold;
+  }
+
+  &.visible {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copy-toast {
+    transition: none;
+  }
+}
+
 // Make the "Please provide more precise search terms." hint stand out so
 // users notice when their query has been truncated to 10000 results.
 .search-refine-hint {
