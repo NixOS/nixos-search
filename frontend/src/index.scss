@@ -1121,11 +1121,9 @@ a:focus-visible {
   }
 }
 
-.option-copy-button {
+%copy-button-base {
   position: absolute;
-  top: 50%;
   right: 0.4em;
-  transform: translateY(-50%);
   padding: 0.3em 0.7em;
   border-radius: 4px;
   font-size: 0.85em;
@@ -1140,6 +1138,12 @@ a:focus-visible {
     color: var(--text-color);
     background: var(--hover-background, rgba(0, 0, 0, 0.05));
   }
+}
+
+.option-copy-button {
+  @extend %copy-button-base;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 // Each install command / configuration snippet in the package details hosts
@@ -1158,23 +1162,8 @@ a:focus-visible {
 }
 
 .code-copy-button {
-  position: absolute;
+  @extend %copy-button-base;
   top: 0.4em;
-  right: 0.4em;
-  padding: 0.3em 0.7em;
-  border-radius: 4px;
-  font-size: 0.85em;
-  line-height: 1.3;
-  cursor: pointer;
-  user-select: none;
-  color: var(--search-result-short-details-color, #666);
-  border: 1px solid var(--search-sidebar-container-border-color, #ccc);
-  background: var(--background-color, #fff);
-
-  &:hover {
-    color: var(--text-color);
-    background: var(--hover-background, rgba(0, 0, 0, 0.05));
-  }
 }
 
 .copy-toast {

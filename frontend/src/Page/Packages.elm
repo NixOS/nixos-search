@@ -365,16 +365,7 @@ separately from the displayed content.
 -}
 copyableCommand : String -> String -> List (Html Msg) -> Html Msg
 copyableCommand preClass commandText content =
-    div [ class "code-block-wrapper" ]
-        [ pre [ class preClass ] content
-        , button
-            [ type_ "button"
-            , class "code-copy-button"
-            , title "Copy to clipboard"
-            , onClick (CopyToClipboard commandText)
-            ]
-            [ text "Copy" ]
-        ]
+    Utils.copyable CopyToClipboard commandText (pre [ class preClass ] content)
 
 
 viewResultItem :
