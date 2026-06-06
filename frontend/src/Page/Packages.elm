@@ -654,6 +654,21 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                         )
                 ]
 
+        nixosOptions =
+            if item.source.flakeUrl == Nothing then
+                div []
+                    [ h4 [] [ text "NixOS options" ]
+                    , p []
+                        [ a [ href ("/options?channel=" ++ channel ++ "&query=" ++ item.source.attr_name) ]
+                            [ text "Search NixOS options for "
+                            , em [] [ text item.source.attr_name ]
+                            ]
+                        ]
+                    ]
+
+            else
+                text ""
+
         longerPackageDetails =
             optionals (Just item.source.attr_name == show)
                 [ div [ trapClick ]
@@ -912,6 +927,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                 ]
                     , programs
                     , maintainersTeamsAndPlatforms
+                    , nixosOptions
                     , if List.isEmpty item.source.modularServices then
                         text ""
 
