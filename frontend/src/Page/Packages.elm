@@ -420,18 +420,20 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                             ]
                             ++ optionals (List.length item.source.outputs > 1)
                                 [ li []
-                                    (text "Outputs: "
-                                        :: (item.source.default_output
-                                                |> Maybe.map (\d -> [ strong [] [ code [] [ text d ] ], text " " ])
-                                                |> Maybe.withDefault []
-                                           )
-                                        ++ (item.source.outputs
-                                                |> List.filter (\o -> Just o /= item.source.default_output)
-                                                |> List.sort
-                                                |> List.map (\o -> code [] [ text o ])
-                                                |> List.intersperse (text " ")
-                                           )
-                                    )
+                                    [ text "Outputs: "
+                                    , inlineListCode
+                                        ((item.source.default_output
+                                            |> Maybe.map (\d -> strong [] [ text d ])
+                                            |> Maybe.map List.singleton
+                                            |> Maybe.withDefault []
+                                         )
+                                            ++ (item.source.outputs
+                                                    |> List.filter (\o -> Just o /= item.source.default_output)
+                                                    |> List.sort
+                                                    |> List.map (\o -> text o)
+                                               )
+                                        )
+                                    ]
                                 ]
                             ++ (item.source.homepage
                                     |> List.head
@@ -472,9 +474,9 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         in
                                         optionals (not (List.isEmpty licenses))
                                             [ li []
-                                                (text "License: "
-                                                    :: List.intersperse (text " ▪ ") licenses
-                                                )
+                                                [ text "License: "
+                                                , inlineListCode licenses
+                                                ]
                                             ]
                                )
                        )
@@ -640,25 +642,21 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                 ]
 
                   else
-                    p []
-                        (List.intersperse (text " ")
-                            (List.map
-                                (\p ->
-                                    code []
-                                        [ case item.source.mainProgram of
-                                            Nothing ->
-                                                text p
+                    inlineListElementsCode
+                        (List.map
+                            (\p ->
+                                case item.source.mainProgram of
+                                    Nothing ->
+                                        text p
 
-                                            Just mainProgram ->
-                                                if p == mainProgram then
-                                                    strong [] [ text p ]
+                                    Just mainProgram ->
+                                        if p == mainProgram then
+                                            strong [] [ text p ]
 
-                                                else
-                                                    text p
-                                        ]
-                                )
-                                (List.sort item.source.programs)
+                                        else
+                                            text p
                             )
+                            (List.sort item.source.programs)
                         )
                 ]
 
@@ -1015,6 +1013,40 @@ viewResultItem nixosChannels channel showInstallDetails show item =
          , Search.showMoreButton toggle isOpen
          ]
             ++ longerPackageDetails
+        )
+
+
+inlineListElements : List (Html msg) -> Html msg
+inlineListElements =
+    baseInlineList "inline-list-elements" identity
+
+
+inlineListElementsCode : List (Html msg) -> Html msg
+inlineListElementsCode =
+    baseInlineList "inline-list-elements" withCode
+
+
+inlineList : List (Html msg) -> Html msg
+inlineList =
+    baseInlineList "inline-list" identity
+
+
+inlineListCode : List (Html msg) -> Html msg
+inlineListCode =
+    baseInlineList "inline-list" withCode
+
+
+withCode : Html msg -> Html msg
+withCode i =
+    code [] [ i ]
+
+
+baseInlineList : String -> (Html msg -> Html msg) -> List (Html msg) -> Html msg
+baseInlineList className wrapper items =
+    ul [ class className ]
+        (items
+            |> List.map (\i -> li [] [ wrapper i ])
+            |> List.intersperse (text " ")
         )
 
 

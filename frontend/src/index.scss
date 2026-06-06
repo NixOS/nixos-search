@@ -1236,3 +1236,15 @@ a:focus-visible {
   font-size: 0.85em;
   opacity: 0.75;
 }
+
+ul.inline-list-elements {
+  margin: 0;
+  li {
+    display: inline;
+  }
+}
+
+ul.inline-list {
+  @extend .inline-list-elements;
+  display: inline;
+}
