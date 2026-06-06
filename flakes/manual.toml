@@ -508,10 +508,11 @@ type = "github"
 owner = "StardustXR"
 repo = "telescope"
 
-[[sources]]
-type = "github"
-owner = "surrealdb"
-repo = "surrealdb"
+# seems to rely on allow-import-from-derivation now
+#[[sources]]
+#type = "github"
+#owner = "surrealdb"
+#repo = "surrealdb"
 
 [[sources]]
 type = "github"
