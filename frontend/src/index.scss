@@ -866,12 +866,12 @@ header .navbar.navbar-static-top ul.nav > li.external {
                 display: grid;
                 grid-template-columns: auto auto;
 
-                // make it easy to copy only the list of Github handles
-                & > :first-child > ul > :last-child {
-                  user-select: none;
-                }
-                & > :first-child > ul > :last-child > code {
-                  user-select: text;
+                .maintainer-list-item {
+                  cursor: pointer;
+
+                  &:hover {
+                    background-color: var(--search-sidebar-hovered-link-background);
+                  }
                 }
               }
             }

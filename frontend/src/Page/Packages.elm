@@ -46,7 +46,6 @@ import Html.Attributes
         , id
         , target
         , title
-        , type_
         )
 import Html.Events exposing (onClick)
 import Http exposing (Body)
@@ -483,19 +482,32 @@ viewResultItem nixosChannels channel showInstallDetails show item =
 
         showMaintainer maintainer =
             let
-                nameLink : Html msg
-                nameLink =
+                githubHandle =
+                    Maybe.map (String.append "@") maintainer.github
+
+                name =
+                    Maybe.withDefault (Maybe.withDefault "Unknown" maintainer.github) maintainer.name
+
+                nameHtml =
                     case maintainer.github of
                         Just github ->
-                            a
-                                [ href ("https://github.com/" ++ github) ]
-                                [ text (Maybe.withDefault github maintainer.name) ]
+                            a [ href ("https://github.com/" ++ github) ] [ text name ]
 
                         Nothing ->
-                            text (Maybe.withDefault "Unknown" maintainer.name)
+                            text name
 
-                emailLink : List (Html msg)
-                emailLink =
+                githubHtml =
+                    case githubHandle of
+                        Just handle ->
+                            [ text " ("
+                            , code [] [ text handle ]
+                            , text ")"
+                            ]
+
+                        Nothing ->
+                            []
+
+                emailHtml =
                     case maintainer.email of
                         Just email ->
                             [ text " <"
@@ -505,8 +517,16 @@ viewResultItem nixosChannels channel showInstallDetails show item =
 
                         Nothing ->
                             []
+
+                ( onClickAttr, _ ) =
+                    case githubHandle of
+                        Just handle ->
+                            ( [ onClick (CopyToClipboard handle) ], [] )
+
+                        Nothing ->
+                            ( [], [] )
             in
-            li [] (nameLink :: emailLink)
+            li (class "maintainer-list-item" :: onClickAttr) (nameHtml :: githubHtml ++ emailHtml)
 
         linkAllMaintainers maintainers =
             let
@@ -514,11 +534,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                     List.filterMap (\m -> Maybe.map (String.append "@") m.github) maintainers
             in
             optionals (not (List.isEmpty ghHandles))
-                [ li []
-                    [ text "Maintainer Github handles: "
-                    , code []
-                        [ text (String.join " " ghHandles) ]
-                    ]
+                [ li [ class "maintainer-list-item", onClick (CopyToClipboard (String.join " " ghHandles)) ]
+                    [ text "Copy all maintainers' GitHub handles" ]
                 ]
 
         showTeam team =
@@ -559,7 +576,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                     List.filterMap (\m -> m.email) maintainers
             in
             optionals (List.length maintainerMails > 1)
-                [ li []
+                [ li [ class "maintainer-list-item" ]
                     [ a
                         [ href ("mailto:" ++ String.join "," maintainerMails) ]
                         [ text "✉️ Mail to all maintainers" ]
