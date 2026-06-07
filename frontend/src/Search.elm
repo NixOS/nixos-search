@@ -989,7 +989,7 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
             if result.hits.total.value == 0 && List.isEmpty buckets then
                 div [ class "search-results" ]
                     [ ul [ class "search-sidebar" ] searchBuckets
-                    , viewNoResults categoryName model.query model.channel
+                    , viewNoResults categoryName model.activeOptionSource model.query model.channel
                     ]
 
             else if not (List.isEmpty buckets) then
@@ -1035,28 +1035,46 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
 
 viewNoResults :
     String
+    -> Route.OptionSource
     -> String
     -> String
     -> Html c
-viewNoResults categoryName query channel =
-    div [ class "search-no-results" ]
-        ([ h2 [] [ text <| "No " ++ categoryName ++ " found!" ]
-         ]
-            ++ crossSearchHint categoryName query channel
-            ++ (if categoryName == "modular services" then
-                    [ text "Not all packages provide modular services. You might want to "
-                    , Html.a [ href ("https://github.com/NixOS/nixpkgs/issues?q=" ++ query) ] [ text "search nixpkgs issues" ]
-                    , text "."
-                    ]
+viewNoResults categoryName activeOptionSource query channel =
+    let
+        nixpkgsIssues =
+            Html.a [ href ("https://github.com/NixOS/nixpkgs/issues?q=" ++ query) ]
+                [ text "search nixpkgs issues" ]
 
-                else
-                    [ text "You might want to "
-                    , Html.a [ href "https://github.com/NixOS/nixpkgs/blob/master/pkgs/README.md#quick-start-to-adding-a-package" ] [ text "add a package" ]
-                    , text " or "
-                    , Html.a [ href ("https://github.com/NixOS/nixpkgs/issues?q=" ++ query) ] [ text "search nixpkgs issues" ]
-                    , text "."
-                    ]
-               )
+        homeManagerIssues =
+            Html.a [ href ("https://github.com/nix-community/home-manager/issues?q=" ++ query) ]
+                [ text "search home-manager issues" ]
+
+        body =
+            if categoryName == "packages" then
+                [ text "You might want to "
+                , Html.a [ href "https://github.com/NixOS/nixpkgs/blob/master/pkgs/README.md#quick-start-to-adding-a-package" ]
+                    [ text "add a package" ]
+                , text " or "
+                , nixpkgsIssues
+                , text "."
+                ]
+
+            else if categoryName == "modular services" then
+                [ text "Not all packages provide modular services. You might want to "
+                , nixpkgsIssues
+                , text "."
+                ]
+
+            else if activeOptionSource == Route.HomeManagerOptionSource then
+                [ text "You might want to ", homeManagerIssues, text "." ]
+
+            else
+                [ text "You might want to ", nixpkgsIssues, text "." ]
+    in
+    div [ class "search-no-results" ]
+        (h2 [] [ text <| "No " ++ categoryName ++ " found!" ]
+            :: crossSearchHint categoryName query channel
+            ++ body
         )
 
 
