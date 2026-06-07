@@ -638,26 +638,25 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                         Just mainProgram ->
                             p []
                                 [ p [] [ text "Only the main program of this package is known: " ]
-                                , code [] [ strong [] [ text mainProgram ] ]
+                                , withCopyableCode mainProgram (strong [] [ text mainProgram ])
                                 ]
 
                   else
-                    inlineListElementsCode
-                        (List.map
-                            (\p ->
-                                case item.source.mainProgram of
-                                    Nothing ->
+                    inlineListElementsCopyableCode
+                        identity
+                        (\p ->
+                            case item.source.mainProgram of
+                                Nothing ->
+                                    text p
+
+                                Just mainProgram ->
+                                    if p == mainProgram then
+                                        strong [] [ text p ]
+
+                                    else
                                         text p
-
-                                    Just mainProgram ->
-                                        if p == mainProgram then
-                                            strong [] [ text p ]
-
-                                        else
-                                            text p
-                            )
-                            (List.sort item.source.programs)
                         )
+                        (List.sort item.source.programs)
                 ]
 
         nixosOptions =
@@ -1026,6 +1025,11 @@ inlineListElementsCode =
     baseInlineList "inline-list-elements" withCode
 
 
+inlineListElementsCopyableCode : (a -> String) -> (a -> Html Msg) -> List a -> Html Msg
+inlineListElementsCopyableCode toText toHtml items =
+    baseInlineList "inline-list-elements" (\i -> i) (List.map (\item -> withCopyableCode (toText item) (toHtml item)) items)
+
+
 inlineList : List (Html msg) -> Html msg
 inlineList =
     baseInlineList "inline-list" identity
@@ -1039,6 +1043,16 @@ inlineListCode =
 withCode : Html msg -> Html msg
 withCode i =
     code [] [ i ]
+
+
+withCopyableCode : String -> Html Msg -> Html Msg
+withCopyableCode content html =
+    code
+        [ onClick (CopyToClipboard content)
+        , class "clickable-code"
+        , title "Click to copy"
+        ]
+        [ html ]
 
 
 baseInlineList : String -> (Html msg -> Html msg) -> List (Html msg) -> Html msg
