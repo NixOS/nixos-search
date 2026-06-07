@@ -1,12 +1,14 @@
-module Main exposing (Flags, Model, Msg, Page, main)
+port module Main exposing (Flags, Model, Msg, Page, main)
 
 import Browser
 import Browser.Dom
 import Browser.Navigation
+import Dict
 import Html
     exposing
         ( Html
         , a
+        , button
         , div
         , footer
         , header
@@ -21,12 +23,16 @@ import Html
 import Html.Attributes
     exposing
         ( alt
+        , attribute
         , class
         , classList
         , href
         , id
         , src
+        , target
+        , title
         )
+import Html.Events exposing (onClick)
 import Json.Decode
 import Page.Flakes exposing (Model(..))
 import Page.Options
@@ -54,7 +60,53 @@ type alias Flags =
     , elasticsearchUsername : String
     , elasticsearchPassword : String
     , nixosChannels : Json.Decode.Value
+    , theme : String
     }
+
+
+type Theme
+    = Auto
+    | Light
+    | Dark
+
+
+themeFromString : String -> Theme
+themeFromString s =
+    case s of
+        "light" ->
+            Light
+
+        "dark" ->
+            Dark
+
+        _ ->
+            Auto
+
+
+themeToString : Theme -> String
+themeToString t =
+    case t of
+        Auto ->
+            "auto"
+
+        Light ->
+            "light"
+
+        Dark ->
+            "dark"
+
+
+themeLabel : Theme -> String
+themeLabel t =
+    case t of
+        Auto ->
+            "Auto"
+
+        Light ->
+            "Light"
+
+        Dark ->
+            "Dark"
 
 
 type alias Model =
@@ -64,7 +116,11 @@ type alias Model =
     , defaultNixOSChannel : String
     , nixosChannels : List NixOSChannel
     , page : Page
+    , theme : Theme
     }
+
+
+port setTheme : String -> Cmd msg
 
 
 type Page
@@ -106,6 +162,7 @@ init flags url navKey =
             , nixosChannels = nixosChannels.channels
             , page = NotFound
             , route = Route.Home
+            , theme = themeFromString flags.theme
             }
     in
     changeRouteTo model url
@@ -123,6 +180,7 @@ type Msg
     | FlakesMsg Page.Flakes.Msg
     | CtrlKRegistered
     | SearchFocusResult
+    | SetTheme Theme
 
 
 updateWith :
@@ -176,7 +234,25 @@ attemptQuery (( model, _ ) as pair) =
 
         Options searchModel ->
             if Search.shouldLoad searchModel then
-                submitQuery OptionsMsg Page.Options.makeRequest { searchModel | searchType = OptionSearch }
+                Tuple.mapSecond
+                    (\cmd ->
+                        Cmd.batch
+                            [ cmd
+                            , Cmd.map OptionsMsg <|
+                                Page.Options.makeRequest
+                                    model.elasticsearch
+                                    model.nixosChannels
+                                    OptionSearch
+                                    searchModel.channel
+                                    searchModel.query
+                                    searchModel.from
+                                    searchModel.size
+                                    searchModel.buckets
+                                    searchModel.sort
+                                    searchModel.activeOptionSource
+                            ]
+                    )
+                    pair
 
             else
                 noEffects pair
@@ -206,17 +282,20 @@ pageMatch m1 m2 =
             True
 
         ( Packages model_a, Packages model_b ) ->
-            { model_a | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked }
-                == { model_b | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked }
+            { model_a | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+                == { model_b | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
 
         ( Options model_a, Options model_b ) ->
-            { model_a | show = Nothing, result = NotAsked } == { model_b | show = Nothing, result = NotAsked }
+            { model_a | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+                == { model_b | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
 
         ( Flakes (OptionModel model_a), Flakes (OptionModel model_b) ) ->
-            { model_a | show = Nothing, result = NotAsked } == { model_b | show = Nothing, result = NotAsked }
+            { model_a | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+                == { model_b | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
 
         ( Flakes (PackagesModel model_a), Flakes (PackagesModel model_b) ) ->
-            { model_a | show = Nothing, result = NotAsked } == { model_b | show = Nothing, result = NotAsked }
+            { model_a | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+                == { model_b | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
 
         _ ->
             False
@@ -261,7 +340,7 @@ changeRouteTo currentModel url =
                         _ ->
                             Nothing
             in
-            Page.Packages.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
+            Page.Packages.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels True modelPage
                 |> updateWith Packages PackagesMsg model
                 |> avoidReinit
                 |> attemptQuery
@@ -276,7 +355,7 @@ changeRouteTo currentModel url =
                         _ ->
                             Nothing
             in
-            Page.Options.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
+            Page.Options.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels True modelPage
                 |> updateWith Options OptionsMsg model
                 |> avoidReinit
                 |> attemptQuery
@@ -335,6 +414,11 @@ update msg model =
 
         ( CtrlKRegistered, _ ) ->
             ( model, Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> SearchFocusResult) )
+
+        ( SetTheme theme, _ ) ->
+            ( { model | theme = theme }
+            , setTheme (themeToString theme)
+            )
 
         _ ->
             -- Disregard messages that arrived for the wrong page.
@@ -403,11 +487,12 @@ view model =
                         [ div [ class "navbar-inner" ]
                             [ div [ class "container" ]
                                 [ a [ class "brand", href "https://nixos.org" ]
-                                    [ img [ alt "NixOS logo", src "/images/nix-logo.png", class "logo" ] []
+                                    [ img [ alt "NixOS logo", src "/images/nix-logo-pride.png", class "logo" ] []
                                     ]
                                 , div []
                                     [ ul [ class "nav pull-left" ]
                                         (viewNavigation model.route)
+                                    , viewThemeSelector model.theme
                                     ]
                                 ]
                             ]
@@ -456,16 +541,18 @@ viewNavigation route =
                         args
 
                     _ ->
-                        Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+                        Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Route.defaultOptionSource
     in
     li [] [ a [ href "https://nixos.org" ] [ text "Back to nixos.org" ] ]
         :: List.map
             (viewNavigationItem route)
             [ ( Route.Packages searchArgs, text "Packages" )
-            , ( Route.Options searchArgs, text "NixOS options" )
+            , ( Route.Options searchArgs, text "Options" )
             , ( Route.Flakes searchArgs, text "3rd-party Flakes" )
             ]
-        ++ [ li [] [ a [ href "https://wiki.nixos.org" ] [ text "NixOS Wiki" ] ] ]
+        ++ [ li [ class "external" ] [ a [ href "https://noogle.dev", target "_blank", Html.Attributes.rel "noopener noreferrer" ] [ text "Functions" ] ]
+           , li [ class "external" ] [ a [ href "https://wiki.nixos.org", target "_blank", Html.Attributes.rel "noopener noreferrer" ] [ text "NixOS Wiki" ] ]
+           ]
 
 
 viewNavigationItem :
@@ -476,6 +563,48 @@ viewNavigationItem currentRoute ( route, title ) =
     li
         [ classList [ ( "active", currentRoute == route ) ] ]
         [ a [ Route.href route ] [ title ] ]
+
+
+themeIcon : Theme -> String
+themeIcon t =
+    case t of
+        Auto ->
+            "◐"
+
+        Light ->
+            "☀"
+
+        Dark ->
+            "☾"
+
+
+viewThemeSelector : Theme -> Html Msg
+viewThemeSelector currentTheme =
+    div
+        [ class "btn-group pull-right theme-toggle"
+        , attribute "role" "group"
+        , attribute "aria-label" "Theme"
+        ]
+        (List.map
+            (\t ->
+                button
+                    [ class "btn"
+                    , classList [ ( "active", t == currentTheme ) ]
+                    , title (themeLabel t)
+                    , attribute "aria-label" (themeLabel t)
+                    , attribute "aria-pressed"
+                        (if t == currentTheme then
+                            "true"
+
+                         else
+                            "false"
+                        )
+                    , onClick (SetTheme t)
+                    ]
+                    [ span [ class "theme-icon" ] [ text (themeIcon t) ] ]
+            )
+            [ Auto, Light, Dark ]
+        )
 
 
 viewPage : Model -> Html Msg

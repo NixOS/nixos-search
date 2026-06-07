@@ -6,6 +6,14 @@ url = "git+https://codeberg.org/alch_emi/embers-nix-packages.git?ref=main"
 
 [[sources]]
 type = "git"
+url = "git+https://codeberg.org/eicas/omeka-s-flake"
+
+[[sources]]
+type = "git"
+url = "git+https://codeberg.org/raboof/browserify?ref=nix"
+
+[[sources]]
+type = "git"
 url = "git+https://codeberg.org/wolfangaukang/python-trovo?ref=main"
 
 # wolfangaukang is no longer in 'maintainers'
@@ -29,10 +37,6 @@ url = "git+https://github.com/raboof/dmake?ref=nix"
 [[sources]]
 type = "git"
 url = "git+https://github.com/raboof/octopin?ref=nix"
-
-[[sources]]
-type = "git"
-url = "git+https://github.com/TamtamHero/fw-fanctrl?ref=packaging/nix"
 
 [[sources]]
 type = "git"
@@ -90,6 +94,91 @@ repo = "nyx"
 
 [[sources]]
 type = "github"
+owner = "DeterminateSystems"
+repo = "bonk"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "cpiotools"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "determinate"
+
+# [[sources]]
+# type = "github"
+# owner = "DeterminateSystems"
+# repo = "dhcpv6macd"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "fh"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "flake-checker"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "flake-iter"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "flake-schemas"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "flake-templates"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "magic-nix-cache"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "nix-config-parser"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "nix-installer"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "nix-netboot-serve"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "nix-src"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "nixos-vault-service"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "update-flake-lock"
+
+[[sources]]
+type = "github"
+owner = "DeterminateSystems"
+repo = "zpool-auto-expand-partitions"
+
+[[sources]]
+type = "github"
 owner = "dgollings"
 repo = "nix-atlas"
 
@@ -112,6 +201,11 @@ repo = "flake-compat"
 type = "github"
 owner = "eza-community"
 repo = "eza"
+
+[[sources]]
+type = "github"
+owner = "felbinger"
+repo = "srsran.nix"
 
 [[sources]]
 type = "github"
@@ -238,11 +332,10 @@ type = "github"
 owner = "nix-community"
 repo = "autofirma-nix"
 
-# error: attribute 'outputName' missing
-#[[sources]]
-#type = "github"
-#owner = "nix-community"
-#repo = "fenix"
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "fenix"
 
 [[sources]]
 type = "github"
@@ -309,10 +402,11 @@ type = "github"
 owner = "nix-systems"
 repo = "x86_64-linux"
 
-[[sources]]
-type = "github"
-owner = "NixOS"
-repo = "hydra"
+# https://github.com/NixOS/nixos-search/issues/1175
+#[[sources]]
+#type = "github"
+#owner = "NixOS"
+#repo = "hydra"
 
 [[sources]]
 type = "github"
@@ -424,10 +518,11 @@ type = "github"
 owner = "StardustXR"
 repo = "telescope"
 
-[[sources]]
-type = "github"
-owner = "surrealdb"
-repo = "surrealdb"
+# seems to rely on allow-import-from-derivation now
+#[[sources]]
+#type = "github"
+#owner = "surrealdb"
+#repo = "surrealdb"
 
 [[sources]]
 type = "github"
@@ -488,6 +583,11 @@ repo = "zed"
 type = "gitlab"
 owner = "pi-lar"
 repo = "neuropil"
+
+[[sources]]
+type = "gitlab"
+owner = "pinage404"
+repo = "nix-sandboxes"
 
 [[sources]]
 type = "gitlab"
