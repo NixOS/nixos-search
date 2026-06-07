@@ -357,7 +357,7 @@ viewResultItem nixosChannels channel show activeSource item =
                                     |> Maybe.map
                                         (\default ->
                                             [ div [] [ text "Default" ]
-                                            , div [] <| Maybe.withDefault [ copyable default (asPreCode default) ] (Utils.showHtml default)
+                                            , div [] <| Maybe.withDefault [ Utils.copyable CopyToClipboard default (asPreCode default) ] (Utils.showHtml default)
                                             ]
                                         )
                                     |> Maybe.withDefault []
@@ -366,7 +366,7 @@ viewResultItem nixosChannels channel show activeSource item =
                                     |> Maybe.map
                                         (\example ->
                                             [ div [] [ text "Example" ]
-                                            , div [] <| Maybe.withDefault [ copyable example (asHighlightPreCode example) ] (Utils.showHtml example)
+                                            , div [] <| Maybe.withDefault [ Utils.copyable CopyToClipboard example (asHighlightPreCode example) ] (Utils.showHtml example)
                                             ]
                                         )
                                     |> Maybe.withDefault []
@@ -446,20 +446,6 @@ viewResultItem nixosChannels channel show activeSource item =
             ]
 
 
-copyable : String -> Html Msg -> Html Msg
-copyable textToCopy rendered =
-    div [ class "code-block-wrapper" ]
-        [ rendered
-        , button
-            [ type_ "button"
-            , class "code-copy-button"
-            , title "Copy to clipboard"
-            , onClick (CopyToClipboard textToCopy)
-            ]
-            [ text "Copy" ]
-        ]
-
-
 asHighlightPreCode : String -> Html msg
 asHighlightPreCode value =
     div []
@@ -510,7 +496,7 @@ viewUsageSnippet source =
 
         usage snippet =
             [ div [] [ text "Usage" ]
-            , copyable snippet (asHighlightPreCode snippet)
+            , Utils.copyable CopyToClipboard snippet (asHighlightPreCode snippet)
             ]
     in
     case source.docType of
@@ -725,13 +711,7 @@ viewOptionNamePath channel activeSource optionName segments =
             [ code [ class "code-block" ]
                 (segments |> List.indexedMap renderSegment |> List.concat)
             ]
-        , button
-            [ type_ "button"
-            , class "option-copy-button"
-            , title "Copy option name"
-            , onClick (CopyToClipboard optionName)
-            ]
-            [ text "Copy" ]
+        , Utils.copyButton CopyToClipboard "option-copy-button" "Copy option name" optionName
         ]
 
 
