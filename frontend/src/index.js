@@ -20,6 +20,13 @@ function applyTheme(theme) {
 const initialTheme = normalizeTheme(localStorage.getItem("theme"));
 applyTheme(initialTheme);
 
+const connection = navigator.connection || navigator.webkitConnection;
+const saveDataAttr = document.documentElement.dataset.saveData === "on";
+const saveData =
+    saveDataAttr ||
+    (connection && connection.saveData) ||
+    (connection && connection.type === "cellular");
+
 const app = Elm.Main.init({
     flags: {
         elasticsearchMappingSchemaVersion: parseInt(
@@ -32,6 +39,7 @@ const app = Elm.Main.init({
             process.env.ELASTICSEARCH_PASSWORD || "X8gPHnzL52wFEekuxsfQ9cSh",
         nixosChannels: JSON.parse(process.env.NIXOS_CHANNELS),
         theme: initialTheme,
+        saveData: Boolean(saveData),
     },
 });
 

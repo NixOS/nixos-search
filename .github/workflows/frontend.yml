@@ -34,6 +34,17 @@ jobs:
           mkdir ./dist
           cp -RL ./result/* ./dist/
 
+      - name: Build autocomplete corpus
+        shell: sh
+        env:
+          AUTOCOMPLETE_OUT_DIR: ./dist/autocomplete
+        run: |
+          NIXOS_CHANNELS=$(cat $(nix build --no-link --print-out-paths .#nixosChannelsJson))
+          export NIXOS_CHANNELS
+          ELASTICSEARCH_MAPPING_SCHEMA_VERSION=$(nix eval --raw --impure --expr '(import ./version.nix).frontend')
+          export ELASTICSEARCH_MAPPING_SCHEMA_VERSION
+          node frontend/scripts/build-autocomplete-corpus.mjs
+
       - name: Deploy to Netlify
         uses: nwtgck/actions-netlify@v3.0
         if: github.repository_owner == 'NixOS'
