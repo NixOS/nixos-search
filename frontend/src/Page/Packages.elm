@@ -628,35 +628,39 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                 ]
 
         programs =
+            let
+                sortedPrograms =
+                    case item.source.mainProgram of
+                        Just mp ->
+                            mp :: (item.source.programs |> List.filter (\p -> p /= mp) |> List.sort)
+
+                        Nothing ->
+                            List.sort item.source.programs
+
+                renderOne p =
+                    if Just p == item.source.mainProgram then
+                        strong [] [ text p ]
+
+                    else
+                        text p
+            in
             div []
                 [ h4 [] [ text "Programs provided" ]
-                , if List.isEmpty item.source.programs then
-                    case item.source.mainProgram of
-                        Nothing ->
-                            p [] [ text "This package provides no programs." ]
+                , if List.isEmpty sortedPrograms then
+                    p [] [ text "This package provides no programs." ]
 
-                        Just mainProgram ->
-                            p []
-                                [ p [] [ text "Only the main program of this package is known: " ]
-                                , withCopyableCode mainProgram (strong [] [ text mainProgram ])
-                                ]
+                  else if List.isEmpty item.source.programs then
+                    let
+                        mp =
+                            Maybe.withDefault "" item.source.mainProgram
+                    in
+                    p []
+                        [ p [] [ text "Only the main program of this package is known: " ]
+                        , withCopyableCode mp (renderOne mp)
+                        ]
 
                   else
-                    inlineListElementsCopyableCode
-                        identity
-                        (\p ->
-                            case item.source.mainProgram of
-                                Nothing ->
-                                    text p
-
-                                Just mainProgram ->
-                                    if p == mainProgram then
-                                        strong [] [ text p ]
-
-                                    else
-                                        text p
-                        )
-                        (List.sort item.source.programs)
+                    inlineListElementsCopyableCode identity renderOne sortedPrograms
                 ]
 
         nixosOptions =
