@@ -656,11 +656,21 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                     in
                     p []
                         [ p [] [ text "Only the main program of this package is known: " ]
-                        , withCopyableCode mp (renderOne mp)
+                        , withCopyableCode "main-program" mp (renderOne mp)
                         ]
 
                   else
-                    inlineListElementsCopyableCode identity renderOne sortedPrograms
+                    inlineListElementsCopyableCode
+                        (\p ->
+                            if Just p == item.source.mainProgram then
+                                "main-program"
+
+                            else
+                                ""
+                        )
+                        identity
+                        renderOne
+                        sortedPrograms
                 ]
 
         nixosOptions =
@@ -1029,9 +1039,9 @@ inlineListElementsCode =
     baseInlineList "inline-list-elements" withCode
 
 
-inlineListElementsCopyableCode : (a -> String) -> (a -> Html Msg) -> List a -> Html Msg
-inlineListElementsCopyableCode toText toHtml items =
-    baseInlineList "inline-list-elements" (\i -> i) (List.map (\item -> withCopyableCode (toText item) (toHtml item)) items)
+inlineListElementsCopyableCode : (a -> String) -> (a -> String) -> (a -> Html Msg) -> List a -> Html Msg
+inlineListElementsCopyableCode toExtraClass toText toHtml items =
+    baseInlineList "inline-list-elements" (\i -> i) (List.map (\item -> withCopyableCode (toExtraClass item) (toText item) (toHtml item)) items)
 
 
 inlineList : List (Html msg) -> Html msg
@@ -1049,11 +1059,11 @@ withCode i =
     code [] [ i ]
 
 
-withCopyableCode : String -> Html Msg -> Html Msg
-withCopyableCode content html =
+withCopyableCode : String -> String -> Html Msg -> Html Msg
+withCopyableCode extraClass content html =
     code
         [ onClick (CopyToClipboard content)
-        , class "clickable-code"
+        , class ("clickable-code " ++ extraClass)
         , title "Click to copy"
         ]
         [ html ]

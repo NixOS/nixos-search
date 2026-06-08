@@ -864,7 +864,7 @@ header .navbar.navbar-static-top ul.nav > li.external {
               }
 
               // put border around main program
-              & > :nth-child(3) code:has(strong) {
+              & > :nth-child(3) code.main-program {
                 border: 2px solid;
               }
 
