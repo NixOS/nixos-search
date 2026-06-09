@@ -14,6 +14,7 @@ import Html
         , header
         , img
         , li
+        , nav
         , small
         , span
         , sup
@@ -483,7 +484,7 @@ view model =
             [ id "shortcut-list-el" ]
             [ div []
                 [ header []
-                    [ div [ class "navbar navbar-static-top" ]
+                    [ nav [ class "navbar navbar-static-top" ]
                         [ div [ class "navbar-inner" ]
                             [ div [ class "container" ]
                                 [ a [ class "brand", href "https://nixos.org" ]

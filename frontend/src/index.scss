@@ -465,22 +465,28 @@ footer {
   line-height: 1;
 }
 
-header .navbar.navbar-static-top {
-  .brand {
-    padding-bottom: 0;
-  }
-  img.logo {
-    margin-top: -5px;
-    padding-right: 5px;
-    line-height: 25px;
-    height: 25px;
-  }
-  ul.nav > li {
-    line-height: 20px;
-    sup {
-      margin-left: 0.5em;
-    }
-  }
+header {
+	position: sticky;
+	top: 0;
+	z-index: 100;
+
+	.navbar.navbar-static-top {
+	  .brand {
+	    padding-bottom: 0;
+	  }
+	  img.logo {
+	    margin-top: -5px;
+	    padding-right: 5px;
+	    line-height: 25px;
+	    height: 25px;
+	  }
+	  ul.nav > li {
+	    line-height: 20px;
+	    sup {
+	      margin-left: 0.5em;
+	    }
+	  }
+	}
 }
 
 header .navbar.navbar-static-top ul.nav > li.external {
