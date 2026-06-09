@@ -114,6 +114,8 @@ lazy_static! {
                     "type": "nested",
                     "properties": {
                         "fullName": {"type": "text"},
+                        "shortName": {"type": "text"},
+                        "spdxId": {"type": "text"},
                         "url": {"type": "text"}},
                 },
                 "package_license_set": {"type": "keyword"},
