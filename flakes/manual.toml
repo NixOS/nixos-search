@@ -43,6 +43,10 @@ type = "git"
 url = "git+https://github.com/xddxdd/nix-cachyos-kernel?ref=release"
 
 [[sources]]
+type = "git"
+url = "git+https://git.clan.lol/clan/clan-core"
+
+[[sources]]
 type = "github"
 owner = "4JX"
 repo = "L5P-Keyboard-RGB"
