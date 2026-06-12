@@ -673,20 +673,29 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                         sortedPrograms
                 ]
 
-        nixosOptions =
-            if item.source.flakeUrl == Nothing then
-                div []
-                    [ h4 [] [ text "NixOS options" ]
-                    , p []
-                        [ a [ href ("/options?channel=" ++ channel ++ "&query=" ++ item.source.attr_name) ]
-                            [ text "Search NixOS options for "
-                            , em [] [ text item.source.attr_name ]
+        optionsLink =
+            let
+                searchLink heading label url =
+                    div []
+                        [ h4 [] [ text heading ]
+                        , p []
+                            [ a [ href url ]
+                                [ text label
+                                , em [] [ text item.source.attr_name ]
+                                ]
                             ]
                         ]
-                    ]
+            in
+            case item.source.flakeUrl of
+                Nothing ->
+                    searchLink "NixOS options"
+                        "Search NixOS options for "
+                        ("/options?channel=" ++ channel ++ "&query=" ++ item.source.attr_name)
 
-            else
-                text ""
+                Just _ ->
+                    searchLink "Flake options"
+                        "Search flake options for "
+                        ("/flakes?type=options&query=" ++ item.source.attr_name)
 
         longerPackageDetails =
             optionals (Just item.source.attr_name == show)
@@ -946,7 +955,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                 ]
                     , programs
                     , maintainersTeamsAndPlatforms
-                    , nixosOptions
+                    , optionsLink
                     , if List.isEmpty item.source.modularServices then
                         text ""
 
