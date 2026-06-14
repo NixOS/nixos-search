@@ -1892,38 +1892,6 @@ table th[class*=span] {
 .table-hover tbody tr.info:hover>td {
   background-color:#c4e3f3
 }
-[class*=" icon-"],
-[class^=icon-] {
-  background-image:url(/images/glyphicons-halflings.png);
-  background-position:14px 14px;
-  background-repeat:no-repeat;
-  display:inline-block;
-  height:14px;
-  line-height:14px;
-  *margin-right:.3em;
-  margin-top:1px;
-  vertical-align:text-top;
-  width:14px
-}
-.dropdown-menu>.active>a>[class*=" icon-"],
-.dropdown-menu>.active>a>[class^=icon-],
-.dropdown-menu>li>a:focus>[class*=" icon-"],
-.dropdown-menu>li>a:focus>[class^=icon-],
-.dropdown-menu>li>a:hover>[class*=" icon-"],
-.dropdown-menu>li>a:hover>[class^=icon-],
-.dropdown-submenu:focus>a>[class*=" icon-"],
-.dropdown-submenu:focus>a>[class^=icon-],
-.dropdown-submenu:hover>a>[class*=" icon-"],
-.dropdown-submenu:hover>a>[class^=icon-],
-.icon-white,
-.nav-list>.active>a>[class*=" icon-"],
-.nav-list>.active>a>[class^=icon-],
-.nav-pills>.active>a>[class*=" icon-"],
-.nav-pills>.active>a>[class^=icon-],
-.navbar-inverse .nav>.active>a>[class*=" icon-"],
-.navbar-inverse .nav>.active>a>[class^=icon-] {
-  background-image:url(/images/glyphicons-halflings-white.png)
-}
 .icon-glass {
   background-position:0 0
 }
