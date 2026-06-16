@@ -295,7 +295,6 @@
         text-shadow: none;
         box-shadow: none;
         border-radius: 4px;
-        margin: 4px;
         padding: 6px 12px;
 
         &:hover,
@@ -465,20 +464,37 @@ footer {
   line-height: 1;
 }
 
-header .navbar.navbar-static-top {
-  .brand {
-    padding-bottom: 0;
+header .navbar .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding-block: 4px;
+  gap: 4px;
+
+  a.brand {
+    all: unset;
+    display: flex;
+
+    img {
+      height: 25px;
+    }
   }
-  img.logo {
-    margin-top: -5px;
-    padding-right: 5px;
-    line-height: 25px;
-    height: 25px;
+
+  &::before, &::after {
+    all: unset; /* remove pseudo-elements added by bootstrap */
   }
-  ul.nav > li {
-    line-height: 20px;
-    sup {
-      margin-left: 0.5em;
+
+  .nav {
+    display: flex;
+    flex-flow: row wrap;
+    margin: unset;
+    gap: 8px;
+
+    & + .btn-group {
+      /* theme selection */
+      margin: unset;
+      margin-left: auto;
     }
   }
 }
