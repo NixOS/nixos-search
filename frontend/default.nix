@@ -1,48 +1,52 @@
 {
-  pkgs ? import <nixpkgs> { },
+  buildNpmPackage,
+  elm2nix,
+  elmPackages,
+  importNpmLock,
+  nodejs,
+
   nixosChannels,
   version,
 }:
-pkgs.npmlock2nix.v1.build {
+let
+  manifest = builtins.fromJSON (builtins.readFile ./package.json);
+in buildNpmPackage {
+  pname = manifest.name;
+  version = manifest.version;
   src = ./.;
   installPhase = ''
     mkdir $out
     cp -R dist/* $out/
     cp netlify.toml $out/
   '';
-  postConfigure = pkgs.elmPackages.fetchElmDeps {
-    elmPackages = import ./elm-srcs.nix;
-    elmVersion = pkgs.elmPackages.elm.version;
-    registryDat = ./registry.dat;
-  };
-  ELASTICSEARCH_MAPPING_SCHEMA_VERSION = version;
-  NIXOS_CHANNELS = builtins.toJSON nixosChannels;
-  buildCommands = [
-    "HOME=$PWD npm run prod"
-  ];
-  buildInputs =
-    (with pkgs; [
+  nativeBuildInputs =
+    [
       nodejs
       elm2nix
-    ])
-    ++ (with pkgs.elmPackages; [
+    ]
+    ++ (with elmPackages; [
       elm
       elm-format
       elm-language-server
       elm-test
     ]);
-  node_modules_attrs = {
-    sourceOverrides = {
-      elm =
-        sourceIngo: drv:
-        drv.overrideAttrs (old: {
-          postPatch = ''
-            sed -i -e "s|download(|//download(|" install.js
-            sed -i -e "s|request(|//request(|" download.js
-            sed -i -e "s|var version|return; var version|" download.js
-            cp ${pkgs.elmPackages.elm}/bin/elm bin/elm
-          '';
-        });
+
+  postConfigure = elmPackages.fetchElmDeps {
+    elmPackages = import ./elm-srcs.nix;
+    elmVersion = elmPackages.elm.version;
+    registryDat = ./registry.dat;
+  };
+
+  ELASTICSEARCH_MAPPING_SCHEMA_VERSION = version;
+  NIXOS_CHANNELS = builtins.toJSON nixosChannels;
+
+  npmBuildScript = "prod";
+  npmDeps = importNpmLock {
+    npmRoot = ./.;
+    packageSourceOverrides = {
+      "node_modules/elm" = elmPackages.elm;
     };
   };
+  npmConfigHook = importNpmLock.npmConfigHook;
+  npmFlags = [ "--legacy-peer-deps" ];
 }
