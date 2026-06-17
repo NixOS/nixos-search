@@ -50,45 +50,11 @@
         "type": "github"
       }
     },
-    "nixpkgs-npmlock2nix": {
-      "locked": {
-        "lastModified": 1636623366,
-        "narHash": "sha256-jOQMlv9qFSj0U66HB+ujZoapty0UbewmSNbX8+3ujUQ=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "c5ed8beb478a8ca035f033f659b60c89500a3034",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "c5ed8beb478a8ca035f033f659b60c89500a3034",
-        "type": "github"
-      }
-    },
-    "npmlock2nix": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1758100811,
-        "narHash": "sha256-qJc3ffjHVXUdZqytKcDK9XZ2b3BQ1RdYfZFuYgxbrn4=",
-        "owner": "nix-community",
-        "repo": "npmlock2nix",
-        "rev": "4d9060afbaa5f57ee0b8ef11c7044ed287a7d302",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nix-community",
-        "repo": "npmlock2nix",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
         "nixos-infra": "nixos-infra",
         "nixpkgs": "nixpkgs",
-        "nixpkgs-npmlock2nix": "nixpkgs-npmlock2nix",
-        "npmlock2nix": "npmlock2nix",
         "treefmt-nix": "treefmt-nix"
       }
     },
