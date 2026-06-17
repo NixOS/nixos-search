@@ -15,7 +15,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   npmDeps = fetchNpmDeps {
     pname = "npm-deps-${finalAttrs.name}";
     inherit (finalAttrs) src;
-    hash = "sha256-boNLYUhgdUgbWrIsco8uePqUb/z+T/FggM62cadZo00=";
+    hash = "sha256-CXRmfx11jJk32UO+hVIDNCKkY/Gst07CNXCJl8uy/S8=";
   };
 
   postConfigure = elmPackages.fetchElmDeps {
