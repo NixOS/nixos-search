@@ -1,11 +1,12 @@
-const { defineConfig } = require("@rsbuild/core");
-const { pluginSass } = require("@rsbuild/plugin-sass");
+import { defineConfig } from "@rsbuild/core";
+import { pluginSass } from "@rsbuild/plugin-sass";
+import * as sass from "sass";
 
-module.exports = defineConfig({
+export default defineConfig({
     plugins: [
         pluginSass({
             sassLoaderOptions: {
-                implementation: require("sass"),
+                implementation: sass,
             },
         }),
     ],
@@ -18,8 +19,7 @@ module.exports = defineConfig({
                 process.env.ELASTICSEARCH_MAPPING_SCHEMA_VERSION || "0",
             ),
             "process.env.ELASTICSEARCH_PASSWORD": JSON.stringify(
-                process.env.ELASTICSEARCH_PASSWORD ||
-                    "X8gPHnzL52wFEekuxsfQ9cSh",
+                process.env.ELASTICSEARCH_PASSWORD || "X8gPHnzL52wFEekuxsfQ9cSh",
             ),
             "process.env.ELASTICSEARCH_URL": JSON.stringify(
                 process.env.ELASTICSEARCH_URL || "/backend",
