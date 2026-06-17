@@ -489,11 +489,9 @@ view model =
                                 [ a [ class "brand", href "https://nixos.org" ]
                                     [ img [ alt "NixOS logo", src "/images/nix-logo-pride.png", class "logo" ] []
                                     ]
-                                , div []
-                                    [ ul [ class "nav pull-left" ]
-                                        (viewNavigation model.route)
-                                    , viewThemeSelector model.theme
-                                    ]
+                                , ul [ class "nav" ]
+                                    (viewNavigation model.route)
+                                , viewThemeSelector model.theme
                                 ]
                             ]
                         ]
