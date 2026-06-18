@@ -1,7 +1,7 @@
-module Components.Button exposing (..)
+module Components.Button exposing (viewButton)
 
 import Html exposing (Attribute, Html, button)
-import Html.Attributes exposing (attribute, class, type_)
+import Html.Attributes exposing (class, type_)
 
 
 viewButton : List (Attribute msg) -> List (Html msg) -> Html msg

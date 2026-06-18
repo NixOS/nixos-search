@@ -45,7 +45,6 @@ import Html
     exposing
         ( Html
         , a
-        , button
         , code
         , div
         , form
@@ -556,9 +555,6 @@ update toRoute navKey msg model nixosChannels =
 
         QueryResponse result ->
             let
-                activeSourceId =
-                    Route.optionSourceId model.activeOptionSource
-
                 -- Mirror the active tab's count into the per-source dict
                 -- so tabs read uniformly from one place. Pages that don't
                 -- use option-source tabs (Packages, Flakes) just write
@@ -566,6 +562,10 @@ update toRoute navKey msg model nixosChannels =
                 updatedCounts =
                     case result of
                         RemoteData.Success r ->
+                            let
+                                activeSourceId =
+                                    Route.optionSourceId model.activeOptionSource
+                            in
                             Dict.insert
                                 activeSourceId
                                 r.hits.total.value
@@ -1046,10 +1046,6 @@ viewNoResults categoryName activeOptionSource query channel =
             Html.a [ href ("https://github.com/NixOS/nixpkgs/issues?q=" ++ query) ]
                 [ text "search nixpkgs issues" ]
 
-        homeManagerIssues =
-            Html.a [ href ("https://github.com/nix-community/home-manager/issues?q=" ++ query) ]
-                [ text "search home-manager issues" ]
-
         body =
             if categoryName == "packages" then
                 [ text "You might want to "
@@ -1067,6 +1063,11 @@ viewNoResults categoryName activeOptionSource query channel =
                 ]
 
             else if activeOptionSource == Route.HomeManagerOptionSource then
+                let
+                    homeManagerIssues =
+                        Html.a [ href ("https://github.com/nix-community/home-manager/issues?q=" ++ query) ]
+                            [ text "search home-manager issues" ]
+                in
                 [ text "You might want to ", homeManagerIssues, text "." ]
 
             else

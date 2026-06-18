@@ -1,5 +1,6 @@
 module Page.Packages exposing
     ( Aggregations
+    , LicenseExpression
     , Model
     , Msg(..)
     , ResultAggregations
@@ -25,7 +26,6 @@ import Html
     exposing
         ( Html
         , a
-        , button
         , code
         , div
         , em
@@ -1029,24 +1029,9 @@ viewResultItem nixosChannels channel showInstallDetails show item =
         )
 
 
-inlineListElements : List (Html msg) -> Html msg
-inlineListElements =
-    baseInlineList "inline-list-elements" identity
-
-
-inlineListElementsCode : List (Html msg) -> Html msg
-inlineListElementsCode =
-    baseInlineList "inline-list-elements" withCode
-
-
 inlineListElementsCopyableCode : (a -> String) -> (a -> String) -> (a -> Html Msg) -> List a -> Html Msg
 inlineListElementsCopyableCode toExtraClass toText toHtml items =
     baseInlineList "inline-list-elements" (\i -> i) (List.map (\item -> withCopyableCode (toExtraClass item) (toText item) (toHtml item)) items)
-
-
-inlineList : List (Html msg) -> Html msg
-inlineList =
-    baseInlineList "inline-list" identity
 
 
 inlineListCode : List (Html msg) -> Html msg

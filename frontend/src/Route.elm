@@ -10,7 +10,6 @@ module Route exposing
     , fromUrl
     , href
     , optionSourceDocType
-    , optionSourceFromId
     , optionSourceId
     , optionSourceLabel
     , routeToString
