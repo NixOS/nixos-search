@@ -57,7 +57,6 @@ select {
 button,
 input {
   line-height:normal;
-  *overflow:visible
 }
 button::-moz-focus-inner,
 input::-moz-focus-inner {
@@ -156,7 +155,6 @@ a:hover {
   float:right
 }
 .container {
-  *zoom:1;
   margin-left:auto;
   margin-right:auto
 }
@@ -365,7 +363,6 @@ input[type=checkbox] {
   line-height:normal;
   margin:4px 0 0;
   margin-top:1px\9;
-  *margin-top:0
 }
 input[type=button],
 input[type=checkbox],
@@ -376,7 +373,6 @@ input[type=submit] {
 select {
   height:30px;
   line-height:30px;
-  *margin-top:4px
 }
 select {
   background-color:#fff;
@@ -464,11 +460,9 @@ select:focus:invalid:focus {
   background-color:#fff;
   border:1px solid #ccc;
   border:1px solid rgba(0,0,0,.2);
-  *border-bottom-width:2px;
   -webkit-border-radius:6px;
   -moz-border-radius:6px;
   border-radius:6px;
-  *border-right-width:2px;
   -webkit-box-shadow:0 5px 10px rgba(0,0,0,.2);
   -moz-box-shadow:0 5px 10px rgba(0,0,0,.2);
   box-shadow:0 5px 10px rgba(0,0,0,.2);
@@ -492,9 +486,7 @@ select:focus:invalid:focus {
   border-bottom:1px solid #fff;
   height:1px;
   margin:9px 1px;
-  *margin:-5px 0 5px;
   overflow:hidden;
-  *width:100%
 }
 .dropdown-menu>li>a {
   clear:both;
@@ -539,9 +531,6 @@ select:focus:invalid:focus {
   filter:progid:DXImageTransform.Microsoft.gradient(enabled=false);
   text-decoration:none
 }
-.open {
-  *z-index:1000
-}
 .open>.dropdown-menu {
   display:block
 }
@@ -550,9 +539,7 @@ select:focus:invalid:focus {
   right:0
 }
 .btn {
-  *zoom:1;
   background-color:#f5f5f5;
-  *background-color:#e6e6e6;
   background-image:-moz-linear-gradient(top,#fff,#e6e6e6);
   background-image:-webkit-gradient(linear,0 0,0 100%,from(#fff),to(#e6e6e6));
   background-image:-webkit-linear-gradient(top,#fff,#e6e6e6);
@@ -560,7 +547,6 @@ select:focus:invalid:focus {
   background-image:linear-gradient(180deg,#fff,#e6e6e6);
   background-repeat:repeat-x;
   border:1px solid #ccc;
-  *border:0;
   border-color:rgba(0,0,0,.1) rgba(0,0,0,.1) #b3b3b3;
   -webkit-border-radius:4px;
   -moz-border-radius:4px;
@@ -571,13 +557,11 @@ select:focus:invalid:focus {
   color:#333;
   cursor:pointer;
   display:inline-block;
-  *display:inline;
   filter:progid:DXImageTransform.Microsoft.gradient(startColorstr="#ffffffff",endColorstr="#ffe6e6e6",GradientType=0);
   filter:progid:DXImageTransform.Microsoft.gradient(enabled=false);
   font-size:14px;
   line-height:20px;
   margin-bottom:0;
-  *margin-left:.3em;
   padding:4px 12px;
   text-align:center;
   text-shadow:0 1px 1px hsla(0,0%,100%,.75);
@@ -590,15 +574,11 @@ select:focus:invalid:focus {
 .btn:hover,
 .btn[disabled] {
   background-color:#e6e6e6;
-  *background-color:#d9d9d9;
   color:#333
 }
 .btn.active,
 .btn:active {
   background-color:#ccc\9
-}
-.btn:first-child {
-  *margin-left:0
 }
 .btn:focus,
 .btn:hover {
@@ -633,28 +613,17 @@ select:focus:invalid:focus {
   filter:alpha(opacity=65);
   opacity:.65
 }
-button.btn,
-input[type=submit].btn {
-  *padding-bottom:3px;
-  *padding-top:3px
-}
 button.btn::-moz-focus-inner,
 input[type=submit].btn::-moz-focus-inner {
   border:0;
   padding:0
 }
 .btn-group {
-  *zoom:1;
   display:inline-block;
-  *display:inline;
   font-size:0;
-  *margin-left:.3em;
   position:relative;
   vertical-align:middle;
   white-space:nowrap
-}
-.btn-group:first-child {
-  *margin-left:0
 }
 .btn-group+.btn-group {
   margin-left:5px
@@ -754,10 +723,6 @@ input[type=submit].btn::-moz-focus-inner {
   float:right
 }
 
-.nav-tabs {
-  *zoom:1
-}
-
 .nav-tabs:after,
 .nav-tabs:before {
   content:"";
@@ -855,11 +820,8 @@ input[type=submit].btn::-moz-focus-inner {
 .navbar {
   margin-bottom:20px;
   overflow:visible;
-  *position:relative;
-  *z-index:2
 }
 .navbar-inner {
-  *zoom:1;
   background-color:#fafafa;
   background-image:-moz-linear-gradient(top,#fff,#f2f2f2);
   background-image:-webkit-gradient(linear,0 0,0 100%,from(#fff),to(#f2f2f2));
@@ -1023,7 +985,6 @@ input[type=submit].btn::-moz-focus-inner {
   right:100%
 }
 .pager {
-  *zoom:1;
   list-style:none;
   margin:20px 0;
   text-align:center
