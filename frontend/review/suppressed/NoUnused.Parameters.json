@@ -1,0 +1,6 @@
+{
+    "version": 1,
+    "automatically created by": "elm-review suppress",
+    "learn more": "elm-review suppress --help",
+    "suppressions": [{ "count": 2, "filePath": "src/Page/Options.elm" }]
+}

@@ -21,11 +21,8 @@ import Html
     exposing
         ( Html
         , a
-        , button
         , code
         , div
-        , input
-        , label
         , li
         , pre
         , span
@@ -35,18 +32,14 @@ import Html
         )
 import Html.Attributes
     exposing
-        ( checked
-        , class
+        ( class
         , classList
         , href
         , target
-        , title
-        , type_
         )
 import Html.Events
     exposing
-        ( onCheck
-        , onClick
+        ( onClick
         )
 import Http exposing (Body)
 import Json.Decode
@@ -307,12 +300,6 @@ viewResultItem nixosChannels channel show activeSource item =
         asPreCode value =
             div [] [ pre [] [ code [ class "code-block" ] [ text value ] ] ]
 
-        isService =
-            item.source.docType == "service"
-
-        isHomeManager =
-            item.source.docType == "home-manager-option"
-
         nameSegments =
             optionNameSegments item.source
 
@@ -329,6 +316,10 @@ viewResultItem nixosChannels channel show activeSource item =
 
         showDetails =
             if Just itemId == show then
+                let
+                    isService =
+                        item.source.docType == "service"
+                in
                 Just <|
                     div [ Html.Attributes.map SearchMsg Search.trapClick ] <|
                         [ div [] [ text "Name" ]
@@ -598,14 +589,15 @@ findSource nixosChannels channel source =
                     not (String.isEmpty v)
                         && not (String.contains " " v)
                         && not (String.contains "," v)
-
-                ref =
-                    Maybe.withDefault "HEAD" source.flakeRevision
-
-                positionWithLine =
-                    cleanPosition value |> String.replace ":" "#L"
             in
             if looksLikePath value && String.startsWith "https://github.com/" flakeUrl_ then
+                let
+                    ref =
+                        Maybe.withDefault "HEAD" source.flakeRevision
+
+                    positionWithLine =
+                        cleanPosition value |> String.replace ":" "#L"
+                in
                 a
                     [ href (flakeUrl_ ++ "/blob/" ++ ref ++ "/" ++ positionWithLine)
                     , target "_blank"
