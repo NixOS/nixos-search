@@ -83,8 +83,8 @@ You may need to manually edit `frontend/src/Search.elm` to use the right index.
 
 - On each commit to `main` branch a GitHub Action is triggered.
 - GitHub Action then builds production version of the web application using
-  `npm run prod` command.
-- The built web application (in `./dist`) is then deployed to Netlify.
+  `nix build .#frontend` command.
+- The built web application (in `./result`) is then deployed to Netlify.
 - GitHub Action can also be triggered via Pull Request, which if Pull Request
   was created from a non-forked repo's branch, will provide a preview url in a
   comment.
