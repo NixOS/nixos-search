@@ -111,7 +111,6 @@
               opensearch-cli
               rustfmt
               rust-analyzer
-              yarn
             ];
             extraShellHook = ''
               export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
@@ -136,15 +135,14 @@
             inputsFrom = [ packages.frontend ];
             extraPackages = with pkgs; [
               rustfmt
-              yarn
             ];
             extraShellHook = ''
               export PATH=$PWD/frontend/node_modules/.bin:$PATH
               rm -rf frontend/node_modules
               ln -sf ${packages.frontend.node_modules}/node_modules frontend/
-              echo "========================================================"
-              echo "= To develop the frontend run: cd frontend && yarn dev ="
-              echo "========================================================"
+              echo "==========================================================="
+              echo "= To develop the frontend run: cd frontend && npm run dev ="
+              echo "==========================================================="
             '';
           };
         };
