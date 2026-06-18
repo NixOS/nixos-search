@@ -39,6 +39,7 @@ import Array
 import Base64
 import Browser.Dom
 import Browser.Navigation
+import Components.Button exposing (viewButton)
 import Dict exposing (Dict)
 import Html
     exposing
@@ -1194,7 +1195,7 @@ viewSearchInput nixosChannels outMsg categoryName selectedChannel searchQuery =
                     ]
                     []
                 ]
-            , button [ class "btn", type_ "submit" ]
+            , viewButton [ type_ "submit" ]
                 [ text "Search" ]
             ]
             :: (selectedChannel
@@ -1219,11 +1220,10 @@ viewChannels nixosChannels outMsg selectedChannel =
                 ]
                 (List.map
                     (\channel ->
-                        button
+                        viewButton
                             [ type_ "button"
                             , classList
-                                [ ( "btn", True )
-                                , ( "active", channel.id == selectedChannel )
+                                [ ( "active", channel.id == selectedChannel )
                                 ]
                             , onClick <| outMsg (ChannelChange channel.id)
                             ]
@@ -1339,10 +1339,8 @@ viewSortSelection model =
             ]
         , onClickStop NoOp
         ]
-        [ button
-            [ class "btn"
-            , onClick ToggleSort
-            ]
+        [ viewButton
+            [ onClick ToggleSort ]
             [ span [] [ text <| "Sort: " ]
             , span [ class "selected" ] [ text <| toSortTitle model.sort ]
             , span [ class "caret" ] []
@@ -1382,9 +1380,8 @@ viewPager model total =
     div []
         [ ul [ class "pager" ]
             [ li []
-                [ button
-                    [ class "btn"
-                    , disabled (model.from == 0)
+                [ viewButton
+                    [ disabled (model.from == 0)
                     , onClick <|
                         if model.from == 0 then
                             NoOp
@@ -1395,9 +1392,8 @@ viewPager model total =
                     [ text "First" ]
                 ]
             , li []
-                [ button
-                    [ class "btn"
-                    , disabled (model.from == 0)
+                [ viewButton
+                    [ disabled (model.from == 0)
                     , onClick <|
                         if model.from - model.size < 0 then
                             NoOp
@@ -1408,9 +1404,8 @@ viewPager model total =
                     [ text "Previous" ]
                 ]
             , li []
-                [ button
-                    [ class "btn"
-                    , disabled (model.from + model.size >= total)
+                [ viewButton
+                    [ disabled (model.from + model.size >= total)
                     , onClick <|
                         if model.from + model.size >= total then
                             NoOp
@@ -1421,9 +1416,8 @@ viewPager model total =
                     [ text "Next" ]
                 ]
             , li []
-                [ button
-                    [ class "btn"
-                    , disabled (model.from + model.size >= total)
+                [ viewButton
+                    [ disabled (model.from + model.size >= total)
                     , onClick <|
                         if model.from + model.size >= total then
                             NoOp

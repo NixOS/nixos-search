@@ -1,4 +1,5 @@
-import "./index.scss";
+import "./scss/index.scss";
+
 import "elm-keyboard-shortcut";
 import { Elm } from "./Main";
 
