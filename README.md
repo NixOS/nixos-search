@@ -38,13 +38,13 @@ better queries which in turn will produce better results.
 To start developing open a terminal and run:
 
 ```
-env --chdir=frontend nix develop -c yarn install
+nix develop -c npm --prefix=frontend install
 ```
 
 ... and then:
 
 ```
-env --chdir=frontend nix develop -c yarn dev
+nix develop -c npm --prefix=frontend run dev
 ```
 
 You can point your browser to `http://localhost:3000` and start developing.
@@ -58,7 +58,7 @@ This allows testing the frontend against the 'production' package index.
 This project uses `elm-review` to enforce standard rules over Elm code. To use it you can run:
 
 ```
-env --chdir=frontend nix develop -c yarn elm-review
+nix develop -c npx --prefix=frontend elm-review
 ```
 
 to check the code. You can add `--fix` for automatic fixes, and `--watch` to run it in watch mode during development.
@@ -83,7 +83,7 @@ You may need to manually edit `frontend/src/Search.elm` to use the right index.
 
 - On each commit to `main` branch a GitHub Action is triggered.
 - GitHub Action then builds production version of the web application using
-  `yarn prod` command.
+  `npm run prod` command.
 - The built web application (in `./dist`) is then deployed to Netlify.
 - GitHub Action can also be triggered via Pull Request, which if Pull Request
   was created from a non-forked repo's branch, will provide a preview url in a
