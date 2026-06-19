@@ -420,6 +420,11 @@ repo = "kalker"
 
 [[sources]]
 type = "github"
+owner = "PierreBorine"
+repo = "vintagestory-nix"
+
+[[sources]]
+type = "github"
 owner = "PrismLauncher"
 repo = "PrismLauncher"
 
