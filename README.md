@@ -128,6 +128,7 @@ We generally try to include a wide range of flakes that could be of interest to 
 
 - Patches are very welcome!
 - You can send a PRs without opening an issue first, but if you're planning significant work it might be good to discuss your ideas beforehand to avoid disappointment later.
+  (We also have a [Matrix channel](https://app.element.io/#/room/#nixos-search:matrix.org)!)
 - Reviews by people without write access are welcome.
 - Every PR requires at least one approval by someone (other than the author) with write access. They can either:
   - approve and merge immediately;
