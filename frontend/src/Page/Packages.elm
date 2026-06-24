@@ -22,6 +22,7 @@ module Page.Packages exposing
     )
 
 import Browser.Navigation
+import Components.CodeBlock exposing (copyable)
 import Html
     exposing
         ( Html
@@ -364,7 +365,7 @@ separately from the displayed content.
 -}
 copyableCommand : String -> String -> List (Html Msg) -> Html Msg
 copyableCommand preClass commandText content =
-    Utils.copyable CopyToClipboard commandText (pre [ class preClass ] content)
+    copyable CopyToClipboard commandText (pre [ class preClass ] content)
 
 
 viewResultItem :
