@@ -46,6 +46,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     mkdir $out
     cp -R dist/* $out/
     cp netlify.toml $out/
+    cp sitemap.xml $out/
 
     runHook postInstall
   '';
