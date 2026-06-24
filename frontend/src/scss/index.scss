@@ -83,7 +83,6 @@
     /* Color of the animation above the `Loading` text that is shown when searching */
     --loader-color: var(--text-color);
     /* Background color of the experimental badge next to the flakes search */
-    --info-label-background: var(--dark-blue); // #007dbb;
     /* Text color for links. Probably overwritten by bootstrap */
     --link-color: var(--light-blue); // #007dbb;
     /* Background color for the small badges with number in the sidebar */
@@ -136,12 +135,6 @@
   // `j` / `k` keyboard navigation between search results.
   .result-selected {
     @include outline-visible;
-  }
-
-  .label-warning {
-    background: transparent;
-    color: var(--text-color-warning);
-    text-shadow: none;
   }
 
   button.btn.btn {
@@ -1041,9 +1034,6 @@ header .navbar.navbar-static-top ul.nav > li.external {
 /* ------------------------------------------------------------------------- */
 /* -- Accessibility overrides ---------------------------------------------- */
 /* ------------------------------------------------------------------------- */
-.label-info {
-  background: var(--info-label-background);
-}
 
 // Use the same color for focused and hovered links, as they are underlined anyway
 a,

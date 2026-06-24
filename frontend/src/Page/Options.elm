@@ -16,6 +16,7 @@ module Page.Options exposing
     )
 
 import Browser.Navigation
+import Components.Badge as Badge
 import Dict exposing (Dict)
 import Html
     exposing
@@ -217,7 +218,7 @@ viewSourceTab activeSource count source =
             text (Route.optionSourceLabel source)
                 :: (case source of
                         Route.ModularServiceOptions ->
-                            [ span [ class "label label-info experimental-badge" ] [ text "Experimental" ] ]
+                            [ Badge.view Badge.Experimental ]
 
                         _ ->
                             []

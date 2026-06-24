@@ -953,8 +953,7 @@ input[type=submit].btn::-moz-focus-inner {
   color:#999;
   cursor:default
 }
-.badge,
-.label {
+.badge {
   background-color:#999;
   color:#fff;
   display:inline-block;
@@ -966,11 +965,6 @@ input[type=submit].btn::-moz-focus-inner {
   vertical-align:baseline;
   white-space:nowrap
 }
-.label {
-  -webkit-border-radius:3px;
-  -moz-border-radius:3px;
-  border-radius:3px
-}
 .badge {
   -webkit-border-radius:9px;
   -moz-border-radius:9px;
@@ -978,44 +972,17 @@ input[type=submit].btn::-moz-focus-inner {
   padding-left:9px;
   padding-right:9px
 }
-.badge:empty,
-.label:empty {
+.badge:empty {
   display:none
 }
 a.badge:focus,
-a.badge:hover,
-a.label:focus,
-a.label:hover {
+a.badge:hover {
   color:#fff;
   cursor:pointer;
   text-decoration:none
 }
 
-.label-warning {
-  background-color:#f89406
-}
-
-.label-warning[href] {
-  background-color:#c67605
-}
-
-.label-success {
-  background-color:#468847
-}
-
-.label-success[href] {
-  background-color:#356635
-}
-
-.label-info {
-  background-color:#3a87ad
-}
-
-.label-info[href] {
-  background-color:#2d6987
-}
-.btn .badge,
-.btn .label {
+.btn .badge {
   position:relative;
   top:-1px
 }
