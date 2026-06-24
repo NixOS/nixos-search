@@ -16,6 +16,7 @@ module Page.Options exposing
     )
 
 import Browser.Navigation
+import Components.CodeBlock exposing (copyable, copyButton)
 import Dict exposing (Dict)
 import Html
     exposing
@@ -348,7 +349,7 @@ viewResultItem nixosChannels channel show activeSource item =
                                     |> Maybe.map
                                         (\default ->
                                             [ div [] [ text "Default" ]
-                                            , div [] <| Maybe.withDefault [ Utils.copyable CopyToClipboard default (asPreCode default) ] (Utils.showHtml default)
+                                            , div [] <| Maybe.withDefault [ copyable CopyToClipboard default (asPreCode default) ] (Utils.showHtml default)
                                             ]
                                         )
                                     |> Maybe.withDefault []
@@ -357,7 +358,7 @@ viewResultItem nixosChannels channel show activeSource item =
                                     |> Maybe.map
                                         (\example ->
                                             [ div [] [ text "Example" ]
-                                            , div [] <| Maybe.withDefault [ Utils.copyable CopyToClipboard example (asHighlightPreCode example) ] (Utils.showHtml example)
+                                            , div [] <| Maybe.withDefault [ copyable CopyToClipboard example (asHighlightPreCode example) ] (Utils.showHtml example)
                                             ]
                                         )
                                     |> Maybe.withDefault []
@@ -487,7 +488,7 @@ viewUsageSnippet source =
 
         usage snippet =
             [ div [] [ text "Usage" ]
-            , Utils.copyable CopyToClipboard snippet (asHighlightPreCode snippet)
+            , copyable CopyToClipboard snippet (asHighlightPreCode snippet)
             ]
     in
     case source.docType of
@@ -703,7 +704,7 @@ viewOptionNamePath channel activeSource optionName segments =
             [ code [ class "code-block" ]
                 (segments |> List.indexedMap renderSegment |> List.concat)
             ]
-        , Utils.copyButton CopyToClipboard "option-copy-button" "Copy option name" optionName
+        , copyButton CopyToClipboard "option-copy-button" "Copy option name" optionName
         ]
 
 
