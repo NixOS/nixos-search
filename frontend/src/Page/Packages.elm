@@ -578,9 +578,9 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                     List.filterMap (\m -> m.email) maintainers
             in
             optionals (List.length maintainerMails > 1)
-                [ li [ class "maintainer-list-item" ]
-                    [ a
-                        [ href ("mailto:" ++ String.join "," maintainerMails) ]
+                [ a
+                    [ href ("mailto:" ++ String.join "," maintainerMails) ]
+                    [ li [ class "maintainer-list-item" ]
                         [ text "✉️ Mail to all maintainers" ]
                     ]
                 ]
