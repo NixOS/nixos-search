@@ -39,6 +39,7 @@ import Array
 import Base64
 import Browser.Dom
 import Browser.Navigation
+import Components.Badge as Badge
 import Components.Button exposing (viewButton)
 import Dict exposing (Dict)
 import Html
@@ -198,18 +199,16 @@ channelBadge : NixOSChannelStatus -> List (Html msg)
 channelBadge status =
     case status of
         Rolling ->
-            -- [ span [ class "label label-success" ] [ text "Rolling" ] ]
             []
 
         Beta ->
-            [ span [ class "label label-info" ] [ text "Beta" ] ]
+            [ Badge.view Badge.Beta ]
 
         Stable ->
-            -- [ span [ class "label label-success" ] [ text "Stable" ] ]
             []
 
         Deprecated ->
-            [ span [ class "label label-warning" ] [ text "Deprecated" ] ]
+            [ Badge.view Badge.Deprecated ]
 
 
 decodeNixOSChannels : Json.Decode.Decoder NixOSChannels

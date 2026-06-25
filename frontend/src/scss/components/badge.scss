@@ -1,0 +1,22 @@
+.label {
+  color: #000;
+  border-radius: 3px;
+  padding: 2px 4px;
+  line-height: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  text-shadow: none;
+
+  &-deprecated {
+    background-color: #e99861; // Persian Orange
+  }
+
+  &-beta {
+    background-color: #6fc488; // Zambian Green
+  }
+
+  &-experimental {
+    background-color: #5fb8f2; // Argentinian Blue
+  }
+}
