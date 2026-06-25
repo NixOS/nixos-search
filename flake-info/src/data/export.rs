@@ -29,7 +29,9 @@ type Flake = super::Flake;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct License {
     url: Option<String>,
-    fullName: String,
+    fullName: Option<String>,
+    shortName: Option<String>,
+    spdxId: Option<String>,
 }
 
 impl From<import::License> for License {
@@ -38,26 +40,35 @@ impl From<import::License> for License {
         match license {
             import::License::None { .. } => License {
                 url: None,
-                fullName: "no license specified".to_string(),
+                fullName: Some("no license specified".to_string()),
+                shortName: None,
+                spdxId: None,
             },
             import::License::Simple { license } => License {
                 url: None,
-                fullName: license,
+                fullName: Some(license),
+                shortName: None,
+                spdxId: None,
             },
             import::License::Full {
                 fullName,
                 shortName,
+                spdxId,
                 url,
                 ..
             } => License {
                 url,
-                fullName: fullName.unwrap_or(shortName.unwrap_or("custom".into())),
+                fullName,
+                shortName,
+                spdxId,
             },
             // Compound variants should be flattened before reaching this point;
             // if one slips through, use its SPDX expression as the display name.
             other => License {
                 url: None,
-                fullName: other.spdx_expression(),
+                fullName: Some(other.spdx_expression()),
+                shortName: None,
+                spdxId: None,
             },
         }
     }
@@ -73,7 +84,11 @@ impl From<import::License> for License {
 pub enum LicenseExpression {
     Leaf {
         #[serde(rename = "fullName")]
-        full_name: String,
+        full_name: Option<String>,
+        #[serde(rename = "shortName")]
+        short_name: Option<String>,
+        #[serde(rename = "spdxId")]
+        spdx_id: Option<String>,
         url: Option<String>,
     },
     And {
@@ -95,22 +110,27 @@ impl From<import::License> for LicenseExpression {
     fn from(license: import::License) -> Self {
         match license {
             import::License::None { .. } => LicenseExpression::Leaf {
-                full_name: "no license specified".to_string(),
+                full_name: Some("no license specified".to_string()),
+                short_name: None,
+                spdx_id: None,
                 url: None,
             },
             import::License::Simple { license } => LicenseExpression::Leaf {
-                full_name: license,
+                full_name: Some(license),
+                short_name: None,
+                spdx_id: None,
                 url: None,
             },
             import::License::Full {
                 fullName,
                 shortName,
+                spdxId,
                 url,
                 ..
             } => LicenseExpression::Leaf {
-                full_name: fullName
-                    .or(shortName)
-                    .unwrap_or_else(|| "custom".to_string()),
+                full_name: fullName,
+                short_name: shortName,
+                spdx_id: spdxId,
                 url,
             },
             import::License::Compound {
@@ -276,7 +296,14 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                     .collect();
                 let package_license_set: Vec<String> = package_license
                     .iter()
-                    .map(|l| l.fullName.to_owned())
+                    .map(|l| {
+                        l.fullName
+                            .as_ref()
+                            .or(l.shortName.as_ref())
+                            .or(l.spdxId.as_ref())
+                            .map(|s| s.to_owned())
+                            .unwrap_or_else(|| "custom".to_string())
+                    })
                     .collect();
 
                 let maintainer: Maintainer = f.into();
@@ -357,7 +384,14 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
 
                 let package_license_set = package_license
                     .iter()
-                    .map(|l: &License| l.fullName.to_owned())
+                    .map(|l: &License| {
+                        l.fullName
+                            .as_ref()
+                            .or(l.shortName.as_ref())
+                            .or(l.spdxId.as_ref())
+                            .map(|s| s.to_owned())
+                            .unwrap_or_else(|| "custom".to_string())
+                    })
                     .collect();
 
                 let platforms: HashSet<String> =
@@ -656,5 +690,50 @@ mod tests {
         let option: Derivation = option.try_into().unwrap();
 
         println!("{}", serde_json::to_string_pretty(&option).unwrap());
+    }
+
+    #[test]
+    fn test_license_from_import() {
+        use crate::data::import;
+        let import_license = import::License::Full {
+            fullName: Some("GNU General Public License v3.0 only".to_string()),
+            shortName: Some("GPL v3".to_string()),
+            spdxId: Some("GPL-3.0-only".to_string()),
+            url: Some("https://spdx.org/licenses/GPL-3.0-only.html".to_string()),
+        };
+
+        let export_license = License::from(import_license.clone());
+        assert_eq!(
+            export_license.fullName,
+            Some("GNU General Public License v3.0 only".to_string())
+        );
+        assert_eq!(export_license.shortName, Some("GPL v3".to_string()));
+        assert_eq!(export_license.spdxId, Some("GPL-3.0-only".to_string()));
+        assert_eq!(
+            export_license.url,
+            Some("https://spdx.org/licenses/GPL-3.0-only.html".to_string())
+        );
+
+        let export_expr = LicenseExpression::from(import_license);
+        if let LicenseExpression::Leaf {
+            full_name,
+            short_name,
+            spdx_id,
+            url,
+        } = export_expr
+        {
+            assert_eq!(
+                full_name,
+                Some("GNU General Public License v3.0 only".to_string())
+            );
+            assert_eq!(short_name, Some("GPL v3".to_string()));
+            assert_eq!(spdx_id, Some("GPL-3.0-only".to_string()));
+            assert_eq!(
+                url,
+                Some("https://spdx.org/licenses/GPL-3.0-only.html".to_string())
+            );
+        } else {
+            panic!("Expected LicenseExpression::Leaf");
+        }
     }
 }

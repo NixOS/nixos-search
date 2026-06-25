@@ -101,6 +101,8 @@ type alias ResultItemSource =
 
 type alias ResultPackageLicense =
     { fullName : Maybe String
+    , shortName : Maybe String
+    , spdxId : Maybe String
     , url : Maybe String
     }
 
@@ -111,7 +113,12 @@ satisfied; OR licenses offer a choice; WITH applies an exception; PLUS is
 "or any later version".
 -}
 type LicenseExpression
-    = LicenseLeaf { fullName : String, url : Maybe String }
+    = LicenseLeaf
+        { fullName : Maybe String
+        , shortName : Maybe String
+        , spdxId : Maybe String
+        , url : Maybe String
+        }
     | LicenseAnd (List LicenseExpression)
     | LicenseOr (List LicenseExpression)
     | LicenseWith LicenseExpression LicenseExpression
@@ -450,7 +457,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                     Just expression ->
                                         [ li []
                                             (text "License: "
-                                                :: renderLicenseExpression createShortDetailsItem expression
+                                                :: renderLicenseExpression expression
                                             )
                                         ]
 
@@ -458,19 +465,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         let
                                             licenses =
                                                 item.source.licenses
-                                                    |> List.filterMap
-                                                        (\license ->
-                                                            case license.url of
-                                                                Nothing ->
-                                                                    Maybe.map text license.fullName
-
-                                                                Just url ->
-                                                                    Just
-                                                                        (createShortDetailsItem
-                                                                            (Maybe.withDefault "Unknown" license.fullName)
-                                                                            url
-                                                                        )
-                                                        )
+                                                    |> List.map renderLicenseLeaf
                                         in
                                         optionals (not (List.isEmpty licenses))
                                             [ li []
@@ -1063,47 +1058,104 @@ baseInlineList className wrapper items =
         )
 
 
-renderLicenseExpression :
-    (String -> String -> Html Msg)
-    -> LicenseExpression
-    -> List (Html Msg)
-renderLicenseExpression mkLink expr =
-    case expr of
-        LicenseLeaf { fullName, url } ->
-            case url of
-                Just u ->
-                    [ mkLink fullName u ]
+getLicenseDisplayAndTooltip :
+    { a | fullName : Maybe String, shortName : Maybe String, spdxId : Maybe String }
+    -> { display : String, tooltip : Maybe String }
+getLicenseDisplayAndTooltip license =
+    let
+        display =
+            case license.spdxId of
+                Just spdxId ->
+                    spdxId
 
                 Nothing ->
-                    [ text fullName ]
+                    case license.shortName of
+                        Just shortName ->
+                            shortName
+
+                        Nothing ->
+                            Maybe.withDefault "Unknown" license.fullName
+
+        tooltip =
+            case license.fullName of
+                Just fullName ->
+                    Just fullName
+
+                Nothing ->
+                    case license.shortName of
+                        Just shortName ->
+                            Just shortName
+
+                        Nothing ->
+                            license.spdxId
+    in
+    { display = display, tooltip = tooltip }
+
+
+renderLicenseLeaf :
+    { a | fullName : Maybe String, shortName : Maybe String, spdxId : Maybe String, url : Maybe String }
+    -> Html Msg
+renderLicenseLeaf license =
+    let
+        info =
+            getLicenseDisplayAndTooltip license
+
+        titleAttr =
+            case info.tooltip of
+                Just t ->
+                    [ title t ]
+
+                Nothing ->
+                    []
+    in
+    case license.url of
+        Just u ->
+            a
+                ([ href u
+                 , target "_blank"
+                 ]
+                    ++ titleAttr
+                )
+                [ text info.display ]
+
+        Nothing ->
+            span titleAttr [ text info.display ]
+
+
+renderLicenseExpression :
+    LicenseExpression
+    -> List (Html Msg)
+renderLicenseExpression expr =
+    case expr of
+        LicenseLeaf leaf ->
+            [ renderLicenseLeaf leaf ]
 
         LicenseAnd children ->
-            renderJoined mkLink "AND" children
+            renderJoined "AND" children
 
         LicenseOr children ->
-            renderJoined mkLink "OR" children
+            renderJoined "OR" children
 
         LicenseWith license exception ->
-            renderChild mkLink license
+            renderChild license
                 ++ [ text " ", span [ class "license-operator" ] [ text "WITH" ], text " " ]
-                ++ renderChild mkLink exception
+                ++ renderChild exception
 
         LicensePlus license ->
-            renderChild mkLink license ++ [ text "+" ]
+            renderChild license ++ [ text "+" ]
 
 
 renderJoined :
-    (String -> String -> Html Msg)
-    -> String
+    String
     -> List LicenseExpression
     -> List (Html Msg)
-renderJoined mkLink op children =
+renderJoined op children =
     let
         separator =
             [ text " ", span [ class "license-operator" ] [ text op ], text " " ]
     in
     children
-        |> List.map (renderChild mkLink)
+        |> List.map renderChild
         |> List.intersperse separator
         |> List.concat
 
@@ -1112,13 +1164,12 @@ renderJoined mkLink op children =
 precedence is unambiguous.
 -}
 renderChild :
-    (String -> String -> Html Msg)
-    -> LicenseExpression
+    LicenseExpression
     -> List (Html Msg)
-renderChild mkLink expr =
+renderChild expr =
     let
         inner =
-            renderLicenseExpression mkLink expr
+            renderLicenseExpression expr
     in
     case expr of
         LicenseLeaf _ ->
@@ -1418,9 +1469,11 @@ decodeHomepage =
 
 decodeResultPackageLicense : Json.Decode.Decoder ResultPackageLicense
 decodeResultPackageLicense =
-    Json.Decode.map2 ResultPackageLicense
-        (Json.Decode.field "fullName" (Json.Decode.nullable Json.Decode.string))
-        (Json.Decode.field "url" (Json.Decode.nullable Json.Decode.string))
+    Json.Decode.map4 ResultPackageLicense
+        (Json.Decode.oneOf [ Json.Decode.field "fullName" (Json.Decode.nullable Json.Decode.string), Json.Decode.succeed Nothing ])
+        (Json.Decode.oneOf [ Json.Decode.field "shortName" (Json.Decode.nullable Json.Decode.string), Json.Decode.succeed Nothing ])
+        (Json.Decode.oneOf [ Json.Decode.field "spdxId" (Json.Decode.nullable Json.Decode.string), Json.Decode.succeed Nothing ])
+        (Json.Decode.oneOf [ Json.Decode.field "url" (Json.Decode.nullable Json.Decode.string), Json.Decode.succeed Nothing ])
 
 
 decodeLicenseExpression : Json.Decode.Decoder LicenseExpression
@@ -1434,10 +1487,12 @@ decodeLicenseExpression =
             (\kind ->
                 case kind of
                     "leaf" ->
-                        Json.Decode.map2
-                            (\n u -> LicenseLeaf { fullName = n, url = u })
-                            (Json.Decode.field "fullName" Json.Decode.string)
-                            (Json.Decode.field "url" (Json.Decode.nullable Json.Decode.string))
+                        Json.Decode.map4
+                            (\f s idx u -> LicenseLeaf { fullName = f, shortName = s, spdxId = idx, url = u })
+                            (Json.Decode.oneOf [ Json.Decode.field "fullName" (Json.Decode.nullable Json.Decode.string), Json.Decode.succeed Nothing ])
+                            (Json.Decode.oneOf [ Json.Decode.field "shortName" (Json.Decode.nullable Json.Decode.string), Json.Decode.succeed Nothing ])
+                            (Json.Decode.oneOf [ Json.Decode.field "spdxId" (Json.Decode.nullable Json.Decode.string), Json.Decode.succeed Nothing ])
+                            (Json.Decode.oneOf [ Json.Decode.field "url" (Json.Decode.nullable Json.Decode.string), Json.Decode.succeed Nothing ])
 
                     "and" ->
                         Json.Decode.map LicenseAnd
