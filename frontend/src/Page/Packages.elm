@@ -656,13 +656,13 @@ viewResultItem nixosChannels channel showInstallDetails show item =
 
         optionsLink =
             let
-                searchLink heading label url =
+                searchLink heading label term url =
                     div []
                         [ h4 [] [ text heading ]
                         , p []
                             [ a [ href url ]
                                 [ text label
-                                , em [] [ text item.source.attr_name ]
+                                , em [] [ text term ]
                                 ]
                             ]
                         ]
@@ -671,12 +671,30 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                 Nothing ->
                     searchLink "NixOS options"
                         "Search NixOS options for "
+                        item.source.attr_name
                         ("/options?channel=" ++ channel ++ "&query=" ++ item.source.attr_name)
 
-                Just _ ->
+                Just ( flakeRef, _ ) ->
+                    let
+                        repoName =
+                            flakeRef
+                                |> String.split "/"
+                                |> List.filter (\segment -> not (String.isEmpty segment))
+                                |> List.reverse
+                                |> List.head
+                                |> Maybe.withDefault item.source.attr_name
+
+                        term =
+                            if item.source.attr_name == "default" && String.contains "/" flakeRef then
+                                repoName
+
+                            else
+                                item.source.attr_name
+                    in
                     searchLink "Flake options"
                         "Search flake options for "
-                        ("/flakes?type=options&query=" ++ item.source.attr_name)
+                        term
+                        ("/flakes?type=options&query=" ++ term)
 
         longerPackageDetails =
             optionals (Just item.source.attr_name == show)
