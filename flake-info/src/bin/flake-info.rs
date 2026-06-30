@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use flake_info::commands::NixCheckError;
 use flake_info::data::import::Kind;
 use flake_info::data::{self, Export, Source};
@@ -463,29 +463,73 @@ async fn push_to_elastic(
     // catch error variant if abort strategy was triggered
     let ensure = es.ensure_index(&config).await;
     if let Err(ElasticsearchError::IndexExistsError(_)) = ensure {
-        // abort on abort
-        return Ok(());
+        // The index already exists under the Abort strategy. This is only a
+        // legitimate no-op if the alias already points at it (a previous run
+        // completed successfully). If the alias does not point here, the index
+        // is stale/half-built (e.g. a prior push died before flipping the
+        // alias) - fail so the job is red and the index gets rebuilt, rather
+        // than silently returning green forever.
+        match &alias {
+            Some(a) if !elastic.no_alias => {
+                if es.alias_points_at(a, &index).await? {
+                    return Ok(());
+                }
+                return Err(anyhow!(
+                    "Index {index} exists but alias {a} does not point at it; \
+                     stale/half-built import - failing so it is rebuilt"
+                ));
+            }
+            _ => return Ok(()),
+        }
     } else {
         // throw error if present
         ensure?;
     }
 
+    // From here on this run created the index (Abort or Recreate path). If the
+    // push or alias write fails, best-effort delete the just-created index so a
+    // partial index is never left stranded for the next run to treat as
+    // "already exists". Never clear under Ignore (append): we did not create
+    // the index and must not wipe pre-existing data. CI only uses abort
+    // (nixpkgs) and recreate (flakes), so Ignore-append is not exercised, but
+    // guard it anyway.
+    let created_index = !matches!(elastic.elastic_exists, ExistsStrategy::Ignore);
+
     let successes = exports()?;
 
     info!("Pushing to elastic");
-    es.push_exports(&config, &successes)
-        .await
-        .with_context(|| "Failed to push results to elasticsearch".to_string())?;
+    if let Err(e) = es.push_exports(&config, &successes).await {
+        if created_index {
+            warn!("push failed, clearing partial index {index} so next run rebuilds");
+            if let Err(clear_err) = es.clear_index(&config).await {
+                warn!("failed to clear partial index {index}: {clear_err}");
+            }
+        }
+        return Err(e).with_context(|| "Failed to push results to elasticsearch".to_string());
+    }
 
     if let Some(alias) = alias {
         if !elastic.no_alias {
-            es.write_alias(&config, &index, &alias)
-                .await
-                .with_context(|| "Failed to create alias".to_string())?;
+            if let Err(e) = es.write_alias(&config, &index, &alias).await {
+                if created_index {
+                    warn!(
+                        "alias write failed, clearing partial index {index} so next run rebuilds"
+                    );
+                    if let Err(clear_err) = es.clear_index(&config).await {
+                        warn!("failed to clear partial index {index}: {clear_err}");
+                    }
+                }
+                return Err(e).with_context(|| "Failed to create alias".to_string());
+            }
         } else {
             warn!("Creating alias disabled")
         }
     }
+
+    // Emit the final index name at a stable, greppable prefix so the workflow
+    // (or an operator) can assert the alias resolves to exactly this index -
+    // i.e. that the run that just finished is the one now being served.
+    println!("FLAKE_INFO_PUSHED_INDEX={index}");
 
     Ok(())
 }
