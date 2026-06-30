@@ -1,0 +1,10 @@
+User-agent: *
+
+Allow: /$
+Allow: /packages
+Allow: /options
+Allow: /flakes
+Disallow: /backend
+Disallow: /*?* # Block crawling of arbitrary search results
+
+Sitemap: https://search.nixos.com/sitemap.xml

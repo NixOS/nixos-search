@@ -1,3 +1,8 @@
+@use "bootstrap";
+@use "bootstrap-responsive";
+
+@use "components";
+
 :root {
   --text-color: #333;
   --background-color: #fff;
@@ -78,7 +83,6 @@
     /* Color of the animation above the `Loading` text that is shown when searching */
     --loader-color: var(--text-color);
     /* Background color of the experimental badge next to the flakes search */
-    --info-label-background: var(--dark-blue); // #007dbb;
     /* Text color for links. Probably overwritten by bootstrap */
     --link-color: var(--light-blue); // #007dbb;
     /* Background color for the small badges with number in the sidebar */
@@ -97,7 +101,15 @@
     background-color: var(--terminal-background);
     color: var(--terminal-color);
     border: none;
-    padding: 4px;
+    padding: .2em .4em;
+  }
+
+  .clickable-code {
+    cursor: pointer;
+
+    &:hover {
+      background-color: var(--search-sidebar-hovered-link-background);
+    }
   }
 
   pre {
@@ -123,12 +135,6 @@
   // `j` / `k` keyboard navigation between search results.
   .result-selected {
     @include outline-visible;
-  }
-
-  .label-warning {
-    background: transparent;
-    color: var(--text-color-warning);
-    text-shadow: none;
   }
 
   button.btn.btn {
@@ -273,6 +279,20 @@
     }
   }
 
+  header .nav + .btn-group {
+    box-sizing: border-box;
+    border: none;
+
+    & > .btn {
+      border: 1px solid transparent;
+      margin-left: 0px;
+
+      &  + .btn {
+        margin-left: -1px;
+      }
+    }
+  }
+
   // Override bootstrap styles for the header bar
   // Very navbar to boost specificity
   .navbar.navbar.navbar.navbar.navbar.navbar {
@@ -287,8 +307,6 @@
         text-shadow: none;
         box-shadow: none;
         border-radius: 4px;
-        margin: 4px;
-        padding: 6px 12px;
 
         &:hover,
         &:focus,
@@ -457,20 +475,42 @@ footer {
   line-height: 1;
 }
 
-header .navbar.navbar-static-top {
-  .brand {
-    padding-bottom: 0;
+header .navbar .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding-block: 4px;
+  gap: 4px;
+
+  a.brand {
+    all: unset;
+    display: flex;
+
+    img {
+      height: 25px;
+    }
   }
-  img.logo {
-    margin-top: -5px;
-    padding-right: 5px;
-    line-height: 25px;
-    height: 25px;
+
+  &::before, &::after {
+    all: unset; /* remove pseudo-elements added by bootstrap */
   }
-  ul.nav > li {
-    line-height: 20px;
-    sup {
-      margin-left: 0.5em;
+
+  .nav {
+    display: flex;
+    flex-flow: row wrap;
+    margin: unset;
+    gap: 8px;
+
+    & + .btn-group {
+      /* theme selection */
+      display: flex;
+      margin: unset;
+      margin-left: auto;
+
+      & > .btn {
+        display: flex;
+      }
     }
   }
 }
@@ -576,6 +616,13 @@ header .navbar.navbar-static-top ul.nav > li.external {
 
      & > h2 {
        margin-top: 0;
+     }
+
+     // Nudge toward the other search (packages vs options) when a query
+     // comes up empty -- the two tabs are easy to confuse.
+     & > .search-cross-hint {
+       margin: 0.5em 0;
+       font-size: 1.1em;
      }
   }
 
@@ -849,8 +896,8 @@ header .navbar.navbar-static-top ul.nav > li.external {
               }
 
               // put border around main program
-              & > :nth-child(3) code:has(strong) {
-                border: 2px solid;
+              & > :nth-child(3) code.main-program {
+                border: .1em solid;
               }
 
               // maintainers and platforms
@@ -859,12 +906,12 @@ header .navbar.navbar-static-top ul.nav > li.external {
                 display: grid;
                 grid-template-columns: auto auto;
 
-                // make it easy to copy only the list of Github handles
-                & > :first-child > ul > :last-child {
-                  user-select: none;
-                }
-                & > :first-child > ul > :last-child > code {
-                  user-select: text;
+                .maintainer-list-item {
+                  cursor: pointer;
+
+                  &:hover {
+                    background-color: var(--search-sidebar-hovered-link-background);
+                  }
                 }
               }
             }
@@ -987,9 +1034,6 @@ header .navbar.navbar-static-top ul.nav > li.external {
 /* ------------------------------------------------------------------------- */
 /* -- Accessibility overrides ---------------------------------------------- */
 /* ------------------------------------------------------------------------- */
-.label-info {
-  background: var(--info-label-background);
-}
 
 // Use the same color for focused and hovered links, as they are underlined anyway
 a,
@@ -1114,11 +1158,9 @@ a:focus-visible {
   }
 }
 
-.option-copy-button {
+%copy-button-base {
   position: absolute;
-  top: 50%;
   right: 0.4em;
-  transform: translateY(-50%);
   padding: 0.3em 0.7em;
   border-radius: 4px;
   font-size: 0.85em;
@@ -1132,6 +1174,73 @@ a:focus-visible {
   &:hover {
     color: var(--text-color);
     background: var(--hover-background, rgba(0, 0, 0, 0.05));
+  }
+}
+
+.option-copy-button {
+  @extend %copy-button-base;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+// Each install command / configuration snippet in the package details hosts
+// a copy button pinned to its top-right corner. The wrapper is the
+// positioning context so the button overlays the code without shifting it.
+// Pinned to the top (rather than centred) since some snippets span multiple
+// lines.
+.code-block-wrapper {
+  position: relative;
+
+  // Keep the text clear of the button. The block is a bare <pre> for package
+  // commands but a nested <pre> for option values, so match either.
+  & pre {
+    padding-right: 4em;
+  }
+}
+
+.code-copy-button {
+  @extend %copy-button-base;
+  top: 0.4em;
+}
+
+.copy-toast {
+  position: fixed;
+  bottom: 1.5em;
+  left: 50%;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  max-width: calc(100vw - 2em);
+  padding: 0.5em 0.9em;
+  border-radius: 6px;
+  border: 1px solid var(--search-sidebar-container-border-color, #ccc);
+  background: var(--background-color, #fff);
+  color: var(--text-color, #333);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+  font-size: 0.9em;
+
+  opacity: 0;
+  transform: translate(-50%, 0.6em);
+  pointer-events: none;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+
+  &::before {
+    content: "✓";
+    font-weight: bold;
+  }
+
+  &.visible {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copy-toast {
+    transition: none;
   }
 }
 
@@ -1163,4 +1272,16 @@ a:focus-visible {
   font-weight: bold;
   font-size: 0.85em;
   opacity: 0.75;
+}
+
+ul.inline-list-elements {
+  margin: 0;
+  li {
+    display: inline;
+  }
+}
+
+ul.inline-list {
+  @extend .inline-list-elements;
+  display: inline;
 }

@@ -1,22 +1,20 @@
-port module Main exposing (Flags, Model, Msg, Page, main)
+port module Main exposing (Flags, Model, Msg, Page, Theme, main)
 
 import Browser
 import Browser.Dom
 import Browser.Navigation
+import Components.Button exposing (viewButton)
 import Dict
 import Html
     exposing
         ( Html
         , a
-        , button
         , div
         , footer
         , header
         , img
         , li
-        , small
         , span
-        , sup
         , text
         , ul
         )
@@ -46,6 +44,8 @@ import Search
         , defaultFlakeId
         )
 import Shortcut
+import Svg exposing (Svg, path, svg)
+import Svg.Attributes exposing (d, fill, height, viewBox, width)
 import Task
 import Url
 
@@ -489,11 +489,9 @@ view model =
                                 [ a [ class "brand", href "https://nixos.org" ]
                                     [ img [ alt "NixOS logo", src "/images/nix-logo-pride.png", class "logo" ] []
                                     ]
-                                , div []
-                                    [ ul [ class "nav pull-left" ]
-                                        (viewNavigation model.route)
-                                    , viewThemeSelector model.theme
-                                    ]
+                                , ul [ class "nav" ]
+                                    (viewNavigation model.route)
+                                , viewThemeSelector model.theme
                                 ]
                             ]
                         ]
@@ -565,17 +563,49 @@ viewNavigationItem currentRoute ( route, title ) =
         [ a [ Route.href route ] [ title ] ]
 
 
-themeIcon : Theme -> String
-themeIcon t =
-    case t of
-        Auto ->
-            "◐"
 
+-- Material Design Icons by Google
+-- Licensed under Apache License 2.0
+-- https://github.com/google/material-design-icons
+
+
+themeAutoIconPath : String
+themeAutoIconPath =
+    "M80 61.2398L93.24 47.9998L80 34.7598V15.9998H61.24L48 2.75977L34.76 15.9998H16V34.7598L2.76001 47.9998L16 61.2398V79.9998H34.76L48 93.2398L61.24 79.9998H80V61.2398ZM48 71.9998V23.9998C61.24 23.9998 72 34.7598 72 47.9998C72 61.2398 61.24 71.9998 48 71.9998Z"
+
+
+themeDarkIconPath : String
+themeDarkIconPath =
+    "M48 12C28.12 12 12 28.12 12 48C12 67.88 28.12 84 48 84C67.88 84 84 67.88 84 48C84 46.16 83.84 44.32 83.6 42.56C79.68 48.04 73.28 51.6 66 51.6C54.08 51.6 44.4 41.92 44.4 30C44.4 22.76 47.96 16.32 53.44 12.4C51.68 12.16 49.84 12 48 12Z"
+
+
+themeLightIconPath : String
+themeLightIconPath =
+    "M48 28C36.96 28 28 36.96 28 48C28 59.04 36.96 68 48 68C59.04 68 68 59.04 68 48C68 36.96 59.04 28 48 28ZM8 52H16C18.2 52 20 50.2 20 48C20 45.8 18.2 44 16 44H8C5.8 44 4 45.8 4 48C4 50.2 5.8 52 8 52ZM80 52H88C90.2 52 92 50.2 92 48C92 45.8 90.2 44 88 44H80C77.8 44 76 45.8 76 48C76 50.2 77.8 52 80 52ZM44 8V16C44 18.2 45.8 20 48 20C50.2 20 52 18.2 52 16V8C52 5.8 50.2 4 48 4C45.8 4 44 5.8 44 8ZM44 80V88C44 90.2 45.8 92 48 92C50.2 92 52 90.2 52 88V80C52 77.8 50.2 76 48 76C45.8 76 44 77.8 44 80ZM23.96 18.32C22.4 16.76 19.84 16.76 18.32 18.32C16.76 19.88 16.76 22.44 18.32 23.96L22.56 28.2C24.12 29.76 26.68 29.76 28.2 28.2C29.72 26.64 29.76 24.08 28.2 22.56L23.96 18.32ZM73.44 67.8C71.88 66.24 69.32 66.24 67.8 67.8C66.24 69.36 66.24 71.92 67.8 73.44L72.04 77.68C73.6 79.24 76.16 79.24 77.68 77.68C79.24 76.12 79.24 73.56 77.68 72.04L73.44 67.8ZM77.68 23.96C79.24 22.4 79.24 19.84 77.68 18.32C76.12 16.76 73.56 16.76 72.04 18.32L67.8 22.56C66.24 24.12 66.24 26.68 67.8 28.2C69.36 29.72 71.92 29.76 73.44 28.2L77.68 23.96ZM28.2 73.44C29.76 71.88 29.76 69.32 28.2 67.8C26.64 66.24 24.08 66.24 22.56 67.8L18.32 72.04C16.76 73.6 16.76 76.16 18.32 77.68C19.88 79.2 22.44 79.24 23.96 77.68L28.2 73.44Z"
+
+
+getThemeSvgIconPath : Theme -> String
+getThemeSvgIconPath theme =
+    case theme of
         Light ->
-            "☀"
+            themeLightIconPath
 
         Dark ->
-            "☾"
+            themeDarkIconPath
+
+        Auto ->
+            themeAutoIconPath
+
+
+getThemeSvgIcon : Theme -> Svg msg
+getThemeSvgIcon theme =
+    svg
+        [ viewBox "0 0 96 96"
+        , fill "currentColor"
+        , width "16"
+        , height "16"
+        ]
+        [ path [ d (getThemeSvgIconPath theme) ] [] ]
 
 
 viewThemeSelector : Theme -> Html Msg
@@ -587,9 +617,8 @@ viewThemeSelector currentTheme =
         ]
         (List.map
             (\t ->
-                button
-                    [ class "btn"
-                    , classList [ ( "active", t == currentTheme ) ]
+                viewButton
+                    [ classList [ ( "active", t == currentTheme ) ]
                     , title (themeLabel t)
                     , attribute "aria-label" (themeLabel t)
                     , attribute "aria-pressed"
@@ -601,7 +630,7 @@ viewThemeSelector currentTheme =
                         )
                     , onClick (SetTheme t)
                     ]
-                    [ span [ class "theme-icon" ] [ text (themeIcon t) ] ]
+                    [ span [ class "theme-icon" ] [ getThemeSvgIcon t ] ]
             )
             [ Auto, Light, Dark ]
         )

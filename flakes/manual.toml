@@ -40,10 +40,6 @@ url = "git+https://github.com/raboof/octopin?ref=nix"
 
 [[sources]]
 type = "git"
-url = "git+https://github.com/TamtamHero/fw-fanctrl?ref=packaging/nix"
-
-[[sources]]
-type = "git"
 url = "git+https://github.com/xddxdd/nix-cachyos-kernel?ref=release"
 
 [[sources]]
@@ -205,6 +201,11 @@ repo = "flake-compat"
 type = "github"
 owner = "eza-community"
 repo = "eza"
+
+[[sources]]
+type = "github"
+owner = "felbinger"
+repo = "srsran.nix"
 
 [[sources]]
 type = "github"
@@ -444,6 +445,11 @@ repo = "nixos-flake-hardware-profiles"
 
 [[sources]]
 type = "github"
+owner = "slendidev"
+repo = "yavsrg-flake"
+
+[[sources]]
+type = "github"
 owner = "snowfallorg"
 repo = "drift"
 
@@ -517,10 +523,11 @@ type = "github"
 owner = "StardustXR"
 repo = "telescope"
 
-[[sources]]
-type = "github"
-owner = "surrealdb"
-repo = "surrealdb"
+# seems to rely on allow-import-from-derivation now
+#[[sources]]
+#type = "github"
+#owner = "surrealdb"
+#repo = "surrealdb"
 
 [[sources]]
 type = "github"

@@ -100,6 +100,11 @@
     version = "1.1.0";
   };
 
+  "elm/svg" = {
+    sha256 = "sha256-E9jJoSlCG+lb912Mw93wXl6vxt9548cxLwQHc8eRjLM=";
+    version = "1.0.1";
+  };
+
   "elm/time" = {
     sha256 = "0vch7i86vn0x8b850w1p69vplll1bnbkp8s383z7pinyg94cm2z1";
     version = "1.0.0";

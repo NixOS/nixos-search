@@ -1,5 +1,6 @@
 module Page.Packages exposing
     ( Aggregations
+    , LicenseExpression
     , Model
     , Msg(..)
     , ResultAggregations
@@ -44,6 +45,7 @@ import Html.Attributes
         , href
         , id
         , target
+        , title
         )
 import Html.Events exposing (onClick)
 import Http exposing (Body)
@@ -51,6 +53,7 @@ import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
 import List.Extra
+import Ports
 import Regex
 import Route exposing (SearchType)
 import Search
@@ -98,6 +101,8 @@ type alias ResultItemSource =
 
 type alias ResultPackageLicense =
     { fullName : Maybe String
+    , shortName : Maybe String
+    , spdxId : Maybe String
     , url : Maybe String
     }
 
@@ -108,7 +113,12 @@ satisfied; OR licenses offer a choice; WITH applies an exception; PLUS is
 "or any later version".
 -}
 type LicenseExpression
-    = LicenseLeaf { fullName : String, url : Maybe String }
+    = LicenseLeaf
+        { fullName : Maybe String
+        , shortName : Maybe String
+        , spdxId : Maybe String
+        , url : Maybe String
+        }
     | LicenseAnd (List LicenseExpression)
     | LicenseOr (List LicenseExpression)
     | LicenseWith LicenseExpression LicenseExpression
@@ -237,6 +247,7 @@ platforms =
 
 type Msg
     = SearchMsg (Search.Msg ResultItemSource ResultAggregations)
+    | CopyToClipboard String
 
 
 update :
@@ -259,6 +270,9 @@ update navKey msg model nixosChannels =
             in
             ( newModel, Cmd.map SearchMsg newCmd )
 
+        CopyToClipboard text_ ->
+            ( model, Ports.copyToClipboard text_ )
+
 
 
 -- VIEW
@@ -271,7 +285,7 @@ view :
 view nixosChannels model =
     Search.view { categoryName = "packages" }
         [ text "Search more than "
-        , strong [] [ text "120 000 packages" ]
+        , strong [] [ text "140 000 packages" ]
         ]
         nixosChannels
         model
@@ -350,6 +364,16 @@ viewSuccess nixosChannels channel showInstallDetails show hits =
         )
 
 
+{-| Render an install command or configuration snippet together with a
+button that copies its plain-text form to the clipboard. The package name
+inside the snippet is rendered in bold, so the exact text to copy is passed
+separately from the displayed content.
+-}
+copyableCommand : String -> String -> List (Html Msg) -> Html Msg
+copyableCommand preClass commandText content =
+    Utils.copyable CopyToClipboard commandText (pre [ class preClass ] content)
+
+
 viewResultItem :
     List NixOSChannel
     -> String
@@ -403,18 +427,20 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                             ]
                             ++ optionals (List.length item.source.outputs > 1)
                                 [ li []
-                                    (text "Outputs: "
-                                        :: (item.source.default_output
-                                                |> Maybe.map (\d -> [ strong [] [ code [] [ text d ] ], text " " ])
-                                                |> Maybe.withDefault []
-                                           )
-                                        ++ (item.source.outputs
-                                                |> List.filter (\o -> Just o /= item.source.default_output)
-                                                |> List.sort
-                                                |> List.map (\o -> code [] [ text o ])
-                                                |> List.intersperse (text " ")
-                                           )
-                                    )
+                                    [ text "Outputs: "
+                                    , inlineListCode
+                                        ((item.source.default_output
+                                            |> Maybe.map (\d -> strong [] [ text d ])
+                                            |> Maybe.map List.singleton
+                                            |> Maybe.withDefault []
+                                         )
+                                            ++ (item.source.outputs
+                                                    |> List.filter (\o -> Just o /= item.source.default_output)
+                                                    |> List.sort
+                                                    |> List.map (\o -> text o)
+                                               )
+                                        )
+                                    ]
                                 ]
                             ++ (item.source.homepage
                                     |> List.head
@@ -431,7 +457,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                     Just expression ->
                                         [ li []
                                             (text "License: "
-                                                :: renderLicenseExpression createShortDetailsItem expression
+                                                :: renderLicenseExpression expression
                                             )
                                         ]
 
@@ -439,25 +465,13 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         let
                                             licenses =
                                                 item.source.licenses
-                                                    |> List.filterMap
-                                                        (\license ->
-                                                            case license.url of
-                                                                Nothing ->
-                                                                    Maybe.map text license.fullName
-
-                                                                Just url ->
-                                                                    Just
-                                                                        (createShortDetailsItem
-                                                                            (Maybe.withDefault "Unknown" license.fullName)
-                                                                            url
-                                                                        )
-                                                        )
+                                                    |> List.map renderLicenseLeaf
                                         in
                                         optionals (not (List.isEmpty licenses))
                                             [ li []
-                                                (text "License: "
-                                                    :: List.intersperse (text " ▪ ") licenses
-                                                )
+                                                [ text "License: "
+                                                , inlineListCode licenses
+                                                ]
                                             ]
                                )
                        )
@@ -465,19 +479,32 @@ viewResultItem nixosChannels channel showInstallDetails show item =
 
         showMaintainer maintainer =
             let
-                nameLink : Html msg
-                nameLink =
+                githubHandle =
+                    Maybe.map (String.append "@") maintainer.github
+
+                name =
+                    Maybe.withDefault (Maybe.withDefault "Unknown" maintainer.github) maintainer.name
+
+                nameHtml =
                     case maintainer.github of
                         Just github ->
-                            a
-                                [ href ("https://github.com/" ++ github) ]
-                                [ text (Maybe.withDefault github maintainer.name) ]
+                            a [ href ("https://github.com/" ++ github) ] [ text name ]
 
                         Nothing ->
-                            text (Maybe.withDefault "Unknown" maintainer.name)
+                            text name
 
-                emailLink : List (Html msg)
-                emailLink =
+                githubHtml =
+                    case githubHandle of
+                        Just handle ->
+                            [ text " ("
+                            , code [] [ text handle ]
+                            , text ")"
+                            ]
+
+                        Nothing ->
+                            []
+
+                emailHtml =
                     case maintainer.email of
                         Just email ->
                             [ text " <"
@@ -487,8 +514,16 @@ viewResultItem nixosChannels channel showInstallDetails show item =
 
                         Nothing ->
                             []
+
+                ( onClickAttr, _ ) =
+                    case githubHandle of
+                        Just handle ->
+                            ( [ onClick (CopyToClipboard handle) ], [] )
+
+                        Nothing ->
+                            ( [], [] )
             in
-            li [] (nameLink :: emailLink)
+            li (class "maintainer-list-item" :: onClickAttr) (nameHtml :: githubHtml ++ emailHtml)
 
         linkAllMaintainers maintainers =
             let
@@ -496,11 +531,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                     List.filterMap (\m -> Maybe.map (String.append "@") m.github) maintainers
             in
             optionals (not (List.isEmpty ghHandles))
-                [ li []
-                    [ text "Maintainer Github handles: "
-                    , code []
-                        [ text (String.join " " ghHandles) ]
-                    ]
+                [ li [ class "maintainer-list-item", onClick (CopyToClipboard (String.join " " ghHandles)) ]
+                    [ text "Copy all maintainers' GitHub handles" ]
                 ]
 
         showTeam team =
@@ -541,9 +573,9 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                     List.filterMap (\m -> m.email) maintainers
             in
             optionals (List.length maintainerMails > 1)
-                [ li []
-                    [ a
-                        [ href ("mailto:" ++ String.join "," maintainerMails) ]
+                [ a
+                    [ href ("mailto:" ++ String.join "," maintainerMails) ]
+                    [ li [ class "maintainer-list-item" ]
                         [ text "✉️ Mail to all maintainers" ]
                     ]
                 ]
@@ -591,41 +623,92 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                 ]
 
         programs =
+            let
+                sortedPrograms =
+                    case item.source.mainProgram of
+                        Just mp ->
+                            mp :: (item.source.programs |> List.filter (\p -> p /= mp) |> List.sort)
+
+                        Nothing ->
+                            List.sort item.source.programs
+
+                renderOne p =
+                    if Just p == item.source.mainProgram then
+                        strong [] [ text p ]
+
+                    else
+                        text p
+            in
             div []
                 [ h4 [] [ text "Programs provided" ]
-                , if List.isEmpty item.source.programs then
-                    case item.source.mainProgram of
-                        Nothing ->
-                            p [] [ text "This package provides no programs." ]
+                , if List.isEmpty sortedPrograms then
+                    p [] [ text "This package provides no programs." ]
 
-                        Just mainProgram ->
-                            p []
-                                [ p [] [ text "Only the main program of this package is known: " ]
-                                , code [] [ strong [] [ text mainProgram ] ]
-                                ]
+                  else if List.isEmpty item.source.programs then
+                    let
+                        mp =
+                            Maybe.withDefault "" item.source.mainProgram
+                    in
+                    p []
+                        [ p [] [ text "Only the main program of this package is known: " ]
+                        , withCopyableCode "main-program" mp (renderOne mp)
+                        ]
 
                   else
-                    p []
-                        (List.intersperse (text " ")
-                            (List.map
-                                (\p ->
-                                    code []
-                                        [ case item.source.mainProgram of
-                                            Nothing ->
-                                                text p
+                    inlineListElementsCopyableCode
+                        (\p ->
+                            if Just p == item.source.mainProgram then
+                                "main-program"
 
-                                            Just mainProgram ->
-                                                if p == mainProgram then
-                                                    strong [] [ text p ]
-
-                                                else
-                                                    text p
-                                        ]
-                                )
-                                (List.sort item.source.programs)
-                            )
+                            else
+                                ""
                         )
+                        identity
+                        renderOne
+                        sortedPrograms
                 ]
+
+        optionsLink =
+            let
+                searchLink heading label term url =
+                    div []
+                        [ h4 [] [ text heading ]
+                        , p []
+                            [ a [ href url ]
+                                [ text label
+                                , em [] [ text term ]
+                                ]
+                            ]
+                        ]
+            in
+            case item.source.flakeUrl of
+                Nothing ->
+                    searchLink "NixOS options"
+                        "Search NixOS options for "
+                        item.source.attr_name
+                        ("/options?channel=" ++ channel ++ "&query=" ++ item.source.attr_name)
+
+                Just ( flakeRef, _ ) ->
+                    let
+                        repoName =
+                            flakeRef
+                                |> String.split "/"
+                                |> List.filter (\segment -> not (String.isEmpty segment))
+                                |> List.reverse
+                                |> List.head
+                                |> Maybe.withDefault item.source.attr_name
+
+                        term =
+                            if item.source.attr_name == "default" && String.contains "/" flakeRef then
+                                repoName
+
+                            else
+                                item.source.attr_name
+                    in
+                    searchLink "Flake options"
+                        "Search flake options for "
+                        term
+                        ("/flakes?type=options&query=" ++ term)
 
         longerPackageDetails =
             optionals (Just item.source.attr_name == show)
@@ -667,7 +750,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                             , ( "active", True )
                                             ]
                                         ]
-                                        [ pre [ class "code-block shell-command" ]
+                                        [ copyableCommand "code-block shell-command"
+                                            ("nix profile add " ++ flakeUrl ++ "#" ++ item.source.attr_name)
                                             [ text "nix profile add "
                                             , strong [] [ text flakeUrl ]
                                             , text "#"
@@ -783,7 +867,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         , class "tab-pane"
                                         , id "package-details-nixpkgs"
                                         ]
-                                        [ pre [ class "code-block shell-command" ]
+                                        [ copyableCommand "code-block shell-command"
+                                            ("nix-env -iA nixos." ++ item.source.attr_name)
                                             [ text "nix-env -iA nixos."
                                             , strong [] [ text item.source.attr_name ]
                                             ]
@@ -805,7 +890,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         , class "tab-pane"
                                         , id "package-details-nixpkgs"
                                         ]
-                                        [ pre [ class "code-block shell-command" ]
+                                        [ copyableCommand "code-block shell-command"
+                                            ("# without flakes:\nnix-env -iA nixpkgs." ++ item.source.attr_name ++ "\n# with flakes:\nnix profile add nixpkgs#" ++ item.source.attr_name)
                                             [ text "# without flakes:\nnix-env -iA nixpkgs."
                                             , strong [] [ text item.source.attr_name ]
                                             , text "\n# with flakes:\nnix profile add nixpkgs#"
@@ -830,7 +916,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         , class "tab-pane"
                                         , id "package-details-nixpkgs"
                                         ]
-                                        [ pre [ class "code-block" ]
+                                        [ copyableCommand "code-block"
+                                            ("  environment.systemPackages = [\n    pkgs." ++ item.source.attr_name ++ "\n  ];")
                                             [ text <| "  environment.systemPackages = [\n    pkgs."
                                             , strong [] [ text item.source.attr_name ]
                                             , text <| "\n  ];"
@@ -858,7 +945,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                             , ( "active", List.member showInstallDetails [ Search.Unset, Search.ViaNixShell, Search.FromFlake ] )
                                             ]
                                         ]
-                                        [ pre [ class "code-block shell-command" ]
+                                        [ copyableCommand "code-block shell-command"
+                                            ("nix-shell -p " ++ item.source.attr_name)
                                             [ text "nix-shell -p "
                                             , strong [] [ text item.source.attr_name ]
                                             ]
@@ -870,7 +958,8 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                         , class "tab-pane"
                                         , id "package-details-nixpkgs"
                                         ]
-                                        [ pre [ class "code-block shell-command" ]
+                                        [ copyableCommand "code-block shell-command"
+                                            ("nix profile add nixpkgs#" ++ item.source.attr_name)
                                             [ text "nix profile add nixpkgs#"
                                             , strong [] [ text item.source.attr_name ]
                                             ]
@@ -879,6 +968,7 @@ viewResultItem nixosChannels channel showInstallDetails show item =
                                 ]
                     , programs
                     , maintainersTeamsAndPlatforms
+                    , optionsLink
                     , if List.isEmpty item.source.modularServices then
                         text ""
 
@@ -961,47 +1051,138 @@ viewResultItem nixosChannels channel showInstallDetails show item =
         )
 
 
-renderLicenseExpression :
-    (String -> String -> Html Msg)
-    -> LicenseExpression
-    -> List (Html Msg)
-renderLicenseExpression mkLink expr =
-    case expr of
-        LicenseLeaf { fullName, url } ->
-            case url of
-                Just u ->
-                    [ mkLink fullName u ]
+inlineListElementsCopyableCode : (a -> String) -> (a -> String) -> (a -> Html Msg) -> List a -> Html Msg
+inlineListElementsCopyableCode toExtraClass toText toHtml items =
+    baseInlineList "inline-list-elements" (\i -> i) (List.map (\item -> withCopyableCode (toExtraClass item) (toText item) (toHtml item)) items)
+
+
+inlineListCode : List (Html msg) -> Html msg
+inlineListCode =
+    baseInlineList "inline-list" withCode
+
+
+withCode : Html msg -> Html msg
+withCode i =
+    code [] [ i ]
+
+
+withCopyableCode : String -> String -> Html Msg -> Html Msg
+withCopyableCode extraClass content html =
+    code
+        [ onClick (CopyToClipboard content)
+        , class ("clickable-code " ++ extraClass)
+        , title "Click to copy"
+        ]
+        [ html ]
+
+
+baseInlineList : String -> (Html msg -> Html msg) -> List (Html msg) -> Html msg
+baseInlineList className wrapper items =
+    ul [ class className ]
+        (items
+            |> List.map (\i -> li [] [ wrapper i ])
+            |> List.intersperse (text " ")
+        )
+
+
+getLicenseDisplayAndTooltip :
+    { a | fullName : Maybe String, shortName : Maybe String, spdxId : Maybe String }
+    -> { display : String, tooltip : Maybe String }
+getLicenseDisplayAndTooltip license =
+    let
+        display =
+            case license.spdxId of
+                Just spdxId ->
+                    spdxId
 
                 Nothing ->
-                    [ text fullName ]
+                    case license.shortName of
+                        Just shortName ->
+                            shortName
+
+                        Nothing ->
+                            Maybe.withDefault "Unknown" license.fullName
+
+        tooltip =
+            case license.fullName of
+                Just fullName ->
+                    Just fullName
+
+                Nothing ->
+                    case license.shortName of
+                        Just shortName ->
+                            Just shortName
+
+                        Nothing ->
+                            license.spdxId
+    in
+    { display = display, tooltip = tooltip }
+
+
+renderLicenseLeaf :
+    { a | fullName : Maybe String, shortName : Maybe String, spdxId : Maybe String, url : Maybe String }
+    -> Html Msg
+renderLicenseLeaf license =
+    let
+        info =
+            getLicenseDisplayAndTooltip license
+
+        titleAttr =
+            case info.tooltip of
+                Just t ->
+                    [ title t ]
+
+                Nothing ->
+                    []
+    in
+    case license.url of
+        Just u ->
+            a
+                ([ href u
+                 , target "_blank"
+                 ]
+                    ++ titleAttr
+                )
+                [ text info.display ]
+
+        Nothing ->
+            span titleAttr [ text info.display ]
+
+
+renderLicenseExpression :
+    LicenseExpression
+    -> List (Html Msg)
+renderLicenseExpression expr =
+    case expr of
+        LicenseLeaf leaf ->
+            [ renderLicenseLeaf leaf ]
 
         LicenseAnd children ->
-            renderJoined mkLink "AND" children
+            renderJoined "AND" children
 
         LicenseOr children ->
-            renderJoined mkLink "OR" children
+            renderJoined "OR" children
 
         LicenseWith license exception ->
-            renderChild mkLink license
+            renderChild license
                 ++ [ text " ", span [ class "license-operator" ] [ text "WITH" ], text " " ]
-                ++ renderChild mkLink exception
+                ++ renderChild exception
 
         LicensePlus license ->
-            renderChild mkLink license ++ [ text "+" ]
+            renderChild license ++ [ text "+" ]
 
 
 renderJoined :
-    (String -> String -> Html Msg)
-    -> String
+    String
     -> List LicenseExpression
     -> List (Html Msg)
-renderJoined mkLink op children =
+renderJoined op children =
     let
         separator =
             [ text " ", span [ class "license-operator" ] [ text op ], text " " ]
     in
     children
-        |> List.map (renderChild mkLink)
+        |> List.map renderChild
         |> List.intersperse separator
         |> List.concat
 
@@ -1010,13 +1191,12 @@ renderJoined mkLink op children =
 precedence is unambiguous.
 -}
 renderChild :
-    (String -> String -> Html Msg)
-    -> LicenseExpression
+    LicenseExpression
     -> List (Html Msg)
-renderChild mkLink expr =
+renderChild expr =
     let
         inner =
-            renderLicenseExpression mkLink expr
+            renderLicenseExpression expr
     in
     case expr of
         LicenseLeaf _ ->
@@ -1316,9 +1496,11 @@ decodeHomepage =
 
 decodeResultPackageLicense : Json.Decode.Decoder ResultPackageLicense
 decodeResultPackageLicense =
-    Json.Decode.map2 ResultPackageLicense
-        (Json.Decode.field "fullName" (Json.Decode.nullable Json.Decode.string))
-        (Json.Decode.field "url" (Json.Decode.nullable Json.Decode.string))
+    Json.Decode.map4 ResultPackageLicense
+        (Json.Decode.oneOf [ Json.Decode.field "fullName" (Json.Decode.nullable Json.Decode.string), Json.Decode.succeed Nothing ])
+        (Json.Decode.oneOf [ Json.Decode.field "shortName" (Json.Decode.nullable Json.Decode.string), Json.Decode.succeed Nothing ])
+        (Json.Decode.oneOf [ Json.Decode.field "spdxId" (Json.Decode.nullable Json.Decode.string), Json.Decode.succeed Nothing ])
+        (Json.Decode.oneOf [ Json.Decode.field "url" (Json.Decode.nullable Json.Decode.string), Json.Decode.succeed Nothing ])
 
 
 decodeLicenseExpression : Json.Decode.Decoder LicenseExpression
@@ -1332,10 +1514,12 @@ decodeLicenseExpression =
             (\kind ->
                 case kind of
                     "leaf" ->
-                        Json.Decode.map2
-                            (\n u -> LicenseLeaf { fullName = n, url = u })
-                            (Json.Decode.field "fullName" Json.Decode.string)
-                            (Json.Decode.field "url" (Json.Decode.nullable Json.Decode.string))
+                        Json.Decode.map4
+                            (\f s idx u -> LicenseLeaf { fullName = f, shortName = s, spdxId = idx, url = u })
+                            (Json.Decode.oneOf [ Json.Decode.field "fullName" (Json.Decode.nullable Json.Decode.string), Json.Decode.succeed Nothing ])
+                            (Json.Decode.oneOf [ Json.Decode.field "shortName" (Json.Decode.nullable Json.Decode.string), Json.Decode.succeed Nothing ])
+                            (Json.Decode.oneOf [ Json.Decode.field "spdxId" (Json.Decode.nullable Json.Decode.string), Json.Decode.succeed Nothing ])
+                            (Json.Decode.oneOf [ Json.Decode.field "url" (Json.Decode.nullable Json.Decode.string), Json.Decode.succeed Nothing ])
 
                     "and" ->
                         Json.Decode.map LicenseAnd

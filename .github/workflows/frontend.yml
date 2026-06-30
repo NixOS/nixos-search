@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checking out the repository
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7.0.0
 
       - name: Setup
         uses: ./.github/actions/common-setup
@@ -35,7 +35,7 @@ jobs:
           cp -RL ./result/* ./dist/
 
       - name: Deploy to Netlify
-        uses: nwtgck/actions-netlify@v3.0
+        uses: nwtgck/actions-netlify@v4.0
         if: github.repository_owner == 'NixOS'
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}

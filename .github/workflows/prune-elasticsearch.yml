@@ -27,7 +27,7 @@ jobs:
 
     steps:
       - name: Checking out the repository
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v7.0.0
 
       - name: Prune unaliased indices
         if: github.repository_owner == 'NixOS'

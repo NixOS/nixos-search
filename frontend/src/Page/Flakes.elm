@@ -26,6 +26,7 @@ import Html.Events exposing (onClick)
 import Http exposing (Body)
 import Page.Options exposing (Msg(..))
 import Page.Packages exposing (Msg(..))
+import Ports
 import RemoteData
 import Route
     exposing
@@ -116,8 +117,8 @@ update navKey msg model nixosChannels =
                     in
                     ( newModel, Cmd.map Page.Options.SearchMsg newCmd ) |> Tuple.mapBoth OptionModel (Cmd.map OptionsMsg)
 
-                Page.Options.CopyOptionName name ->
-                    ( OptionModel model_, Page.Options.copyToClipboard name )
+                Page.Options.CopyToClipboard text_ ->
+                    ( OptionModel model_, Ports.copyToClipboard text_ )
 
         ( PackagesMsg msg_, PackagesModel model_ ) ->
             case msg_ of
@@ -132,6 +133,9 @@ update navKey msg model nixosChannels =
                                 nixosChannels
                     in
                     ( newModel, Cmd.map Page.Packages.SearchMsg newCmd ) |> Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg)
+
+                Page.Packages.CopyToClipboard text_ ->
+                    ( PackagesModel model_, Ports.copyToClipboard text_ )
 
         _ ->
             ( model, Cmd.none )

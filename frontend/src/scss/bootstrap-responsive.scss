@@ -1,0 +1,98 @@
+/*!
+ * Bootstrap Responsive v2.3.2
+ *
+ * Copyright 2013 Twitter, Inc
+ * Licensed under the Apache License v2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Designed and built with all the love in the world by @mdo and @fat.
+ */
+@-ms-viewport {
+  width:device-width
+}
+@media(min-width:1200px) {
+  [class*=span] {
+    float:left;
+    margin-left:30px;
+    min-height:1px
+  }
+  .container,
+  .navbar-static-top .container {
+    width:1170px;
+  }
+  
+  input {
+    margin-left:0
+  }
+}
+@media(min-width:768px) and (max-width:979px) {
+  [class*=span] {
+    float:left;
+    margin-left:20px;
+    min-height:1px
+  }
+  .container,
+  .navbar-static-top .container {
+    width:724px
+  }
+  
+  input {
+    margin-left:0
+  }
+}
+@media(max-width:767px) {
+  body {
+    padding-left:20px;
+    padding-right:20px
+  }
+  
+  .navbar-static-top {
+    margin-left:-20px;
+    margin-right:-20px
+  }
+  .container {
+    width:auto
+  }
+  
+  [class*=span] {
+    display:block;
+    float:none;
+    margin-left:0
+  }
+  
+  [class*=span] {
+    -webkit-box-sizing:border-box;
+    -moz-box-sizing:border-box;
+    box-sizing:border-box;
+    width:100%
+  }
+  
+  input[class*=span],
+  select[class*=span] {
+    -webkit-box-sizing:border-box;
+    -moz-box-sizing:border-box;
+    box-sizing:border-box;
+    display:block;
+    min-height:30px;
+    width:100%
+  }
+}
+@media(max-width:480px) {
+  input[type=checkbox] {
+    border:1px solid #ccc
+  }
+}
+@media(max-width:979px) {
+  body {
+    padding-top:0
+  }
+  .navbar .container {
+    padding:0;
+    width:auto
+  }
+  .navbar .brand {
+    margin:0 0 0 -5px;
+    padding-left:10px;
+    padding-right:10px
+  }
+}

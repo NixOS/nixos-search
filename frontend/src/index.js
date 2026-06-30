@@ -1,9 +1,7 @@
-"use strict";
+import "./scss/index.scss";
 
-require("./index.scss");
-require("elm-keyboard-shortcut");
-
-const { Elm } = require("./Main");
+import "elm-keyboard-shortcut";
+import { Elm } from "./Main";
 
 function normalizeTheme(value) {
     return value === "light" || value === "dark" ? value : "auto";
@@ -45,10 +43,34 @@ if (app.ports && app.ports.setTheme) {
     });
 }
 
+let copyToast = null;
+let copyToastTimer = null;
+
+function showCopyToast(message) {
+    if (!copyToast) {
+        copyToast = document.createElement("div");
+        copyToast.className = "copy-toast";
+        copyToast.setAttribute("role", "status");
+        copyToast.setAttribute("aria-live", "polite");
+        document.body.appendChild(copyToast);
+    }
+    copyToast.textContent = message;
+    copyToast.classList.add("visible");
+    if (copyToastTimer) {
+        clearTimeout(copyToastTimer);
+    }
+    copyToastTimer = setTimeout(() => {
+        copyToast.classList.remove("visible");
+    }, 2000);
+}
+
 if (app.ports && app.ports.copyToClipboard) {
     app.ports.copyToClipboard.subscribe((text) => {
         if (!text || !navigator.clipboard) return;
-        navigator.clipboard.writeText(text).catch(() => {});
+        navigator.clipboard
+            .writeText(text)
+            .then(() => showCopyToast("Copied to clipboard"))
+            .catch(() => {});
     });
 }
 
