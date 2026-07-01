@@ -467,16 +467,26 @@ async fn push_to_elastic(
         // legitimate no-op if the alias already points at it (a previous run
         // completed successfully). If the alias does not point here, the index
         // is stale/half-built (e.g. a prior push died before flipping the
-        // alias) - fail so the job is red and the index gets rebuilt, rather
-        // than silently returning green forever.
+        // alias): clear the stranded index before failing so the next run
+        // rebuilds from scratch, rather than aborting on the same stale index
+        // forever. `alias_points_at` propagates lookup errors and only returns
+        // false on a definitive miss, so a transient check failure fails the
+        // run without wiping a still-good aliased index.
         match &alias {
             Some(a) if !elastic.no_alias => {
                 if es.alias_points_at(a, &index).await? {
                     return Ok(());
                 }
+                warn!(
+                    "index {index} exists but alias {a} does not point at it; \
+                     clearing stranded/half-built index so the next run rebuilds"
+                );
+                if let Err(clear_err) = es.clear_index(&config).await {
+                    warn!("failed to clear stranded index {index}: {clear_err}");
+                }
                 return Err(anyhow!(
-                    "Index {index} exists but alias {a} does not point at it; \
-                     stale/half-built import - failing so it is rebuilt"
+                    "Index {index} existed but alias {a} did not point at it \
+                     (stale/half-built import); cleared it - failing so the next run rebuilds"
                 ));
             }
             _ => return Ok(()),
@@ -525,11 +535,6 @@ async fn push_to_elastic(
             warn!("Creating alias disabled")
         }
     }
-
-    // Emit the final index name at a stable, greppable prefix so the workflow
-    // (or an operator) can assert the alias resolves to exactly this index -
-    // i.e. that the run that just finished is the one now being served.
-    println!("FLAKE_INFO_PUSHED_INDEX={index}");
 
     Ok(())
 }

@@ -226,13 +226,6 @@ lazy_static! {
     });
 }
 
-/// Whether an HTTP status code from a bulk push is a transient failure worth
-/// retrying. Covers ES/proxy overload (429) and gateway/upstream errors
-/// (502/503/504). All other statuses are treated as deterministic.
-pub fn is_retryable_status(code: u16) -> bool {
-    matches!(code, 429 | 502 | 503 | 504)
-}
-
 #[derive(Default)]
 pub struct Elasticsearch {
     client: Client,
@@ -289,10 +282,35 @@ impl Elasticsearch {
         let mut had_failures = false;
 
         for chunk in chunks {
-            // Retry transient 5xx/429/transport errors with bounded exponential
-            // backoff. Other 4xx and per-item failures are deterministic and are
-            // surfaced without retrying.
-            let response_body = self.send_bulk_chunk_with_retry(config, chunk).await?;
+            let body = chunk
+                .iter()
+                .map(|e| BulkOperation::from(BulkOperation::index(e)))
+                .collect();
+
+            let response = self
+                .client
+                .bulk(elasticsearch::BulkParts::Index(config.index))
+                .body(body)
+                .send()
+                .await
+                .map_err(ElasticsearchError::PushError)?;
+
+            if response.status_code().is_client_error() || response.status_code().is_server_error()
+            {
+                return Err(response
+                    .exception()
+                    .await
+                    .map_err(ElasticsearchError::ClientError)?
+                    .map(ElasticsearchError::PushResponseError)
+                    .unwrap_or(ElasticsearchError::BulkRequestPartialFailure));
+            }
+
+            // Elasticsearch bulk API returns HTTP 200 even when some items fail
+            // Reference: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html
+            let response_body: serde_json::Value = response
+                .json()
+                .await
+                .map_err(ElasticsearchError::ClientError)?;
 
             // Warn if any items in the bulk request failed
             if let Some(true) = response_body.get("errors").and_then(|v| v.as_bool()) {
@@ -340,87 +358,6 @@ impl Elasticsearch {
         }
 
         Ok(())
-    }
-
-    /// Send a single bulk chunk, retrying transient transport errors and
-    /// retryable status codes (429/502/503/504) with bounded exponential
-    /// backoff. Returns the parsed bulk-response body on success so the caller
-    /// can inspect per-item `errors`. Non-retryable 4xx responses are returned
-    /// as an error without retrying.
-    async fn send_bulk_chunk_with_retry(
-        &self,
-        config: &Config<'_>,
-        chunk: &[Export],
-    ) -> Result<serde_json::Value, ElasticsearchError> {
-        const MAX_ATTEMPTS: u32 = 5;
-
-        let mut attempt = 1;
-        loop {
-            let body = chunk
-                .iter()
-                .map(|e| BulkOperation::from(BulkOperation::index(e)))
-                .collect();
-
-            let send_result = self
-                .client
-                .bulk(elasticsearch::BulkParts::Index(config.index))
-                .body(body)
-                .send()
-                .await;
-
-            let response = match send_result {
-                Ok(response) => response,
-                Err(e) => {
-                    // Transport error (connection reset, timeout, etc.): retry.
-                    if attempt < MAX_ATTEMPTS {
-                        let backoff = Self::retry_backoff(attempt);
-                        warn!(
-                            "Bulk push transport error (attempt {}/{}): {}; retrying in {:?}",
-                            attempt, MAX_ATTEMPTS, e, backoff
-                        );
-                        tokio::time::sleep(backoff).await;
-                        attempt += 1;
-                        continue;
-                    }
-                    return Err(ElasticsearchError::PushError(e));
-                }
-            };
-
-            let status = response.status_code().as_u16();
-            if response.status_code().is_client_error() || response.status_code().is_server_error()
-            {
-                if is_retryable_status(status) && attempt < MAX_ATTEMPTS {
-                    let backoff = Self::retry_backoff(attempt);
-                    warn!(
-                        "Bulk push got retryable status {} (attempt {}/{}); retrying in {:?}",
-                        status, attempt, MAX_ATTEMPTS, backoff
-                    );
-                    tokio::time::sleep(backoff).await;
-                    attempt += 1;
-                    continue;
-                }
-
-                // Non-retryable, or attempts exhausted: surface the exception.
-                return Err(response
-                    .exception()
-                    .await
-                    .map_err(ElasticsearchError::ClientError)?
-                    .map(ElasticsearchError::PushResponseError)
-                    .unwrap_or(ElasticsearchError::BulkRequestPartialFailure));
-            }
-
-            // Elasticsearch bulk API returns HTTP 200 even when some items fail
-            // Reference: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html
-            return response
-                .json()
-                .await
-                .map_err(ElasticsearchError::ClientError);
-        }
-    }
-
-    /// Fixed exponential backoff: 2s, 4s, 8s, 16s for attempts 1..=4.
-    fn retry_backoff(attempt: u32) -> std::time::Duration {
-        std::time::Duration::from_secs(2u64.pow(attempt))
     }
 
     /// Look up whether the alias currently resolves to (among others) `index`.
@@ -665,20 +602,6 @@ mod tests {
         es.push_exports(config, &exports).await?;
 
         Ok(())
-    }
-
-    #[test]
-    fn test_is_retryable_status() {
-        for code in [429, 502, 503, 504] {
-            assert!(is_retryable_status(code), "{} should be retryable", code);
-        }
-        for code in [200, 201, 400, 404, 409, 500, 501] {
-            assert!(
-                !is_retryable_status(code),
-                "{} should not be retryable",
-                code
-            );
-        }
     }
 
     #[tokio::test]

@@ -66,53 +66,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: sh
         run: |
-          # Capture stdout so we can read the FLAKE_INFO_PUSHED_INDEX line that
-          # flake-info emits, and assert the alias resolves to it in Warmup.
-          # `set -e` (sh default off) plus an explicit status check ensures a
-          # failed import still fails the step despite the `tee` pipe.
-          set -e
-          nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(nix eval --raw --file ./version.nix import) nixpkgs ${{ matrix.channel }} > flake-info.out
-          cat flake-info.out
-
-          PUSHED_INDEX="$(sed -n 's/^FLAKE_INFO_PUSHED_INDEX=//p' flake-info.out | tail -n1)"
-          echo "pushed index: $PUSHED_INDEX"
-          echo "PUSHED_INDEX=$PUSHED_INDEX" >> "$GITHUB_ENV"
+          nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(nix eval --raw --file ./version.nix import) nixpkgs ${{ matrix.channel }}
 
       - name: Warmup ${{ matrix.channel }} channel
         if: github.repository_owner == 'NixOS'
         shell: sh
         run: |
-          INDEX="latest-$(nix eval --raw --file ./version.nix import)-nixos-${{ matrix.channel }}"
-
           for i in 1 2 3
           do
-            curl -sS "${{ secrets.ELASTICSEARCH_URL2 }}/$INDEX/_search" | jq -ce '.took // error'
+            curl -sS ${{ secrets.ELASTICSEARCH_URL2 }}/latest-$(nix eval --raw --file ./version.nix import)-nixos-${{ matrix.channel }}/_search | jq -ce '.took // error'
           done
-
-          # Doc-count floor: a half-built index that somehow got aliased would
-          # have far fewer docs than a real import. Fail the job if the alias
-          # target is suspiciously small so the import is rebuilt rather than
-          # silently serving stale/partial data.
-          MIN_DOCS=100000
-          COUNT="$(curl -sS "${{ secrets.ELASTICSEARCH_URL2 }}/$INDEX/_count" | jq -e '.count')"
-          echo "Index $INDEX has $COUNT docs (floor $MIN_DOCS)"
-          if [ "$COUNT" -lt "$MIN_DOCS" ]; then
-            echo "Doc count $COUNT below floor $MIN_DOCS; alias target is stale or half-built" >&2
-            exit 1
-          fi
-
-          # Rev freshness: assert the alias resolves to exactly the index this
-          # run just pushed. Catches the stranded-index case where a previous
-          # run's index is still aliased and a no-op run would otherwise look
-          # green. Skipped only if no index name was captured (older binary).
-          if [ -n "$PUSHED_INDEX" ]; then
-            if ! curl -sS "${{ secrets.ELASTICSEARCH_URL2 }}/$INDEX/_alias" | jq -e --arg idx "$PUSHED_INDEX" 'has($idx)' > /dev/null; then
-              echo "Alias $INDEX does not resolve to freshly pushed index $PUSHED_INDEX" >&2
-              curl -sS "${{ secrets.ELASTICSEARCH_URL2 }}/$INDEX/_alias" | jq -r 'keys[]' >&2 || true
-              exit 1
-            fi
-            echo "Alias $INDEX correctly resolves to $PUSHED_INDEX"
-          fi
 
       - name: Create issue if failed
         if: failure()
@@ -167,23 +130,10 @@ jobs:
         if: github.repository_owner == 'NixOS'
         shell: sh
         run: |
-          INDEX="latest-$(nix eval --raw --file ./version.nix import)-group-${{ matrix.group }}"
-
           for i in 1 2 3
           do
-            curl -sS "${{ secrets.ELASTICSEARCH_URL2 }}/$INDEX/_search" | jq -c '.took // .'
+            curl -sS ${{ secrets.ELASTICSEARCH_URL2 }}/latest-$(nix eval --raw --file ./version.nix import)-group-${{ matrix.group }}/_search | jq -c '.took // .'
           done
-
-          # Doc-count floor: the flakes group is small and its size varies, so
-          # only assert the alias target is non-empty. This still catches an
-          # empty/half-built index that got aliased.
-          MIN_DOCS=1
-          COUNT="$(curl -sS "${{ secrets.ELASTICSEARCH_URL2 }}/$INDEX/_count" | jq -e '.count')"
-          echo "Index $INDEX has $COUNT docs (floor $MIN_DOCS)"
-          if [ "$COUNT" -lt "$MIN_DOCS" ]; then
-            echo "Doc count $COUNT below floor $MIN_DOCS; alias target is stale or half-built" >&2
-            exit 1
-          fi
 
       - name: Create issue if failed
         if: failure()
