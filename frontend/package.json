@@ -35,6 +35,7 @@
         "tabWidth": 4
     },
     "dependencies": {
+        "@nixos/branding": "^0.1.0",
         "elm-keyboard-shortcut": "^1.0.1"
     }
 }

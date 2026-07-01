@@ -494,10 +494,10 @@ view model =
                                         [ alt "NixOS logo"
                                         , src
                                             (if model.isPrideMonth then
-                                                "/images/nix-logo-pride.png"
+                                                "/images/nixos-logomark-rainbow-gradient-none.svg"
 
                                              else
-                                                "/images/nix-logo.png"
+                                                "/images/nixos-logomark-default-gradient-none.svg"
                                             )
                                         , class "logo"
                                         ]
