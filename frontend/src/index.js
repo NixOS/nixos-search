@@ -30,6 +30,7 @@ const app = Elm.Main.init({
             process.env.ELASTICSEARCH_PASSWORD || "X8gPHnzL52wFEekuxsfQ9cSh",
         nixosChannels: JSON.parse(process.env.NIXOS_CHANNELS),
         theme: initialTheme,
+        isPrideMonth: new Date().getMonth() === 5,
     },
 });
 
