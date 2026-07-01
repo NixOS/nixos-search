@@ -449,8 +449,7 @@ asHighlightPreCode value =
         ]
 
 
-{-| Render a "Usage" section showing how to use this option in the appropriate
-context, including `_class` to clarify which module system it belongs to.
+{-| Render a "Usage" section showing how to use this option.
 -}
 viewUsageSnippet : ResultItemSource -> List (Html Msg)
 viewUsageSnippet source =
@@ -497,7 +496,6 @@ viewUsageSnippet source =
                 ( Just pkg, Just mod_ ) ->
                     usage
                         ("system.services.<name> = {\n"
-                            ++ "  _class = \"service\";\n"
                             ++ "  imports = [ pkgs."
                             ++ pkg
                             ++ ".services."
@@ -514,7 +512,6 @@ viewUsageSnippet source =
             usage
                 ("# configuration.nix\n"
                     ++ "{\n"
-                    ++ "  _class = \"nixos\";\n"
                     ++ nestedOption "  "
                     ++ "}"
                 )
@@ -523,7 +520,6 @@ viewUsageSnippet source =
             usage
                 ("# home.nix\n"
                     ++ "{\n"
-                    ++ "  _class = \"homeManager\";\n"
                     ++ nestedOption "  "
                     ++ "}"
                 )
