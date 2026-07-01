@@ -61,6 +61,7 @@ type alias Flags =
     , elasticsearchPassword : String
     , nixosChannels : Json.Decode.Value
     , theme : String
+    , isPrideMonth : Bool
     }
 
 
@@ -117,6 +118,7 @@ type alias Model =
     , nixosChannels : List NixOSChannel
     , page : Page
     , theme : Theme
+    , isPrideMonth : Bool
     }
 
 
@@ -163,6 +165,7 @@ init flags url navKey =
             , page = NotFound
             , route = Route.Home
             , theme = themeFromString flags.theme
+            , isPrideMonth = flags.isPrideMonth
             }
     in
     changeRouteTo model url
@@ -487,7 +490,18 @@ view model =
                         [ div [ class "navbar-inner" ]
                             [ div [ class "container" ]
                                 [ a [ class "brand", href "https://nixos.org" ]
-                                    [ img [ alt "NixOS logo", src "/images/nix-logo-pride.png", class "logo" ] []
+                                    [ img
+                                        [ alt "NixOS logo"
+                                        , src
+                                            (if model.isPrideMonth then
+                                                "/images/nixos-logomark-rainbow-gradient-none.svg"
+
+                                             else
+                                                "/images/nixos-logomark-default-gradient-none.svg"
+                                            )
+                                        , class "logo"
+                                        ]
+                                        []
                                     ]
                                 , ul [ class "nav" ]
                                     (viewNavigation model.route)
