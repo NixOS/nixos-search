@@ -1,4 +1,5 @@
 *.log
+.astro
 .DS_Store
 .cache
 .idea

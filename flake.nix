@@ -93,6 +93,7 @@
         packages = {
           default = packages.flake-info;
           flake-info = import ./flake-info { inherit pkgs; };
+          frontend-astro = pkgs.callPackage ./frontend-astro { inherit nixosChannels version; };
           frontend = pkgs.callPackage ./frontend {
             inherit nixosChannels version;
           };
@@ -143,6 +144,19 @@
               echo "==========================================================="
               echo "= To develop the frontend run: cd frontend && npm run dev ="
               echo "==========================================================="
+            '';
+          };
+
+          frontend-astro = mkDevShell {
+            inputsFrom = [ packages.frontend-astro ];
+            extraPackages = with pkgs; [
+              rustfmt
+              yarn
+            ];
+            extraShellHook = ''
+              echo "========================================================"
+              echo "= To develop the frontend run: cd frontend-astro && npm install && npm run dev ="
+              echo "========================================================"
             '';
           };
         };

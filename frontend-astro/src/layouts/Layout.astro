@@ -1,0 +1,21 @@
+---
+import { SEO } from "astro-seo";
+import Nav from "../components/Nav.astro";
+import "../styling.css";
+---
+
+
+<html lang="en">
+	<head>
+		<SEO title = "NixOS Search" charset="utf-8"/>
+	</head>
+	<body class="bg-neutral-900 min-h-screen">
+		<div class="w-full flex justify-center items-center">
+		<div class="flex w-full h-6 justify-center items-center font-bold text-white bg-red-800 py-2">
+			<p>🚧 Prototype/Demo. Expect breaking changes. Contribute on <a class="underline" href="https://github.com/NixOS/nixos-search/">Github</a> </p>
+			</div>
+		</div>
+		<Nav/>
+		<slot/>
+	</body>
+</html>
