@@ -605,6 +605,11 @@ owner = "simple-nixos-mailserver"
 repo = "nixos-mailserver"
 
 [[sources]]
+type = "gitlab"
+owner = "yisraeldov"
+repo = "thinkorswim-flake"
+
+[[sources]]
 type = "sourcehut"
 owner = "~alexdavid"
 repo = "jail.nix"
