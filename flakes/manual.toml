@@ -450,6 +450,11 @@ repo = "agenix"
 
 [[sources]]
 type = "github"
+owner = "skelettor"
+repo = "nix-openlinkhub"
+
+[[sources]]
+type = "github"
 owner = "slendidev"
 repo = "yavsrg-flake"
 
