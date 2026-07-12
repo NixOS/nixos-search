@@ -341,10 +341,11 @@ type = "github"
 owner = "nix-community"
 repo = "autofirma-nix"
 
-[[sources]]
-type = "github"
-owner = "nix-community"
-repo = "fenix"
+# x86_64-darwin throws deprecated
+# [[sources]]
+# type = "github"
+# owner = "nix-community"
+# repo = "fenix"
 
 [[sources]]
 type = "github"
