@@ -809,6 +809,8 @@ makeRequestBody types query from size sort =
         , ( "service_package", 3.0 )
         , ( "service_packages", 3.0 )
         ]
+        [ "option_description^3" ]
+        Nothing
 
 
 

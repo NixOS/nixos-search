@@ -1520,6 +1520,111 @@ searchFields positiveWords mainFields fields =
     multiMatch :: List.concatMap (\mf -> List.map (toWildcardQuery mf) queryWordsWildCard) mainFields
 
 
+shouldClauses :
+    String
+    -> List String
+    -> List String
+    -> List (List ( String, Json.Encode.Value ))
+shouldClauses primaryField positiveWords phraseFields =
+    if List.isEmpty positiveWords then
+        []
+
+    else
+        let
+            joined : String
+            joined =
+                String.concat positiveWords
+
+            termClause : List ( String, Json.Encode.Value )
+            termClause =
+                [ ( "term"
+                  , Json.Encode.object
+                        [ ( primaryField
+                          , Json.Encode.object
+                                [ ( "value", Json.Encode.string joined )
+                                , ( "boost", Json.Encode.float 100.0 )
+                                ]
+                          )
+                        ]
+                  )
+                ]
+
+            prefixClause : List ( String, Json.Encode.Value )
+            prefixClause =
+                [ ( "prefix"
+                  , Json.Encode.object
+                        [ ( primaryField
+                          , Json.Encode.object
+                                [ ( "value", Json.Encode.string joined )
+                                , ( "boost", Json.Encode.float 20.0 )
+                                , ( "case_insensitive", Json.Encode.bool True )
+                                ]
+                          )
+                        ]
+                  )
+                ]
+
+            phraseClause : List (List ( String, Json.Encode.Value ))
+            phraseClause =
+                if List.length positiveWords > 1 then
+                    [ [ ( "constant_score"
+                        , Json.Encode.object
+                            [ ( "filter"
+                              , Json.Encode.object
+                                    [ ( "multi_match"
+                                      , Json.Encode.object
+                                            [ ( "type", Json.Encode.string "phrase" )
+                                            , ( "query", Json.Encode.string (String.join " " positiveWords) )
+                                            , ( "fields", Json.Encode.list Json.Encode.string phraseFields )
+                                            ]
+                                      )
+                                    ]
+                              )
+                            , ( "boost", Json.Encode.float 80.0 )
+                            ]
+                        )
+                      ]
+                    ]
+
+                else
+                    []
+        in
+        termClause :: prefixClause :: phraseClause
+
+
+rescoreQuery : String -> ( String, Json.Encode.Value )
+rescoreQuery field =
+    ( "rescore"
+    , Json.Encode.object
+        [ ( "window_size", Json.Encode.int 100 )
+        , ( "query"
+          , Json.Encode.object
+                [ ( "rescore_query"
+                  , Json.Encode.object
+                        [ ( "function_score"
+                          , Json.Encode.object
+                                [ ( "script_score"
+                                  , Json.Encode.object
+                                        [ ( "script"
+                                          , Json.Encode.object
+                                                [ ( "source"
+                                                  , Json.Encode.string ("1.0 / doc['" ++ field ++ "'].value.length()")
+                                                  )
+                                                ]
+                                          )
+                                        ]
+                                  )
+                                ]
+                          )
+                        ]
+                  )
+                , ( "rescore_query_weight", Json.Encode.float 20.0 )
+                ]
+          )
+        ]
+    )
+
+
 makeRequestBody :
     String
     -> Int
@@ -1532,8 +1637,10 @@ makeRequestBody :
     -> List ( String, Json.Encode.Value )
     -> List String
     -> List ( String, Float )
+    -> List String
+    -> Maybe String
     -> Http.Body
-makeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets mainFields fields =
+makeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets mainFields fields phraseFields rescoreField =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -1548,19 +1655,23 @@ makeRequestBody query from sizeRaw sort types sortField otherSortFields terms fi
                 |> String.words
                 |> List.partition (String.startsWith "-")
                 |> Tuple.mapFirst (List.map (String.dropLeft 1))
+
+        primaryField : String
+        primaryField =
+            List.head mainFields |> Maybe.withDefault ""
     in
     Http.jsonBody
         (Json.Encode.object
-            [ ( "from"
-              , Json.Encode.int from
-              )
-            , ( "size"
-              , Json.Encode.int size
-              )
-            , toSortQuery sort sortField otherSortFields
-            , toAggregations terms
-            , ( "query"
-              , Json.Encode.object
+            ([ ( "from"
+               , Json.Encode.int from
+               )
+             , ( "size"
+               , Json.Encode.int size
+               )
+             , toSortQuery sort sortField otherSortFields
+             , toAggregations terms
+             , ( "query"
+               , Json.Encode.object
                     [ ( "bool"
                       , Json.Encode.object
                             [ ( "filter"
@@ -1597,11 +1708,23 @@ makeRequestBody query from sizeRaw sort types sortField otherSortFields terms fi
                                       ]
                                     ]
                               )
+                            , ( "should"
+                              , Json.Encode.list Json.Encode.object
+                                    (shouldClauses primaryField positiveWords phraseFields)
+                              )
                             ]
                       )
                     ]
-              )
-            ]
+               )
+             ]
+                ++ (case rescoreField of
+                        Just field ->
+                            [ rescoreQuery field ]
+
+                        Nothing ->
+                            []
+                   )
+            )
         )
 
 
