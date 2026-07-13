@@ -167,41 +167,56 @@ let
   # Filter for user-visible, non-internal options
   filterOptions = opts: lib.filter (x: x.visible && !x.internal && lib.head x.loc != "_module") opts;
 
+  evalOptionsWith =
+    {
+      evalModules ? lib.evalModules,
+      modules,
+      specialArgs ? { },
+      class ? null,
+      extraAttrs ? { },
+    }:
+    let
+      declarations =
+        (evalModules (
+          {
+            modules = modules ++ [
+              (
+                { lib, ... }:
+                {
+                  _module.check = lib.mkForce false;
+                }
+              )
+            ];
+            specialArgs = {
+              pkgs = nixpkgs;
+            }
+            // specialArgs;
+          }
+          // lib.optionalAttrs (class != null) { inherit class; }
+        )).options;
+
+      opts = lib.optionAttrSetToDocList declarations;
+    in
+    map (cleanUpOption extraAttrs) (filterOptions opts);
+
   readNixOSOptions =
     {
       module,
       modulePath ? null,
     }:
-    let
-      declarations =
-        (lib.evalModules {
-          modules = (if lib.isList module then module else [ module ]) ++ [
-            (
-              { ... }:
-              {
-                _module.check = false;
-              }
-            )
-          ];
-          specialArgs = {
-            # !!! NixOS-specific. Unfortunately, NixOS modules can rely on the `modulesPath`
-            # argument to import modules from the nixos tree. However, most of the time
-            # this is done to import *profiles* which do not declare any options, so we
-            # can allow it.
-            modulesPath = "${nixpkgsFlake}/nixos/modules";
-
-            # Provide commonly-used arguments so module evaluation that expects them
-            # (e.g. `pkgs` or `config`) does not fail during CI evaluation.
-            pkgs = nixpkgs;
-          };
-        }).options;
-
-      opts = lib.optionAttrSetToDocList declarations;
+    evalOptionsWith {
+      modules = if lib.isList module then module else [ module ];
+      specialArgs = {
+        # !!! NixOS-specific. Unfortunately, NixOS modules can rely on the `modulesPath`
+        # argument to import modules from the nixos tree. However, most of the time
+        # this is done to import *profiles* which do not declare any options, so we
+        # can allow it.
+        modulesPath = "${nixpkgsFlake}/nixos/modules";
+      };
       extraAttrs = lib.optionalAttrs (modulePath != null) {
         flake = modulePath;
       };
-    in
-    map (cleanUpOption extraAttrs) (filterOptions opts);
+    };
 
   # Parses the angle-bracket prefix from modular service option names to extract
   # service_package and service_module, strips the prefix, and tags as entry_type = "service".
@@ -321,25 +336,14 @@ let
           }
         else
           fn;
-
-      declarations =
-        (hmLib.evalModules {
-          modules = hmModuleList ++ [
-            (
-              { lib, ... }:
-              {
-                _module.check = lib.mkForce false;
-              }
-            )
-          ];
-          specialArgs = {
-            pkgs = nixpkgs;
-          };
-        }).options;
-
-      opts = hmLib.optionAttrSetToDocList declarations;
     in
-    map (cleanUpOption { entry_type = "home-manager-option"; }) (filterOptions opts);
+    evalOptionsWith {
+      evalModules = hmLib.evalModules;
+      modules = hmModuleList;
+      extraAttrs = {
+        entry_type = "home-manager-option";
+      };
+    };
 
   read = reader: set: lib.flatten (lib.attrValues (withSystem reader set));
 
@@ -510,6 +514,15 @@ let
   # with "<" come from modular services.
   nixpkgsAllOpts = readNixOSOptions { module = nixpkgsBaseModules ++ serviceDocModules; };
   isServiceOption = opt: lib.hasPrefix "<" opt.name;
+  readOptionsIf =
+    {
+      cond,
+      reader,
+    }:
+    let
+      check = builtins.tryEval cond;
+    in
+    if check.success && check.value then reader else [ ];
 
 in
 
@@ -518,19 +531,17 @@ rec {
   packages = lib.attrValues (collectSystems allPackageSets.packages packages');
   apps = lib.attrValues (collectSystems { } apps'); # apps don't need fallback evaluation
   options = readFlakeOptions;
-  home-manager-options =
-    let
-      # Require both `modules/modules.nix` and `modules/lib/stdlib-extended.nix`
-      # to avoid false positives. Other flakes (e.g. `nix-bitcoin`) ship a
-      # `modules/modules.nix` that is unrelated to home-manager; only
-      # home-manager itself also provides the `stdlib-extended.nix` helper
-      # that `readHomeManagerOptions` imports.
-      isHomeManager = builtins.tryEval (
-        builtins.pathExists "${resolved}/modules/modules.nix"
-        && builtins.pathExists "${resolved}/modules/lib/stdlib-extended.nix"
-      );
-    in
-    if isHomeManager.success && isHomeManager.value then readHomeManagerOptions else [ ];
+  home-manager-options = readOptionsIf {
+    # Require both `modules/modules.nix` and `modules/lib/stdlib-extended.nix`
+    # to avoid false positives. Other flakes (e.g. `nix-bitcoin`) ship a
+    # `modules/modules.nix` that is unrelated to home-manager; only
+    # home-manager itself also provides the `stdlib-extended.nix` helper
+    # that `readHomeManagerOptions` imports.
+    cond =
+      builtins.pathExists "${resolved}/modules/modules.nix"
+      && builtins.pathExists "${resolved}/modules/lib/stdlib-extended.nix";
+    reader = readHomeManagerOptions;
+  };
   all = packages ++ apps ++ options;
 
   nixos-options = builtins.filter (opt: !(isServiceOption opt)) nixpkgsAllOpts;
