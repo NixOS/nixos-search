@@ -105,16 +105,21 @@ type alias AggregationsAll =
 
 
 init :
-    Route.SearchArgs
+    Search.Options
+    -> Bool
+    -> Route.SearchArgs
     -> String
     -> List NixOSChannel
     -> Bool
     -> Maybe Model
     -> ( Model, Cmd Msg )
-init searchArgs defaultNixOSChannel nixosChannels includeChannelInUrl model =
+init options preferStatic searchArgs defaultNixOSChannel nixosChannels includeChannelInUrl model =
     let
+        searchArgsForOptions =
+            { searchArgs | type_ = Just Route.OptionSearch }
+
         ( newModel, newCmd ) =
-            Search.init searchArgs defaultNixOSChannel nixosChannels model
+            Search.init options preferStatic searchArgsForOptions defaultNixOSChannel nixosChannels model
 
         finalModel =
             if includeChannelInUrl then

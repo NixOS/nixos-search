@@ -62,6 +62,7 @@ type alias Flags =
     , nixosChannels : Json.Decode.Value
     , theme : String
     , isPrideMonth : Bool
+    , saveData : Bool
     }
 
 
@@ -119,6 +120,7 @@ type alias Model =
     , page : Page
     , theme : Theme
     , isPrideMonth : Bool
+    , preferStatic : Bool
     }
 
 
@@ -166,6 +168,7 @@ init flags url navKey =
             , route = Route.Home
             , theme = themeFromString flags.theme
             , isPrideMonth = flags.isPrideMonth
+            , preferStatic = not flags.saveData
             }
     in
     changeRouteTo model url
@@ -343,7 +346,7 @@ changeRouteTo currentModel url =
                         _ ->
                             Nothing
             in
-            Page.Packages.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels True modelPage
+            Page.Packages.init currentModel.elasticsearch currentModel.preferStatic searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels True modelPage
                 |> updateWith Packages PackagesMsg model
                 |> avoidReinit
                 |> attemptQuery
@@ -358,7 +361,7 @@ changeRouteTo currentModel url =
                         _ ->
                             Nothing
             in
-            Page.Options.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels True modelPage
+            Page.Options.init currentModel.elasticsearch currentModel.preferStatic searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels True modelPage
                 |> updateWith Options OptionsMsg model
                 |> avoidReinit
                 |> attemptQuery
@@ -373,7 +376,7 @@ changeRouteTo currentModel url =
                         _ ->
                             Nothing
             in
-            Page.Flakes.init searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
+            Page.Flakes.init currentModel.elasticsearch currentModel.preferStatic searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
                 |> updateWith Flakes FlakesMsg model
                 |> avoidReinit
                 |> attemptQuery

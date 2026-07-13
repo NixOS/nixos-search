@@ -53,6 +53,20 @@ application.
 
 This allows testing the frontend against the 'production' package index.
 
+### Locally test type-ahead from static assets
+
+```bash
+nix build .#frontend
+chmod -R u+w dist 2>/dev/null; rm -rf dist && mkdir -p dist && cp -RL --no-preserve=mode ./result/* ./dist/
+
+env \
+  NIXOS_CHANNELS="$(cat "$(nix build --no-link --print-out-paths .#nixosChannelsJson)")" \
+  AUTOCOMPLETE_OUT_DIR=./dist/autocomplete \
+  node frontend/scripts/build-autocomplete-corpus.mjs
+
+node frontend/scripts/serve-local.mjs
+```
+
 ### elm-review
 
 This project uses `elm-review` to enforce standard rules over Elm code. To use it you can run:
@@ -76,7 +90,15 @@ Then you can upload information with something like:
 flake-info --elastic-schema-version 43 --elastic-index-name=nixos-unstable --push --elastic-exists recreate nixpkgs unstable
 ```
 
-To point the frontend to the local index, `export ELASTICSEARCH_URL=http://localhost:9200` before running the frontend.
+To point the frontend to the local index, set these environment variables
+before running the frontend:
+
+```
+export ELASTICSEARCH_URL=http://localhost:9200
+export ELASTICSEARCH_USERNAME=""
+export ELASTICSEARCH_PASSWORD=""
+```
+
 You may need to manually edit `frontend/src/Search.elm` to use the right index.
 
 ## Deploying
