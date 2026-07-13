@@ -529,6 +529,14 @@ viewUsageSnippet source =
                     ++ "}"
                 )
 
+        "nix-on-droid-option" ->
+            usage
+                ("# nix-on-droid.nix\n"
+                    ++ "{\n"
+                    ++ nestedOption "  "
+                    ++ "}"
+                )
+
         _ ->
             []
 
@@ -563,6 +571,12 @@ findSource nixosChannels channel source =
         homeManagerUrlPrefix branch =
             repoUrlPrefix "nix-community" "home-manager" branch
 
+        nixOnDroidBranch nixpkgsBranch =
+            stableBranch nixpkgsBranch "release-"
+
+        nixOnDroidUrlPrefix branch =
+            repoUrlPrefix "nix-community" "nix-on-droid" branch
+
         cleanPosition value =
             if String.startsWith "source/" value then
                 String.dropLeft 7 value
@@ -577,6 +591,9 @@ findSource nixosChannels channel source =
                         prefix =
                             if source.docType == "home-manager-option" then
                                 homeManagerUrlPrefix (homeManagerBranch channelDetails.branch)
+
+                            else if source.docType == "nix-on-droid-option" then
+                                nixOnDroidUrlPrefix (nixOnDroidBranch channelDetails.branch)
 
                             else
                                 githubUrlPrefix channelDetails.branch

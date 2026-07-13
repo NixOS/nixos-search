@@ -49,11 +49,12 @@ type OptionSource
     = NixosOptions
     | ModularServiceOptions
     | HomeManagerOptionSource
+    | NixOnDroidOptionSource
 
 
 allOptionSources : List OptionSource
 allOptionSources =
-    [ NixosOptions, ModularServiceOptions, HomeManagerOptionSource ]
+    [ NixosOptions, ModularServiceOptions, HomeManagerOptionSource, NixOnDroidOptionSource ]
 
 
 {-| Default tab when no source is specified in the URL.
@@ -76,6 +77,9 @@ optionSourceId source =
 
         HomeManagerOptionSource ->
             "home_manager"
+
+        NixOnDroidOptionSource ->
+            "nix_on_droid"
 
 
 {-| Inverse of `optionSourceId`. Returns `Nothing` for unknown identifiers
@@ -102,6 +106,9 @@ optionSourceDocType source =
         HomeManagerOptionSource ->
             "home-manager-option"
 
+        NixOnDroidOptionSource ->
+            "nix-on-droid-option"
+
 
 {-| Human-readable checkbox label.
 -}
@@ -116,6 +123,9 @@ optionSourceLabel source =
 
         HomeManagerOptionSource ->
             "nix-community/home-manager"
+
+        NixOnDroidOptionSource ->
+            "nix-community/nix-on-droid"
 
 
 type SearchType
