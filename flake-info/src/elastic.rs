@@ -279,32 +279,32 @@ impl Elasticsearch {
     ) -> Result<(), ElasticsearchError> {
         // let exports: Result<Vec<Value>, serde_json::Error> = exports.iter().map(serde_json::to_value).collect();
         // let exports = exports?;
-        let bodies = exports.chunks(7_000).map(|chunk| {
-            chunk
-                .iter()
-                .map(|e| BulkOperation::from(BulkOperation::index(e)))
-        });
+        let chunks = exports.chunks(7_000);
 
         let mut had_failures = false;
 
-        for body in bodies {
+        for chunk in chunks {
+            let body = chunk
+                .iter()
+                .map(|e| BulkOperation::from(BulkOperation::index(e)))
+                .collect();
+
             let response = self
                 .client
                 .bulk(elasticsearch::BulkParts::Index(config.index))
-                .body(body.collect())
+                .body(body)
                 .send()
                 .await
                 .map_err(ElasticsearchError::PushError)?;
 
-            let response = dbg!(response);
             if response.status_code().is_client_error() || response.status_code().is_server_error()
             {
-                return response
+                return Err(response
                     .exception()
                     .await
                     .map_err(ElasticsearchError::ClientError)?
                     .map(ElasticsearchError::PushResponseError)
-                    .map_or(Ok(()), Err);
+                    .unwrap_or(ElasticsearchError::BulkRequestPartialFailure));
             }
 
             // Elasticsearch bulk API returns HTTP 200 even when some items fail
@@ -362,6 +362,33 @@ impl Elasticsearch {
         Ok(())
     }
 
+    /// Look up whether the alias currently resolves to (among others) `index`.
+    /// Thin wrapper over the `get_alias` call used by `write_alias`.
+    pub async fn alias_points_at(
+        &self,
+        alias: &str,
+        index: &str,
+    ) -> Result<bool, ElasticsearchError> {
+        let response = self
+            .client
+            .indices()
+            .get_alias(IndicesGetAliasParts::Name(&[alias]))
+            .send()
+            .await
+            .map_err(ElasticsearchError::InitIndexError)?;
+
+        if response.status_code() == 404 {
+            return Ok(false);
+        }
+
+        let indices = response
+            .json::<HashMap<String, Value>>()
+            .await
+            .map_err(ElasticsearchError::InitIndexError)?;
+
+        Ok(indices.contains_key(index))
+    }
+
     pub async fn ensure_index(&self, config: &Config<'_>) -> Result<(), ElasticsearchError> {
         let exists = self.check_index(config).await?;
 
@@ -402,7 +429,7 @@ impl Elasticsearch {
             .await
             .map_err(ElasticsearchError::InitIndexError)?;
 
-        dbg!(response)
+        response
             .exception()
             .await
             .map_err(ElasticsearchError::ClientError)?
@@ -433,7 +460,7 @@ impl Elasticsearch {
             .await
             .map_err(ElasticsearchError::InitIndexError)?;
 
-        dbg!(response)
+        response
             .exception()
             .await
             .map_err(ElasticsearchError::ClientError)?
@@ -484,7 +511,7 @@ impl Elasticsearch {
             .await
             .map_err(ElasticsearchError::InitIndexError)?;
 
-        dbg!(response)
+        response
             .exception()
             .await
             .map_err(ElasticsearchError::ClientError)?
@@ -575,6 +602,39 @@ mod tests {
 
         es.ensure_index(config).await?;
         es.push_exports(config, &exports).await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_alias_points_at() -> Result<(), Box<dyn std::error::Error>> {
+        let es = Elasticsearch::new("http://localhost:9200").unwrap();
+        let alias = "test_alias_points_at";
+
+        let config_a = &Config {
+            index: "test_alias_points_at_a",
+            exists_strategy: ExistsStrategy::Recreate,
+        };
+        let config_b = &Config {
+            index: "test_alias_points_at_b",
+            exists_strategy: ExistsStrategy::Recreate,
+        };
+
+        es.ensure_index(config_a).await?;
+        es.ensure_index(config_b).await?;
+
+        // Alias points at index A.
+        es.write_alias(config_a, config_a.index, alias).await?;
+        assert!(es.alias_points_at(alias, config_a.index).await?);
+        assert!(!es.alias_points_at(alias, config_b.index).await?);
+
+        // Flip the alias to index B.
+        es.write_alias(config_b, config_b.index, alias).await?;
+        assert!(es.alias_points_at(alias, config_b.index).await?);
+        assert!(!es.alias_points_at(alias, config_a.index).await?);
+
+        es.clear_index(config_a).await?;
+        es.clear_index(config_b).await?;
 
         Ok(())
     }
