@@ -79,9 +79,9 @@ pub fn get_nixpkgs_info(
 }
 
 pub fn get_nixpkgs_package_services(nixpkgs: &Source) -> Result<HashMap<String, Vec<String>>> {
-    let mut command = Command::with_args("nix", &["eval", "--json"]);
+    let mut command = Command::with_args("nix", &["eval", "--json", "--no-write-lock-file"]);
     command.add_arg_pair("-f", super::EXTRACT_SCRIPT.clone());
-    command.add_arg_pair("-I", format!("nixpkgs={}", nixpkgs.to_flake_ref()));
+    command.add_args(["--override-flake", "nixpkgs", &nixpkgs.to_flake_ref()].iter());
     command.add_arg("nixos-package-services");
 
     command.enable_capture();
@@ -138,9 +138,9 @@ pub fn get_nixpkgs_programs(nixpkgs: &Nixpkgs) -> Result<HashMap<String, HashSet
 }
 
 pub fn get_nixpkgs_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
-    let mut command = Command::with_args("nix", &["eval", "--json"]);
+    let mut command = Command::with_args("nix", &["eval", "--json", "--no-write-lock-file"]);
     command.add_arg_pair("-f", super::EXTRACT_SCRIPT.clone());
-    command.add_arg_pair("-I", format!("nixpkgs={}", nixpkgs.to_flake_ref()));
+    command.add_args(["--override-flake", "nixpkgs", &nixpkgs.to_flake_ref()].iter());
     command.add_arg("nixos-options");
 
     command.enable_capture();
@@ -160,9 +160,9 @@ pub fn get_nixpkgs_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
 }
 
 pub fn get_nixpkgs_services(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
-    let mut command = Command::with_args("nix", &["eval", "--json"]);
+    let mut command = Command::with_args("nix", &["eval", "--json", "--no-write-lock-file"]);
     command.add_arg_pair("-f", super::EXTRACT_SCRIPT.clone());
-    command.add_arg_pair("-I", format!("nixpkgs={}", nixpkgs.to_flake_ref()));
+    command.add_args(["--override-flake", "nixpkgs", &nixpkgs.to_flake_ref()].iter());
     command.add_arg("nixos-services");
 
     command.enable_capture();
@@ -198,7 +198,7 @@ pub fn get_home_manager_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
     let hm_flake_ref = home_manager_flake_ref(nixpkgs);
     let mut command = Command::with_args("nix", &["eval", "--json", "--no-write-lock-file"]);
     command.add_arg_pair("-f", super::EXTRACT_SCRIPT.clone());
-    command.add_arg_pair("-I", format!("nixpkgs={}", nixpkgs.to_flake_ref()));
+    command.add_args(["--override-flake", "nixpkgs", &nixpkgs.to_flake_ref()].iter());
     command.add_args(["--override-flake", "input-flake", &hm_flake_ref].iter());
     command.add_arg("home-manager-options");
 

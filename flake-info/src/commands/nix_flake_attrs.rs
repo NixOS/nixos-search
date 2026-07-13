@@ -25,9 +25,13 @@ pub fn get_derivation_info<T: AsRef<str> + Display>(
         .env
         .insert("NIXPKGS_ALLOW_UNSUPPORTED_SYSTEM".into(), "1".into());
     command.add_arg_pair("-f", super::EXTRACT_SCRIPT.clone());
-    command.add_arg_pair(
-        "-I",
-        "nixpkgs=https://github.com/NixOS/nixpkgs/archive/refs/heads/nixpkgs-unstable.tar.gz",
+    command.add_args(
+        [
+            "--override-flake",
+            "nixpkgs",
+            "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixpkgs-unstable.tar.gz",
+        ]
+        .iter(),
     );
     command.add_args(["--override-flake", "input-flake", flake_ref.as_ref()].iter());
     command.add_args(["--argstr", "flake", flake_ref.as_ref()].iter());

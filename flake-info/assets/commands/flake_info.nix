@@ -5,8 +5,9 @@
 let
   resolved = builtins.getFlake input-flake;
 
-  nixpkgs = (import <nixpkgs> { });
-  lib = nixpkgs.lib;
+  nixpkgsFlake = builtins.getFlake "nixpkgs";
+  inherit (nixpkgsFlake) lib;
+  nixpkgs = nixpkgsFlake.legacyPackages.${referenceSystem};
 
   # filter = lib.filterAttrs (key: _ : key == "apps" || key == "packages");
 
@@ -187,7 +188,7 @@ let
             # argument to import modules from the nixos tree. However, most of the time
             # this is done to import *profiles* which do not declare any options, so we
             # can allow it.
-            modulesPath = "${nixpkgs.path}/nixos/modules";
+            modulesPath = "${nixpkgsFlake}/nixos/modules";
 
             # Provide commonly-used arguments so module evaluation that expects them
             # (e.g. `pkgs` or `config`) does not fail during CI evaluation.
@@ -490,8 +491,8 @@ let
     ) { } list;
 
   # nixpkgs-specific, doesn't use the flake argument
-  nixpkgsBaseModules = import <nixpkgs/nixos/modules/module-list.nix> ++ [
-    <nixpkgs/nixos/modules/virtualisation/qemu-vm.nix>
+  nixpkgsBaseModules = import "${nixpkgsFlake}/nixos/modules/module-list.nix" ++ [
+    "${nixpkgsFlake}/nixos/modules/virtualisation/qemu-vm.nix"
     { nixpkgs.hostPlatform = "x86_64-linux"; }
   ];
 
@@ -499,7 +500,7 @@ let
   # `pkgs` attributes (which would force shallow evaluation of every package
   # and is too expensive -- see NixOS/nixpkgs#509117).
   serviceDocModules =
-    (import <nixpkgs/nixos/modules/misc/documentation/modular-services.nix> {
+    (import "${nixpkgsFlake}/nixos/modules/misc/documentation/modular-services.nix" {
       inherit lib;
       pkgs = nixpkgs;
     }).documentation.nixos.extraModules;
