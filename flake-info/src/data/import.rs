@@ -202,6 +202,7 @@ pub enum NixpkgsEntry {
     Option(NixOption),
     Service(NixOption),
     HomeManagerOption(NixOption),
+    DarwinOption(NixOption),
 }
 
 /// Most information about packages in nixpkgs is contained in the meta key
@@ -255,6 +256,7 @@ arg_enum! {
         Package,
         Option,
         HomeManagerOption,
+        DarwinOption,
         ModularService,
         All,
     }
@@ -267,6 +269,7 @@ impl AsRef<str> for Kind {
             Kind::Package => "packages",
             Kind::Option => "options",
             Kind::HomeManagerOption => "home-manager-options",
+            Kind::DarwinOption => "darwin-options",
             Kind::ModularService => "services",
             Kind::All => "all",
         }

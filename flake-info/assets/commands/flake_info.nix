@@ -345,6 +345,22 @@ let
       };
     };
 
+  # Extract options from nix-darwin's module system.
+  # Evaluated separately during the nixpkgs channel import (via
+  # `--override-flake input-flake github:nix-darwin/nix-darwin`) so that
+  # nix-darwin options land in the channel index alongside NixOS options.
+  readDarwinOptions =
+    let
+      darwinModulesPath = "${resolved}/modules/module-list.nix";
+      darwinModuleList = import darwinModulesPath;
+    in
+    evalOptionsWith {
+      modules = darwinModuleList;
+      extraAttrs = {
+        entry_type = "darwin-option";
+      };
+    };
+
   read = reader: set: lib.flatten (lib.attrValues (withSystem reader set));
 
   # Get all package sets by system for potential fallback evaluation
@@ -531,6 +547,12 @@ rec {
   packages = lib.attrValues (collectSystems allPackageSets.packages packages');
   apps = lib.attrValues (collectSystems { } apps'); # apps don't need fallback evaluation
   options = readFlakeOptions;
+  darwin-options = readOptionsIf {
+    cond =
+      builtins.pathExists "${resolved}/modules/module-list.nix"
+      && builtins.pathExists "${resolved}/modules/system/defaults-write.nix";
+    reader = readDarwinOptions;
+  };
   home-manager-options = readOptionsIf {
     # Require both `modules/modules.nix` and `modules/lib/stdlib-extended.nix`
     # to avoid false positives. Other flakes (e.g. `nix-bitcoin`) ship a

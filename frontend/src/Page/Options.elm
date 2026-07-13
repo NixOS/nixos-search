@@ -529,6 +529,14 @@ viewUsageSnippet source =
                     ++ "}"
                 )
 
+        "darwin-option" ->
+            usage
+                ("# darwin-configuration.nix\n"
+                    ++ "{\n"
+                    ++ nestedOption "  "
+                    ++ "}"
+                )
+
         _ ->
             []
 
@@ -563,6 +571,12 @@ findSource nixosChannels channel source =
         homeManagerUrlPrefix branch =
             repoUrlPrefix "nix-community" "home-manager" branch
 
+        darwinBranch nixpkgsBranch =
+            stableBranch nixpkgsBranch "nix-darwin-"
+
+        darwinUrlPrefix branch =
+            repoUrlPrefix "nix-darwin" "nix-darwin" branch
+
         cleanPosition value =
             if String.startsWith "source/" value then
                 String.dropLeft 7 value
@@ -577,6 +591,9 @@ findSource nixosChannels channel source =
                         prefix =
                             if source.docType == "home-manager-option" then
                                 homeManagerUrlPrefix (homeManagerBranch channelDetails.branch)
+
+                            else if source.docType == "darwin-option" then
+                                darwinUrlPrefix (darwinBranch channelDetails.branch)
 
                             else
                                 githubUrlPrefix channelDetails.branch
