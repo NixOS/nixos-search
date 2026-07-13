@@ -1659,6 +1659,30 @@ makeRequestBody query from sizeRaw sort types sortField otherSortFields terms fi
         primaryField : String
         primaryField =
             List.head mainFields |> Maybe.withDefault ""
+
+        -- only emit `rescore` for the `Relevance` sort.
+        rescoreActive : Bool
+        rescoreActive =
+            case ( sort, rescoreField ) of
+                ( Relevance, Just _ ) ->
+                    True
+
+                _ ->
+                    False
+
+        sortQuery : ( String, Json.Encode.Value )
+        sortQuery =
+            if rescoreActive then
+                -- Sort by `_score` descending only: the one sort Elasticsearch
+                -- permits alongside `rescore`. The rescore provides the
+                -- tie-break in place of the dropped alphabetical secondary field.
+                ( "sort"
+                , Json.Encode.list Json.Encode.object
+                    [ [ ( "_score", Json.Encode.string "desc" ) ] ]
+                )
+
+            else
+                toSortQuery sort sortField otherSortFields
     in
     Http.jsonBody
         (Json.Encode.object
@@ -1668,7 +1692,7 @@ makeRequestBody query from sizeRaw sort types sortField otherSortFields terms fi
              , ( "size"
                , Json.Encode.int size
                )
-             , toSortQuery sort sortField otherSortFields
+             , sortQuery
              , toAggregations terms
              , ( "query"
                , Json.Encode.object
@@ -1717,11 +1741,11 @@ makeRequestBody query from sizeRaw sort types sortField otherSortFields terms fi
                     ]
                )
              ]
-                ++ (case rescoreField of
-                        Just field ->
+                ++ (case ( rescoreActive, rescoreField ) of
+                        ( True, Just field ) ->
                             [ rescoreQuery field ]
 
-                        Nothing ->
+                        _ ->
                             []
                    )
             )
