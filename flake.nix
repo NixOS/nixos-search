@@ -138,8 +138,7 @@
             ];
             extraShellHook = ''
               export PATH=$PWD/frontend/node_modules/.bin:$PATH
-              rm -rf frontend/node_modules
-              ln -sf ${packages.frontend.node_modules}/node_modules frontend/
+              ( cd frontend && npm ci --no-audit --no-fund )
               echo "==========================================================="
               echo "= To develop the frontend run: cd frontend && npm run dev ="
               echo "==========================================================="
