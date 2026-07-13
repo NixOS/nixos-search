@@ -1325,3 +1325,11 @@ ul.inline-list {
   font-weight: bold;
   font-size: 0.95em;
 }
+
+.typeahead-secondary {
+  font-size: 0.85em;
+  color: var(--text-color-light, #666);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
