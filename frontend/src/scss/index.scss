@@ -34,6 +34,7 @@
   --badge-background: #757575;
 
   --blue-dark-13: #28395f;
+  --orange-75: #e99861;
 
   --dark-blue: #5277C3; // Blue background
   --light-blue: #7ebae4;
@@ -1240,8 +1241,8 @@ a:focus-visible {
 .search-refine-hint {
   margin-top: 0.3em;
   padding: 0.4em 0.6em;
-  border-left: 3px solid var(--info-label-background);
-  background: var(--hover-background, rgba(0, 0, 0, 0.05));
+  border-left: 3px solid var(--orange-75);
+  background: color-mix( in srgb, var(--hover-background), var(--orange-75) 10%);
   font-size: 0.7em;
   font-weight: bold;
 }
