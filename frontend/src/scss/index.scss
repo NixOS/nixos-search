@@ -246,37 +246,14 @@
   }
 
   // Override bootstrap styles for the search box
-  .search-input {
-    >div:first-child:first-child:first-child {
-      display: flex;
-      gap: 2rem;
+  .search-input-top {
 
-      div {
-        flex-grow: 1;
-      }
+    input {
+      background: var(--button-background);
+      color: var(--text-color);
 
-      input {
-        background: var(--button-background);
-        box-shadow: none;
-        border: 1px solid transparent;
-        color: var(--text-color);
-
-        &::placeholder {
-          font-weight: bold;
-          opacity: 1;
-          color: var(--text-color-light);
-        }
-      }
-
-    }
-
-    .btn-group {
-      border: none;
-      border-radius: 4px;
-      background: inherit;
-
-      button+button {
-        border-left: 1px solid var(--line-color);
+      &::placeholder {
+        color: var(--text-color-light);
       }
     }
   }
@@ -571,21 +548,32 @@ header .navbar.navbar-static-top ul.nav > li.external {
   // Search input section
   & > .search-input {
 
-    // Search Input and Button
-    & > div:nth-child(1) {
-      display: grid;
-      grid-template-columns: auto 8em;
+    .search-input-top {
+      margin-bottom: 1em;
+      display: flex;
+      gap: 1ch;
 
-      & > div > input {
-        font-size: 18px;
-        height: 40px;
+      #search-query-input {
+        height: 100%;
         width: 100%;
+        margin: 0;
+        padding: .5em;
+        box-sizing: border-box;
+        border: 2px solid var(--search-sidebar-container-border-color);
+        border-radius: 4px;
+        font-size: 1.2rem;
+        font-weight: 500; // TODO: introduce medium font variant
+        outline: 0;
+
+        &:focus, &:focus-within {
+          border: 2px solid var(--dark-blue);
+        }
       }
 
-      & > button {
-        font-size: 24px;
-        height: 50px;
-        min-width: 4em;
+      button.btn.btn.search-input-submit {
+        font-size: 1.2rem;
+        font-weight: 600;
+        border: 2px solid var(--search-sidebar-container-border-color);
       }
     }
 
