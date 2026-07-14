@@ -361,6 +361,28 @@ let
       };
     };
 
+  # Extract options from nix-on-droid's module system.
+  # Evaluated separately during the nixpkgs channel import (via
+  # `--override-flake input-flake github:nix-community/nix-on-droid`) so that
+  # nix-on-droid options land in the channel index alongside NixOS options.
+  readNixOnDroidOptions =
+    let
+      nodModulesPath = "${resolved}/modules/module-list.nix";
+      nodModuleList = import nodModulesPath {
+        pkgs = nixpkgs;
+        home-manager-path = "";
+        isFlake = true;
+        targetSystem = "aarch64-linux";
+      };
+    in
+    evalOptionsWith {
+      modules = nodModuleList;
+      class = "nixOnDroid";
+      extraAttrs = {
+        entry_type = "nix-on-droid-option";
+      };
+    };
+
   read = reader: set: lib.flatten (lib.attrValues (withSystem reader set));
 
   # Get all package sets by system for potential fallback evaluation
@@ -525,9 +547,6 @@ let
       pkgs = nixpkgs;
     }).documentation.nixos.extraModules;
 
-  # Evaluate base + service documentation modules together (service modules
-  # depend on base option types). Then partition: options whose name starts
-  # with "<" come from modular services.
   nixpkgsAllOpts = readNixOSOptions { module = nixpkgsBaseModules ++ serviceDocModules; };
   isServiceOption = opt: lib.hasPrefix "<" opt.name;
   readOptionsIf =
@@ -552,6 +571,12 @@ rec {
       builtins.pathExists "${resolved}/modules/module-list.nix"
       && builtins.pathExists "${resolved}/modules/system/defaults-write.nix";
     reader = readDarwinOptions;
+  };
+  nix-on-droid-options = readOptionsIf {
+    cond =
+      builtins.pathExists "${resolved}/modules/module-list.nix"
+      && builtins.pathExists "${resolved}/modules/environment/android-integration.nix";
+    reader = readNixOnDroidOptions;
   };
   home-manager-options = readOptionsIf {
     # Require both `modules/modules.nix` and `modules/lib/stdlib-extended.nix`

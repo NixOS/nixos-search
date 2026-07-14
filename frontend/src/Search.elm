@@ -1085,9 +1085,15 @@ viewNoResults :
     -> Html c
 viewNoResults categoryName activeOptionSource query channel =
     let
+        issuesLink repoOwner repoName labelText =
+            Html.a [ href ("https://github.com/" ++ repoOwner ++ "/" ++ repoName ++ "/issues?q=" ++ query) ]
+                [ text labelText ]
+
+        suggestIssuesLink repoOwner repoName labelText =
+            [ text "You might want to ", issuesLink repoOwner repoName labelText, text "." ]
+
         nixpkgsIssues =
-            Html.a [ href ("https://github.com/NixOS/nixpkgs/issues?q=" ++ query) ]
-                [ text "search nixpkgs issues" ]
+            issuesLink "NixOS" "nixpkgs" "search nixpkgs issues"
 
         body =
             if categoryName == "packages" then
@@ -1106,23 +1112,16 @@ viewNoResults categoryName activeOptionSource query channel =
                 ]
 
             else if activeOptionSource == Route.HomeManagerOptionSource then
-                let
-                    homeManagerIssues =
-                        Html.a [ href ("https://github.com/nix-community/home-manager/issues?q=" ++ query) ]
-                            [ text "search home-manager issues" ]
-                in
-                [ text "You might want to ", homeManagerIssues, text "." ]
+                suggestIssuesLink "nix-community" "home-manager" "search home-manager issues"
 
             else if activeOptionSource == Route.DarwinOptionSource then
-                let
-                    darwinIssues =
-                        Html.a [ href ("https://github.com/nix-darwin/nix-darwin/issues?q=" ++ query) ]
-                            [ text "search nix-darwin issues" ]
-                in
-                [ text "You might want to ", darwinIssues, text "." ]
+                suggestIssuesLink "nix-darwin" "nix-darwin" "search nix-darwin issues"
+
+            else if activeOptionSource == Route.NixOnDroidOptionSource then
+                suggestIssuesLink "nix-community" "nix-on-droid" "search nix-on-droid issues"
 
             else
-                [ text "You might want to ", nixpkgsIssues, text "." ]
+                suggestIssuesLink "NixOS" "nixpkgs" "search nixpkgs issues"
     in
     div [ class "search-no-results" ]
         (h2 [] [ text <| "No " ++ categoryName ++ " found!" ]

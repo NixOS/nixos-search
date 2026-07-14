@@ -203,6 +203,7 @@ pub enum NixpkgsEntry {
     Service(NixOption),
     HomeManagerOption(NixOption),
     DarwinOption(NixOption),
+    NixOnDroidOption(NixOption),
 }
 
 /// Most information about packages in nixpkgs is contained in the meta key
@@ -257,6 +258,7 @@ arg_enum! {
         Option,
         HomeManagerOption,
         DarwinOption,
+        NixOnDroidOption,
         ModularService,
         All,
     }
@@ -270,6 +272,7 @@ impl AsRef<str> for Kind {
             Kind::Option => "options",
             Kind::HomeManagerOption => "home-manager-options",
             Kind::DarwinOption => "darwin-options",
+            Kind::NixOnDroidOption => "nix-on-droid-options",
             Kind::ModularService => "services",
             Kind::All => "all",
         }

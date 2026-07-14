@@ -254,9 +254,18 @@ pub enum Derivation {
         option_default: Option<DocValue>,
         option_example: Option<DocValue>,
         option_flake: Option<ModulePath>,
-    },
     #[serde(rename = "darwin-option")]
     DarwinOption {
+        option_source: Option<String>,
+        option_name: String,
+        option_description: Option<DocString>,
+        option_type: Option<String>,
+        option_default: Option<DocValue>,
+        option_example: Option<DocValue>,
+        option_flake: Option<ModulePath>,
+    },
+    #[serde(rename = "nix-on-droid-option")]
+    NixOnDroidOption {
         option_source: Option<String>,
         option_name: String,
         option_description: Option<DocString>,
@@ -537,6 +546,24 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                 flake,
                 ..
             }) => Derivation::DarwinOption {
+                option_source: declarations.get(0).map(Clone::clone),
+                option_name: name,
+                option_description: description,
+                option_default: default,
+                option_example: example,
+                option_flake: flake,
+                option_type,
+            },
+            import::NixpkgsEntry::NixOnDroidOption(NixOption {
+                declarations,
+                description,
+                name,
+                option_type,
+                default,
+                example,
+                flake,
+                ..
+            }) => Derivation::NixOnDroidOption {
                 option_source: declarations.get(0).map(Clone::clone),
                 option_name: name,
                 option_description: description,

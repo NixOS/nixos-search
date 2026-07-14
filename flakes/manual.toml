@@ -360,6 +360,11 @@ repo = "nix-darwin"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "nix-on-droid"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nixvim"
 
 [[sources]]

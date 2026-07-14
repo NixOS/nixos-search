@@ -528,10 +528,17 @@ viewUsageSnippet source =
                     ++ nestedOption "  "
                     ++ "}"
                 )
-
         "darwin-option" ->
             usage
                 ("# darwin-configuration.nix\n"
+                    ++ "{\n"
+                    ++ nestedOption "  "
+                    ++ "}"
+                )
+
+        "nix-on-droid-option" ->
+            usage
+                ("# nix-on-droid.nix\n"
                     ++ "{\n"
                     ++ nestedOption "  "
                     ++ "}"
@@ -570,12 +577,17 @@ findSource nixosChannels channel source =
 
         homeManagerUrlPrefix branch =
             repoUrlPrefix "nix-community" "home-manager" branch
-
         darwinBranch nixpkgsBranch =
             stableBranch nixpkgsBranch "nix-darwin-"
 
         darwinUrlPrefix branch =
             repoUrlPrefix "nix-darwin" "nix-darwin" branch
+
+        nixOnDroidBranch nixpkgsBranch =
+            stableBranch nixpkgsBranch "release-"
+
+        nixOnDroidUrlPrefix branch =
+            repoUrlPrefix "nix-community" "nix-on-droid" branch
 
         cleanPosition value =
             if String.startsWith "source/" value then
@@ -594,6 +606,9 @@ findSource nixosChannels channel source =
 
                             else if source.docType == "darwin-option" then
                                 darwinUrlPrefix (darwinBranch channelDetails.branch)
+
+                            else if source.docType == "nix-on-droid-option" then
+                                nixOnDroidUrlPrefix (nixOnDroidBranch channelDetails.branch)
 
                             else
                                 githubUrlPrefix channelDetails.branch
