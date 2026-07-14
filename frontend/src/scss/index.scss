@@ -13,8 +13,8 @@
   --search-sidebar-container-border-color: #ccc;
   --search-sidebar-link-color: var(--text-color);
   --search-sidebar-hovered-link-background: #eee;
-  --search-sidebar-selected-link-background: #0081c2;
-  --search-sidebar-selected-link-color: #fff;
+  --search-sidebar-selected-link-background: var(--light-blue);
+  --search-sidebar-selected-link-color: #000;
   /* Divider between search results */
   --search-result-divider-line-color: #ccc;
   /* Gets overwritten by bootstrap; has no effect */
@@ -32,6 +32,11 @@
   --link-color: #007dbb;
   /* Background color for the small badges with number in the sidebar */
   --badge-background: #757575;
+
+  --blue-dark-13: #28395f;
+
+  --dark-blue: #5277C3; // Blue background
+  --light-blue: #7ebae4;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -61,16 +66,13 @@
     --terminal-background: #353535;
     --terminal-color: var(--text-color);
     --line-color: #ffffff26; // Color for separating lines
-    --dark-blue: #5277C3; // Blue background
-    --light-blue: #7ebae4;
 
     --result-item-show-more-background: var(--background-color);
     --result-item-show-more-color: var(--text-color);
     --search-sidebar-container-border-color: var(--line-color);
     --search-sidebar-link-color: var(--text-color);
     --search-sidebar-hovered-link-background: var(--hover-background);
-    --search-sidebar-selected-link-background: var(--dark-blue); // #0081c2;
-    --search-sidebar-selected-link-color: var(--text-color);
+    --search-sidebar-selected-link-color: #000;
     /* Divider between search results */
     --search-result-divider-line-color: var(--line-color);
     /* Color of the search results */
@@ -701,10 +703,10 @@ header .navbar.navbar-static-top ul.nav > li.external {
                 background: var(--search-sidebar-selected-link-background);
                 color: var(--search-sidebar-selected-link-color);
                 position: relative;
-                  & > span:last-child {
-                  display: none;
 
-                  }
+                & > span:last-child {
+                  display: none;
+                }
               }
 
               & .close {
@@ -1109,9 +1111,22 @@ a:focus-visible {
 // nesting), so the override actually wins the cascade.
 .search-page ul.search-sidebar > li.search-source-tabs > ul > li > a {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 0.3em;
   text-decoration: none;
+
+
+  .label-experimental {
+    background: var(--light-blue);
+    color: #000;
+    padding: 3px 6px;
+  }
+
+  &.selected .label-experimental {
+    background: var(--blue-dark-13);
+    color: #fff;
+  }
+
 
   & > span {
     text-align: left;
@@ -1126,19 +1141,6 @@ a:focus-visible {
   // and the lone label (when counts are still loading).
   &.selected > span:last-child {
     display: inline-block;
-  }
-
-  // Nested inside the source label so it travels with the label text
-  // rather than affecting the flex layout of the tab row.
-  .experimental-badge {
-    margin-left: 0.3em;
-  }
-
-  // The selected-tab background is already saturated blue; flip the
-  // experimental badge to read against it instead of blending in.
-  &.selected .experimental-badge {
-    background: var(--search-sidebar-selected-link-color);
-    color: var(--search-sidebar-selected-link-background);
   }
 }
 
@@ -1332,4 +1334,8 @@ ul.inline-list {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.source-label {
+  display: contents !important;
 }
