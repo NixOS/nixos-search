@@ -33,7 +33,7 @@ submit-on-enter UX.
 import Base64
 import Dict exposing (Dict)
 import Html exposing (Html, a, li, span, text, ul)
-import Html.Attributes exposing (class, href)
+import Html.Attributes exposing (class, classList, href)
 import Http
 import Json.Decode
 import Json.Decode.Pipeline
@@ -355,12 +355,13 @@ update options nixosChannels searchType activeSource channel query msg model =
 
 viewDropdown : Model -> Html msg
 viewDropdown model =
-    if not model.preferStatic || not model.visible || List.isEmpty model.suggestions then
-        text ""
+    ul
+        [ class "typeahead-suggestions"
 
-    else
-        ul [ class "typeahead-suggestions" ]
-            (List.map viewSuggestion model.suggestions)
+        -- TODO: make it work with focus-within for accessibility!
+        , classList [ ( "typeahead-suggestions-visible", not (List.isEmpty model.suggestions) && model.visible ) ]
+        ]
+        (List.map viewSuggestion model.suggestions)
 
 
 viewSuggestion : Suggestion -> Html msg
