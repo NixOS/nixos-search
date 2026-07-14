@@ -79,22 +79,18 @@ pub fn get_nixpkgs_info(
 }
 
 pub fn get_nixpkgs_package_services(nixpkgs: &Source) -> Result<HashMap<String, Vec<String>>> {
-    let mut command = Command::with_args("nix", &["eval", "--json"]);
-    command.add_arg_pair("-f", super::EXTRACT_SCRIPT.clone());
-    command.add_arg_pair("-I", format!("nixpkgs={}", nixpkgs.to_flake_ref()));
+    let mut command = super::nix_eval_command(&["eval", "--json", "--no-write-lock-file"]);
+    command.add_args(["--override-flake", "nixpkgs", &nixpkgs.to_flake_ref()].iter());
     command.add_arg("nixos-package-services");
-
-    command.enable_capture();
-    command.log_to = LogTo::Log;
-    command.log_output_on_error = true;
 
     let cow = command
         .run()
         .with_context(|| "Failed to gather modular service mapping for packages")?;
 
     let output = &*cow.stdout_string_lossy();
-    let map: HashMap<String, Vec<String>> =
-        serde_json::from_str(output).with_context(|| "Could not parse package-services map")?;
+    let de = &mut serde_json::Deserializer::from_str(output);
+    let map: HashMap<String, Vec<String>> = serde_path_to_error::deserialize(de)
+        .with_context(|| "Could not parse package-services map")?;
     Ok(map)
 }
 
@@ -137,85 +133,68 @@ pub fn get_nixpkgs_programs(nixpkgs: &Nixpkgs) -> Result<HashMap<String, HashSet
     Ok(programs)
 }
 
-pub fn get_nixpkgs_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
-    let mut command = Command::with_args("nix", &["eval", "--json"]);
-    command.add_arg_pair("-f", super::EXTRACT_SCRIPT.clone());
-    command.add_arg_pair("-I", format!("nixpkgs={}", nixpkgs.to_flake_ref()));
-    command.add_arg("nixos-options");
-
-    command.enable_capture();
-    command.log_to = LogTo::Log;
-    command.log_output_on_error = true;
+fn get_options_from_script(
+    nixpkgs: &Source,
+    attribute: &str,
+    override_flake: Option<(&str, &str)>,
+) -> Result<Vec<NixOption>> {
+    let mut command = super::nix_eval_command(&["eval", "--json", "--no-write-lock-file"]);
+    command.add_args(["--override-flake", "nixpkgs", &nixpkgs.to_flake_ref()].iter());
+    if let Some((name, flake_ref)) = override_flake {
+        command.add_args(["--override-flake", name, flake_ref].iter());
+    }
+    command.add_arg(attribute);
 
     let cow = command
         .run()
-        .with_context(|| "Failed to gather information about nixpkgs options")?;
+        .with_context(|| format!("Failed to gather information about {}", attribute))?;
 
     let output = &*cow.stdout_string_lossy();
     let de = &mut serde_json::Deserializer::from_str(output);
-    let attr_set: Vec<NixOption> =
-        serde_path_to_error::deserialize(de).with_context(|| "Could not parse options")?;
+    let attr_set: Vec<NixOption> = serde_path_to_error::deserialize(de)
+        .with_context(|| format!("Could not parse {}", attribute))?;
 
-    Ok(attr_set.into_iter().map(NixpkgsEntry::Option).collect())
+    Ok(attr_set)
+}
+
+pub fn get_nixpkgs_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
+    let options = get_options_from_script(nixpkgs, "nixos-options", None)?;
+    Ok(options.into_iter().map(NixpkgsEntry::Option).collect())
 }
 
 pub fn get_nixpkgs_services(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
-    let mut command = Command::with_args("nix", &["eval", "--json"]);
-    command.add_arg_pair("-f", super::EXTRACT_SCRIPT.clone());
-    command.add_arg_pair("-I", format!("nixpkgs={}", nixpkgs.to_flake_ref()));
-    command.add_arg("nixos-services");
+    let options = get_options_from_script(nixpkgs, "nixos-services", None)?;
+    Ok(options.into_iter().map(NixpkgsEntry::Service).collect())
+}
 
-    command.enable_capture();
-    command.log_to = LogTo::Log;
-    command.log_output_on_error = true;
-
-    let cow = command
-        .run()
-        .with_context(|| "Failed to gather information about nixpkgs modular services")?;
-
-    let output = &*cow.stdout_string_lossy();
-    let de = &mut serde_json::Deserializer::from_str(output);
-    let attr_set: Vec<NixOption> =
-        serde_path_to_error::deserialize(de).with_context(|| "Could not parse services")?;
-
-    Ok(attr_set.into_iter().map(NixpkgsEntry::Service).collect())
+fn flake_ref_for(nixpkgs: &Source, base: &str, suffix_pattern: Option<&str>) -> String {
+    match nixpkgs {
+        Source::Nixpkgs(Nixpkgs { channel, .. }) if channel != "unstable" => {
+            let suffix = match suffix_pattern {
+                Some(pat) => pat.replace("{channel}", channel),
+                None => format!("release-{channel}"),
+            };
+            format!("{base}/{suffix}")
+        }
+        _ => base.to_string(),
+    }
 }
 
 /// Home-manager flake reference matching a given nixpkgs channel. Stable
 /// nixpkgs channels (`nixos-XX.YY`) get the corresponding `release-XX.YY`
 /// branch in `nix-community/home-manager`; `nixos-unstable` gets `master`.
 fn home_manager_flake_ref(nixpkgs: &Source) -> String {
-    let base = "github:nix-community/home-manager";
-    match nixpkgs {
-        Source::Nixpkgs(Nixpkgs { channel, .. }) if channel != "unstable" => {
-            format!("{base}/release-{channel}")
-        }
-        _ => base.to_string(),
-    }
+    flake_ref_for(nixpkgs, "github:nix-community/home-manager", None)
 }
 
 pub fn get_home_manager_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
     let hm_flake_ref = home_manager_flake_ref(nixpkgs);
-    let mut command = Command::with_args("nix", &["eval", "--json", "--no-write-lock-file"]);
-    command.add_arg_pair("-f", super::EXTRACT_SCRIPT.clone());
-    command.add_arg_pair("-I", format!("nixpkgs={}", nixpkgs.to_flake_ref()));
-    command.add_args(["--override-flake", "input-flake", &hm_flake_ref].iter());
-    command.add_arg("home-manager-options");
-
-    command.enable_capture();
-    command.log_to = LogTo::Log;
-    command.log_output_on_error = true;
-
-    let cow = command
-        .run()
-        .with_context(|| "Failed to gather information about home-manager options")?;
-
-    let output = &*cow.stdout_string_lossy();
-    let de = &mut serde_json::Deserializer::from_str(output);
-    let attr_set: Vec<NixOption> = serde_path_to_error::deserialize(de)
-        .with_context(|| "Could not parse home-manager options")?;
-
-    Ok(attr_set
+    let options = get_options_from_script(
+        nixpkgs,
+        "home-manager-options",
+        Some(("input-flake", &hm_flake_ref)),
+    )?;
+    Ok(options
         .into_iter()
         .map(NixpkgsEntry::HomeManagerOption)
         .collect())

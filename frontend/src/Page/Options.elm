@@ -540,23 +540,28 @@ findSource :
     -> List (Html a)
 findSource nixosChannels channel source =
     let
-        githubUrlPrefix branch =
-            "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/"
-
-        -- Home Manager options are imported from the `release-XX.YY` branch of
-        -- `nix-community/home-manager` matching the nixpkgs channel
-        -- (see `flake-info/src/commands/nixpkgs_info.rs`), or `master` for
-        -- `nixos-unstable`. Their `option_source` paths resolve against that
-        -- repo, not nixpkgs.
-        homeManagerBranch nixpkgsBranch =
+        stableBranch nixpkgsBranch prefixPattern =
             if nixpkgsBranch == "nixos-unstable" then
                 "master"
 
             else
-                "release-" ++ String.dropLeft (String.length "nixos-") nixpkgsBranch
+                let
+                    version =
+                        String.dropLeft (String.length "nixos-") nixpkgsBranch
+                in
+                prefixPattern ++ version
+
+        repoUrlPrefix owner repo branch =
+            "https://github.com/" ++ owner ++ "/" ++ repo ++ "/blob/" ++ branch ++ "/"
+
+        githubUrlPrefix branch =
+            "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/"
+
+        homeManagerBranch nixpkgsBranch =
+            stableBranch nixpkgsBranch "release-"
 
         homeManagerUrlPrefix branch =
-            "https://github.com/nix-community/home-manager/blob/" ++ branch ++ "/"
+            repoUrlPrefix "nix-community" "home-manager" branch
 
         cleanPosition value =
             if String.startsWith "source/" value then

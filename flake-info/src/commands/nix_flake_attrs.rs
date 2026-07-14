@@ -1,7 +1,5 @@
 use crate::data::import::{FlakeEntry, Kind};
 use anyhow::{Context, Result};
-use command_run::{Command, LogTo};
-use serde_json::Deserializer;
 use std::fmt::Display;
 use std::path::PathBuf;
 
@@ -20,14 +18,17 @@ pub fn get_derivation_info<T: AsRef<str> + Display>(
     temp_store: bool,
     extra: &[String],
 ) -> Result<Vec<FlakeEntry>> {
-    let mut command = Command::with_args("nix", ARGS.iter());
+    let mut command = super::nix_eval_command(&ARGS);
     command
         .env
         .insert("NIXPKGS_ALLOW_UNSUPPORTED_SYSTEM".into(), "1".into());
-    command.add_arg_pair("-f", super::EXTRACT_SCRIPT.clone());
-    command.add_arg_pair(
-        "-I",
-        "nixpkgs=https://github.com/NixOS/nixpkgs/archive/refs/heads/nixpkgs-unstable.tar.gz",
+    command.add_args(
+        [
+            "--override-flake",
+            "nixpkgs",
+            "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixpkgs-unstable.tar.gz",
+        ]
+        .iter(),
     );
     command.add_args(["--override-flake", "input-flake", flake_ref.as_ref()].iter());
     command.add_args(["--argstr", "flake", flake_ref.as_ref()].iter());
@@ -41,16 +42,13 @@ pub fn get_derivation_info<T: AsRef<str> + Display>(
         command.add_arg_pair("--store", temp_store_path.canonicalize()?);
     }
     command.add_args(extra);
-    command.enable_capture();
-    command.log_to = LogTo::Log;
-    command.log_output_on_error = true;
 
     let parsed: Result<Vec<FlakeEntry>> = command
         .run()
         .with_context(|| format!("Failed to gather information about {}", flake_ref))
         .and_then(|o| {
             let output = &*o.stdout_string_lossy();
-            let de = &mut Deserializer::from_str(output);
+            let de = &mut serde_json::Deserializer::from_str(output);
             serde_path_to_error::deserialize(de)
                 .with_context(|| format!("Failed to analyze flake {}", flake_ref))
         });
