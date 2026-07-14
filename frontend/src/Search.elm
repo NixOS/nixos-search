@@ -63,6 +63,7 @@ import Html
 import Html.Attributes
     exposing
         ( attribute
+        , autocomplete
         , autofocus
         , class
         , classList
@@ -1233,6 +1234,9 @@ viewSearchInput nixosChannels outMsg categoryName selectedChannel searchQuery ma
                 [ input
                     [ type_ "text"
                     , id "search-query-input"
+                    -- not really sure how to make this better, sadly
+                    -- TODO: improve me
+                    , autocomplete (categoryName == "3rd-party flake packages")
                     , autofocus True
                     , placeholder <| "Search for " ++ categoryName
                     , onInput (outMsg << QueryInput)
