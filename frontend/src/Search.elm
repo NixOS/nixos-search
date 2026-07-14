@@ -1228,7 +1228,7 @@ viewSearchInput nixosChannels outMsg categoryName selectedChannel searchQuery ma
         [ onSubmit (outMsg QueryInputSubmit)
         , class "search-input"
         ]
-        (div []
+        (div [ class "search-input-top" ]
             [ div [ class "search-input-with-typeahead" ]
                 [ input
                     [ type_ "text"
@@ -1259,7 +1259,7 @@ viewSearchInput nixosChannels outMsg categoryName selectedChannel searchQuery ma
                     Nothing ->
                         text ""
                 ]
-            , viewButton [ type_ "submit" ]
+            , viewButton [ type_ "submit", class "search-input-submit" ]
                 [ text "Search" ]
             ]
             :: (selectedChannel
