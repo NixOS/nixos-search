@@ -254,6 +254,7 @@ pub enum Derivation {
         option_default: Option<DocValue>,
         option_example: Option<DocValue>,
         option_flake: Option<ModulePath>,
+    },
     #[serde(rename = "darwin-option")]
     DarwinOption {
         option_source: Option<String>,

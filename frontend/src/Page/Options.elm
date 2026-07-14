@@ -528,6 +528,7 @@ viewUsageSnippet source =
                     ++ nestedOption "  "
                     ++ "}"
                 )
+
         "darwin-option" ->
             usage
                 ("# darwin-configuration.nix\n"
@@ -577,6 +578,7 @@ findSource nixosChannels channel source =
 
         homeManagerUrlPrefix branch =
             repoUrlPrefix "nix-community" "home-manager" branch
+
         darwinBranch nixpkgsBranch =
             stableBranch nixpkgsBranch "nix-darwin-"
 

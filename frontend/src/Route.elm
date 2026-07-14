@@ -78,6 +78,7 @@ optionSourceId source =
 
         HomeManagerOptionSource ->
             "home_manager"
+
         DarwinOptionSource ->
             "darwin"
 
@@ -108,6 +109,7 @@ optionSourceDocType source =
 
         HomeManagerOptionSource ->
             "home-manager-option"
+
         DarwinOptionSource ->
             "darwin-option"
 
@@ -128,6 +130,7 @@ optionSourceLabel source =
 
         HomeManagerOptionSource ->
             "nix-community/home-manager"
+
         DarwinOptionSource ->
             "nix-darwin"
 
