@@ -2,6 +2,7 @@
 @use "bootstrap-responsive";
 
 @use "components";
+@use "fragments";
 
 :root {
   --text-color: #333;
@@ -259,23 +260,7 @@
     }
   }
 
-  header .nav + .btn-group {
-    box-sizing: border-box;
-    border: none;
-
-    & > .btn {
-      border: 1px solid transparent;
-      margin-left: 0px;
-
-      &  + .btn {
-        margin-left: -1px;
-      }
-    }
-  }
-
-  // Override bootstrap styles for the header bar
-  // Very navbar to boost specificity
-  .navbar.navbar.navbar.navbar.navbar.navbar {
+  .navbar {
     &>.navbar-inner {
       background: var(--headerbar-background-color);
       border-bottom: none;
@@ -453,67 +438,6 @@ footer {
 .theme-toggle .theme-icon {
   font-size: 1.4em;
   line-height: 1;
-}
-
-header .navbar .container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  padding-block: 4px;
-  gap: 4px;
-
-  a.brand {
-    all: unset;
-    display: flex;
-
-    img {
-      height: 25px;
-      width: auto;
-    }
-  }
-
-  &::before, &::after {
-    all: unset; /* remove pseudo-elements added by bootstrap */
-  }
-
-  .nav {
-    display: flex;
-    flex-flow: row wrap;
-    margin: unset;
-    gap: 8px;
-
-    & + .btn-group {
-      /* theme selection */
-      display: flex;
-      margin: unset;
-      margin-left: auto;
-
-      & > .btn {
-        display: flex;
-      }
-    }
-  }
-}
-
-header .navbar.navbar-static-top ul.nav > li.external {
-
-  > a {
-    color: var(--link-color);
-    text-decoration: none;
-    background: none !important;
-    border-radius: 0;
-
-    &:hover {
-      text-decoration: underline;
-      background: none !important;
-    }
-
-    &::after {
-      content: " \2197";
-      font-size: 0.75em;
-    }
-  }
 }
 
 // Search seatch
