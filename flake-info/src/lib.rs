@@ -86,11 +86,18 @@ pub fn process_nixpkgs(
         Vec::new()
     };
 
+    let mut nix_on_droid_options = if matches!(kind, Kind::All | Kind::NixOnDroidOption) {
+        commands::get_nix_on_droid_options(nixpkgs)?
+    } else {
+        Vec::new()
+    };
+
     let mut all = drvs;
     all.append(&mut options);
     all.append(&mut services);
     all.append(&mut hm_options);
     all.append(&mut darwin_options);
+    all.append(&mut nix_on_droid_options);
 
     let exports = all
         .into_iter()

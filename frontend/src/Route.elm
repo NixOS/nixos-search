@@ -50,11 +50,12 @@ type OptionSource
     | ModularServiceOptions
     | HomeManagerOptionSource
     | DarwinOptionSource
+    | NixOnDroidOptionSource
 
 
 allOptionSources : List OptionSource
 allOptionSources =
-    [ NixosOptions, ModularServiceOptions, HomeManagerOptionSource, DarwinOptionSource ]
+    [ NixosOptions, ModularServiceOptions, HomeManagerOptionSource, DarwinOptionSource, NixOnDroidOptionSource ]
 
 
 {-| Default tab when no source is specified in the URL.
@@ -80,6 +81,9 @@ optionSourceId source =
 
         DarwinOptionSource ->
             "darwin"
+
+        NixOnDroidOptionSource ->
+            "nix_on_droid"
 
 
 {-| Inverse of `optionSourceId`. Returns `Nothing` for unknown identifiers
@@ -109,6 +113,9 @@ optionSourceDocType source =
         DarwinOptionSource ->
             "darwin-option"
 
+        NixOnDroidOptionSource ->
+            "nix-on-droid-option"
+
 
 {-| Human-readable checkbox label.
 -}
@@ -126,6 +133,9 @@ optionSourceLabel source =
 
         DarwinOptionSource ->
             "Darwin"
+
+        NixOnDroidOptionSource ->
+            "Nix-on-Droid"
 
 
 type SearchType

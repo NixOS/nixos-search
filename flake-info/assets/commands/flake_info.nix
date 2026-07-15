@@ -361,6 +361,30 @@ let
       };
     };
 
+  # Extract options from nix-on-droid's module system.
+  # Evaluated separately during the nixpkgs channel import (via
+  # `--override-flake input-flake github:nix-community/nix-on-droid`) so that
+  # nix-on-droid options land in the channel index alongside NixOS options.
+  # nix-on-droid's module-list.nix is a function, so we call it with stub
+  # arguments to obtain the list of module paths.
+  readNixOnDroidOptions =
+    let
+      nod = resolved;
+      nodModulesPath = "${nod}/modules/module-list.nix";
+      nodModuleList = import nodModulesPath {
+        pkgs = nixpkgs;
+        home-manager-path = "";
+        isFlake = true;
+        targetSystem = "aarch64-linux";
+      };
+    in
+    evalOptionsWith {
+      modules = nodModuleList;
+      extraAttrs = {
+        entry_type = "nix-on-droid-option";
+      };
+    };
+
   read = reader: set: lib.flatten (lib.attrValues (withSystem reader set));
 
   # Get all package sets by system for potential fallback evaluation
@@ -563,6 +587,15 @@ rec {
       builtins.pathExists "${resolved}/modules/modules.nix"
       && builtins.pathExists "${resolved}/modules/lib/stdlib-extended.nix";
     reader = readHomeManagerOptions;
+  };
+  # Use nix-on-droid's `modules/environment/login/default.nix` as a
+  # fingerprint: it is unique to nix-on-droid and not present in home-manager,
+  # nix-darwin, or other flakes that happen to carry a `modules/module-list.nix`.
+  nix-on-droid-options = readOptionsIf {
+    cond =
+      builtins.pathExists "${resolved}/modules/module-list.nix"
+      && builtins.pathExists "${resolved}/modules/environment/login/default.nix";
+    reader = readNixOnDroidOptions;
   };
   all = packages ++ apps ++ options;
 

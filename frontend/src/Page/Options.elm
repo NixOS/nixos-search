@@ -230,6 +230,9 @@ viewSourceTab activeSource count source =
                 Route.DarwinOptionSource ->
                     [ Badge.view Badge.External ]
 
+                Route.NixOnDroidOptionSource ->
+                    [ Badge.view Badge.Community ]
+
                 _ ->
                     []
             )
@@ -543,6 +546,14 @@ viewUsageSnippet source =
                     ++ "}"
                 )
 
+        "nix-on-droid-option" ->
+            usage
+                ("# nix-on-droid.nix\n"
+                    ++ "{\n"
+                    ++ nestedOption "  "
+                    ++ "}"
+                )
+
         _ ->
             []
 
@@ -583,6 +594,12 @@ findSource nixosChannels channel source =
         darwinUrlPrefix branch =
             repoUrlPrefix "nix-darwin" "nix-darwin" branch
 
+        nixOnDroidBranch nixpkgsBranch =
+            stableBranch nixpkgsBranch "release-"
+
+        nixOnDroidUrlPrefix branch =
+            repoUrlPrefix "nix-community" "nix-on-droid" branch
+
         cleanPosition value =
             if String.startsWith "source/" value then
                 String.dropLeft 7 value
@@ -600,6 +617,9 @@ findSource nixosChannels channel source =
 
                             else if source.docType == "darwin-option" then
                                 darwinUrlPrefix (darwinBranch channelDetails.branch)
+
+                            else if source.docType == "nix-on-droid-option" then
+                                nixOnDroidUrlPrefix (nixOnDroidBranch channelDetails.branch)
 
                             else
                                 githubUrlPrefix channelDetails.branch
