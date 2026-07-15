@@ -354,6 +354,11 @@ repo = "home-manager"
 
 [[sources]]
 type = "github"
+owner = "nix-darwin"
+repo = "nix-darwin"
+
+[[sources]]
+type = "github"
 owner = "nix-community"
 repo = "nixvim"
 

@@ -200,6 +200,30 @@ pub fn get_home_manager_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
         .collect())
 }
 
+/// Nix-darwin flake reference matching a given nixpkgs channel. Stable
+/// nixpkgs channels (`nixos-XX.YY`) get the corresponding `nix-darwin-XX.YY`
+/// branch in `nix-darwin/nix-darwin`; `nixos-unstable` gets `master`.
+fn darwin_flake_ref(nixpkgs: &Source) -> String {
+    flake_ref_for(
+        nixpkgs,
+        "github:nix-darwin/nix-darwin",
+        Some("nix-darwin-{channel}"),
+    )
+}
+
+pub fn get_darwin_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
+    let darwin_flake_ref = darwin_flake_ref(nixpkgs);
+    let options = get_options_from_script(
+        nixpkgs,
+        "darwin-options",
+        Some(("input-flake", &darwin_flake_ref)),
+    )?;
+    Ok(options
+        .into_iter()
+        .map(NixpkgsEntry::DarwinOption)
+        .collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1114,6 +1114,14 @@ viewNoResults categoryName activeOptionSource query channel =
                 in
                 [ text "You might want to ", homeManagerIssues, text "." ]
 
+            else if activeOptionSource == Route.DarwinOptionSource then
+                let
+                    darwinIssues =
+                        Html.a [ href ("https://github.com/nix-darwin/nix-darwin/issues?q=" ++ query) ]
+                            [ text "search nix-darwin issues" ]
+                in
+                [ text "You might want to ", darwinIssues, text "." ]
+
             else
                 [ text "You might want to ", nixpkgsIssues, text "." ]
     in
