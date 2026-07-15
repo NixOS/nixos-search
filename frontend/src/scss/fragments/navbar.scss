@@ -23,7 +23,7 @@
   }
 
   .container {
-    width: 940px;
+    width: auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -89,4 +89,23 @@
       }
     }
   }
+}
+
+.navbar .container {
+  @media(min-width:1200px) {
+    width: 1170px;
+  }
+
+  @media(min-width:980px) and (max-width:1199px) {
+    width: 940px;
+  }
+
+  @media(min-width:768px) and (max-width:979px) {
+    width: 724px;
+  }
+
+  @media(min-width:768px) and (max-width:979px) {
+    width: 724px;
+  }
+
 }
