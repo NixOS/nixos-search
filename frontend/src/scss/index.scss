@@ -260,23 +260,7 @@
     }
   }
 
-  header .nav + .btn-group {
-    box-sizing: border-box;
-    border: none;
-
-    & > .btn {
-      border: 1px solid transparent;
-      margin-left: 0px;
-
-      &  + .btn {
-        margin-left: -1px;
-      }
-    }
-  }
-
-  // Override bootstrap styles for the header bar
-  // Very navbar to boost specificity
-  .navbar.navbar.navbar.navbar.navbar.navbar {
+  .navbar {
     &>.navbar-inner {
       background: var(--headerbar-background-color);
       border-bottom: none;
