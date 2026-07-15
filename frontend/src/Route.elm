@@ -122,10 +122,10 @@ optionSourceLabel source =
             "Modular services"
 
         HomeManagerOptionSource ->
-            "nix-community/home-manager"
+            "Home Manager"
 
         DarwinOptionSource ->
-            "nix-darwin"
+            "Darwin"
 
 
 type SearchType

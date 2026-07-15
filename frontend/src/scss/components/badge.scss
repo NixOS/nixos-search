@@ -16,7 +16,15 @@
     background-color: #6fc488; // Zambian Green
   }
 
-  &-experimental {
-    background-color: #5fb8f2; // Argentinian Blue
-  }
+	&-community {
+		background-color: var(--light-blue);
+	}
+
+	&-experimental {
+		background-color: var(--orange-75);
+	}
+
+	&-external {
+		background-color: var(--dark-blue);
+	}
 }

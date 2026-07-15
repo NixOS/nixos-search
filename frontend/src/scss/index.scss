@@ -1105,17 +1105,29 @@ a:focus-visible {
   text-decoration: none;
 
 
-  .label-experimental {
-    background: var(--light-blue);
+  .label {
     color: #000;
     padding: 3px 6px;
+
+    background-color: var(--bg);
+
+    &-experimental {
+      --bg: var(--orange-75);
+    }
+
+    &-community {
+      --bg: var(--light-blue);
+    }
+
+    &-external {
+      --bg: var(--dark-blue);
+    }
   }
 
-  &.selected .label-experimental {
-    background: var(--blue-dark-13);
+  &.selected .label {
     color: #fff;
+    background-color: oklch(from var(--bg) calc(l * 0.5) c h);
   }
-
 
   & > span {
     text-align: left;
