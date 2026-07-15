@@ -1280,13 +1280,13 @@ ul.inline-list {
 
 .search-input-with-typeahead {
   position: relative;
-  display: inline-block;
   width: 100%;
 }
 
 .typeahead-suggestions {
   position: absolute;
-  top: 100%;
+  border-radius: 4px;
+  top: calc(100% + 1ex);
   left: 0;
   right: 0;
   z-index: 1000;
@@ -1296,6 +1296,12 @@ ul.inline-list {
   border: 1px solid var(--search-sidebar-container-border-color, #ccc);
   background: var(--background-color, #fff);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+
+  visibility: hidden;
+
+  &-visible {
+    visibility: visible;
+  }
 }
 
 .typeahead-item {
