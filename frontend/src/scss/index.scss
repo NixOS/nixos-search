@@ -33,7 +33,6 @@
   --link-color: #007dbb;
   /* Background color for the small badges with number in the sidebar */
   --badge-background: #757575;
-  --carret-color: #000;
 
   --blue-dark-13: #28395f;
   --orange-75: #e99861;
@@ -93,7 +92,6 @@
     --link-color: var(--light-blue); // #007dbb;
     /* Background color for the small badges with number in the sidebar */
     --badge-background: var(--button-active-hover-background);
-    --carret-color: #fff;
 
     --color-hover-tab: var(--hover-background);
     --color-active-tab: #393939;
@@ -129,10 +127,6 @@
 
   *:focus {
     outline-width: 0 !important;
-  }
-
-  *:focus-visible {
-    @include outline-visible;
   }
 
   a:focus-visible {
@@ -171,6 +165,18 @@
     &:disabled {
       background: var(--button-background);
       color: var(--text-color-light);
+    }
+  }
+
+  .sort-container {
+    background: var(--button-background);
+    border: 1px solid var(--line-color);
+    color: var(--text-color);
+    text-shadow: none;
+    box-shadow: none;
+
+    &:hover {
+      background: var(--button-hover-background);
     }
   }
 
@@ -1158,4 +1164,26 @@ ul.inline-list {
 
 .source-label {
   display: contents !important;
+}
+
+sort-select-wrapper select {
+  outline: none;
+}
+
+.sort-container {
+  display: inline-flex;
+  align-items: center;
+  font-weight: bold;
+
+  .sort-select {
+    background: transparent;
+    border: none;
+    color: inherit;
+    font-weight: inherit;
+
+    option {
+      background-color: var(--background-color);
+      color: var(--text-color);
+    }
+  }
 }

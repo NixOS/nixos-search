@@ -178,15 +178,7 @@ view nixosChannels model =
 
         mkBody categoryName model_ viewSuccess viewBuckets outMsg =
             div
-                (List.append
-                    [ class <| "search-page " ++ resultStatus model_.result ]
-                    (if model_.showSort then
-                        [ onClick (outMsg ToggleSort) ]
-
-                     else
-                        []
-                    )
-                )
+                [ class <| "search-page " ++ resultStatus model_.result ]
                 [ h1 [] bodyTitle
                 , viewSearchInput nixosChannels outMsg categoryName Nothing model_.query Nothing
                 , viewResult nixosChannels outMsg categoryName model_ viewSuccess viewBuckets <|

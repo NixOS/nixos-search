@@ -54,7 +54,9 @@ import Html
         , h4
         , input
         , li
+        , option
         , p
+        , select
         , span
         , strong
         , text
@@ -70,6 +72,7 @@ import Html.Attributes
         , disabled
         , href
         , id
+        , name
         , placeholder
         , type_
         , value
@@ -110,7 +113,6 @@ type alias Model a b =
     , size : Int
     , buckets : Maybe String
     , sort : Sort
-    , showSort : Bool
     , showInstallDetails : Details
     , searchType : Route.SearchType
     , redirectedChannel : Maybe String
@@ -362,7 +364,6 @@ init options preferStatic args defaultNixOSChannel nixosChannels maybeModel =
             args.sort
                 |> Maybe.andThen fromSortId
                 |> Maybe.withDefault defaultSearchArgs.sort
-      , showSort = False
       , showInstallDetails = Unset
       , searchType =
             args.type_
@@ -445,7 +446,6 @@ elementId str =
 type Msg a b
     = NoOp
     | SortChange Sort
-    | ToggleSort
     | BucketsChange String
     | ChannelChange String
     | SubjectChange SearchType
@@ -506,13 +506,6 @@ update toRoute navKey msg model nixosChannels =
             }
                 |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
-
-        ToggleSort ->
-            ( { model
-                | showSort = not model.showSort
-              }
-            , Cmd.none
-            )
 
         BucketsChange buckets ->
             { model
@@ -844,7 +837,7 @@ toSortTitle sort =
             "Alphabetically Descending"
 
         Relevance ->
-            "Best match"
+            "Best Match"
 
 
 toSortId : Sort -> String
@@ -915,15 +908,7 @@ view { categoryName } title nixosChannels model viewSuccess viewBuckets outMsg s
                     "failure"
     in
     div
-        (List.append
-            [ class <| "search-page " ++ resultStatus ]
-            (if model.showSort then
-                [ onClick (outMsg ToggleSort) ]
-
-             else
-                []
-            )
-        )
+        [ class <| "search-page " ++ resultStatus ]
         ([ h1 [] title
          , viewSearchInput nixosChannels outMsg categoryName (Just model.channel) model.query (Just model.typeahead)
          ]
@@ -1409,42 +1394,31 @@ viewSortSelection :
     Model a b
     -> Html (Msg a b)
 viewSortSelection model =
-    div
-        [ class "btn-group dropdown pull-right"
-        , classList
-            [ ( "open", model.showSort )
-            ]
-        , onClickStop NoOp
-        ]
-        [ viewButton
-            [ onClick ToggleSort ]
-            [ span [] [ text <| "Sort: " ]
-            , span [ class "selected" ] [ text <| toSortTitle model.sort ]
-            , span [ class "caret" ] []
-            ]
-        , ul
-            [ class "pull-right dropdown-menu"
-            ]
-            (List.append
-                [ li [ class " header" ] [ text "Sort options" ]
-                , li [ class "divider" ] []
-                ]
-                (List.map
-                    (\sort ->
-                        li
-                            [ classList
-                                [ ( "selected", model.sort == sort )
-                                ]
-                            ]
-                            [ a
-                                [ href "#"
-                                , onClick <| SortChange sort
-                                ]
-                                [ text <| toSortTitle sort ]
-                            ]
-                    )
-                    sortBy
+    Html.node "sort-select-wrapper"
+        [ class "btn pull-right sort-container" ]
+        [ span [ class "sort-label" ] [ text "Sort: " ]
+        , select
+            [ id "sort-select"
+            , name "sort"
+            , class "sort-select"
+            , value (toSortId model.sort)
+            , onInput
+                (\val ->
+                    case fromSortId val of
+                        Just s ->
+                            SortChange s
+
+                        Nothing ->
+                            NoOp
                 )
+            ]
+            (List.map
+                (\sort ->
+                    option
+                        [ value (toSortId sort) ]
+                        [ text <| toSortTitle sort ]
+                )
+                sortBy
             )
         ]
 
