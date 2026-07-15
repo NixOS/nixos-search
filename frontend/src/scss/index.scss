@@ -171,82 +171,6 @@
     }
   }
 
-  // Override bootstrap colors for the sort dropdown
-  .search-results {
-    .dropdown {
-      border-radius: 4px;
-
-      .caret {
-        border-top-color: var(--text-color) !important;
-      }
-
-      &.open>button.btn {
-        background: var(--button-active-background);
-
-        &:hover {
-          background: var(--button-active-hover-background);
-        }
-      }
-
-      &>button.btn {
-        background: var(--button-background);
-
-        &:hover {
-          background: var(--button-hover-background);
-        }
-
-        &:focus:not(:focus-visible) {
-          outline: none !important;
-        }
-
-        border-radius: 4px;
-        color: var(--text-color);
-        border: none;
-        text-shadow: none;
-        box-shadow: none;
-      }
-    }
-
-    ul.dropdown-menu {
-      background: var(--button-background);
-      padding: 0;
-      margin-top: 4px;
-
-      li {
-        border-radius: 4px;
-        border-top-right-radius: 4px;
-        border-top-left-radius: 4px;
-        margin: 4px;
-
-        a {
-          border-radius: 4px;
-          color: var(--text-color);
-          background: inherit;
-          transition: background 0.2s;
-        }
-
-        a::before {
-          content: none !important;
-        }
-      }
-
-      .header,
-      .divider {
-        display: none;
-      }
-
-      li:hover {
-        a {
-          background: var(--hover-background);
-        }
-      }
-
-      li.selected {
-        background: var(--button-active-background);
-      }
-    }
-  }
-
   // Override bootstrap styles for the search box
   .search-input-top {
 
@@ -647,44 +571,6 @@ footer {
 
       // Search results header
       & > :nth-child(1) {
-
-        // Dropdown to show sorting options
-        & > div:nth-child(1) {
-
-          & > button {
-            & > .selected {
-              margin-right: 0.5em;
-            }
-          }
-
-          & > ul > li {
-
-            & > a {
-              padding: 3px 10px;
-            }
-
-            & > a:before {
-              display: inline-block;
-              content: " ";
-              width: 24.5px;
-            }
-
-            &.selected > a:before {
-              content: "\2714";
-            }
-          }
-
-          & > ul > li.header {
-            font-weight: bold;
-            padding: 3px 10px 0 10px;
-          }
-
-          & > ul > li.header:before,
-          & > ul > li.divider:before {
-            display: none;
-          }
-        }
-
         // Text that displays number of results
         & > h2:nth-child(2) {
           font-size: 1.7em;
