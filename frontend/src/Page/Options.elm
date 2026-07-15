@@ -220,14 +220,20 @@ viewSourceTab activeSource count source =
             Route.optionSourceId source
 
         labelChildren =
-            text (Route.optionSourceLabel source)
-                :: (case source of
-                        Route.ModularServiceOptions ->
-                            [ Badge.view Badge.Experimental ]
+            (case source of
+                Route.ModularServiceOptions ->
+                    [ Badge.view Badge.Experimental ]
 
-                        _ ->
-                            []
-                   )
+                Route.HomeManagerOptionSource ->
+                    [ Badge.view Badge.Community ]
+
+                Route.DarwinOptionSource ->
+                    [ Badge.view Badge.External ]
+
+                _ ->
+                    []
+            )
+                ++ [ text (Route.optionSourceLabel source) ]
 
         badge =
             case count of
