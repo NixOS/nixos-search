@@ -1,9 +1,3 @@
-// imported from bootstrap
-
-.navbar-static-top .container {
-  width: 940px;
-}
-
 .navbar {
   margin-bottom: 20px;
   overflow: visible;
@@ -87,67 +81,65 @@
       }
     }
   }
-}
 
-// our scss
-
-header .navbar .container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  padding-block: 4px;
-  gap: 4px;
-
-  a.brand {
-    all: unset;
+  .container {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    padding-block: 4px;
+    gap: 4px;
 
-    img {
-      height: 25px;
-      width: auto;
-    }
-  }
-
-  &::before, &::after {
-    all: unset; /* remove pseudo-elements added by bootstrap */
-  }
-
-  .nav {
-    display: flex;
-    flex-flow: row wrap;
-    margin: unset;
-    gap: 8px;
-
-    & + .btn-group {
-      /* theme selection */
+    a.brand {
+      all: unset;
       display: flex;
-      margin: unset;
-      margin-left: auto;
 
-      & > .btn {
+      img {
+        height: 25px;
+        width: auto;
+      }
+    }
+
+    &::before, &::after {
+      all: unset; /* remove pseudo-elements added by bootstrap */
+    }
+
+    .nav {
+      display: flex;
+      flex-flow: row wrap;
+      margin: unset;
+      gap: 8px;
+
+      & + .btn-group {
+        /* theme selection */
         display: flex;
+        margin: unset;
+        margin-left: auto;
+
+        & > .btn {
+          display: flex;
+        }
       }
     }
   }
-}
 
-header .navbar.navbar-static-top ul.nav > li.external {
+  &.navbar-static-top ul.nav > li.external {
 
-  > a {
-    color: var(--link-color);
-    text-decoration: none;
-    background: none !important;
-    border-radius: 0;
-
-    &:hover {
-      text-decoration: underline;
+    > a {
+      color: var(--link-color);
+      text-decoration: none;
       background: none !important;
-    }
+      border-radius: 0;
 
-    &::after {
-      content: " \2197";
-      font-size: 0.75em;
+      &:hover {
+        text-decoration: underline;
+        background: none !important;
+      }
+
+      &::after {
+        content: " \2197";
+        font-size: 0.75em;
+      }
     }
   }
 }
