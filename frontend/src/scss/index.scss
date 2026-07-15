@@ -33,6 +33,7 @@
   --link-color: #007dbb;
   /* Background color for the small badges with number in the sidebar */
   --badge-background: #757575;
+  --carret-color: #000;
 
   --blue-dark-13: #28395f;
   --orange-75: #e99861;
@@ -91,6 +92,7 @@
     --link-color: var(--light-blue); // #007dbb;
     /* Background color for the small badges with number in the sidebar */
     --badge-background: var(--button-active-hover-background);
+    --carret-color: #fff;
 
     --color-hover-tab: var(--hover-background);
     --color-active-tab: #393939;
