@@ -37,6 +37,7 @@
 
   --blue-dark-13: #28395f;
   --orange-75: #e99861;
+  --pink-75: oklch(.75 0.12 330);
 
   --dark-blue: #5277C3; // Blue background
   --light-blue: #7ebae4;
@@ -932,13 +933,13 @@ a:focus-visible {
     }
 
     &-external {
-      --bg: var(--dark-blue);
+      --bg: var(--pink-75);
     }
   }
 
   &.selected .label {
     color: #fff;
-    background-color: oklch(from var(--bg) calc(l * 0.5) c h);
+    background-color: oklch(from var(--bg) 0.35 c h);
   }
 
   & > span {
