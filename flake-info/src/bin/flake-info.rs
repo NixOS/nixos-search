@@ -3,7 +3,7 @@ use flake_info::commands::NixCheckError;
 use flake_info::data::import::Kind;
 use flake_info::data::{self, Export, Source};
 use flake_info::elastic::{self, ElasticsearchError, ExistsStrategy};
-use log::{error, info, warn};
+use log::{info, warn};
 use sha2::Digest;
 use std::io;
 use std::path::PathBuf;

@@ -462,7 +462,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     package_outputs: package.outputs.into_keys().collect(),
                     package_default_output: package.default_output,
                     package_programs: programs,
-                    package_mainProgram: package.meta.mainProgram,
+                    package_mainProgram: package.meta.main_program,
                     package_license,
                     package_license_set,
                     package_license_expression,
