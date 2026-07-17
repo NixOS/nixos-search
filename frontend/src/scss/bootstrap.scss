@@ -48,11 +48,6 @@ img {
 }
 button,
 input,
-select {
-  font-size:100%;
-  margin:0;
-  vertical-align:middle
-}
 button,
 input {
   line-height:normal;
@@ -73,9 +68,6 @@ input[type=button],
 input[type=checkbox],
 input[type=submit],
 label,
-select {
-  cursor:pointer
-}
 input[type=search] {
   -webkit-appearance:textfield;
   -webkit-box-sizing:content-box;
@@ -291,16 +283,8 @@ form {
 button,
 input,
 label,
-select {
-  font-size:14px;
-  font-weight:400;
-  line-height:20px
-}
 button,
 input,
-select {
-  font-family:Helvetica Neue,Helvetica,Arial,sans-serif
-}
 label {
   display:block;
   margin-bottom:5px
@@ -321,25 +305,8 @@ input[type=submit] {
   width:auto
 }
 
-select {
-  height:30px;
-  line-height:30px;
-}
-select {
-  background-color:#fff;
-  border:1px solid #ccc;
-  width:220px
-}
 
-select[size] {
-  height:auto
-}
 input[type=checkbox]:focus,
-select:focus {
-  outline:thin dotted #333;
-  outline:5px auto -webkit-focus-ring-color;
-  outline-offset:-2px
-}
 input:-moz-placeholder {
   color:#999
 }
@@ -359,34 +326,16 @@ input::-webkit-input-placeholder {
 }
 
 input[class*=span],
-select[class*=span] {
-  float:none;
-  margin-left:0
-}
 
 input {
   margin-left:0
 }
 input[disabled],
-select[disabled] {
-  background-color:#eee;
-  cursor:not-allowed
-}
 input[type=checkbox][disabled] {
   background-color:transparent
 }
 input:focus:invalid,
-select:focus:invalid {
-  border-color:#ee5f5b;
-  color:#b94a48
-}
 input:focus:invalid:focus,
-select:focus:invalid:focus {
-  border-color:#e9322d;
-  -webkit-box-shadow:0 0 6px #f8b9b7;
-  -moz-box-shadow:0 0 6px #f8b9b7;
-  box-shadow:0 0 6px #f8b9b7
-}
 
 button.btn::-moz-focus-inner,
 input[type=submit].btn::-moz-focus-inner {

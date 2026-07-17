@@ -196,3 +196,15 @@ document.addEventListener("keydown", (event) => {
     event.preventDefault();
     next.scrollIntoView({ block: "nearest" });
 });
+
+customElements.define(
+    "sort-select-wrapper",
+    class extends HTMLElement {
+        connectedCallback() {
+            this.onclick = (pointerEvent) => {
+                const select = this.querySelector("select");
+                pointerEvent.target !== select && select.showPicker();
+            };
+        }
+    },
+);

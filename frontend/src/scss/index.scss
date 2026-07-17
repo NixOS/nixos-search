@@ -13,9 +13,9 @@
   --result-item-show-more-color: #666;
   --search-sidebar-container-border-color: #ccc;
   --search-sidebar-link-color: var(--text-color);
-  --search-sidebar-hovered-link-background: #eee;
-  --search-sidebar-selected-link-background: var(--light-blue);
-  --search-sidebar-selected-link-color: #000;
+  --hovered-item-background: #eee;
+  --selected-item-background: var(--light-blue);
+  --selected-item-color: #000;
   /* Divider between search results */
   --search-result-divider-line-color: #ccc;
   /* Gets overwritten by bootstrap; has no effect */
@@ -33,7 +33,6 @@
   --link-color: #007dbb;
   /* Background color for the small badges with number in the sidebar */
   --badge-background: #757575;
-  --carret-color: #000;
 
   --blue-dark-13: #28395f;
   --orange-75: #e99861;
@@ -75,8 +74,8 @@
     --result-item-show-more-color: var(--text-color);
     --search-sidebar-container-border-color: var(--line-color);
     --search-sidebar-link-color: var(--text-color);
-    --search-sidebar-hovered-link-background: var(--hover-background);
-    --search-sidebar-selected-link-color: #000;
+    --hovered-item-background: var(--hover-background);
+    --selected-item-color: #000;
     /* Divider between search results */
     --search-result-divider-line-color: var(--line-color);
     /* Color of the search results */
@@ -93,7 +92,6 @@
     --link-color: var(--light-blue); // #007dbb;
     /* Background color for the small badges with number in the sidebar */
     --badge-background: var(--button-active-hover-background);
-    --carret-color: #fff;
 
     --color-hover-tab: var(--hover-background);
     --color-active-tab: #393939;
@@ -115,7 +113,7 @@
     cursor: pointer;
 
     &:hover {
-      background-color: var(--search-sidebar-hovered-link-background);
+      background-color: var(--hovered-item-background);
     }
   }
 
@@ -129,10 +127,6 @@
 
   *:focus {
     outline-width: 0 !important;
-  }
-
-  *:focus-visible {
-    @include outline-visible;
   }
 
   a:focus-visible {
@@ -171,6 +165,18 @@
     &:disabled {
       background: var(--button-background);
       color: var(--text-color-light);
+    }
+  }
+
+  .sort-container {
+    background: var(--button-background);
+    border: 1px solid var(--line-color);
+    color: var(--text-color);
+    text-shadow: none;
+    box-shadow: none;
+
+    &:hover {
+      background: var(--button-hover-background);
     }
   }
 
@@ -527,7 +533,7 @@ footer {
 
               &:hover {
                 text-decoration: none;
-                background: var(--search-sidebar-hovered-link-background);
+                 background: var(--hovered-item-background);
               }
 
               & > span:first-child {
@@ -540,8 +546,8 @@ footer {
               }
 
               &.selected {
-                background: var(--search-sidebar-selected-link-background);
-                color: var(--search-sidebar-selected-link-color);
+                 background: var(--selected-item-background);
+                 color: var(--selected-item-color);
                 position: relative;
 
                 & > span:last-child {
@@ -715,7 +721,7 @@ footer {
                   cursor: pointer;
 
                   &:hover {
-                    background-color: var(--search-sidebar-hovered-link-background);
+                    background-color: var(--hovered-item-background);
                   }
                 }
               }
@@ -1138,7 +1144,7 @@ ul.inline-list {
     color: var(--text-color);
 
     &:hover {
-      background: var(--search-sidebar-hovered-link-background, #eee);
+      background: var(--hovered-item-background, #eee);
     }
   }
 }
@@ -1158,4 +1164,46 @@ ul.inline-list {
 
 .source-label {
   display: contents !important;
+}
+
+sort-select-wrapper select {
+  outline: none;
+}
+
+.sort-container {
+  display: inline-flex;
+  align-items: center;
+  font-weight: bold;
+  anchor-name: --sort-container;
+
+  .sort-select {
+    appearance: base-select;
+    border: none;
+    background: transparent;
+
+    option {
+      background-color: var(--background-color);
+      color: var(--text-color);
+
+      &:hover,
+      &:focus {
+        background-color: var(--button-hover-background, var(--hovered-item-background));
+      }
+
+      &:checked {
+        background-color: var(--selected-item-background);
+        color: var(--selected-item-color);
+      }
+    }
+  }
+}
+
+.sort-select::picker(select) {
+  appearance: base-select;
+  border-radius: 4px;
+  border: 1px solid var(--line-color);
+  background-color: var(--background-color);
+  position-anchor: --sort-container;
+  position-area: bottom span-right;
+  margin-block: 4px;
 }
