@@ -1,4 +1,4 @@
-frontend/src/assets/autocomplete/
+frontend/public/autocomplete/
 *.log
 .DS_Store
 .cache

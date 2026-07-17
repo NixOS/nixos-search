@@ -40,7 +40,6 @@ export default defineConfig({
     },
     output: {
         copy: [
-            { from: "./src/assets", to: "." },
             {
                 from: "node_modules/@nixos/branding/artifacts/internal",
                 to: "images",
