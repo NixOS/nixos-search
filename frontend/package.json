@@ -10,13 +10,11 @@
     },
     "main": "index.js",
     "scripts": {
-        "analyse": "elm-analyse -s -p 3001 -o",
         "build": "rsbuild build",
         "build:autocomplete": "node scripts/build-autocomplete-corpus.mjs",
-        "dev": "node scripts/build-autocomplete-corpus.mjs && rsbuild dev --port 3000",
-        "nodebug": "NODEBUG=true rsbuild dev --port 3000",
-        "prod": "rsbuild build",
-        "start": "npm run dev",
+        "dev": "npm run build:autocomplete && rsbuild dev",
+        "preview": "rsbuild preview",
+        "review": "elm-review",
         "test": "elm-test"
     },
     "devDependencies": {
@@ -30,7 +28,7 @@
         "sass": "^1.43.5"
     },
     "engines": {
-        "node": ">=12"
+        "node": ">=18"
     },
     "prettier": {
         "tabWidth": 4
