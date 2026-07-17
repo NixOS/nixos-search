@@ -38,7 +38,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     npmHooks.npmInstallHook
   ];
 
-  npmBuildScript = "prod";
+  npmBuildScript = "build";
 
   installPhase = ''
     runHook preInstall
