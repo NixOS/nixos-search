@@ -1107,6 +1107,14 @@ viewNoResults categoryName activeOptionSource query channel =
                 in
                 [ text "You might want to ", darwinIssues, text "." ]
 
+            else if activeOptionSource == Route.NixOnDroidOptionSource then
+                let
+                    nixOnDroidIssues =
+                        Html.a [ href ("https://github.com/nix-community/nix-on-droid/issues?q=" ++ query) ]
+                            [ text "search nix-on-droid issues" ]
+                in
+                [ text "You might want to ", nixOnDroidIssues, text "." ]
+
             else
                 [ text "You might want to ", nixpkgsIssues, text "." ]
     in

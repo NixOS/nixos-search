@@ -224,6 +224,29 @@ pub fn get_darwin_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
         .collect())
 }
 
+/// Nix-on-droid flake reference. The nix-on-droid project uses a `release-XX.YY`
+/// branch for stable nixpkgs channels and `master` for unstable.
+fn nix_on_droid_flake_ref(nixpkgs: &Source) -> String {
+    flake_ref_for(
+        nixpkgs,
+        "github:nix-community/nix-on-droid",
+        Some("release-{channel}"),
+    )
+}
+
+pub fn get_nix_on_droid_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
+    let nix_on_droid_flake_ref = nix_on_droid_flake_ref(nixpkgs);
+    let options = get_options_from_script(
+        nixpkgs,
+        "nix-on-droid-options",
+        Some(("input-flake", &nix_on_droid_flake_ref)),
+    )?;
+    Ok(options
+        .into_iter()
+        .map(NixpkgsEntry::NixOnDroidOption)
+        .collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
