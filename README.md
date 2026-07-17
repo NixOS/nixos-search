@@ -57,14 +57,14 @@ This allows testing the frontend against the 'production' package index.
 
 ```bash
 nix build .#frontend
-chmod -R u+w dist 2>/dev/null; rm -rf dist && mkdir -p dist && cp -RL --no-preserve=mode ./result/* ./dist/
+chmod -R u+w frontend/dist 2>/dev/null; rm -rf frontend/dist && mkdir -p frontend/dist && cp -RL --no-preserve=mode ./result/* ./frontend/dist/
 
 env \
   NIXOS_CHANNELS="$(cat "$(nix build --no-link --print-out-paths .#nixosChannelsJson)")" \
   AUTOCOMPLETE_OUT_DIR=./dist/autocomplete \
-  node frontend/scripts/build-autocomplete-corpus.mjs
+  nix develop -c npm --prefix=frontend run build:autocomplete
 
-node frontend/scripts/serve-local.mjs
+nix develop -c npm --prefix=frontend run preview
 ```
 
 ### elm-review
@@ -72,10 +72,10 @@ node frontend/scripts/serve-local.mjs
 This project uses `elm-review` to enforce standard rules over Elm code. To use it you can run:
 
 ```
-nix develop -c npx --prefix=frontend elm-review
+nix develop -c npm --prefix=frontend run review
 ```
 
-to check the code. You can add `--fix` for automatic fixes, and `--watch` to run it in watch mode during development.
+to check the code. You can add `-- --fix` for automatic fixes, and `-- --watch` to run it in watch mode during development.
 
 ### End-to-end testing
 

@@ -37,13 +37,13 @@ jobs:
       - name: Build autocomplete corpus
         shell: sh
         env:
-          AUTOCOMPLETE_OUT_DIR: ./dist/autocomplete
+          AUTOCOMPLETE_OUT_DIR: ../dist/autocomplete
         run: |
           NIXOS_CHANNELS=$(cat $(nix build --no-link --print-out-paths .#nixosChannelsJson))
           export NIXOS_CHANNELS
           ELASTICSEARCH_MAPPING_SCHEMA_VERSION=$(nix eval --raw --impure --expr '(import ./version.nix).frontend')
           export ELASTICSEARCH_MAPPING_SCHEMA_VERSION
-          node frontend/scripts/build-autocomplete-corpus.mjs
+          npm --prefix frontend run build:autocomplete
 
       - name: Deploy to Netlify
         uses: nwtgck/actions-netlify@v4.0
