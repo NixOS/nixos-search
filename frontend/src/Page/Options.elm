@@ -23,11 +23,13 @@ import Html
         ( Html
         , a
         , code
+        , details
         , div
         , li
         , pre
         , span
         , strong
+        , summary
         , text
         , ul
         )
@@ -36,6 +38,7 @@ import Html.Attributes
         ( class
         , classList
         , href
+        , property
         , target
         )
 import Html.Events
@@ -45,6 +48,7 @@ import Html.Events
 import Http exposing (Body)
 import Json.Decode
 import Json.Decode.Pipeline
+import Json.Encode
 import List.Extra
 import Ports
 import RemoteData
@@ -327,100 +331,95 @@ viewResultItem nixosChannels channel show activeSource item =
                 [ code [] [ text pkg ] ]
 
         showDetails =
-            if Just itemId == show then
-                let
-                    isService =
-                        item.source.docType == "service"
-                in
-                Just <|
-                    div [ Html.Attributes.map SearchMsg Search.trapClick ] <|
-                        [ div [] [ text "Name" ]
-                        , div [] [ viewOptionNamePath channel activeSource item.source.name nameSegments ]
-                        ]
-                            ++ (item.source.description
-                                    |> Maybe.andThen Utils.showHtml
-                                    |> Maybe.map
-                                        (\description ->
-                                            [ div [] [ text "Description" ]
-                                            , div [] description
-                                            ]
-                                        )
-                                    |> Maybe.withDefault []
-                               )
-                            ++ (item.source.type_
-                                    |> Maybe.map
-                                        (\t ->
-                                            [ div [] [ text "Type" ]
-                                            , div [] [ asPre t ]
-                                            ]
-                                        )
-                                    |> Maybe.withDefault []
-                               )
-                            ++ (item.source.default
-                                    |> Maybe.map
-                                        (\default ->
-                                            [ div [] [ text "Default" ]
-                                            , div [] <| Maybe.withDefault [ Utils.copyable CopyToClipboard default (asPreCode default) ] (Utils.showHtml default)
-                                            ]
-                                        )
-                                    |> Maybe.withDefault []
-                               )
-                            ++ (item.source.example
-                                    |> Maybe.map
-                                        (\example ->
-                                            [ div [] [ text "Example" ]
-                                            , div [] <| Maybe.withDefault [ Utils.copyable CopyToClipboard example (asHighlightPreCode example) ] (Utils.showHtml example)
-                                            ]
-                                        )
-                                    |> Maybe.withDefault []
-                               )
-                            ++ (if isService then
-                                    [ div [] [ text "About" ]
-                                    , div []
-                                        [ a
-                                            [ href "https://nixos.org/manual/nixos/stable/#modular-services"
-                                            , Html.Attributes.target "_blank"
-                                            ]
-                                            [ text "What are modular services?" ]
-                                        ]
+            let
+                isService =
+                    item.source.docType == "service"
+            in
+            div [ Html.Attributes.map SearchMsg Search.trapClick ] <|
+                [ div [] [ text "Name" ]
+                , div [] [ viewOptionNamePath channel activeSource item.source.name nameSegments ]
+                ]
+                    ++ (item.source.description
+                            |> Maybe.andThen Utils.showHtml
+                            |> Maybe.map
+                                (\description ->
+                                    [ div [] [ text "Description" ]
+                                    , div [] description
+                                    ]
+                                )
+                            |> Maybe.withDefault []
+                       )
+                    ++ (item.source.type_
+                            |> Maybe.map
+                                (\t ->
+                                    [ div [] [ text "Type" ]
+                                    , div [] [ asPre t ]
+                                    ]
+                                )
+                            |> Maybe.withDefault []
+                       )
+                    ++ (item.source.default
+                            |> Maybe.map
+                                (\default ->
+                                    [ div [] [ text "Default" ]
+                                    , div [] <| Maybe.withDefault [ Utils.copyable CopyToClipboard default (asPreCode default) ] (Utils.showHtml default)
+                                    ]
+                                )
+                            |> Maybe.withDefault []
+                       )
+                    ++ (item.source.example
+                            |> Maybe.map
+                                (\example ->
+                                    [ div [] [ text "Example" ]
+                                    , div [] <| Maybe.withDefault [ Utils.copyable CopyToClipboard example (asHighlightPreCode example) ] (Utils.showHtml example)
+                                    ]
+                                )
+                            |> Maybe.withDefault []
+                       )
+                    ++ (if isService then
+                            [ div [] [ text "About" ]
+                            , div []
+                                [ a
+                                    [ href "https://nixos.org/manual/nixos/stable/#modular-services"
+                                    , Html.Attributes.target "_blank"
+                                    ]
+                                    [ text "What are modular services?" ]
+                                ]
+                            ]
+
+                        else
+                            []
+                       )
+                    ++ (if isService then
+                            case item.source.servicePackages of
+                                [] ->
+                                    item.source.servicePackage
+                                        |> Maybe.map
+                                            (\pkg ->
+                                                [ div [] [ text "Provided by package" ]
+                                                , div [] [ pkgLink pkg ]
+                                                ]
+                                            )
+                                        |> Maybe.withDefault []
+
+                                [ single ] ->
+                                    [ div [] [ text "Provided by package" ]
+                                    , div [] [ pkgLink single ]
                                     ]
 
-                                else
-                                    []
-                               )
-                            ++ (if isService then
-                                    case item.source.servicePackages of
-                                        [] ->
-                                            item.source.servicePackage
-                                                |> Maybe.map
-                                                    (\pkg ->
-                                                        [ div [] [ text "Provided by package" ]
-                                                        , div [] [ pkgLink pkg ]
-                                                        ]
-                                                    )
-                                                |> Maybe.withDefault []
+                                many ->
+                                    [ div [] [ text "Provided by packages" ]
+                                    , div []
+                                        (List.intersperse (text ", ") (List.map pkgLink many))
+                                    ]
 
-                                        [ single ] ->
-                                            [ div [] [ text "Provided by package" ]
-                                            , div [] [ pkgLink single ]
-                                            ]
-
-                                        many ->
-                                            [ div [] [ text "Provided by packages" ]
-                                            , div []
-                                                (List.intersperse (text ", ") (List.map pkgLink many))
-                                            ]
-
-                                else
-                                    []
-                               )
-                            ++ viewUsageSnippet item.source
-                            ++ [ div [] [ text "Declared in" ]
-                               , div [] <| findSource nixosChannels channel item.source
-                               ]
-
-            else
-                Nothing
+                        else
+                            []
+                       )
+                    ++ viewUsageSnippet item.source
+                    ++ [ div [] [ text "Declared in" ]
+                       , div [] <| findSource nixosChannels channel item.source
+                       ]
 
         toggle =
             SearchMsg (Search.ShowDetails itemId)
@@ -433,20 +432,25 @@ viewResultItem nixosChannels channel show activeSource item =
         , classList [ ( "opened", isOpen ) ]
         , Search.elementId itemId
         ]
-    <|
-        List.filterMap identity
-            [ Just <|
-                ul [ class "search-result-button" ]
+        [ details
+            [ property "open" (Json.Encode.bool isOpen)
+            ]
+            [ summary
+                [ onClick toggle
+                , class "option-summary"
+                ]
+                [ ul [ class "search-result-button" ]
                     [ li []
                         [ a
-                            [ onClick toggle
-                            , href ""
+                            [ href ""
                             ]
                             [ text displayName ]
                         ]
                     ]
+                ]
             , showDetails
             ]
+        ]
 
 
 asHighlightPreCode : String -> Html msg
