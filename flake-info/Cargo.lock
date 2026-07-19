@@ -379,6 +379,7 @@ dependencies = [
  "sha2",
  "sqlite",
  "structopt",
+ "tempfile",
  "thiserror",
  "tokio",
  "toml",

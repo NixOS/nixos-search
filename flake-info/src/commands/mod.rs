@@ -1,7 +1,9 @@
+mod dep_count;
 mod nix_check_version;
 mod nix_flake_attrs;
 mod nix_flake_info;
 mod nixpkgs_info;
+pub use dep_count::get_nixpkgs_dep_counts;
 pub use nix_check_version::{NixCheckError, check_nix_version};
 pub use nix_flake_attrs::get_derivation_info;
 pub use nix_flake_info::get_flake_info;
