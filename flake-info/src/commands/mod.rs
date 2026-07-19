@@ -3,6 +3,7 @@ mod nix_check_version;
 mod nix_flake_attrs;
 mod nix_flake_info;
 mod nixpkgs_info;
+mod repology;
 pub use dep_count::get_nixpkgs_dep_counts;
 pub use nix_check_version::{NixCheckError, check_nix_version};
 pub use nix_flake_attrs::get_derivation_info;
@@ -11,6 +12,7 @@ pub use nixpkgs_info::{
     get_darwin_options, get_home_manager_options, get_nixpkgs_info, get_nixpkgs_options,
     get_nixpkgs_package_services, get_nixpkgs_services,
 };
+pub use repology::get_repology_repo_counts;
 
 use anyhow::{Context, Result};
 use command_run::{Command, LogTo};

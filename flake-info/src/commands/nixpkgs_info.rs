@@ -64,6 +64,15 @@ pub fn get_nixpkgs_info(
     } else {
         HashMap::new()
     };
+    // Repology is an external service, so a failure only loses the signal.
+    let repology_counts = if attribute.is_none() {
+        super::get_repology_repo_counts().unwrap_or_else(|err| {
+            log::warn!("Skipping Repology repository counts: {:#}", err);
+            HashMap::new()
+        })
+    } else {
+        HashMap::new()
+    };
 
     Ok(attr_set
         .into_iter()
@@ -75,12 +84,14 @@ pub fn get_nixpkgs_info(
                 .collect();
             let modular_services = package_services.remove(&attribute).unwrap_or_default();
             let dep_count = dep_counts.get(&attribute).copied();
+            let repology_repos = repology_counts.get(&attribute).copied();
             NixpkgsEntry::Derivation {
                 attribute,
                 package,
                 programs,
                 modular_services,
                 dep_count,
+                repology_repos,
             }
         })
         .collect())

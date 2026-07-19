@@ -153,6 +153,9 @@ lazy_static! {
                 "package_dep_count": {
                     "type": "rank_feature"
                 },
+                "package_repology_repos": {
+                    "type": "rank_feature"
+                },
                 // Options fields
                 "option_name": {
                     "type": "keyword",
