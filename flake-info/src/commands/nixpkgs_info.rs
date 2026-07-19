@@ -58,6 +58,12 @@ pub fn get_nixpkgs_info(
     let mut programs = get_nixpkgs_programs(nixpkgs)?;
     let mut package_services =
         get_nixpkgs_package_services(&Source::Nixpkgs(nixpkgs.clone())).unwrap_or_default();
+    // Skip the slow eval when only importing a single attribute.
+    let dep_counts = if attribute.is_none() {
+        super::get_nixpkgs_dep_counts(nixpkgs)?
+    } else {
+        HashMap::new()
+    };
 
     Ok(attr_set
         .into_iter()
@@ -68,11 +74,13 @@ pub fn get_nixpkgs_info(
                 .into_iter()
                 .collect();
             let modular_services = package_services.remove(&attribute).unwrap_or_default();
+            let dep_count = dep_counts.get(&attribute).copied();
             NixpkgsEntry::Derivation {
                 attribute,
                 package,
                 programs,
                 modular_services,
+                dep_count,
             }
         })
         .collect())
