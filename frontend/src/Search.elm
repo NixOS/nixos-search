@@ -1,6 +1,7 @@
 module Search exposing
     ( Aggregation
     , AggregationsBucketItem
+    , BucketInputType(..)
     , Details(..)
     , Model
     , Msg(..)
@@ -39,20 +40,23 @@ import Array
 import Base64
 import Browser.Dom
 import Browser.Navigation
-import Components.Badge as Badge
 import Components.Button exposing (viewButton)
 import Dict exposing (Dict)
 import Html
     exposing
         ( Html
         , a
+        , aside
         , code
         , div
+        , fieldset
         , form
         , h1
         , h2
         , h4
         , input
+        , label
+        , legend
         , li
         , option
         , p
@@ -64,9 +68,9 @@ import Html
         )
 import Html.Attributes
     exposing
-        ( attribute
-        , autocomplete
+        ( autocomplete
         , autofocus
+        , checked
         , class
         , classList
         , disabled
@@ -95,7 +99,7 @@ import RemoteData
 import Route
     exposing
         ( OptionSource
-        , SearchType
+        , SearchType(..)
         , allTypes
         , searchTypeToTitle
         )
@@ -113,7 +117,7 @@ type alias Model a b =
     , size : Int
     , buckets : Maybe String
     , sort : Sort
-    , showInstallDetails : Details
+    , showUsageDetails : Details
     , searchType : Route.SearchType
     , redirectedChannel : Maybe String
     , urlChannel : Maybe String
@@ -202,22 +206,6 @@ type NixOSChannelStatus
     | Beta
     | Stable
     | Deprecated
-
-
-channelBadge : NixOSChannelStatus -> List (Html msg)
-channelBadge status =
-    case status of
-        Rolling ->
-            []
-
-        Beta ->
-            [ Badge.view Badge.Beta ]
-
-        Stable ->
-            []
-
-        Deprecated ->
-            [ Badge.view Badge.Deprecated ]
 
 
 decodeNixOSChannels : Json.Decode.Decoder NixOSChannels
@@ -364,7 +352,7 @@ init options preferStatic args defaultNixOSChannel nixosChannels maybeModel =
             args.sort
                 |> Maybe.andThen fromSortId
                 |> Maybe.withDefault defaultSearchArgs.sort
-      , showInstallDetails = Unset
+      , showUsageDetails = Unset
       , searchType =
             args.type_
                 |> Maybe.withDefault defaultSearchArgs.searchType
@@ -454,7 +442,7 @@ type Msg a b
     | QueryResponse (RemoteData.WebData (SearchResult a b))
     | ShowDetails String
     | ChangePage Int
-    | ShowInstallDetails Details
+    | ShowUsageDetails Details
     | SetActiveOptionSource OptionSource
     | SourceCount String Int
     | TypeaheadMsg Typeahead.Msg
@@ -627,8 +615,8 @@ update toRoute navKey msg model nixosChannels =
                 |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
 
-        ShowInstallDetails details ->
-            { model | showInstallDetails = details }
+        ShowUsageDetails details ->
+            { model | showUsageDetails = details }
                 |> pushUrl toRoute navKey
 
         SourceCount sourceId count ->
@@ -910,7 +898,7 @@ view { categoryName } title nixosChannels model viewSuccess viewBuckets outMsg s
     div
         [ class <| "search-page " ++ resultStatus ]
         ([ h1 [] title
-         , viewSearchInput nixosChannels outMsg categoryName (Just model.channel) model.query (Just model.typeahead)
+         , viewSearchInput nixosChannels outMsg categoryName (Just model.channel) model.query (Just model.typeahead) model.sort
          ]
             ++ (case model.redirectedChannel of
                     Just oldChannel ->
@@ -931,29 +919,23 @@ viewFlakes :
     -> SearchType
     -> List (Html msg)
 viewFlakes outMsg selectedCategory =
-    [ li []
-        [ ul []
-            (List.map
-                (\category ->
-                    li []
-                        [ a
-                            [ href "#"
-                            , onClick <| outMsg (SubjectChange category)
-                            , classList
-                                [ ( "selected"
-                                  , category == selectedCategory
-                                  )
-                                ]
-                            ]
-                            [ span [] [ text <| searchTypeToTitle category ]
-                            , closeButton
-                            ]
-                        ]
+    viewBucket
+        RadioInput
+        "Category"
+        (List.map (\cat -> { key = searchTypeToTitle cat, doc_count = 0 }) allTypes)
+        (\title ->
+            outMsg
+                (SubjectChange
+                    (if title == "Packages" then
+                        PackageSearch
+
+                     else
+                        OptionSearch
+                    )
                 )
-                allTypes
-            )
-        ]
-    ]
+        )
+        [ searchTypeToTitle selectedCategory ]
+        []
 
 
 viewResult :
@@ -984,7 +966,7 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
 
             else
                 div [ class "search-results" ]
-                    [ ul [ class "search-sidebar" ] searchBuckets
+                    [ aside [ class "search-sidebar" ] searchBuckets
                     ]
 
         RemoteData.Loading ->
@@ -999,14 +981,14 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
                             viewBuckets model.buckets prev
                     in
                     div [ class "search-results", class "loading-overlay" ]
-                        [ ul [ class "search-sidebar" ] (searchBuckets ++ buckets)
+                        [ aside [ class "search-sidebar" ] (searchBuckets ++ buckets)
                         , div []
                             (viewResults nixosChannels model prev viewSuccess outMsg categoryName)
                         ]
 
                 Nothing ->
                     div [ class "loader-wrapper" ]
-                        [ ul [ class "search-sidebar" ] searchBuckets
+                        [ aside [ class "search-sidebar" ] searchBuckets
                         , div [ class "loader" ] [ text "Loading..." ]
                         , h2 [] [ text "Searching..." ]
                         ]
@@ -1018,20 +1000,13 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
             in
             if result.hits.total.value == 0 && List.isEmpty buckets then
                 div [ class "search-results" ]
-                    [ ul [ class "search-sidebar" ] searchBuckets
+                    [ aside [ class "search-sidebar" ] searchBuckets
                     , viewNoResults categoryName model.activeOptionSource model.query model.channel
-                    ]
-
-            else if not (List.isEmpty buckets) then
-                div [ class "search-results" ]
-                    [ ul [ class "search-sidebar" ] (searchBuckets ++ buckets)
-                    , div []
-                        (viewResults nixosChannels model result viewSuccess outMsg categoryName)
                     ]
 
             else
                 div [ class "search-results" ]
-                    [ ul [ class "search-sidebar" ] searchBuckets
+                    [ aside [ class "search-sidebar" ] (searchBuckets ++ buckets)
                     , div []
                         (viewResults nixosChannels model result viewSuccess outMsg categoryName)
                     ]
@@ -1162,49 +1137,62 @@ closeButton =
     span [] []
 
 
+type BucketInputType
+    = CheckboxInput
+    | RadioInput
+
+
 viewBucket :
-    String
+    BucketInputType
+    -> String
     -> List AggregationsBucketItem
     -> (String -> a)
     -> List String
     -> List (Html a)
     -> List (Html a)
-viewBucket title buckets searchMsgFor selectedBucket sets =
+viewBucket inputType title buckets searchMsgFor selectedBucket sets =
     List.append
         sets
         (if List.isEmpty buckets then
             []
 
          else
-            [ li []
-                [ ul []
-                    (List.append
-                        [ li [ class "header" ] [ text title ] ]
-                        (List.map
-                            (\bucket ->
-                                li []
-                                    [ a
-                                        [ href "#"
-                                        , onClick <| searchMsgFor bucket.key
-                                        , classList
-                                            [ ( "selected"
-                                              , List.member bucket.key selectedBucket
-                                              )
-                                            ]
-                                        ]
-                                        [ span [] [ text bucket.key ]
-                                        , if List.member bucket.key selectedBucket then
-                                            closeButton
+            [ fieldset [ class "search-bucket" ]
+                (legend [ class "header" ] [ text title ]
+                    :: List.map
+                        (\bucket ->
+                            let
+                                isSelected =
+                                    List.member bucket.key selectedBucket
 
-                                          else
-                                            span [] [ span [ class "badge" ] [ text <| String.fromInt bucket.doc_count ] ]
-                                        ]
+                                inputTypeName =
+                                    case inputType of
+                                        CheckboxInput ->
+                                            "checkbox"
+
+                                        RadioInput ->
+                                            "radio"
+                            in
+                            label
+                                [ classList [ ( "selected", isSelected ) ]
+                                ]
+                                [ span [] [ text bucket.key ]
+                                , if isSelected || bucket.doc_count <= 0 then
+                                    closeButton
+
+                                  else
+                                    span [] [ span [ class "badge" ] [ text <| String.fromInt bucket.doc_count ] ]
+                                , input
+                                    [ type_ inputTypeName
+                                    , name title
+                                    , checked isSelected
+                                    , onClick <| searchMsgFor bucket.key
                                     ]
-                            )
-                            buckets
+                                    []
+                                ]
                         )
-                    )
-                ]
+                        buckets
+                )
             ]
         )
 
@@ -1216,13 +1204,14 @@ viewSearchInput :
     -> Maybe String
     -> String
     -> Maybe Typeahead.Model
+    -> Sort
     -> Html c
-viewSearchInput nixosChannels outMsg categoryName selectedChannel searchQuery maybeTypeahead =
+viewSearchInput nixosChannels outMsg categoryName selectedChannel searchQuery maybeTypeahead currentSort =
     form
         [ onSubmit (outMsg QueryInputSubmit)
         , class "search-input"
         ]
-        (div [ class "search-input-top" ]
+        [ div [ class "search-input-top" ]
             [ div [ class "search-input-with-typeahead" ]
                 [ input
                     [ type_ "text"
@@ -1260,11 +1249,14 @@ viewSearchInput nixosChannels outMsg categoryName selectedChannel searchQuery ma
             , viewButton [ type_ "submit", class "search-input-submit" ]
                 [ text "Search" ]
             ]
-            :: (selectedChannel
-                    |> Maybe.map (\x -> [ div [] (viewChannels nixosChannels outMsg x) ])
-                    |> Maybe.withDefault []
-               )
-        )
+        , div [ class "search-input-options" ]
+            ((selectedChannel
+                |> Maybe.map (\x -> viewChannels nixosChannels outMsg x)
+                |> Maybe.withDefault []
+             )
+                ++ [ Html.map outMsg (viewSortSelection currentSort) ]
+            )
+        ]
 
 
 viewChannels :
@@ -1273,38 +1265,46 @@ viewChannels :
     -> String
     -> List (Html c)
 viewChannels nixosChannels outMsg selectedChannel =
-    List.append
-        [ div []
-            [ h2 [] [ text "Channel: " ]
-            , div
-                [ class "btn-group"
-                , attribute "data-toggle" "buttons-radio"
-                ]
-                (List.map
-                    (\channel ->
-                        viewButton
-                            [ type_ "button"
-                            , classList
-                                [ ( "active", channel.id == selectedChannel )
+    if List.isEmpty nixosChannels then
+        []
+
+    else
+        List.append
+            [ fieldset
+                [ class "radio-group-segmented channel-radios" ]
+                (legend [ class "channel-title" ] [ text "Channels:" ]
+                    :: List.map
+                        (\channel ->
+                            label
+                                [ classList
+                                    [ ( "btn", True )
+                                    , ( "channel-radio", True )
+                                    , ( "active", channel.id == selectedChannel )
+                                    ]
                                 ]
-                            , onClick <| outMsg (ChannelChange channel.id)
-                            ]
-                            (List.intersperse (text " ") (text channel.id :: channelBadge channel.status))
-                    )
-                    nixosChannels
+                                [ text channel.id
+                                , input
+                                    [ type_ "radio"
+                                    , name "channel"
+                                    , checked (channel.id == selectedChannel)
+                                    , onClick <| outMsg (ChannelChange channel.id)
+                                    ]
+                                    []
+                                ]
+                        )
+                        nixosChannels
                 )
             ]
-        ]
-        (if List.any (\{ id } -> id == selectedChannel) nixosChannels then
-            []
+            (if List.any (\{ id } -> id == selectedChannel) nixosChannels then
+                []
 
-         else
-            [ p [ class "alert alert-error" ]
-                [ h4 [] [ text "Wrong channel selected!" ]
-                , text <| "Please select one of the channels above!"
+             else
+                [ p [ class "alert alert-error" ]
+                    [ h4 [] [ text "Wrong channel selected!" ]
+                    , text <| "Please select one of the channels above!"
+                    ]
                 ]
-            ]
-        )
+            )
 
 
 viewResults :
@@ -1337,37 +1337,35 @@ viewResults nixosChannels model result viewSuccess outMsg categoryName =
                 )
     in
     [ div []
-        (List.append
-            [ Html.map outMsg <| viewSortSelection model
-            , h2 []
-                (List.append
-                    [ text "Showing results "
-                    , text from
-                    , text "-"
-                    , text to
-                    , text " of "
+        [ h2 []
+            (List.append
+                [ text "Showing results "
+                , text from
+                , text "-"
+                , text to
+                , text " of "
+                ]
+                (if result.hits.total.value == 10000 then
+                    [ text "more than 10000."
+                    , p [ class "search-refine-hint" ]
+                        [ text "Please provide more precise search terms." ]
                     ]
-                    (if result.hits.total.value == 10000 then
-                        [ text "more than 10000."
-                        , p [ class "search-refine-hint" ]
-                            [ text "Please provide more precise search terms." ]
-                        ]
 
-                     else
-                        let
-                            total =
-                                String.fromInt result.hits.total.value
-                        in
-                        [ strong []
-                            [ text total
-                            , text " "
-                            , text categoryName
-                            ]
-                        , text "."
+                 else
+                    let
+                        total =
+                            String.fromInt result.hits.total.value
+                    in
+                    [ strong []
+                        [ text total
+                        , text " "
+                        , text categoryName
                         ]
-                    )
+                    , text "."
+                    ]
                 )
-            ]
+            )
+        , p []
             (case List.head result.hits.hits of
                 Nothing ->
                     []
@@ -1384,16 +1382,16 @@ viewResults nixosChannels model result viewSuccess outMsg categoryName =
                             , text "."
                             ]
             )
-        )
-    , viewSuccess nixosChannels model.channel model.showInstallDetails model.show result.hits.hits
+        ]
+    , viewSuccess nixosChannels model.channel model.showUsageDetails model.show result.hits.hits
     , Html.map outMsg <| viewPager model result.hits.total.value
     ]
 
 
 viewSortSelection :
-    Model a b
+    Sort
     -> Html (Msg a b)
-viewSortSelection model =
+viewSortSelection currentSort =
     Html.node "sort-select-wrapper"
         [ class "btn pull-right sort-container" ]
         [ span [ class "sort-label" ] [ text "Sort: " ]
@@ -1401,7 +1399,7 @@ viewSortSelection model =
             [ id "sort-select"
             , name "sort"
             , class "sort-select"
-            , value (toSortId model.sort)
+            , value (toSortId currentSort)
             , onInput
                 (\val ->
                     case fromSortId val of

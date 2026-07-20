@@ -10,9 +10,12 @@ import Html
         ( Html
         , a
         , div
+        , fieldset
         , footer
         , header
         , img
+        , input
+        , label
         , li
         , span
         , text
@@ -22,13 +25,16 @@ import Html.Attributes
     exposing
         ( alt
         , attribute
+        , checked
         , class
         , classList
         , href
         , id
+        , name
         , src
         , target
         , title
+        , type_
         )
 import Html.Events exposing (onClick)
 import Json.Decode
@@ -288,8 +294,8 @@ pageMatch m1 m2 =
             True
 
         ( Packages model_a, Packages model_b ) ->
-            { model_a | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
-                == { model_b | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+            { model_a | show = Nothing, showUsageDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+                == { model_b | show = Nothing, showUsageDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
 
         ( Options model_a, Options model_b ) ->
             { model_a | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
@@ -627,27 +633,30 @@ getThemeSvgIcon theme =
 
 viewThemeSelector : Theme -> Html Msg
 viewThemeSelector currentTheme =
-    div
-        [ class "btn-group pull-right theme-toggle"
-        , attribute "role" "group"
+    fieldset
+        [ class "theme-toggle"
         , attribute "aria-label" "Theme"
         ]
         (List.map
             (\t ->
-                viewButton
-                    [ classList [ ( "active", t == currentTheme ) ]
+                label
+                    [ classList
+                        [ ( "btn", True )
+                        , ( "theme-radio", True )
+                        , ( "active", t == currentTheme )
+                        ]
                     , title (themeLabel t)
                     , attribute "aria-label" (themeLabel t)
-                    , attribute "aria-pressed"
-                        (if t == currentTheme then
-                            "true"
-
-                         else
-                            "false"
-                        )
-                    , onClick (SetTheme t)
                     ]
-                    [ span [ class "theme-icon" ] [ getThemeSvgIcon t ] ]
+                    [ span [ class "theme-icon" ] [ getThemeSvgIcon t ]
+                    , input
+                        [ type_ "radio"
+                        , name "theme"
+                        , checked (t == currentTheme)
+                        , onClick (SetTheme t)
+                        ]
+                        []
+                    ]
             )
             [ Auto, Light, Dark ]
         )
