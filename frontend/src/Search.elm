@@ -39,7 +39,6 @@ import Array
 import Base64
 import Browser.Dom
 import Browser.Navigation
-import Components.Badge as Badge
 import Components.Button exposing (viewButton)
 import Dict exposing (Dict)
 import Html
@@ -48,11 +47,14 @@ import Html
         , a
         , code
         , div
+        , fieldset
         , form
         , h1
         , h2
         , h4
         , input
+        , label
+        , legend
         , li
         , option
         , p
@@ -64,9 +66,9 @@ import Html
         )
 import Html.Attributes
     exposing
-        ( attribute
-        , autocomplete
+        ( autocomplete
         , autofocus
+        , checked
         , class
         , classList
         , disabled
@@ -202,22 +204,6 @@ type NixOSChannelStatus
     | Beta
     | Stable
     | Deprecated
-
-
-channelBadge : NixOSChannelStatus -> List (Html msg)
-channelBadge status =
-    case status of
-        Rolling ->
-            []
-
-        Beta ->
-            [ Badge.view Badge.Beta ]
-
-        Stable ->
-            []
-
-        Deprecated ->
-            [ Badge.view Badge.Deprecated ]
 
 
 decodeNixOSChannels : Json.Decode.Decoder NixOSChannels
@@ -1273,38 +1259,46 @@ viewChannels :
     -> String
     -> List (Html c)
 viewChannels nixosChannels outMsg selectedChannel =
-    List.append
-        [ div []
-            [ h2 [] [ text "Channel: " ]
-            , div
-                [ class "btn-group"
-                , attribute "data-toggle" "buttons-radio"
-                ]
-                (List.map
-                    (\channel ->
-                        viewButton
-                            [ type_ "button"
-                            , classList
-                                [ ( "active", channel.id == selectedChannel )
+    if List.isEmpty nixosChannels then
+        []
+
+    else
+        List.append
+            [ fieldset
+                [ class "channel-radios" ]
+                (legend [ class "channel-title" ] [ text "Channels:" ]
+                    :: List.map
+                        (\channel ->
+                            label
+                                [ classList
+                                    [ ( "btn", True )
+                                    , ( "channel-radio", True )
+                                    , ( "active", channel.id == selectedChannel )
+                                    ]
                                 ]
-                            , onClick <| outMsg (ChannelChange channel.id)
-                            ]
-                            (List.intersperse (text " ") (text channel.id :: channelBadge channel.status))
-                    )
-                    nixosChannels
+                                [ text channel.id
+                                , input
+                                    [ type_ "radio"
+                                    , name "channel"
+                                    , checked (channel.id == selectedChannel)
+                                    , onClick <| outMsg (ChannelChange channel.id)
+                                    ]
+                                    []
+                                ]
+                        )
+                        nixosChannels
                 )
             ]
-        ]
-        (if List.any (\{ id } -> id == selectedChannel) nixosChannels then
-            []
+            (if List.any (\{ id } -> id == selectedChannel) nixosChannels then
+                []
 
-         else
-            [ p [ class "alert alert-error" ]
-                [ h4 [] [ text "Wrong channel selected!" ]
-                , text <| "Please select one of the channels above!"
+             else
+                [ p [ class "alert alert-error" ]
+                    [ h4 [] [ text "Wrong channel selected!" ]
+                    , text <| "Please select one of the channels above!"
+                    ]
                 ]
-            ]
-        )
+            )
 
 
 viewResults :
