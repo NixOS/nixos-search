@@ -13,16 +13,16 @@ module Search exposing
     , ResultHitsTotal
     , ResultItem
     , SearchResult
-    , Sort
+    , Sort(..)
     , Terms
     , decodeAggregation
     , decodeNixOSChannels
     , decodeResolvedFlake
     , defaultFlakeId
     , elementId
+    , encodeRequestBody
     , init
     , makeRequest
-    , makeRequestBody
     , makeRequestTask
     , onClickStop
     , shouldLoad
@@ -1674,7 +1674,7 @@ rescoreQuery field =
     )
 
 
-makeRequestBody :
+encodeRequestBody :
     String
     -> Int
     -> Int
@@ -1688,8 +1688,8 @@ makeRequestBody :
     -> List ( String, Float )
     -> List String
     -> Maybe String
-    -> Http.Body
-makeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets mainFields fields phraseFields rescoreField =
+    -> Json.Encode.Value
+encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets mainFields fields phraseFields rescoreField =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -1733,71 +1733,69 @@ makeRequestBody query from sizeRaw sort types sortField otherSortFields terms fi
             else
                 toSortQuery sort sortField otherSortFields
     in
-    Http.jsonBody
-        (Json.Encode.object
-            ([ ( "from"
-               , Json.Encode.int from
-               )
-             , ( "size"
-               , Json.Encode.int size
-               )
-             , sortQuery
-             , toAggregations terms
-             , ( "query"
-               , Json.Encode.object
-                    [ ( "bool"
-                      , Json.Encode.object
-                            [ ( "filter"
-                              , Json.Encode.list Json.Encode.object
-                                    (List.append
-                                        [ filterByType types ]
-                                        (if List.isEmpty filterByBuckets then
-                                            []
+    Json.Encode.object
+        ([ ( "from"
+           , Json.Encode.int from
+           )
+         , ( "size"
+           , Json.Encode.int size
+           )
+         , sortQuery
+         , toAggregations terms
+         , ( "query"
+           , Json.Encode.object
+                [ ( "bool"
+                  , Json.Encode.object
+                        [ ( "filter"
+                          , Json.Encode.list Json.Encode.object
+                                (List.append
+                                    [ filterByType types ]
+                                    (if List.isEmpty filterByBuckets then
+                                        []
 
-                                         else
-                                            [ filterByBuckets ]
-                                        )
+                                     else
+                                        [ filterByBuckets ]
                                     )
-                              )
-                            , ( "must_not"
-                              , Json.Encode.list Json.Encode.object
-                                    (negativeWords
-                                        |> List.concatMap dashUnderscoreVariants
-                                        |> List.Extra.unique
-                                        |> List.concatMap (\w -> List.map (\mf -> toWildcardQuery mf w) mainFields)
+                                )
+                          )
+                        , ( "must_not"
+                          , Json.Encode.list Json.Encode.object
+                                (negativeWords
+                                    |> List.concatMap dashUnderscoreVariants
+                                    |> List.Extra.unique
+                                    |> List.concatMap (\w -> List.map (\mf -> toWildcardQuery mf w) mainFields)
+                                )
+                          )
+                        , ( "must"
+                          , Json.Encode.list Json.Encode.object
+                                [ [ ( "dis_max"
+                                    , Json.Encode.object
+                                        [ ( "tie_breaker", Json.Encode.float 0.7 )
+                                        , ( "queries"
+                                          , Json.Encode.list Json.Encode.object
+                                                (searchFields positiveWords mainFields fields)
+                                          )
+                                        ]
                                     )
-                              )
-                            , ( "must"
-                              , Json.Encode.list Json.Encode.object
-                                    [ [ ( "dis_max"
-                                        , Json.Encode.object
-                                            [ ( "tie_breaker", Json.Encode.float 0.7 )
-                                            , ( "queries"
-                                              , Json.Encode.list Json.Encode.object
-                                                    (searchFields positiveWords mainFields fields)
-                                              )
-                                            ]
-                                        )
-                                      ]
-                                    ]
-                              )
-                            , ( "should"
-                              , Json.Encode.list Json.Encode.object
-                                    (shouldClauses primaryField positiveWords phraseFields)
-                              )
-                            ]
-                      )
-                    ]
-               )
-             ]
-                ++ (case ( rescoreActive, rescoreField ) of
-                        ( True, Just field ) ->
-                            [ rescoreQuery field ]
+                                  ]
+                                ]
+                          )
+                        , ( "should"
+                          , Json.Encode.list Json.Encode.object
+                                (shouldClauses primaryField positiveWords phraseFields)
+                          )
+                        ]
+                  )
+                ]
+           )
+         ]
+            ++ (case ( rescoreActive, rescoreField ) of
+                    ( True, Just field ) ->
+                        [ rescoreQuery field ]
 
-                        _ ->
-                            []
-                   )
-            )
+                    _ ->
+                        []
+               )
         )
 
 
