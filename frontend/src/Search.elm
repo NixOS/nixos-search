@@ -896,7 +896,7 @@ view { categoryName } title nixosChannels model viewSuccess viewBuckets outMsg s
     div
         [ class <| "search-page " ++ resultStatus ]
         ([ h1 [] title
-         , viewSearchInput nixosChannels outMsg categoryName (Just model.channel) model.query (Just model.typeahead)
+         , viewSearchInput nixosChannels outMsg categoryName (Just model.channel) model.query (Just model.typeahead) model.sort
          ]
             ++ (case model.redirectedChannel of
                     Just oldChannel ->
@@ -1202,13 +1202,14 @@ viewSearchInput :
     -> Maybe String
     -> String
     -> Maybe Typeahead.Model
+    -> Sort
     -> Html c
-viewSearchInput nixosChannels outMsg categoryName selectedChannel searchQuery maybeTypeahead =
+viewSearchInput nixosChannels outMsg categoryName selectedChannel searchQuery maybeTypeahead currentSort =
     form
         [ onSubmit (outMsg QueryInputSubmit)
         , class "search-input"
         ]
-        (div [ class "search-input-top" ]
+        [ div [ class "search-input-top" ]
             [ div [ class "search-input-with-typeahead" ]
                 [ input
                     [ type_ "text"
@@ -1246,11 +1247,14 @@ viewSearchInput nixosChannels outMsg categoryName selectedChannel searchQuery ma
             , viewButton [ type_ "submit", class "search-input-submit" ]
                 [ text "Search" ]
             ]
-            :: (selectedChannel
-                    |> Maybe.map (\x -> [ div [] (viewChannels nixosChannels outMsg x) ])
-                    |> Maybe.withDefault []
-               )
-        )
+        , div [ class "search-input-options" ]
+            ((selectedChannel
+                |> Maybe.map (\x -> viewChannels nixosChannels outMsg x)
+                |> Maybe.withDefault []
+             )
+                ++ [ Html.map outMsg (viewSortSelection currentSort) ]
+            )
+        ]
 
 
 viewChannels :
@@ -1331,37 +1335,35 @@ viewResults nixosChannels model result viewSuccess outMsg categoryName =
                 )
     in
     [ div []
-        (List.append
-            [ Html.map outMsg <| viewSortSelection model
-            , h2 []
-                (List.append
-                    [ text "Showing results "
-                    , text from
-                    , text "-"
-                    , text to
-                    , text " of "
+        [ h2 []
+            (List.append
+                [ text "Showing results "
+                , text from
+                , text "-"
+                , text to
+                , text " of "
+                ]
+                (if result.hits.total.value == 10000 then
+                    [ text "more than 10000."
+                    , p [ class "search-refine-hint" ]
+                        [ text "Please provide more precise search terms." ]
                     ]
-                    (if result.hits.total.value == 10000 then
-                        [ text "more than 10000."
-                        , p [ class "search-refine-hint" ]
-                            [ text "Please provide more precise search terms." ]
-                        ]
 
-                     else
-                        let
-                            total =
-                                String.fromInt result.hits.total.value
-                        in
-                        [ strong []
-                            [ text total
-                            , text " "
-                            , text categoryName
-                            ]
-                        , text "."
+                 else
+                    let
+                        total =
+                            String.fromInt result.hits.total.value
+                    in
+                    [ strong []
+                        [ text total
+                        , text " "
+                        , text categoryName
                         ]
-                    )
+                    , text "."
+                    ]
                 )
-            ]
+            )
+        , p []
             (case List.head result.hits.hits of
                 Nothing ->
                     []
@@ -1378,16 +1380,16 @@ viewResults nixosChannels model result viewSuccess outMsg categoryName =
                             , text "."
                             ]
             )
-        )
+        ]
     , viewSuccess nixosChannels model.channel model.showInstallDetails model.show result.hits.hits
     , Html.map outMsg <| viewPager model result.hits.total.value
     ]
 
 
 viewSortSelection :
-    Model a b
+    Sort
     -> Html (Msg a b)
-viewSortSelection model =
+viewSortSelection currentSort =
     Html.node "sort-select-wrapper"
         [ class "btn pull-right sort-container" ]
         [ span [ class "sort-label" ] [ text "Sort: " ]
@@ -1395,7 +1397,7 @@ viewSortSelection model =
             [ id "sort-select"
             , name "sort"
             , class "sort-select"
-            , value (toSortId model.sort)
+            , value (toSortId currentSort)
             , onInput
                 (\val ->
                     case fromSortId val of

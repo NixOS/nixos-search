@@ -180,7 +180,7 @@ view nixosChannels model =
             div
                 [ class <| "search-page " ++ resultStatus model_.result ]
                 [ h1 [] bodyTitle
-                , viewSearchInput nixosChannels outMsg categoryName Nothing model_.query Nothing
+                , viewSearchInput nixosChannels outMsg categoryName Nothing model_.query Nothing model_.sort
                 , viewResult nixosChannels outMsg categoryName model_ viewSuccess viewBuckets <|
                     viewFlakes outMsg model_.searchType
                 ]
