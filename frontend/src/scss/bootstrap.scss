@@ -400,34 +400,7 @@ input[type=submit].btn::-moz-focus-inner {
   float:right
 }
 
-.nav-tabs:after,
-.nav-tabs:before {
-  content:"";
-  display:table;
-  line-height:0
-}
-.nav-tabs:after {
-  clear:both
-}
-.nav-tabs>li {
-  float:left;
-  margin-bottom:-1px
-}
-.nav-tabs>li>a {
-  border:1px solid transparent;
-  border-radius:4px 4px 0 0;
-  line-height:20px;
-  padding:8px 12px
-}
-.tab-content {
-  overflow:auto
-}
-.tab-content>.tab-pane {
-  display:none
-}
-.tab-content>.active {
-  display:block
-}
+
 
 .pager {
   list-style:none;

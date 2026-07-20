@@ -117,7 +117,7 @@ type alias Model a b =
     , size : Int
     , buckets : Maybe String
     , sort : Sort
-    , showInstallDetails : Details
+    , showUsageDetails : Details
     , searchType : Route.SearchType
     , redirectedChannel : Maybe String
     , urlChannel : Maybe String
@@ -352,7 +352,7 @@ init options preferStatic args defaultNixOSChannel nixosChannels maybeModel =
             args.sort
                 |> Maybe.andThen fromSortId
                 |> Maybe.withDefault defaultSearchArgs.sort
-      , showInstallDetails = Unset
+      , showUsageDetails = Unset
       , searchType =
             args.type_
                 |> Maybe.withDefault defaultSearchArgs.searchType
@@ -442,7 +442,7 @@ type Msg a b
     | QueryResponse (RemoteData.WebData (SearchResult a b))
     | ShowDetails String
     | ChangePage Int
-    | ShowInstallDetails Details
+    | ShowUsageDetails Details
     | SetActiveOptionSource OptionSource
     | SourceCount String Int
     | TypeaheadMsg Typeahead.Msg
@@ -615,8 +615,8 @@ update toRoute navKey msg model nixosChannels =
                 |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
 
-        ShowInstallDetails details ->
-            { model | showInstallDetails = details }
+        ShowUsageDetails details ->
+            { model | showUsageDetails = details }
                 |> pushUrl toRoute navKey
 
         SourceCount sourceId count ->
@@ -1271,7 +1271,7 @@ viewChannels nixosChannels outMsg selectedChannel =
     else
         List.append
             [ fieldset
-                [ class "channel-radios" ]
+                [ class "radio-group-segmented channel-radios" ]
                 (legend [ class "channel-title" ] [ text "Channels:" ]
                     :: List.map
                         (\channel ->
@@ -1383,7 +1383,7 @@ viewResults nixosChannels model result viewSuccess outMsg categoryName =
                             ]
             )
         ]
-    , viewSuccess nixosChannels model.channel model.showInstallDetails model.show result.hits.hits
+    , viewSuccess nixosChannels model.channel model.showUsageDetails model.show result.hits.hits
     , Html.map outMsg <| viewPager model result.hits.total.value
     ]
 

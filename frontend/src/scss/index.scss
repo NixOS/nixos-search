@@ -244,47 +244,7 @@
     }
   }
 
-  // Style the tabs in expanded package search results
-  .nav-tabs {
-    border-bottom: 1px solid var(--line-color);
-    border-radius: 4px;
 
-    li {
-      background: transparent !important;
-      border-color: none !important;
-
-      &:hover,
-      &:focus {
-        background: transparent !important;
-        border-color: none !important;
-      }
-
-      a {
-        // border: none;
-        background: transparent;
-        color: var(--text-color);
-      }
-
-      a:hover,
-      a:focus {
-        border-color: transparent;
-        background: transparent !important;
-        color: var(--text-color) !important;
-      }
-
-      &.active {
-
-        a,
-        a:hover,
-        a:focus {
-          border: 1px solid var(--line-color);
-          border-bottom-color: transparent;
-          background: var(--background-color) !important;
-          color: var(--text-color);
-        }
-      }
-    }
-  }
 }
 
 :root[data-theme="dark"] {
@@ -696,23 +656,15 @@ footer {
                   float: left;
                 }
 
-                ul.nav-tabs {
-                  margin: 0;
-
-                  & > li > a {
-                    margin-right: 0;
-                  }
-
-                  .deprecated {
-                    color: var(--text-color-light);
-                  }
+                fieldset.usage-radios {
+                  @include radio-tabbed-group;
                 }
 
                 div.tab-content {
                   padding: 1em;
                   border: 1px solid var(--search-result-expanded-tab-border);
                   border-top: 0;
-                  border-radius: 4px 0 4px 4px;
+                  border-radius: 0 0 4px 4px;
                 }
 
                 pre {

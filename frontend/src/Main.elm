@@ -294,8 +294,8 @@ pageMatch m1 m2 =
             True
 
         ( Packages model_a, Packages model_b ) ->
-            { model_a | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
-                == { model_b | show = Nothing, showInstallDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+            { model_a | show = Nothing, showUsageDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
+                == { model_b | show = Nothing, showUsageDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
 
         ( Options model_a, Options model_b ) ->
             { model_a | show = Nothing, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
