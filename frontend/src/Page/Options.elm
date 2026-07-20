@@ -6,6 +6,7 @@ module Page.Options exposing
     , ResultItemSource
     , decodeResultAggregations
     , decodeResultItemSource
+    , encodeRequestBody
     , init
     , makeRequest
     , makeRequestBody
@@ -52,6 +53,7 @@ import Html.Events
 import Http exposing (Body)
 import Json.Decode
 import Json.Decode.Pipeline
+import Json.Encode
 import List.Extra
 import Ports
 import RemoteData
@@ -820,9 +822,9 @@ makeRequest options nixosChannels _ channel query from size _ sort activeSource 
         |> Cmd.map SearchMsg
 
 
-makeRequestBody : List String -> String -> Int -> Int -> Search.Sort -> Body
-makeRequestBody types query from size sort =
-    Search.makeRequestBody
+encodeRequestBody : List String -> String -> Int -> Int -> Search.Sort -> Json.Encode.Value
+encodeRequestBody types query from size sort =
+    Search.encodeRequestBody
         (String.trim query)
         from
         size
@@ -842,6 +844,11 @@ makeRequestBody types query from size sort =
         ]
         [ "option_description^3" ]
         Nothing
+
+
+makeRequestBody : List String -> String -> Int -> Int -> Search.Sort -> Body
+makeRequestBody types query from size sort =
+    Http.jsonBody (encodeRequestBody types query from size sort)
 
 
 

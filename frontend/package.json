@@ -15,7 +15,8 @@
         "dev": "npm run build:autocomplete && rsbuild dev",
         "preview": "rsbuild preview",
         "review": "elm-review",
-        "test": "elm-test"
+        "test": "elm-test",
+        "benchmark": "node benchmark/run.mjs"
     },
     "devDependencies": {
         "@rsbuild/core": "^1.2.0",

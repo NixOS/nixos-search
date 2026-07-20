@@ -12,6 +12,7 @@ module Page.Packages exposing
     , ResultPackageTeam
     , decodeResultAggregations
     , decodeResultItemSource
+    , encodeRequestBody
     , init
     , makeRequest
     , makeRequestBody
@@ -1209,8 +1210,8 @@ makeRequest options nixosChannels _ channel query from size maybeBuckets sort =
         |> Cmd.map SearchMsg
 
 
-makeRequestBody : String -> Int -> Int -> Maybe String -> Search.Sort -> Body
-makeRequestBody query from size maybeBuckets sort =
+encodeRequestBody : String -> Int -> Int -> Maybe String -> Search.Sort -> Json.Encode.Value
+encodeRequestBody query from size maybeBuckets sort =
     let
         currentBuckets =
             initBuckets maybeBuckets
@@ -1262,7 +1263,7 @@ makeRequestBody query from size maybeBuckets sort =
               )
             ]
     in
-    Search.makeRequestBody
+    Search.encodeRequestBody
         (String.trim query)
         from
         size
@@ -1287,6 +1288,11 @@ makeRequestBody query from size maybeBuckets sort =
         ]
         [ "package_description^3", "package_longDescription^1" ]
         (Just "package_attr_name")
+
+
+makeRequestBody : String -> Int -> Int -> Maybe String -> Search.Sort -> Body
+makeRequestBody query from size maybeBuckets sort =
+    Http.jsonBody (encodeRequestBody query from size maybeBuckets sort)
 
 
 
