@@ -24,6 +24,10 @@ import Html
         , a
         , code
         , div
+        , fieldset
+        , input
+        , label
+        , legend
         , li
         , pre
         , span
@@ -33,10 +37,13 @@ import Html
         )
 import Html.Attributes
     exposing
-        ( class
+        ( checked
+        , class
         , classList
         , href
+        , name
         , target
+        , type_
         )
 import Html.Events
     exposing
@@ -196,65 +203,60 @@ count stays visible until a fresh count for the new tab arrives.
 -}
 viewSourceTabs : OptionSource -> Dict String Int -> Html Msg
 viewSourceTabs activeSource sourceCounts =
-    li [ class "search-source-tabs" ]
-        [ ul [] <|
-            li [ class "header" ] [ text "Source" ]
-                :: List.map
-                    (\source ->
-                        viewSourceTab
-                            activeSource
-                            (Dict.get (Route.optionSourceId source) sourceCounts)
-                            source
-                    )
-                    Route.allOptionSources
-        ]
+    fieldset [ class "search-source-tabs search-bucket" ]
+        (legend [ class "header" ] [ text "Source" ]
+            :: List.map
+                (\source ->
+                    let
+                        isActive =
+                            source == activeSource
 
+                        id =
+                            Route.optionSourceId source
 
-viewSourceTab : OptionSource -> Maybe Int -> OptionSource -> Html Msg
-viewSourceTab activeSource count source =
-    let
-        isActive =
-            source == activeSource
+                        badge =
+                            case Dict.get id sourceCounts of
+                                Just n ->
+                                    [ span [ class "badge" ] [ text (formatCount n) ] ]
 
-        id =
-            Route.optionSourceId source
+                                Nothing ->
+                                    []
 
-        labelChildren =
-            (case source of
-                Route.ModularServiceOptions ->
-                    [ Badge.view Badge.Experimental ]
+                        badgeLabel =
+                            case source of
+                                Route.ModularServiceOptions ->
+                                    [ Badge.view Badge.Experimental ]
 
-                Route.HomeManagerOptionSource ->
-                    [ Badge.view Badge.Community ]
+                                Route.HomeManagerOptionSource ->
+                                    [ Badge.view Badge.Community ]
 
-                Route.DarwinOptionSource ->
-                    [ Badge.view Badge.External ]
+                                Route.DarwinOptionSource ->
+                                    [ Badge.view Badge.External ]
 
-                _ ->
-                    []
-            )
-                ++ [ text (Route.optionSourceLabel source) ]
-
-        badge =
-            case count of
-                Just n ->
-                    [ span [ class "badge" ] [ text (formatCount n) ] ]
-
-                Nothing ->
-                    []
-    in
-    li
-        [ class ("search-source-" ++ id) ]
-        [ a
-            -- The sidebar's existing `&.selected` styling targets `a`,
-            -- not `li`, so the active-tab highlight class lives on the
-            -- anchor.
-            [ classList [ ( "selected", isActive ) ]
-            , href "#"
-            , Html.Events.onClick (SearchMsg (Search.SetActiveOptionSource source))
-            ]
-            (span [ class "source-label" ] labelChildren :: badge)
-        ]
+                                _ ->
+                                    []
+                    in
+                    label
+                        [ classList
+                            [ ( "search-source-tab", True )
+                            , ( "search-source-" ++ id, True )
+                            , ( "selected", isActive )
+                            ]
+                        ]
+                        (span [ class "source-label" ] (badgeLabel ++ [ text (Route.optionSourceLabel source) ])
+                            :: badge
+                            ++ [ input
+                                    [ type_ "radio"
+                                    , name "option-source"
+                                    , checked isActive
+                                    , Html.Events.onClick (SearchMsg (Search.SetActiveOptionSource source))
+                                    ]
+                                    []
+                               ]
+                        )
+                )
+                Route.allOptionSources
+        )
 
 
 {-| Compact rendering of a hit count for the tab badge: 1.2k, 23k, etc.

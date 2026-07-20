@@ -312,9 +312,17 @@ viewBuckets bucketsAsString result =
         selectedBucket =
             initialBuckets
 
-        createBucketsMsg getBucket mergeBuckets value =
-            value
-                |> Utils.toggleList (getBucket initialBuckets)
+        createBucketsMsg isRadio getBucket mergeBuckets value =
+            (if isRadio then
+                if getBucket initialBuckets == [ value ] then
+                    []
+
+                else
+                    [ value ]
+
+             else
+                Utils.toggleList (getBucket initialBuckets) value
+            )
                 |> mergeBuckets initialBuckets
                 |> encodeBuckets
                 |> Json.Encode.encode 0
@@ -328,29 +336,34 @@ viewBuckets bucketsAsString result =
     in
     []
         |> viewBucket
+            Search.RadioInput
             "Package sets"
             (result.aggregations.package_attr_set.buckets |> sortBuckets)
-            (createBucketsMsg .packageSets (\s v -> { s | packageSets = v }))
+            (createBucketsMsg True .packageSets (\s v -> { s | packageSets = v }))
             selectedBucket.packageSets
         |> viewBucket
+            Search.CheckboxInput
             "Licenses"
             (result.aggregations.package_license_set.buckets |> sortBuckets)
-            (createBucketsMsg .licenses (\s v -> { s | licenses = v }))
+            (createBucketsMsg False .licenses (\s v -> { s | licenses = v }))
             selectedBucket.licenses
         |> viewBucket
+            Search.CheckboxInput
             "Maintainers"
             (result.aggregations.package_maintainers_set.buckets |> sortBuckets)
-            (createBucketsMsg .maintainers (\s v -> { s | maintainers = v }))
+            (createBucketsMsg False .maintainers (\s v -> { s | maintainers = v }))
             selectedBucket.maintainers
         |> viewBucket
+            Search.CheckboxInput
             "Teams"
             (result.aggregations.package_teams_set.buckets |> sortBuckets)
-            (createBucketsMsg .teams (\s v -> { s | teams = v }))
+            (createBucketsMsg False .teams (\s v -> { s | teams = v }))
             selectedBucket.teams
         |> viewBucket
+            Search.CheckboxInput
             "Platforms"
             (result.aggregations.package_platforms.buckets |> sortBuckets)
-            (createBucketsMsg .platforms (\s v -> { s | platforms = v }))
+            (createBucketsMsg False .platforms (\s v -> { s | platforms = v }))
             selectedBucket.platforms
 
 

@@ -508,76 +508,81 @@ footer {
     }
   }
 
- // Buckets
-    ul.search-sidebar {
-      list-style: none;
-      margin: 0 1em 0 0;
+  // Buckets
+  .search-sidebar {
+    margin: 0 1em 0 0;
 
-      & > li {
-        margin-bottom: 1em;
-        border: 1px solid var(--search-sidebar-container-border-color);
-        padding: 1em;
+    fieldset.search-bucket {
+      border: 1px solid var(--search-sidebar-container-border-color);
+      padding: 1em;
+      border-radius: 4px;
+      margin: 0 0 1em 0;
+      min-width: 0;
+
+      legend.header {
+        float: none;
+        width: auto;
+        font-size: 1.2em;
+        font-weight: bold;
+        margin-bottom: 0.5em;
+        padding: 0;
+        border: 0;
+        color: inherit;
+        line-height: inherit;
+      }
+
+      label {
+        display: grid;
+        grid-template-columns: auto max-content;
+        color: var(--search-sidebar-link-color);
+        padding: 0.5em 0.5em 0.5em 1em;
         border-radius: 4px;
+        white-space: nowrap;
+        margin-bottom: 0.2em;
+        cursor: pointer;
+        font-weight: normal;
 
-        & > ul {
-          list-style: none;
-          margin: 0;
+        input[type="checkbox"],
+        input[type="radio"] {
+          display: none;
+        }
 
-          & > li {
-            margin-bottom: 0.2em;
+        &:hover {
+          text-decoration: none;
+          background: var(--hovered-item-background);
+        }
 
-            &.header {
-              font-size: 1.2em;
-              font-weight: bold;
-              margin-bottom: 0.5em;
-            }
+        & > span:first-child {
+          text-overflow: ellipsis;
+          overflow: hidden;
+        }
 
-            & > a {
-              display: grid;
-              grid-template-columns: auto max-content;
-              color: var(--search-sidebar-link-color);
-              padding: 0.5em 0.5em 0.5em 1em;
-              text-decoration: none;
-              border-radius: 4px;
-              white-space: nowrap;
+        & > span:last-child {
+          text-align: right;
+          margin-left: 0.3em;
+        }
 
-              &:hover {
-                text-decoration: none;
-                 background: var(--hovered-item-background);
-              }
+        &.selected {
+          background: var(--selected-item-background);
+          color: var(--selected-item-color);
+          position: relative;
 
-              & > span:first-child {
-                text-overflow: ellipsis;
-                overflow: hidden;
-              }
-              & > span:last-child {
-                text-align: right;
-                margin-left: 0.3em;
-              }
-
-              &.selected {
-                 background: var(--selected-item-background);
-                 color: var(--selected-item-color);
-                position: relative;
-
-                & > span:last-child {
-                  display: none;
-                }
-              }
-
-              & .close {
-                opacity: 1;
-                text-shadow: none;
-                color: inherit;
-                font-size: inherit;
-                padding-left: .5em;
-                padding-right: .5em;
-              }
-            }
+          & > span:last-child {
+            display: none;
           }
+        }
+
+        & .close {
+          opacity: 1;
+          text-shadow: none;
+          color: inherit;
+          font-size: inherit;
+          padding-left: .5em;
+          padding-right: .5em;
         }
       }
     }
+  }
 
 
   & > .search-results {
@@ -927,7 +932,7 @@ a:focus-visible {
 // Nested inside `.search-page` to match the specificity of the rule
 // being overridden (which is also `.search-page`-prefixed via outer
 // nesting), so the override actually wins the cascade.
-.search-page ul.search-sidebar > li.search-source-tabs > ul > li > a {
+.search-page .search-sidebar > fieldset.search-source-tabs > label {
   display: flex;
   align-items: baseline;
   gap: 0.3em;
@@ -1093,7 +1098,7 @@ a:focus-visible {
     & .search-results {
       flex-direction: column;
     }
-    & ul.search-sidebar {
+    & .search-sidebar {
       width: 100%;
     }
   }

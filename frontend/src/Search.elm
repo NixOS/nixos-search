@@ -1,6 +1,7 @@
 module Search exposing
     ( Aggregation
     , AggregationsBucketItem
+    , BucketInputType(..)
     , Details(..)
     , Model
     , Msg(..)
@@ -45,6 +46,7 @@ import Html
     exposing
         ( Html
         , a
+        , aside
         , code
         , div
         , fieldset
@@ -97,7 +99,7 @@ import RemoteData
 import Route
     exposing
         ( OptionSource
-        , SearchType
+        , SearchType(..)
         , allTypes
         , searchTypeToTitle
         )
@@ -917,29 +919,23 @@ viewFlakes :
     -> SearchType
     -> List (Html msg)
 viewFlakes outMsg selectedCategory =
-    [ li []
-        [ ul []
-            (List.map
-                (\category ->
-                    li []
-                        [ a
-                            [ href "#"
-                            , onClick <| outMsg (SubjectChange category)
-                            , classList
-                                [ ( "selected"
-                                  , category == selectedCategory
-                                  )
-                                ]
-                            ]
-                            [ span [] [ text <| searchTypeToTitle category ]
-                            , closeButton
-                            ]
-                        ]
+    viewBucket
+        RadioInput
+        "Category"
+        (List.map (\cat -> { key = searchTypeToTitle cat, doc_count = 0 }) allTypes)
+        (\title ->
+            outMsg
+                (SubjectChange
+                    (if title == "Packages" then
+                        PackageSearch
+
+                     else
+                        OptionSearch
+                    )
                 )
-                allTypes
-            )
-        ]
-    ]
+        )
+        [ searchTypeToTitle selectedCategory ]
+        []
 
 
 viewResult :
@@ -970,7 +966,7 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
 
             else
                 div [ class "search-results" ]
-                    [ ul [ class "search-sidebar" ] searchBuckets
+                    [ aside [ class "search-sidebar" ] searchBuckets
                     ]
 
         RemoteData.Loading ->
@@ -985,14 +981,14 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
                             viewBuckets model.buckets prev
                     in
                     div [ class "search-results", class "loading-overlay" ]
-                        [ ul [ class "search-sidebar" ] (searchBuckets ++ buckets)
+                        [ aside [ class "search-sidebar" ] (searchBuckets ++ buckets)
                         , div []
                             (viewResults nixosChannels model prev viewSuccess outMsg categoryName)
                         ]
 
                 Nothing ->
                     div [ class "loader-wrapper" ]
-                        [ ul [ class "search-sidebar" ] searchBuckets
+                        [ aside [ class "search-sidebar" ] searchBuckets
                         , div [ class "loader" ] [ text "Loading..." ]
                         , h2 [] [ text "Searching..." ]
                         ]
@@ -1004,20 +1000,13 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
             in
             if result.hits.total.value == 0 && List.isEmpty buckets then
                 div [ class "search-results" ]
-                    [ ul [ class "search-sidebar" ] searchBuckets
+                    [ aside [ class "search-sidebar" ] searchBuckets
                     , viewNoResults categoryName model.activeOptionSource model.query model.channel
-                    ]
-
-            else if not (List.isEmpty buckets) then
-                div [ class "search-results" ]
-                    [ ul [ class "search-sidebar" ] (searchBuckets ++ buckets)
-                    , div []
-                        (viewResults nixosChannels model result viewSuccess outMsg categoryName)
                     ]
 
             else
                 div [ class "search-results" ]
-                    [ ul [ class "search-sidebar" ] searchBuckets
+                    [ aside [ class "search-sidebar" ] (searchBuckets ++ buckets)
                     , div []
                         (viewResults nixosChannels model result viewSuccess outMsg categoryName)
                     ]
@@ -1148,49 +1137,62 @@ closeButton =
     span [] []
 
 
+type BucketInputType
+    = CheckboxInput
+    | RadioInput
+
+
 viewBucket :
-    String
+    BucketInputType
+    -> String
     -> List AggregationsBucketItem
     -> (String -> a)
     -> List String
     -> List (Html a)
     -> List (Html a)
-viewBucket title buckets searchMsgFor selectedBucket sets =
+viewBucket inputType title buckets searchMsgFor selectedBucket sets =
     List.append
         sets
         (if List.isEmpty buckets then
             []
 
          else
-            [ li []
-                [ ul []
-                    (List.append
-                        [ li [ class "header" ] [ text title ] ]
-                        (List.map
-                            (\bucket ->
-                                li []
-                                    [ a
-                                        [ href "#"
-                                        , onClick <| searchMsgFor bucket.key
-                                        , classList
-                                            [ ( "selected"
-                                              , List.member bucket.key selectedBucket
-                                              )
-                                            ]
-                                        ]
-                                        [ span [] [ text bucket.key ]
-                                        , if List.member bucket.key selectedBucket then
-                                            closeButton
+            [ fieldset [ class "search-bucket" ]
+                (legend [ class "header" ] [ text title ]
+                    :: List.map
+                        (\bucket ->
+                            let
+                                isSelected =
+                                    List.member bucket.key selectedBucket
 
-                                          else
-                                            span [] [ span [ class "badge" ] [ text <| String.fromInt bucket.doc_count ] ]
-                                        ]
+                                inputTypeName =
+                                    case inputType of
+                                        CheckboxInput ->
+                                            "checkbox"
+
+                                        RadioInput ->
+                                            "radio"
+                            in
+                            label
+                                [ classList [ ( "selected", isSelected ) ]
+                                ]
+                                [ span [] [ text bucket.key ]
+                                , if isSelected || bucket.doc_count <= 0 then
+                                    closeButton
+
+                                  else
+                                    span [] [ span [ class "badge" ] [ text <| String.fromInt bucket.doc_count ] ]
+                                , input
+                                    [ type_ inputTypeName
+                                    , name title
+                                    , checked isSelected
+                                    , onClick <| searchMsgFor bucket.key
                                     ]
-                            )
-                            buckets
+                                    []
+                                ]
                         )
-                    )
-                ]
+                        buckets
+                )
             ]
         )
 

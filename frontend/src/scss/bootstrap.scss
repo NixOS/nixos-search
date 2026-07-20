@@ -350,8 +350,6 @@ input[type=submit].btn::-moz-focus-inner {
 .alert {
   background-color:#fcf8e3;
   border:1px solid #fbeed5;
-  -webkit-border-radius:4px;
-  -moz-border-radius:4px;
   border-radius:4px;
   margin-bottom:20px;
   padding:8px 35px 8px 14px;
@@ -408,69 +406,29 @@ input[type=submit].btn::-moz-focus-inner {
   display:table;
   line-height:0
 }
-
 .nav-tabs:after {
   clear:both
 }
-
 .nav-tabs>li {
-  float:left
-}
-
-.nav-tabs>li>a {
-  line-height:14px;
-  margin-right:2px;
-  padding-left:12px;
-  padding-right:12px
-}
-.nav-tabs {
-  border-bottom:1px solid #ddd
-}
-.nav-tabs>li {
+  float:left;
   margin-bottom:-1px
 }
 .nav-tabs>li>a {
   border:1px solid transparent;
-  -webkit-border-radius:4px 4px 0 0;
-  -moz-border-radius:4px 4px 0 0;
   border-radius:4px 4px 0 0;
   line-height:20px;
-  padding-bottom:8px;
-  padding-top:8px
-}
-.nav-tabs>li>a:focus,
-.nav-tabs>li>a:hover {
-  border-color:#eee #eee #ddd
-}
-.nav-tabs>.active>a,
-.nav-tabs>.active>a:focus,
-.nav-tabs>.active>a:hover {
-  background-color:#fff;
-  border:1px solid;
-  border-color:#ddd #ddd transparent;
-  color:#555;
-  cursor:default
+  padding:8px 12px
 }
 .tab-content {
   overflow:auto
 }
-
 .tab-content>.tab-pane {
   display:none
 }
-
 .tab-content>.active {
   display:block
 }
-.nav>.disabled>a {
-  color:#999
-}
-.nav>.disabled>a:focus,
-.nav>.disabled>a:hover {
-  background-color:transparent;
-  cursor:default;
-  text-decoration:none
-}
+
 .pager {
   list-style:none;
   margin:20px 0;
@@ -492,8 +450,6 @@ input[type=submit].btn::-moz-focus-inner {
 .pager li>span {
   background-color:#fff;
   border:1px solid #ddd;
-  -webkit-border-radius:15px;
-  -moz-border-radius:15px;
   border-radius:15px;
   display:inline-block;
   padding:5px 14px
@@ -525,11 +481,7 @@ input[type=submit].btn::-moz-focus-inner {
   padding:2px 4px;
   text-shadow:0 -1px 0 rgba(0,0,0,.25);
   vertical-align:baseline;
-  white-space:nowrap
-}
-.badge {
-  -webkit-border-radius:9px;
-  -moz-border-radius:9px;
+  white-space:nowrap;
   border-radius:9px;
   padding-left:9px;
   padding-right:9px
@@ -547,46 +499,6 @@ a.badge:hover {
 .btn .badge {
   position:relative;
   top:-1px
-}
-@-webkit-keyframes progress-bar-stripes {
-  0% {
-    background-position:40px 0
-  }
-  to {
-    background-position:0 0
-  }
-}
-@-moz-keyframes progress-bar-stripes {
-  0% {
-    background-position:40px 0
-  }
-  to {
-    background-position:0 0
-  }
-}
-@-ms-keyframes progress-bar-stripes {
-  0% {
-    background-position:40px 0
-  }
-  to {
-    background-position:0 0
-  }
-}
-@-o-keyframes progress-bar-stripes {
-  0% {
-    background-position:0 0
-  }
-  to {
-    background-position:40px 0
-  }
-}
-@keyframes progress-bar-stripes {
-  0% {
-    background-position:40px 0
-  }
-  to {
-    background-position:0 0
-  }
 }
 .pull-right {
   float:right
