@@ -297,8 +297,25 @@ searchFields positiveWords mainFields fields =
                     ]
               )
             ]
+
+        fuzzyMatch : List ( String, Json.Encode.Value )
+        fuzzyMatch =
+            [ ( "multi_match"
+              , Json.Encode.object
+                    [ ( "type", Json.Encode.string "best_fields" )
+                    , ( "query", Json.Encode.string (String.join " " positiveWords) )
+                    , ( "fuzziness", Json.Encode.string "AUTO" )
+                    , ( "prefix_length", Json.Encode.int 1 )
+                    , ( "_name", Json.Encode.string <| "fuzzy_" ++ String.join "_" positiveWords )
+                    , ( "fields"
+                      , Json.Encode.list Json.Encode.string
+                            (List.map (\( field, score ) -> field ++ "^" ++ String.fromFloat (score * 0.5)) fields)
+                      )
+                    ]
+              )
+            ]
     in
-    multiMatch :: List.concatMap (\mf -> List.map (toWildcardQuery mf) queryWordsWildCard) mainFields
+    multiMatch :: fuzzyMatch :: List.concatMap (\mf -> List.map (toWildcardQuery mf) queryWordsWildCard) mainFields
 
 
 shouldClauses :
