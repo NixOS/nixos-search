@@ -12,7 +12,7 @@ pub use nixpkgs_info::{
     get_darwin_options, get_home_manager_options, get_nixpkgs_info, get_nixpkgs_options,
     get_nixpkgs_package_services, get_nixpkgs_services,
 };
-pub use repology::get_repology_repo_counts;
+pub use repology::{get_repology_repo_counts, load_repology_repo_counts};
 
 use anyhow::{Context, Result};
 use command_run::{Command, LogTo};

@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::thread::sleep;
 use std::time::Duration;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use log::{info, warn};
 use reqwest::StatusCode;
 use reqwest::header::{HeaderMap, RETRY_AFTER};
@@ -55,6 +55,15 @@ pub fn get_repology_repo_counts() -> Result<HashMap<String, u64>> {
 
     info!("Repology counts cover {} attributes", counts.len());
     Ok(counts)
+}
+
+/// Load counts previously produced by `get_repology_repo_counts` (a JSON object
+/// mapping srcname -> repository count).
+pub fn load_repology_repo_counts(path: &std::path::Path) -> Result<HashMap<String, u64>> {
+    let bytes = std::fs::read(path)
+        .with_context(|| format!("Failed to read Repology counts file {}", path.display()))?;
+    serde_json::from_slice(&bytes)
+        .with_context(|| format!("Failed to parse Repology counts file {}", path.display()))
 }
 
 /// Maximum fetch attempts per page before giving up. When exhausted, the error
@@ -234,6 +243,23 @@ mod tests {
         assert_eq!(counts.get("_7zz"), Some(&4));
         assert_eq!(counts.get("_7zz-rar"), Some(&4));
         assert_eq!(counts.len(), 2);
+    }
+
+    #[test]
+    fn test_load_repology_repo_counts() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("repology-counts.json");
+        std::fs::write(&path, r#"{"_7zz":4,"firefox":150}"#).unwrap();
+
+        let counts = load_repology_repo_counts(&path).unwrap();
+        assert_eq!(counts.get("_7zz"), Some(&4));
+        assert_eq!(counts.get("firefox"), Some(&150));
+        assert_eq!(counts.len(), 2);
+
+        // A missing file is an error, not a panic; the caller downgrades it to
+        // an empty signal.
+        let missing = dir.path().join("does-not-exist.json");
+        assert!(load_repology_repo_counts(&missing).is_err());
     }
 
     #[test]

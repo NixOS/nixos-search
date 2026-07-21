@@ -55,9 +55,10 @@ pub fn process_nixpkgs(
     kind: &Kind,
     attribute: &Option<String>,
     packages_json_url: &Option<String>,
+    repology_counts_file: &Option<PathBuf>,
 ) -> Result<Vec<Export>, anyhow::Error> {
     let drvs = if matches!(kind, Kind::All | Kind::Package) {
-        commands::get_nixpkgs_info(nixpkgs, attribute, packages_json_url)?
+        commands::get_nixpkgs_info(nixpkgs, attribute, packages_json_url, repology_counts_file)?
     } else {
         Vec::new()
     };
