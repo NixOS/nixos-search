@@ -12,7 +12,6 @@ module Page.Packages exposing
     , ResultPackageTeam
     , decodeResultAggregations
     , decodeResultItemSource
-    , encodeRequestBody
     , init
     , makeRequest
     , makeRequestBody
@@ -70,6 +69,7 @@ import Search
         , NixOSChannel
         , viewBucket
         )
+import Search.Query
 import Utils
 
 
@@ -242,16 +242,6 @@ init options preferStatic searchArgs defaultNixOSChannel nixosChannels includeCh
     ( finalModel
     , Cmd.map SearchMsg newCmd
     )
-
-
-platforms : List String
-platforms =
-    [ "x86_64-linux"
-    , "aarch64-linux"
-    , "i686-linux"
-    , "x86_64-darwin"
-    , "aarch64-darwin"
-    ]
 
 
 
@@ -1215,79 +1205,17 @@ encodeRequestBody query from size maybeBuckets sort =
     let
         currentBuckets =
             initBuckets maybeBuckets
-
-        aggregations =
-            [ ( "package_attr_set", currentBuckets.packageSets )
-            , ( "package_license_set", currentBuckets.licenses )
-            , ( "package_maintainers_set", currentBuckets.maintainers )
-            , ( "package_teams_set", currentBuckets.teams )
-            , ( "package_platforms", currentBuckets.platforms )
-            ]
-
-        filterByBucket field value =
-            [ ( "term"
-              , Json.Encode.object
-                    [ ( field
-                      , Json.Encode.object
-                            [ ( "value", Json.Encode.string value )
-                            , ( "_name", Json.Encode.string <| "filter_bucket_" ++ field )
-                            ]
-                      )
-                    ]
-              )
-            ]
-
-        filterByBuckets =
-            [ ( "bool"
-              , Json.Encode.object
-                    [ ( "must"
-                      , Json.Encode.list Json.Encode.object
-                            (List.map
-                                (\( aggregation, buckets ) ->
-                                    [ ( "bool"
-                                      , Json.Encode.object
-                                            [ ( "should"
-                                              , Json.Encode.list Json.Encode.object <|
-                                                    List.map
-                                                        (filterByBucket aggregation)
-                                                        buckets
-                                              )
-                                            ]
-                                      )
-                                    ]
-                                )
-                                aggregations
-                            )
-                      )
-                    ]
-              )
-            ]
     in
-    Search.encodeRequestBody
-        (String.trim query)
+    Search.Query.packagesBody query
         from
         size
         sort
-        [ "package" ]
-        "package_attr_name"
-        [ "package_pversion" ]
-        [ { field = "package_attr_set", size = 20, include = Nothing }
-        , { field = "package_license_set", size = 20, include = Nothing }
-        , { field = "package_maintainers_set", size = 20, include = Nothing }
-        , { field = "package_teams_set", size = 20, include = Nothing }
-        , { field = "package_platforms", size = 20, include = Just platforms }
+        [ ( "package_attr_set", currentBuckets.packageSets )
+        , ( "package_license_set", currentBuckets.licenses )
+        , ( "package_maintainers_set", currentBuckets.maintainers )
+        , ( "package_teams_set", currentBuckets.teams )
+        , ( "package_platforms", currentBuckets.platforms )
         ]
-        filterByBuckets
-        [ "package_attr_name" ]
-        [ ( "package_attr_name", 9.0 )
-        , ( "package_programs", 9.0 )
-        , ( "package_pname", 6.0 )
-        , ( "package_description", 1.3 )
-        , ( "package_longDescription", 1.0 )
-        , ( "flake_name", 0.5 )
-        ]
-        [ "package_description^3", "package_longDescription^1" ]
-        (Just "package_attr_name")
 
 
 makeRequestBody : String -> Int -> Int -> Maybe String -> Search.Sort -> Body
@@ -1417,7 +1345,7 @@ filterPlatforms =
         flip function argB argA =
             function argA argB
     in
-    List.filter (flip List.member platforms)
+    List.filter (flip List.member Search.Query.platforms)
 
 
 decodeHomepage : Json.Decode.Decoder (List String)

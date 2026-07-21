@@ -11,10 +11,9 @@ Used for benchmarking
 -}
 
 import Json.Encode
-import Page.Options
-import Page.Packages
 import Platform
 import Search
+import Search.Query
 
 
 port sendQuery : ({ query : String, k : Int } -> msg) -> Sub msg
@@ -36,10 +35,10 @@ emit : { query : String, k : Int } -> Cmd msg
 emit { query, k } =
     let
         pkgBody =
-            Page.Packages.encodeRequestBody query 0 k Nothing Search.Relevance
+            Search.Query.packagesBody query 0 k Search.Relevance []
 
         optBody =
-            Page.Options.encodeRequestBody [ "option" ] query 0 k Search.Relevance
+            Search.Query.optionsBody [ "option" ] query 0 k Search.Relevance
     in
     gotBodies
         { packages = Json.Encode.encode 0 pkgBody

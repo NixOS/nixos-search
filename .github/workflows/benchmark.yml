@@ -3,9 +3,7 @@ name: "Frontend: Relevance benchmark"
 on:
   pull_request:
     paths:
-      - "frontend/src/Search.elm"
-      - "frontend/src/Page/Packages.elm"
-      - "frontend/src/Page/Options.elm"
+      - "frontend/src/Search/Query.elm"
       - "frontend/src/Benchmark.elm"
       - "frontend/benchmark/**"
       - ".github/workflows/benchmark.yml"

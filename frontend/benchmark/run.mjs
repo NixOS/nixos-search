@@ -79,7 +79,10 @@ async function esSearch(bodyJson) {
         try {
             const resp = await fetch(url, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: AUTH },
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: AUTH,
+                },
                 body: bodyJson,
             });
             if (resp.ok) return resp.json();

@@ -6,7 +6,6 @@ module Page.Options exposing
     , ResultItemSource
     , decodeResultAggregations
     , decodeResultItemSource
-    , encodeRequestBody
     , init
     , makeRequest
     , makeRequestBody
@@ -53,7 +52,6 @@ import Html.Events
 import Http exposing (Body)
 import Json.Decode
 import Json.Decode.Pipeline
-import Json.Encode
 import List.Extra
 import Ports
 import RemoteData
@@ -64,6 +62,7 @@ import Search
         , NixOSChannel
         , decodeResolvedFlake
         )
+import Search.Query
 import SyntaxHighlight exposing (elm, oneDark, toBlockHtml, useTheme)
 import Task
 import Url
@@ -822,33 +821,9 @@ makeRequest options nixosChannels _ channel query from size _ sort activeSource 
         |> Cmd.map SearchMsg
 
 
-encodeRequestBody : List String -> String -> Int -> Int -> Search.Sort -> Json.Encode.Value
-encodeRequestBody types query from size sort =
-    Search.encodeRequestBody
-        (String.trim query)
-        from
-        size
-        sort
-        types
-        "option_name"
-        []
-        []
-        []
-        [ "option_name", "option_name_query" ]
-        [ ( "option_name", 6.0 )
-        , ( "option_name_query", 6.0 )
-        , ( "option_description", 1.0 )
-        , ( "flake_name", 0.5 )
-        , ( "service_package", 3.0 )
-        , ( "service_packages", 3.0 )
-        ]
-        [ "option_description^3" ]
-        Nothing
-
-
 makeRequestBody : List String -> String -> Int -> Int -> Search.Sort -> Body
 makeRequestBody types query from size sort =
-    Http.jsonBody (encodeRequestBody types query from size sort)
+    Http.jsonBody (Search.Query.optionsBody types query from size sort)
 
 
 
