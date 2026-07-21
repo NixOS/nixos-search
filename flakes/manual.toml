@@ -596,6 +596,11 @@ repo = "zed"
 
 [[sources]]
 type = "gitlab"
+owner = "nobodyinperson"
+repo = "yannix"
+
+[[sources]]
+type = "gitlab"
 owner = "pi-lar"
 repo = "neuropil"
 
