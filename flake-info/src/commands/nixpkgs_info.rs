@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 
 use command_run::{Command, LogTo};
 
@@ -18,6 +19,7 @@ pub fn get_nixpkgs_info(
     nixpkgs: &Source,
     attribute: &Option<String>,
     packages_json_url: &Option<String>,
+    repology_counts_file: &Option<PathBuf>,
 ) -> Result<Vec<NixpkgsEntry>> {
     let nixpkgs = match nixpkgs {
         Source::Nixpkgs(nixpkgs) => nixpkgs,
@@ -58,6 +60,17 @@ pub fn get_nixpkgs_info(
     let mut programs = get_nixpkgs_programs(nixpkgs)?;
     let mut package_services =
         get_nixpkgs_package_services(&Source::Nixpkgs(nixpkgs.clone())).unwrap_or_default();
+    // Skip the slow eval when only importing a single attribute.
+    let dep_counts = if attribute.is_none() {
+        super::get_nixpkgs_dep_counts(nixpkgs)?
+    } else {
+        HashMap::new()
+    };
+    let repology_counts = if attribute.is_some() {
+        HashMap::new()
+    } else {
+        resolve_repology_counts(repology_counts_file)
+    };
 
     Ok(attr_set
         .into_iter()
@@ -68,14 +81,48 @@ pub fn get_nixpkgs_info(
                 .into_iter()
                 .collect();
             let modular_services = package_services.remove(&attribute).unwrap_or_default();
+            let dep_count = dep_counts.get(&attribute).copied();
+            let repology_repos = repology_counts.get(&attribute).copied();
             NixpkgsEntry::Derivation {
                 attribute,
                 package,
                 programs,
                 modular_services,
+                dep_count,
+                repology_repos,
             }
         })
         .collect())
+}
+
+/// Repology counts for a full import: from a pre-fetched file when provided
+/// (missing/unreadable -> warn + empty, per the daily-cache design), otherwise
+/// a live best-effort crawl (local/dev/manual and archive/group paths).
+fn resolve_repology_counts(file: &Option<PathBuf>) -> HashMap<String, u64> {
+    match file {
+        Some(path) => match super::load_repology_repo_counts(path) {
+            Ok(counts) => {
+                log::info!(
+                    "Loaded {} Repology counts from {}",
+                    counts.len(),
+                    path.display()
+                );
+                counts
+            }
+            Err(err) => {
+                log::warn!(
+                    "Skipping Repology counts from {}: {:#}",
+                    path.display(),
+                    err
+                );
+                HashMap::new()
+            }
+        },
+        None => super::get_repology_repo_counts().unwrap_or_else(|err| {
+            log::warn!("Skipping Repology repository counts: {:#}", err);
+            HashMap::new()
+        }),
+    }
 }
 
 pub fn get_nixpkgs_package_services(nixpkgs: &Source) -> Result<HashMap<String, Vec<String>>> {

@@ -60,13 +60,29 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
 
+      - name: Compute cache date
+        id: date
+        shell: sh
+        run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore Repology counts from cache
+        uses: actions/cache/restore@v4
+        with:
+          path: repology-counts.json
+          # Falls back to the newest available daily cache; a total miss (e.g. a
+          # branch outside the default-branch cache scope) leaves the file
+          # absent, and the importer warns and drops the Repology signal.
+          key: repology-counts-v1-${{ steps.date.outputs.date }}
+          restore-keys: |
+            repology-counts-v1-
+
       - name: Import ${{ matrix.channel }} channel
         if: github.repository_owner == 'NixOS'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: sh
         run: |
-          nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(nix eval --raw --file ./version.nix import) nixpkgs ${{ matrix.channel }}
+          nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(nix eval --raw --file ./version.nix import) nixpkgs ${{ matrix.channel }} --repology-counts-file repology-counts.json
 
       - name: Warmup ${{ matrix.channel }} channel
         if: github.repository_owner == 'NixOS'

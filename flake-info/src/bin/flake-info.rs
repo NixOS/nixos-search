@@ -70,6 +70,14 @@ enum Command {
                     Useful for testing a fix against a custom-built file from a nixpkgs branch"
         )]
         packages_json_url: Option<String>,
+
+        #[structopt(
+            long = "repology-counts-file",
+            help = "Read Repology repository counts (JSON object srcname->count) from this \
+                    file instead of crawling repology.org. A missing/unreadable file drops \
+                    the signal."
+        )]
+        repology_counts_file: Option<PathBuf>,
     },
 
     #[structopt(about = "Import nixpkgs channel from archive or local git path")]
@@ -110,6 +118,12 @@ enum Command {
             help = "Run nix garbage collection between every group member evaluation"
         )]
         with_gc: bool,
+    },
+
+    #[structopt(about = "Fetch Repology repository counts and write them as JSON")]
+    RepologyCounts {
+        #[structopt(short, long, help = "Write JSON to this file instead of stdout")]
+        output: Option<PathBuf>,
     },
 }
 
@@ -189,6 +203,23 @@ async fn main() -> Result<()> {
 
     let args = Args::from_args();
 
+    // The producer subcommand only crawls Repology and writes JSON; it must be
+    // handled before the --push/--json assertion, which does not apply to it.
+    if let Command::RepologyCounts { output } = &args.command {
+        // `get_repology_repo_counts` uses `reqwest::blocking`, whose internal
+        // runtime must not be dropped on the `#[tokio::main]` block_on thread.
+        // Run it on a blocking-permitted thread instead.
+        let counts = tokio::task::spawn_blocking(flake_info::commands::get_repology_repo_counts)
+            .await
+            .context("Repology counts task panicked")??;
+        let json = serde_json::to_string(&counts)?;
+        match output {
+            Some(path) => std::fs::write(path, json)?,
+            None => println!("{}", json),
+        }
+        return Ok(());
+    }
+
     anyhow::ensure!(
         args.elastic.enable || args.elastic.json,
         "at least one of --push or --json must be specified"
@@ -240,6 +271,10 @@ async fn run_command(
     flake_info::commands::check_nix_version(env!("MIN_NIX_VERSION"))?;
 
     match command {
+        // Handled in main() before the runtime setup below.
+        Command::RepologyCounts { .. } => {
+            unreachable!("RepologyCounts is handled before run_command")
+        }
         Command::Flake { flake, temp_store } => {
             let source = if flake.starts_with("github:") {
                 let mut s = flake.split(":").skip(1).next().unwrap().split("/");
@@ -268,6 +303,7 @@ async fn run_command(
             channel,
             attribute,
             packages_json_url,
+            repology_counts_file,
         } => {
             let nixpkgs = Source::nixpkgs(channel)
                 .await
@@ -293,6 +329,7 @@ async fn run_command(
                         &kind,
                         &attribute,
                         &packages_json_url,
+                        &repology_counts_file,
                     )
                     .map_err(FlakeInfoError::Nixpkgs)
                 }),
@@ -326,6 +363,7 @@ async fn run_command(
                         &kind,
                         &attribute,
                         &None,
+                        &None,
                     )
                     .map_err(FlakeInfoError::Nixpkgs)
                 }),
@@ -350,7 +388,7 @@ async fn run_command(
                 .iter()
                 .map(|source| match source {
                     Source::Nixpkgs(nixpkgs) => {
-                        flake_info::process_nixpkgs(source, &kind, &None, &None)
+                        flake_info::process_nixpkgs(source, &kind, &None, &None, &None)
                             .with_context(|| {
                                 format!(
                                     "While processing nixpkgs archive {}",

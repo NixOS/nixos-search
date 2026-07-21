@@ -26,6 +26,7 @@ sha2 = "0.9"
 pandoc = "0.8.10"
 semver = "1.0"
 sqlite = "0.30"
+tempfile = "3"
 
 elasticsearch = {git = "https://github.com/elastic/elasticsearch-rs", features = ["rustls-tls"], optional = true}
 
