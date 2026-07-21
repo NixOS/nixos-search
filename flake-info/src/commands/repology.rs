@@ -2,8 +2,10 @@ use std::collections::{HashMap, HashSet};
 use std::thread::sleep;
 use std::time::Duration;
 
-use anyhow::{Context, Result};
-use log::info;
+use anyhow::Result;
+use log::{info, warn};
+use reqwest::StatusCode;
+use reqwest::header::{HeaderMap, RETRY_AFTER};
 use serde::Deserialize;
 
 const API_BASE: &str = "https://repology.org/api/v1/projects/";
@@ -35,13 +37,7 @@ pub fn get_repology_repo_counts() -> Result<HashMap<String, u64>> {
     let mut cursor = String::new();
     loop {
         let url = format!("{}{}?inrepo={}", API_BASE, cursor, REPOLOGY_REPO);
-        let page: RepologyPage = client
-            .get(&url)
-            .send()
-            .and_then(reqwest::blocking::Response::error_for_status)
-            .with_context(|| format!("Failed to fetch {}", url))?
-            .json()
-            .with_context(|| format!("Could not parse Repology response from {}", url))?;
+        let page = fetch_page(&client, &url)?;
 
         // The last project of a page is repeated as the first of the next,
         // so a page with a single project is the final one.
@@ -59,6 +55,130 @@ pub fn get_repology_repo_counts() -> Result<HashMap<String, u64>> {
 
     info!("Repology counts cover {} attributes", counts.len());
     Ok(counts)
+}
+
+/// Maximum fetch attempts per page before giving up. When exhausted, the error
+/// propagates and the whole Repology signal is dropped (best-effort).
+const MAX_ATTEMPTS: u32 = 5;
+/// Base unit for exponential backoff between retries.
+const RETRY_BASE_DELAY: Duration = Duration::from_secs(1);
+/// Ceiling on any single backoff wait, including a `Retry-After` value.
+const MAX_RETRY_DELAY: Duration = Duration::from_secs(60);
+
+/// A failed page fetch, tagged with whether a retry might help and any
+/// server-provided delay (from a 429 `Retry-After` header).
+struct FetchError {
+    error: anyhow::Error,
+    retryable: bool,
+    retry_after: Option<Duration>,
+}
+
+/// Fetch and decode one projects page, retrying transient failures (network
+/// errors, HTTP 429, and 5xx) with exponential backoff plus jitter. A 429
+/// `Retry-After` value, when present, replaces the computed delay. Permanent
+/// failures (non-429 4xx) and exhausted retries return `Err`, which drops the
+/// entire Repology signal upstream instead of failing the import.
+fn fetch_page(client: &reqwest::blocking::Client, url: &str) -> Result<RepologyPage> {
+    let mut attempt = 1;
+    loop {
+        match try_fetch_page(client, url) {
+            Ok(page) => return Ok(page),
+            Err(failure) => {
+                if attempt >= MAX_ATTEMPTS || !failure.retryable {
+                    return Err(failure.error);
+                }
+                let delay = failure
+                    .retry_after
+                    .unwrap_or_else(|| backoff_delay(attempt) + jitter())
+                    .min(MAX_RETRY_DELAY);
+                warn!(
+                    "Repology fetch attempt {}/{} for {} failed ({:#}); retrying in {:?}",
+                    attempt, MAX_ATTEMPTS, url, failure.error, delay
+                );
+                sleep(delay);
+                attempt += 1;
+            }
+        }
+    }
+}
+
+/// Perform a single fetch attempt, classifying any failure for the retry loop.
+fn try_fetch_page(
+    client: &reqwest::blocking::Client,
+    url: &str,
+) -> std::result::Result<RepologyPage, FetchError> {
+    // Connection resets, timeouts, and DNS blips carry no status and are transient.
+    let response = match client.get(url).send() {
+        Ok(response) => response,
+        Err(error) => {
+            return Err(FetchError {
+                error: anyhow::Error::new(error).context(format!("Request to {} failed", url)),
+                retryable: true,
+                retry_after: None,
+            });
+        }
+    };
+
+    let status = response.status();
+    if status.is_success() {
+        // A truncated body from a dropped connection surfaces as a decode error,
+        // so treat parse failures as transient as well.
+        return response.json::<RepologyPage>().map_err(|error| FetchError {
+            error: anyhow::Error::new(error)
+                .context(format!("Could not parse Repology response from {}", url)),
+            retryable: true,
+            retry_after: None,
+        });
+    }
+
+    let retry_after = if status == StatusCode::TOO_MANY_REQUESTS {
+        parse_retry_after(response.headers())
+    } else {
+        None
+    };
+    Err(FetchError {
+        error: anyhow::anyhow!("{} returned HTTP {}", url, status),
+        retryable: is_retryable_status(status),
+        retry_after,
+    })
+}
+
+/// An unsuccessful status is worth retrying only for rate limiting (429) and
+/// server errors (5xx); other 4xx responses will not fix themselves.
+fn is_retryable_status(status: StatusCode) -> bool {
+    status == StatusCode::TOO_MANY_REQUESTS || status.is_server_error()
+}
+
+/// Parse a `Retry-After` header given as an integer number of seconds. The
+/// HTTP-date form is ignored, falling back to exponential backoff.
+fn parse_retry_after(headers: &HeaderMap) -> Option<Duration> {
+    let seconds: u64 = headers
+        .get(RETRY_AFTER)?
+        .to_str()
+        .ok()?
+        .trim()
+        .parse()
+        .ok()?;
+    Some(Duration::from_secs(seconds))
+}
+
+/// Deterministic exponential backoff for a 1-based attempt number, capped at
+/// `MAX_RETRY_DELAY`. Jitter is added separately at the call site.
+fn backoff_delay(attempt: u32) -> Duration {
+    let factor = 1u64
+        .checked_shl(attempt.saturating_sub(1))
+        .unwrap_or(u64::MAX);
+    Duration::from_secs(RETRY_BASE_DELAY.as_secs().saturating_mul(factor)).min(MAX_RETRY_DELAY)
+}
+
+/// Up to one second of clock-seeded jitter, avoiding a dependency purely for
+/// backoff randomisation. Cryptographic quality is unnecessary here.
+fn jitter() -> Duration {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.subsec_nanos())
+        .unwrap_or(0);
+    Duration::from_millis(u64::from(nanos % 1_000))
 }
 
 /// Fold one API page into the attribute counts. A project's score is the
@@ -114,5 +234,44 @@ mod tests {
         assert_eq!(counts.get("_7zz"), Some(&4));
         assert_eq!(counts.get("_7zz-rar"), Some(&4));
         assert_eq!(counts.len(), 2);
+    }
+
+    #[test]
+    fn test_is_retryable_status() {
+        assert!(is_retryable_status(StatusCode::TOO_MANY_REQUESTS));
+        assert!(is_retryable_status(StatusCode::INTERNAL_SERVER_ERROR));
+        assert!(is_retryable_status(StatusCode::BAD_GATEWAY));
+        assert!(!is_retryable_status(StatusCode::BAD_REQUEST));
+        assert!(!is_retryable_status(StatusCode::NOT_FOUND));
+        assert!(!is_retryable_status(StatusCode::FORBIDDEN));
+    }
+
+    #[test]
+    fn test_parse_retry_after() {
+        use reqwest::header::HeaderValue;
+
+        let mut headers = HeaderMap::new();
+        assert_eq!(parse_retry_after(&headers), None);
+
+        headers.insert(RETRY_AFTER, HeaderValue::from_static("30"));
+        assert_eq!(parse_retry_after(&headers), Some(Duration::from_secs(30)));
+
+        // The HTTP-date form is not parsed and falls back to backoff.
+        headers.insert(
+            RETRY_AFTER,
+            HeaderValue::from_static("Wed, 21 Oct 2015 07:28:00 GMT"),
+        );
+        assert_eq!(parse_retry_after(&headers), None);
+    }
+
+    #[test]
+    fn test_backoff_delay_grows_and_caps() {
+        assert_eq!(backoff_delay(1), Duration::from_secs(1));
+        assert_eq!(backoff_delay(2), Duration::from_secs(2));
+        assert_eq!(backoff_delay(3), Duration::from_secs(4));
+        assert_eq!(backoff_delay(4), Duration::from_secs(8));
+        // Large attempts saturate at the cap rather than overflowing the shift.
+        assert_eq!(backoff_delay(64), MAX_RETRY_DELAY);
+        assert_eq!(backoff_delay(1000), MAX_RETRY_DELAY);
     }
 }
