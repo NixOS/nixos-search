@@ -1,0 +1,63 @@
+name: "Daily Repology counts refresh"
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Daily, offset from the 2-hourly imports. Repology refreshes its
+    # `nix_unstable` data roughly daily, so this is a generous ceiling.
+    - cron: "0 3 * * *"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  update-repology-counts:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checking out the repository
+        uses: actions/checkout@v7.0.1
+
+      - name: Setup
+        uses: ./.github/actions/common-setup
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+
+      - name: Compute cache date
+        id: date
+        if: github.repository_owner == 'NixOS'
+        shell: sh
+        run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch Repology counts
+        if: github.repository_owner == 'NixOS'
+        shell: sh
+        run: |
+          nix run --accept-flake-config .#flake-info -- repology-counts --output repology-counts.json
+
+      - name: Save Repology counts to cache
+        if: github.repository_owner == 'NixOS'
+        uses: actions/cache/save@v6
+        with:
+          path: repology-counts.json
+          # Actions cache keys are immutable, so a rotating date lets each daily
+          # run publish fresh data. The `v1` prefix allows format bumps.
+          key: repology-counts-v1-${{ steps.date.outputs.date }}
+
+      - name: Create issue if failed
+        if: failure() && github.repository_owner == 'NixOS'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        shell: sh
+        run: |
+          TITLE="Failing daily Repology counts refresh"
+
+          if [ "$(gh issue list --state open --search "in:title $TITLE" -L 1 --json id --jq length)" -eq 0 ]; then
+            gh issue create \
+              --title "$TITLE" \
+              --label "prio:blocker" \
+              --body "This issue was triggered by ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi

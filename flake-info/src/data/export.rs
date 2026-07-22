@@ -207,6 +207,10 @@ pub enum Derivation {
         package_homepage: Vec<String>,
         package_position: Option<String>,
         package_modular_services: Vec<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        package_dep_count: Option<u64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        package_repology_repos: Option<u64>,
     },
     #[serde(rename = "app")]
     App {
@@ -247,6 +251,16 @@ pub enum Derivation {
     },
     #[serde(rename = "home-manager-option")]
     HomeManagerOption {
+        option_source: Option<String>,
+        option_name: String,
+        option_description: Option<DocString>,
+        option_type: Option<String>,
+        option_default: Option<DocValue>,
+        option_example: Option<DocValue>,
+        option_flake: Option<ModulePath>,
+    },
+    #[serde(rename = "darwin-option")]
+    DarwinOption {
         option_source: Option<String>,
         option_name: String,
         option_description: Option<DocString>,
@@ -332,6 +346,8 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                     package_homepage: Vec::new(),
                     package_position: None,
                     package_modular_services: Vec::new(),
+                    package_dep_count: None,
+                    package_repology_repos: None,
                 }
             }
             import::FlakeEntry::App {
@@ -360,6 +376,8 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                 package,
                 programs,
                 modular_services,
+                dep_count,
+                repology_repos,
             } => {
                 let package_attr_set: Vec<_> = attribute.split(".").collect();
                 let package_attr_set: String = (if package_attr_set.len() > 1 {
@@ -452,7 +470,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     package_outputs: package.outputs.into_keys().collect(),
                     package_default_output: package.default_output,
                     package_programs: programs,
-                    package_mainProgram: package.meta.mainProgram,
+                    package_mainProgram: package.meta.main_program,
                     package_license,
                     package_license_set,
                     package_license_expression,
@@ -470,6 +488,8 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                         .map_or(Default::default(), OneOrMany::into_list),
                     package_position: position,
                     package_modular_services: modular_services,
+                    package_dep_count: dep_count,
+                    package_repology_repos: repology_repos,
                 }
             }
             import::NixpkgsEntry::Option(option) => option.try_into()?,
@@ -509,6 +529,24 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                 flake,
                 ..
             }) => Derivation::HomeManagerOption {
+                option_source: declarations.get(0).map(Clone::clone),
+                option_name: name,
+                option_description: description,
+                option_default: default,
+                option_example: example,
+                option_flake: flake,
+                option_type,
+            },
+            import::NixpkgsEntry::DarwinOption(NixOption {
+                declarations,
+                description,
+                name,
+                option_type,
+                default,
+                example,
+                flake,
+                ..
+            }) => Derivation::DarwinOption {
                 option_source: declarations.get(0).map(Clone::clone),
                 option_name: name,
                 option_description: description,

@@ -36,6 +36,11 @@ pkgs.rustPlatform.buildRustPackage rec {
     cp -rt "$out" assets
 
     wrapProgram $out/bin/flake-info \
-      --prefix PATH : ${pkgs.pandoc}/bin
+      --prefix PATH : ${
+        pkgs.lib.makeBinPath [
+          pkgs.pandoc
+          pkgs.nix-eval-jobs
+        ]
+      }
   '';
 }

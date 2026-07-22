@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checking out the repository
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v7.0.1
 
       - name: Setup
         uses: ./.github/actions/common-setup
@@ -33,6 +33,17 @@ jobs:
           nix -vL build .#frontend
           mkdir ./dist
           cp -RL ./result/* ./dist/
+
+      - name: Build autocomplete corpus
+        shell: sh
+        env:
+          AUTOCOMPLETE_OUT_DIR: ../dist/autocomplete
+        run: |
+          NIXOS_CHANNELS=$(cat $(nix build --no-link --print-out-paths .#nixosChannelsJson))
+          export NIXOS_CHANNELS
+          ELASTICSEARCH_MAPPING_SCHEMA_VERSION=$(nix eval --raw --impure --expr '(import ./version.nix).frontend')
+          export ELASTICSEARCH_MAPPING_SCHEMA_VERSION
+          npm --prefix frontend run build:autocomplete
 
       - name: Deploy to Netlify
         uses: nwtgck/actions-netlify@v4.0

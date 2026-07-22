@@ -15,7 +15,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   npmDeps = fetchNpmDeps {
     pname = "npm-deps-${finalAttrs.name}";
     inherit (finalAttrs) src;
-    hash = "sha256-VTuxcAVvynniB1/XXXFdiymegfYBoKwS4lFHJ3I1ltA=";
+    hash = "sha256-TNWedSteI3kwXHRpWek6nL9Rj9R2b252JceSnN5Jp5o=";
   };
 
   postConfigure = elmPackages.fetchElmDeps {
@@ -38,7 +38,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     npmHooks.npmInstallHook
   ];
 
-  npmBuildScript = "prod";
+  npmBuildScript = "build";
 
   installPhase = ''
     runHook preInstall

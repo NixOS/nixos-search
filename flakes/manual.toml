@@ -10,7 +10,15 @@ url = "git+https://codeberg.org/eicas/omeka-s-flake"
 
 [[sources]]
 type = "git"
+url = "git+https://codeberg.org/NMedvesky/nix-futo-notes?ref=main"
+
+[[sources]]
+type = "git"
 url = "git+https://codeberg.org/raboof/browserify?ref=nix"
+
+[[sources]]
+type = "git"
+url = "git+https://codeberg.org/raboof/mock-oauth2-server?ref=nix"
 
 [[sources]]
 type = "git"
@@ -51,6 +59,11 @@ repo = "L5P-Keyboard-RGB"
 type = "github"
 owner = "abathur"
 repo = "resholve"
+
+[[sources]]
+type = "github"
+owner = "acevif"
+repo = "swiftformat-nix"
 
 [[sources]]
 type = "github"
@@ -332,15 +345,11 @@ type = "github"
 owner = "nix-community"
 repo = "autofirma-nix"
 
-[[sources]]
-type = "github"
-owner = "nix-community"
-repo = "fenix"
-
-[[sources]]
-type = "github"
-owner = "nix-community"
-repo = "home-manager"
+# x86_64-darwin throws deprecated
+# [[sources]]
+# type = "github"
+# owner = "nix-community"
+# repo = "fenix"
 
 [[sources]]
 type = "github"
@@ -415,6 +424,11 @@ repo = "flake-utils"
 
 [[sources]]
 type = "github"
+owner = "numtide"
+repo = "llm-agents.nix"
+
+[[sources]]
+type = "github"
 owner = "PaddiM8"
 repo = "kalker"
 
@@ -442,6 +456,11 @@ repo = "agenix"
 type = "github"
 owner = "sincorchetes"
 repo = "nixos-flake-hardware-profiles"
+
+[[sources]]
+type = "github"
+owner = "skelettor"
+repo = "nix-openlinkhub"
 
 [[sources]]
 type = "github"
@@ -586,6 +605,11 @@ repo = "zed"
 
 [[sources]]
 type = "gitlab"
+owner = "nobodyinperson"
+repo = "yannix"
+
+[[sources]]
+type = "gitlab"
 owner = "pi-lar"
 repo = "neuropil"
 
@@ -598,6 +622,11 @@ repo = "nix-sandboxes"
 type = "gitlab"
 owner = "simple-nixos-mailserver"
 repo = "nixos-mailserver"
+
+[[sources]]
+type = "gitlab"
+owner = "yisraeldov"
+repo = "thinkorswim-flake"
 
 [[sources]]
 type = "sourcehut"

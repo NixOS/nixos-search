@@ -24,6 +24,10 @@ import Html
         , a
         , code
         , div
+        , fieldset
+        , input
+        , label
+        , legend
         , li
         , pre
         , span
@@ -33,10 +37,13 @@ import Html
         )
 import Html.Attributes
     exposing
-        ( class
+        ( checked
+        , class
         , classList
         , href
+        , name
         , target
+        , type_
         )
 import Html.Events
     exposing
@@ -55,6 +62,7 @@ import Search
         , NixOSChannel
         , decodeResolvedFlake
         )
+import Search.Query
 import SyntaxHighlight exposing (elm, oneDark, toBlockHtml, useTheme)
 import Task
 import Url
@@ -105,16 +113,21 @@ type alias AggregationsAll =
 
 
 init :
-    Route.SearchArgs
+    Search.Options
+    -> Bool
+    -> Route.SearchArgs
     -> String
     -> List NixOSChannel
     -> Bool
     -> Maybe Model
     -> ( Model, Cmd Msg )
-init searchArgs defaultNixOSChannel nixosChannels includeChannelInUrl model =
+init options preferStatic searchArgs defaultNixOSChannel nixosChannels includeChannelInUrl model =
     let
+        searchArgsForOptions =
+            { searchArgs | type_ = Just Route.OptionSearch }
+
         ( newModel, newCmd ) =
-            Search.init searchArgs defaultNixOSChannel nixosChannels model
+            Search.init options preferStatic searchArgsForOptions defaultNixOSChannel nixosChannels model
 
         finalModel =
             if includeChannelInUrl then
@@ -191,59 +204,60 @@ count stays visible until a fresh count for the new tab arrives.
 -}
 viewSourceTabs : OptionSource -> Dict String Int -> Html Msg
 viewSourceTabs activeSource sourceCounts =
-    li [ class "search-source-tabs" ]
-        [ ul [] <|
-            li [ class "header" ] [ text "Source" ]
-                :: List.map
-                    (\source ->
-                        viewSourceTab
-                            activeSource
-                            (Dict.get (Route.optionSourceId source) sourceCounts)
-                            source
-                    )
-                    Route.allOptionSources
-        ]
+    fieldset [ class "search-source-tabs search-bucket" ]
+        (legend [ class "header" ] [ text "Source" ]
+            :: List.map
+                (\source ->
+                    let
+                        isActive =
+                            source == activeSource
 
+                        id =
+                            Route.optionSourceId source
 
-viewSourceTab : OptionSource -> Maybe Int -> OptionSource -> Html Msg
-viewSourceTab activeSource count source =
-    let
-        isActive =
-            source == activeSource
+                        badge =
+                            case Dict.get id sourceCounts of
+                                Just n ->
+                                    [ span [ class "badge" ] [ text (formatCount n) ] ]
 
-        id =
-            Route.optionSourceId source
+                                Nothing ->
+                                    []
 
-        labelChildren =
-            text (Route.optionSourceLabel source)
-                :: (case source of
-                        Route.ModularServiceOptions ->
-                            [ Badge.view Badge.Experimental ]
+                        badgeLabel =
+                            case source of
+                                Route.ModularServiceOptions ->
+                                    [ Badge.view Badge.Experimental ]
 
-                        _ ->
-                            []
-                   )
+                                Route.HomeManagerOptionSource ->
+                                    [ Badge.view Badge.Community ]
 
-        badge =
-            case count of
-                Just n ->
-                    [ span [ class "badge" ] [ text (formatCount n) ] ]
+                                Route.DarwinOptionSource ->
+                                    [ Badge.view Badge.External ]
 
-                Nothing ->
-                    []
-    in
-    li
-        [ class ("search-source-" ++ id) ]
-        [ a
-            -- The sidebar's existing `&.selected` styling targets `a`,
-            -- not `li`, so the active-tab highlight class lives on the
-            -- anchor.
-            [ classList [ ( "selected", isActive ) ]
-            , href "#"
-            , Html.Events.onClick (SearchMsg (Search.SetActiveOptionSource source))
-            ]
-            (span [ class "source-label" ] labelChildren :: badge)
-        ]
+                                _ ->
+                                    []
+                    in
+                    label
+                        [ classList
+                            [ ( "search-source-tab", True )
+                            , ( "search-source-" ++ id, True )
+                            , ( "selected", isActive )
+                            ]
+                        ]
+                        (span [ class "source-label" ] (badgeLabel ++ [ text (Route.optionSourceLabel source) ])
+                            :: badge
+                            ++ [ input
+                                    [ type_ "radio"
+                                    , name "option-source"
+                                    , checked isActive
+                                    , Html.Events.onClick (SearchMsg (Search.SetActiveOptionSource source))
+                                    ]
+                                    []
+                               ]
+                        )
+                )
+                Route.allOptionSources
+        )
 
 
 {-| Compact rendering of a hit count for the tab badge: 1.2k, 23k, etc.
@@ -449,8 +463,7 @@ asHighlightPreCode value =
         ]
 
 
-{-| Render a "Usage" section showing how to use this option in the appropriate
-context, including `_class` to clarify which module system it belongs to.
+{-| Render a "Usage" section showing how to use this option.
 -}
 viewUsageSnippet : ResultItemSource -> List (Html Msg)
 viewUsageSnippet source =
@@ -497,7 +510,6 @@ viewUsageSnippet source =
                 ( Just pkg, Just mod_ ) ->
                     usage
                         ("system.services.<name> = {\n"
-                            ++ "  _class = \"service\";\n"
                             ++ "  imports = [ pkgs."
                             ++ pkg
                             ++ ".services."
@@ -514,7 +526,6 @@ viewUsageSnippet source =
             usage
                 ("# configuration.nix\n"
                     ++ "{\n"
-                    ++ "  _class = \"nixos\";\n"
                     ++ nestedOption "  "
                     ++ "}"
                 )
@@ -523,7 +534,14 @@ viewUsageSnippet source =
             usage
                 ("# home.nix\n"
                     ++ "{\n"
-                    ++ "  _class = \"homeManager\";\n"
+                    ++ nestedOption "  "
+                    ++ "}"
+                )
+
+        "darwin-option" ->
+            usage
+                ("# darwin-configuration.nix\n"
+                    ++ "{\n"
                     ++ nestedOption "  "
                     ++ "}"
                 )
@@ -539,23 +557,34 @@ findSource :
     -> List (Html a)
 findSource nixosChannels channel source =
     let
-        githubUrlPrefix branch =
-            "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/"
-
-        -- Home Manager options are imported from the `release-XX.YY` branch of
-        -- `nix-community/home-manager` matching the nixpkgs channel
-        -- (see `flake-info/src/commands/nixpkgs_info.rs`), or `master` for
-        -- `nixos-unstable`. Their `option_source` paths resolve against that
-        -- repo, not nixpkgs.
-        homeManagerBranch nixpkgsBranch =
+        stableBranch nixpkgsBranch prefixPattern =
             if nixpkgsBranch == "nixos-unstable" then
                 "master"
 
             else
-                "release-" ++ String.dropLeft (String.length "nixos-") nixpkgsBranch
+                let
+                    version =
+                        String.dropLeft (String.length "nixos-") nixpkgsBranch
+                in
+                prefixPattern ++ version
+
+        repoUrlPrefix owner repo branch =
+            "https://github.com/" ++ owner ++ "/" ++ repo ++ "/blob/" ++ branch ++ "/"
+
+        githubUrlPrefix branch =
+            "https://github.com/NixOS/nixpkgs/blob/" ++ branch ++ "/"
+
+        homeManagerBranch nixpkgsBranch =
+            stableBranch nixpkgsBranch "release-"
 
         homeManagerUrlPrefix branch =
-            "https://github.com/nix-community/home-manager/blob/" ++ branch ++ "/"
+            repoUrlPrefix "nix-community" "home-manager" branch
+
+        darwinBranch nixpkgsBranch =
+            stableBranch nixpkgsBranch "nix-darwin-"
+
+        darwinUrlPrefix branch =
+            repoUrlPrefix "nix-darwin" "nix-darwin" branch
 
         cleanPosition value =
             if String.startsWith "source/" value then
@@ -571,6 +600,9 @@ findSource nixosChannels channel source =
                         prefix =
                             if source.docType == "home-manager-option" then
                                 homeManagerUrlPrefix (homeManagerBranch channelDetails.branch)
+
+                            else if source.docType == "darwin-option" then
+                                darwinUrlPrefix (darwinBranch channelDetails.branch)
 
                             else
                                 githubUrlPrefix channelDetails.branch
@@ -791,24 +823,7 @@ makeRequest options nixosChannels _ channel query from size _ sort activeSource 
 
 makeRequestBody : List String -> String -> Int -> Int -> Search.Sort -> Body
 makeRequestBody types query from size sort =
-    Search.makeRequestBody
-        (String.trim query)
-        from
-        size
-        sort
-        types
-        "option_name"
-        []
-        []
-        []
-        [ "option_name", "option_name_query" ]
-        [ ( "option_name", 6.0 )
-        , ( "option_name_query", 6.0 )
-        , ( "option_description", 1.0 )
-        , ( "flake_name", 0.5 )
-        , ( "service_package", 3.0 )
-        , ( "service_packages", 3.0 )
-        ]
+    Http.jsonBody (Search.Query.optionsBody types query from size sort)
 
 
 

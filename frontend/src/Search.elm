@@ -1,6 +1,7 @@
 module Search exposing
     ( Aggregation
     , AggregationsBucketItem
+    , BucketInputType(..)
     , Details(..)
     , Model
     , Msg(..)
@@ -12,7 +13,7 @@ module Search exposing
     , ResultHitsTotal
     , ResultItem
     , SearchResult
-    , Sort
+    , Sort(..)
     , Terms
     , decodeAggregation
     , decodeNixOSChannels
@@ -21,7 +22,6 @@ module Search exposing
     , elementId
     , init
     , makeRequest
-    , makeRequestBody
     , makeRequestTask
     , onClickStop
     , shouldLoad
@@ -39,22 +39,27 @@ import Array
 import Base64
 import Browser.Dom
 import Browser.Navigation
-import Components.Badge as Badge
 import Components.Button exposing (viewButton)
 import Dict exposing (Dict)
 import Html
     exposing
         ( Html
         , a
+        , aside
         , code
         , div
+        , fieldset
         , form
         , h1
         , h2
         , h4
         , input
+        , label
+        , legend
         , li
+        , option
         , p
+        , select
         , span
         , strong
         , text
@@ -62,36 +67,40 @@ import Html
         )
 import Html.Attributes
     exposing
-        ( attribute
+        ( autocomplete
         , autofocus
+        , checked
         , class
         , classList
         , disabled
         , href
         , id
+        , name
         , placeholder
         , type_
         , value
         )
 import Html.Events
     exposing
-        ( onClick
+        ( on
+        , onBlur
+        , onClick
+        , onFocus
         , onInput
         , onSubmit
         )
 import Http
 import Json.Decode
 import Json.Decode.Pipeline
-import Json.Encode
-import List.Extra
 import RemoteData
 import Route
     exposing
         ( OptionSource
-        , SearchType
+        , SearchType(..)
         , allTypes
         , searchTypeToTitle
         )
+import Search.Typeahead as Typeahead
 import Task
 
 
@@ -105,8 +114,7 @@ type alias Model a b =
     , size : Int
     , buckets : Maybe String
     , sort : Sort
-    , showSort : Bool
-    , showInstallDetails : Details
+    , showUsageDetails : Details
     , searchType : Route.SearchType
     , redirectedChannel : Maybe String
     , urlChannel : Maybe String
@@ -123,6 +131,8 @@ type alias Model a b =
     -- so the UI can keep showing it (with a spinner) instead of
     -- flashing the full loader. Cleared once the new response lands.
     , previousResult : Maybe (SearchResult a b)
+    , options : Options
+    , typeahead : Typeahead.Model
     }
 
 
@@ -193,22 +203,6 @@ type NixOSChannelStatus
     | Beta
     | Stable
     | Deprecated
-
-
-channelBadge : NixOSChannelStatus -> List (Html msg)
-channelBadge status =
-    case status of
-        Rolling ->
-            []
-
-        Beta ->
-            [ Badge.view Badge.Beta ]
-
-        Stable ->
-            []
-
-        Deprecated ->
-            [ Badge.view Badge.Deprecated ]
 
 
 decodeNixOSChannels : Json.Decode.Decoder NixOSChannels
@@ -300,12 +294,14 @@ decodeResolvedFlake =
 
 
 init :
-    Route.SearchArgs
+    Options
+    -> Bool
+    -> Route.SearchArgs
     -> String
     -> List NixOSChannel
     -> Maybe (Model a b)
     -> ( Model a b, Cmd (Msg a b) )
-init args defaultNixOSChannel nixosChannels maybeModel =
+init options preferStatic args defaultNixOSChannel nixosChannels maybeModel =
     let
         getField getFn default =
             maybeModel
@@ -353,8 +349,7 @@ init args defaultNixOSChannel nixosChannels maybeModel =
             args.sort
                 |> Maybe.andThen fromSortId
                 |> Maybe.withDefault defaultSearchArgs.sort
-      , showSort = False
-      , showInstallDetails = Unset
+      , showUsageDetails = Unset
       , searchType =
             args.type_
                 |> Maybe.withDefault defaultSearchArgs.searchType
@@ -362,6 +357,8 @@ init args defaultNixOSChannel nixosChannels maybeModel =
       , sourceCounts = Dict.empty
       , previousResult = Nothing
       , urlChannel = args.channel
+      , options = options
+      , typeahead = Typeahead.init preferStatic
       }
         |> ensureLoading nixosChannels
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
@@ -434,7 +431,6 @@ elementId str =
 type Msg a b
     = NoOp
     | SortChange Sort
-    | ToggleSort
     | BucketsChange String
     | ChannelChange String
     | SubjectChange SearchType
@@ -443,9 +439,12 @@ type Msg a b
     | QueryResponse (RemoteData.WebData (SearchResult a b))
     | ShowDetails String
     | ChangePage Int
-    | ShowInstallDetails Details
+    | ShowUsageDetails Details
     | SetActiveOptionSource OptionSource
     | SourceCount String Int
+    | TypeaheadMsg Typeahead.Msg
+    | TypeaheadBlur
+    | TypeaheadFocus
 
 
 type Details
@@ -493,13 +492,6 @@ update toRoute navKey msg model nixosChannels =
                 |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
 
-        ToggleSort ->
-            ( { model
-                | showSort = not model.showSort
-              }
-            , Cmd.none
-            )
-
         BucketsChange buckets ->
             { model
                 | buckets =
@@ -540,14 +532,25 @@ update toRoute navKey msg model nixosChannels =
                 |> pushUrl toRoute navKey
 
         QueryInput query ->
-            ( { model | query = query }
-            , Cmd.none
+            let
+                ( typeaheadModel, typeaheadCmd ) =
+                    Typeahead.queryChanged model.options
+                        nixosChannels
+                        model.searchType
+                        model.activeOptionSource
+                        model.channel
+                        query
+                        model.typeahead
+            in
+            ( { model | query = query, typeahead = typeaheadModel }
+            , Cmd.map TypeaheadMsg typeaheadCmd
             )
 
         QueryInputSubmit ->
             { model
                 | from = 0
                 , show = Nothing
+                , typeahead = Typeahead.hideModel model.typeahead
             }
                 |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
@@ -609,8 +612,8 @@ update toRoute navKey msg model nixosChannels =
                 |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
 
-        ShowInstallDetails details ->
-            { model | showInstallDetails = details }
+        ShowUsageDetails details ->
+            { model | showUsageDetails = details }
                 |> pushUrl toRoute navKey
 
         SourceCount sourceId count ->
@@ -629,6 +632,26 @@ update toRoute navKey msg model nixosChannels =
             }
                 |> ensureLoading nixosChannels
                 |> pushUrl toRoute navKey
+
+        TypeaheadMsg subMsg ->
+            let
+                ( typeaheadModel, typeaheadCmd ) =
+                    Typeahead.update model.options
+                        nixosChannels
+                        model.searchType
+                        model.activeOptionSource
+                        model.channel
+                        model.query
+                        subMsg
+                        model.typeahead
+            in
+            ( { model | typeahead = typeaheadModel }, Cmd.map TypeaheadMsg typeaheadCmd )
+
+        TypeaheadBlur ->
+            ( model, Cmd.map TypeaheadMsg Typeahead.hideAfterBlur )
+
+        TypeaheadFocus ->
+            ( { model | typeahead = Typeahead.focusModel model.typeahead }, Cmd.none )
 
 
 pushUrl :
@@ -696,99 +719,6 @@ type alias Terms =
     }
 
 
-toAggregations :
-    List Terms
-    -> ( String, Json.Encode.Value )
-toAggregations terms =
-    let
-        aggs =
-            List.map
-                (\term ->
-                    ( term.field
-                    , Json.Encode.object
-                        [ ( "terms"
-                          , Json.Encode.object
-                                ([ ( "field"
-                                   , Json.Encode.string term.field
-                                   )
-                                 , ( "size"
-                                   , Json.Encode.int term.size
-                                   )
-                                 ]
-                                    ++ (case term.include of
-                                            Just include ->
-                                                [ ( "include"
-                                                  , Json.Encode.list Json.Encode.string include
-                                                  )
-                                                ]
-
-                                            Nothing ->
-                                                []
-                                       )
-                                )
-                          )
-                        ]
-                    )
-                )
-                terms
-
-        allAggs =
-            [ ( "all"
-              , Json.Encode.object
-                    [ ( "global"
-                      , Json.Encode.object []
-                      )
-                    , ( "aggregations"
-                      , Json.Encode.object aggs
-                      )
-                    ]
-              )
-            ]
-    in
-    ( "aggs"
-    , Json.Encode.object <| aggs ++ allAggs
-    )
-
-
-toSortQuery :
-    Sort
-    -> String
-    -> List String
-    -> ( String, Json.Encode.Value )
-toSortQuery sort field fields =
-    ( "sort"
-    , case sort of
-        AlphabeticallyAsc ->
-            Json.Encode.list Json.Encode.object
-                [ ( field, Json.Encode.string "asc" )
-                    :: List.map
-                        (\x -> ( x, Json.Encode.string "asc" ))
-                        fields
-                ]
-
-        AlphabeticallyDesc ->
-            Json.Encode.list Json.Encode.object
-                [ ( field, Json.Encode.string "desc" )
-                    :: List.map
-                        (\x -> ( x, Json.Encode.string "desc" ))
-                        fields
-                ]
-
-        Relevance ->
-            -- When scores tie, fall back to ascending alphabetical order on the
-            -- main field (and any secondary fields). Using asc gives a natural
-            -- reading order, e.g. `php-fpm.package` before `php-fpm.settings`,
-            -- instead of the reverse order you get with desc.
-            Json.Encode.list Json.Encode.object
-                [ ( "_score", Json.Encode.string "desc" )
-                    :: ( field, Json.Encode.string "asc" )
-                    :: List.map
-                        (\x -> ( x, Json.Encode.string "asc" ))
-                        fields
-                ]
-    )
-
-
 toSortTitle : Sort -> String
 toSortTitle sort =
     case sort of
@@ -799,7 +729,7 @@ toSortTitle sort =
             "Alphabetically Descending"
 
         Relevance ->
-            "Best match"
+            "Best Match"
 
 
 toSortId : Sort -> String
@@ -870,17 +800,9 @@ view { categoryName } title nixosChannels model viewSuccess viewBuckets outMsg s
                     "failure"
     in
     div
-        (List.append
-            [ class <| "search-page " ++ resultStatus ]
-            (if model.showSort then
-                [ onClick (outMsg ToggleSort) ]
-
-             else
-                []
-            )
-        )
+        [ class <| "search-page " ++ resultStatus ]
         ([ h1 [] title
-         , viewSearchInput nixosChannels outMsg categoryName (Just model.channel) model.query
+         , viewSearchInput nixosChannels outMsg categoryName (Just model.channel) model.query (Just model.typeahead) model.sort
          ]
             ++ (case model.redirectedChannel of
                     Just oldChannel ->
@@ -901,29 +823,23 @@ viewFlakes :
     -> SearchType
     -> List (Html msg)
 viewFlakes outMsg selectedCategory =
-    [ li []
-        [ ul []
-            (List.map
-                (\category ->
-                    li []
-                        [ a
-                            [ href "#"
-                            , onClick <| outMsg (SubjectChange category)
-                            , classList
-                                [ ( "selected"
-                                  , category == selectedCategory
-                                  )
-                                ]
-                            ]
-                            [ span [] [ text <| searchTypeToTitle category ]
-                            , closeButton
-                            ]
-                        ]
+    viewBucket
+        RadioInput
+        "Category"
+        (List.map (\cat -> { key = searchTypeToTitle cat, doc_count = 0 }) allTypes)
+        (\title ->
+            outMsg
+                (SubjectChange
+                    (if title == "Packages" then
+                        PackageSearch
+
+                     else
+                        OptionSearch
+                    )
                 )
-                allTypes
-            )
-        ]
-    ]
+        )
+        [ searchTypeToTitle selectedCategory ]
+        []
 
 
 viewResult :
@@ -954,7 +870,7 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
 
             else
                 div [ class "search-results" ]
-                    [ ul [ class "search-sidebar" ] searchBuckets
+                    [ aside [ class "search-sidebar" ] searchBuckets
                     ]
 
         RemoteData.Loading ->
@@ -969,14 +885,14 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
                             viewBuckets model.buckets prev
                     in
                     div [ class "search-results", class "loading-overlay" ]
-                        [ ul [ class "search-sidebar" ] (searchBuckets ++ buckets)
+                        [ aside [ class "search-sidebar" ] (searchBuckets ++ buckets)
                         , div []
                             (viewResults nixosChannels model prev viewSuccess outMsg categoryName)
                         ]
 
                 Nothing ->
                     div [ class "loader-wrapper" ]
-                        [ ul [ class "search-sidebar" ] searchBuckets
+                        [ aside [ class "search-sidebar" ] searchBuckets
                         , div [ class "loader" ] [ text "Loading..." ]
                         , h2 [] [ text "Searching..." ]
                         ]
@@ -988,20 +904,13 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
             in
             if result.hits.total.value == 0 && List.isEmpty buckets then
                 div [ class "search-results" ]
-                    [ ul [ class "search-sidebar" ] searchBuckets
+                    [ aside [ class "search-sidebar" ] searchBuckets
                     , viewNoResults categoryName model.activeOptionSource model.query model.channel
-                    ]
-
-            else if not (List.isEmpty buckets) then
-                div [ class "search-results" ]
-                    [ ul [ class "search-sidebar" ] (searchBuckets ++ buckets)
-                    , div []
-                        (viewResults nixosChannels model result viewSuccess outMsg categoryName)
                     ]
 
             else
                 div [ class "search-results" ]
-                    [ ul [ class "search-sidebar" ] searchBuckets
+                    [ aside [ class "search-sidebar" ] (searchBuckets ++ buckets)
                     , div []
                         (viewResults nixosChannels model result viewSuccess outMsg categoryName)
                     ]
@@ -1069,6 +978,14 @@ viewNoResults categoryName activeOptionSource query channel =
                 in
                 [ text "You might want to ", homeManagerIssues, text "." ]
 
+            else if activeOptionSource == Route.DarwinOptionSource then
+                let
+                    darwinIssues =
+                        Html.a [ href ("https://github.com/nix-darwin/nix-darwin/issues?q=" ++ query) ]
+                            [ text "search nix-darwin issues" ]
+                in
+                [ text "You might want to ", darwinIssues, text "." ]
+
             else
                 [ text "You might want to ", nixpkgsIssues, text "." ]
     in
@@ -1124,49 +1041,62 @@ closeButton =
     span [] []
 
 
+type BucketInputType
+    = CheckboxInput
+    | RadioInput
+
+
 viewBucket :
-    String
+    BucketInputType
+    -> String
     -> List AggregationsBucketItem
     -> (String -> a)
     -> List String
     -> List (Html a)
     -> List (Html a)
-viewBucket title buckets searchMsgFor selectedBucket sets =
+viewBucket inputType title buckets searchMsgFor selectedBucket sets =
     List.append
         sets
         (if List.isEmpty buckets then
             []
 
          else
-            [ li []
-                [ ul []
-                    (List.append
-                        [ li [ class "header" ] [ text title ] ]
-                        (List.map
-                            (\bucket ->
-                                li []
-                                    [ a
-                                        [ href "#"
-                                        , onClick <| searchMsgFor bucket.key
-                                        , classList
-                                            [ ( "selected"
-                                              , List.member bucket.key selectedBucket
-                                              )
-                                            ]
-                                        ]
-                                        [ span [] [ text bucket.key ]
-                                        , if List.member bucket.key selectedBucket then
-                                            closeButton
+            [ fieldset [ class "search-bucket" ]
+                (legend [ class "header" ] [ text title ]
+                    :: List.map
+                        (\bucket ->
+                            let
+                                isSelected =
+                                    List.member bucket.key selectedBucket
 
-                                          else
-                                            span [] [ span [ class "badge" ] [ text <| String.fromInt bucket.doc_count ] ]
-                                        ]
+                                inputTypeName =
+                                    case inputType of
+                                        CheckboxInput ->
+                                            "checkbox"
+
+                                        RadioInput ->
+                                            "radio"
+                            in
+                            label
+                                [ classList [ ( "selected", isSelected ) ]
+                                ]
+                                [ span [] [ text bucket.key ]
+                                , if isSelected || bucket.doc_count <= 0 then
+                                    closeButton
+
+                                  else
+                                    span [] [ span [ class "badge" ] [ text <| String.fromInt bucket.doc_count ] ]
+                                , input
+                                    [ type_ inputTypeName
+                                    , name title
+                                    , checked isSelected
+                                    , onClick <| searchMsgFor bucket.key
                                     ]
-                            )
-                            buckets
+                                    []
+                                ]
                         )
-                    )
-                ]
+                        buckets
+                )
             ]
         )
 
@@ -1177,32 +1107,60 @@ viewSearchInput :
     -> String
     -> Maybe String
     -> String
+    -> Maybe Typeahead.Model
+    -> Sort
     -> Html c
-viewSearchInput nixosChannels outMsg categoryName selectedChannel searchQuery =
+viewSearchInput nixosChannels outMsg categoryName selectedChannel searchQuery maybeTypeahead currentSort =
     form
         [ onSubmit (outMsg QueryInputSubmit)
         , class "search-input"
         ]
-        (div []
-            [ div []
+        [ div [ class "search-input-top" ]
+            [ div [ class "search-input-with-typeahead" ]
                 [ input
                     [ type_ "text"
                     , id "search-query-input"
+
+                    -- not really sure how to make this better, sadly
+                    -- TODO: improve me
+                    , autocomplete (categoryName == "3rd-party flake packages")
                     , autofocus True
                     , placeholder <| "Search for " ++ categoryName
                     , onInput (outMsg << QueryInput)
+                    , onFocus (outMsg TypeaheadFocus)
+                    , onBlur (outMsg TypeaheadBlur)
+                    , on "keydown"
+                        (Json.Decode.field "key" Json.Decode.string
+                            |> Json.Decode.andThen
+                                (\key ->
+                                    if key == "Escape" then
+                                        Json.Decode.succeed (outMsg (TypeaheadMsg Typeahead.hide))
+
+                                    else
+                                        Json.Decode.fail "not Escape"
+                                )
+                        )
                     , value searchQuery
                     ]
                     []
+                , case maybeTypeahead of
+                    Just typeaheadModel ->
+                        Html.map (outMsg << TypeaheadMsg) (Typeahead.viewDropdown typeaheadModel)
+
+                    Nothing ->
+                        text ""
                 ]
-            , viewButton [ type_ "submit" ]
+            , viewButton [ type_ "submit", class "search-input-submit" ]
                 [ text "Search" ]
             ]
-            :: (selectedChannel
-                    |> Maybe.map (\x -> [ div [] (viewChannels nixosChannels outMsg x) ])
-                    |> Maybe.withDefault []
-               )
-        )
+        , div [ class "search-input-options" ]
+            ((selectedChannel
+                |> Maybe.map (\x -> viewChannels nixosChannels outMsg x)
+                |> Maybe.withDefault []
+             )
+                ++ [ Html.map outMsg (viewSortSelection currentSort) ]
+            )
+        ]
 
 
 viewChannels :
@@ -1211,38 +1169,46 @@ viewChannels :
     -> String
     -> List (Html c)
 viewChannels nixosChannels outMsg selectedChannel =
-    List.append
-        [ div []
-            [ h2 [] [ text "Channel: " ]
-            , div
-                [ class "btn-group"
-                , attribute "data-toggle" "buttons-radio"
-                ]
-                (List.map
-                    (\channel ->
-                        viewButton
-                            [ type_ "button"
-                            , classList
-                                [ ( "active", channel.id == selectedChannel )
+    if List.isEmpty nixosChannels then
+        []
+
+    else
+        List.append
+            [ fieldset
+                [ class "radio-group-segmented channel-radios" ]
+                (legend [ class "channel-title" ] [ text "Channels:" ]
+                    :: List.map
+                        (\channel ->
+                            label
+                                [ classList
+                                    [ ( "btn", True )
+                                    , ( "channel-radio", True )
+                                    , ( "active", channel.id == selectedChannel )
+                                    ]
                                 ]
-                            , onClick <| outMsg (ChannelChange channel.id)
-                            ]
-                            (List.intersperse (text " ") (text channel.id :: channelBadge channel.status))
-                    )
-                    nixosChannels
+                                [ text channel.id
+                                , input
+                                    [ type_ "radio"
+                                    , name "channel"
+                                    , checked (channel.id == selectedChannel)
+                                    , onClick <| outMsg (ChannelChange channel.id)
+                                    ]
+                                    []
+                                ]
+                        )
+                        nixosChannels
                 )
             ]
-        ]
-        (if List.any (\{ id } -> id == selectedChannel) nixosChannels then
-            []
+            (if List.any (\{ id } -> id == selectedChannel) nixosChannels then
+                []
 
-         else
-            [ p [ class "alert alert-error" ]
-                [ h4 [] [ text "Wrong channel selected!" ]
-                , text <| "Please select one of the channels above!"
+             else
+                [ p [ class "alert alert-error" ]
+                    [ h4 [] [ text "Wrong channel selected!" ]
+                    , text <| "Please select one of the channels above!"
+                    ]
                 ]
-            ]
-        )
+            )
 
 
 viewResults :
@@ -1275,37 +1241,35 @@ viewResults nixosChannels model result viewSuccess outMsg categoryName =
                 )
     in
     [ div []
-        (List.append
-            [ Html.map outMsg <| viewSortSelection model
-            , h2 []
-                (List.append
-                    [ text "Showing results "
-                    , text from
-                    , text "-"
-                    , text to
-                    , text " of "
+        [ h2 []
+            (List.append
+                [ text "Showing results "
+                , text from
+                , text "-"
+                , text to
+                , text " of "
+                ]
+                (if result.hits.total.value == 10000 then
+                    [ text "more than 10000."
+                    , p [ class "search-refine-hint" ]
+                        [ text "Please provide more precise search terms." ]
                     ]
-                    (if result.hits.total.value == 10000 then
-                        [ text "more than 10000."
-                        , p [ class "search-refine-hint" ]
-                            [ text "Please provide more precise search terms." ]
-                        ]
 
-                     else
-                        let
-                            total =
-                                String.fromInt result.hits.total.value
-                        in
-                        [ strong []
-                            [ text total
-                            , text " "
-                            , text categoryName
-                            ]
-                        , text "."
+                 else
+                    let
+                        total =
+                            String.fromInt result.hits.total.value
+                    in
+                    [ strong []
+                        [ text total
+                        , text " "
+                        , text categoryName
                         ]
-                    )
+                    , text "."
+                    ]
                 )
-            ]
+            )
+        , p []
             (case List.head result.hits.hits of
                 Nothing ->
                     []
@@ -1322,52 +1286,41 @@ viewResults nixosChannels model result viewSuccess outMsg categoryName =
                             , text "."
                             ]
             )
-        )
-    , viewSuccess nixosChannels model.channel model.showInstallDetails model.show result.hits.hits
+        ]
+    , viewSuccess nixosChannels model.channel model.showUsageDetails model.show result.hits.hits
     , Html.map outMsg <| viewPager model result.hits.total.value
     ]
 
 
 viewSortSelection :
-    Model a b
+    Sort
     -> Html (Msg a b)
-viewSortSelection model =
-    div
-        [ class "btn-group dropdown pull-right"
-        , classList
-            [ ( "open", model.showSort )
-            ]
-        , onClickStop NoOp
-        ]
-        [ viewButton
-            [ onClick ToggleSort ]
-            [ span [] [ text <| "Sort: " ]
-            , span [ class "selected" ] [ text <| toSortTitle model.sort ]
-            , span [ class "caret" ] []
-            ]
-        , ul
-            [ class "pull-right dropdown-menu"
-            ]
-            (List.append
-                [ li [ class " header" ] [ text "Sort options" ]
-                , li [ class "divider" ] []
-                ]
-                (List.map
-                    (\sort ->
-                        li
-                            [ classList
-                                [ ( "selected", model.sort == sort )
-                                ]
-                            ]
-                            [ a
-                                [ href "#"
-                                , onClick <| SortChange sort
-                                ]
-                                [ text <| toSortTitle sort ]
-                            ]
-                    )
-                    sortBy
+viewSortSelection currentSort =
+    Html.node "sort-select-wrapper"
+        [ class "btn pull-right sort-container" ]
+        [ span [ class "sort-label" ] [ text "Sort: " ]
+        , select
+            [ id "sort-select"
+            , name "sort"
+            , class "sort-select"
+            , value (toSortId currentSort)
+            , onInput
+                (\val ->
+                    case fromSortId val of
+                        Just s ->
+                            SortChange s
+
+                        Nothing ->
+                            NoOp
                 )
+            ]
+            (List.map
+                (\sort ->
+                    option
+                        [ value (toSortId sort) ]
+                        [ text <| toSortTitle sort ]
+                )
+                sortBy
             )
         ]
 
@@ -1449,185 +1402,6 @@ type alias Options =
     , username : String
     , password : String
     }
-
-
-filterByType :
-    List String
-    -> List ( String, Json.Encode.Value )
-filterByType types =
-    case types of
-        [ type_ ] ->
-            [ ( "term"
-              , Json.Encode.object
-                    [ ( "type"
-                      , Json.Encode.object
-                            [ ( "value", Json.Encode.string type_ )
-                            , ( "_name", Json.Encode.string <| "filter_" ++ type_ ++ "s" )
-                            ]
-                      )
-                    ]
-              )
-            ]
-
-        _ ->
-            [ ( "terms"
-              , Json.Encode.object
-                    [ ( "type", Json.Encode.list Json.Encode.string types )
-                    , ( "_name", Json.Encode.string <| "filter_" ++ String.join "_" types )
-                    ]
-              )
-            ]
-
-
-searchFields :
-    List String
-    -> List String
-    -> List ( String, Float )
-    -> List (List ( String, Json.Encode.Value ))
-searchFields positiveWords mainFields fields =
-    let
-        allFields : List String
-        allFields =
-            fields
-                |> List.concatMap
-                    (\( field, score ) ->
-                        [ field ++ "^" ++ String.fromFloat score
-                        , field ++ ".*^" ++ String.fromFloat (score * 0.6)
-                        ]
-                    )
-
-        queryWordsWildCard : List String
-        queryWordsWildCard =
-            positiveWords
-                |> List.concatMap dashUnderscoreVariants
-                |> List.Extra.unique
-
-        multiMatch : List ( String, Json.Encode.Value )
-        multiMatch =
-            [ ( "multi_match"
-              , Json.Encode.object
-                    [ ( "type", Json.Encode.string "cross_fields" )
-                    , ( "query", Json.Encode.string (String.join " " positiveWords) )
-                    , ( "analyzer", Json.Encode.string "whitespace" )
-                    , ( "auto_generate_synonyms_phrase_query", Json.Encode.bool False )
-                    , ( "operator", Json.Encode.string "and" )
-                    , ( "_name", Json.Encode.string <| "multi_match_" ++ String.join "_" positiveWords )
-                    , ( "fields", Json.Encode.list Json.Encode.string allFields )
-                    ]
-              )
-            ]
-    in
-    multiMatch :: List.concatMap (\mf -> List.map (toWildcardQuery mf) queryWordsWildCard) mainFields
-
-
-makeRequestBody :
-    String
-    -> Int
-    -> Int
-    -> Sort
-    -> List String
-    -> String
-    -> List String
-    -> List Terms
-    -> List ( String, Json.Encode.Value )
-    -> List String
-    -> List ( String, Float )
-    -> Http.Body
-makeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets mainFields fields =
-    let
-        -- you can not request more then 10000 results otherwise it will return 404
-        size =
-            if from + sizeRaw > 10000 then
-                10000 - from
-
-            else
-                sizeRaw
-
-        ( negativeWords, positiveWords ) =
-            String.toLower query
-                |> String.words
-                |> List.partition (String.startsWith "-")
-                |> Tuple.mapFirst (List.map (String.dropLeft 1))
-    in
-    Http.jsonBody
-        (Json.Encode.object
-            [ ( "from"
-              , Json.Encode.int from
-              )
-            , ( "size"
-              , Json.Encode.int size
-              )
-            , toSortQuery sort sortField otherSortFields
-            , toAggregations terms
-            , ( "query"
-              , Json.Encode.object
-                    [ ( "bool"
-                      , Json.Encode.object
-                            [ ( "filter"
-                              , Json.Encode.list Json.Encode.object
-                                    (List.append
-                                        [ filterByType types ]
-                                        (if List.isEmpty filterByBuckets then
-                                            []
-
-                                         else
-                                            [ filterByBuckets ]
-                                        )
-                                    )
-                              )
-                            , ( "must_not"
-                              , Json.Encode.list Json.Encode.object
-                                    (negativeWords
-                                        |> List.concatMap dashUnderscoreVariants
-                                        |> List.Extra.unique
-                                        |> List.concatMap (\w -> List.map (\mf -> toWildcardQuery mf w) mainFields)
-                                    )
-                              )
-                            , ( "must"
-                              , Json.Encode.list Json.Encode.object
-                                    [ [ ( "dis_max"
-                                        , Json.Encode.object
-                                            [ ( "tie_breaker", Json.Encode.float 0.7 )
-                                            , ( "queries"
-                                              , Json.Encode.list Json.Encode.object
-                                                    (searchFields positiveWords mainFields fields)
-                                              )
-                                            ]
-                                        )
-                                      ]
-                                    ]
-                              )
-                            ]
-                      )
-                    ]
-              )
-            ]
-        )
-
-
-{-| Given a word, returns all variants of replacing underscores and dashes with each other.
--}
-dashUnderscoreVariants : String -> List String
-dashUnderscoreVariants word =
-    [ String.replace "_" "-" word
-    , String.replace "-" "_" word
-    , word
-    ]
-
-
-toWildcardQuery : String -> String -> List ( String, Json.Encode.Value )
-toWildcardQuery mainField queryWord =
-    [ ( "wildcard"
-      , Json.Encode.object
-            [ ( mainField
-              , Json.Encode.object
-                    [ ( "value", Json.Encode.string ("*" ++ queryWord ++ "*") )
-                    , ( "case_insensitive", Json.Encode.bool True )
-                    ]
-              )
-            ]
-      )
-    ]
 
 
 makeRequest :

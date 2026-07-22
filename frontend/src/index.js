@@ -18,6 +18,13 @@ function applyTheme(theme) {
 const initialTheme = normalizeTheme(localStorage.getItem("theme"));
 applyTheme(initialTheme);
 
+const connection = navigator.connection || navigator.webkitConnection;
+const saveDataAttr = document.documentElement.dataset.saveData === "on";
+const saveData =
+    saveDataAttr ||
+    (connection && connection.saveData) ||
+    (connection && connection.type === "cellular");
+
 const app = Elm.Main.init({
     flags: {
         elasticsearchMappingSchemaVersion: parseInt(
@@ -30,6 +37,8 @@ const app = Elm.Main.init({
             process.env.ELASTICSEARCH_PASSWORD || "X8gPHnzL52wFEekuxsfQ9cSh",
         nixosChannels: JSON.parse(process.env.NIXOS_CHANNELS),
         theme: initialTheme,
+        isPrideMonth: new Date().getMonth() === 5,
+        saveData: Boolean(saveData),
     },
 });
 
@@ -187,3 +196,15 @@ document.addEventListener("keydown", (event) => {
     event.preventDefault();
     next.scrollIntoView({ block: "nearest" });
 });
+
+customElements.define(
+    "sort-select-wrapper",
+    class extends HTMLElement {
+        connectedCallback() {
+            this.onclick = (pointerEvent) => {
+                const select = this.querySelector("select");
+                pointerEvent.target !== select && select.showPicker();
+            };
+        }
+    },
+);

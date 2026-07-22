@@ -198,10 +198,13 @@ pub enum NixpkgsEntry {
         package: Package,
         programs: Vec<String>,
         modular_services: Vec<String>,
+        dep_count: Option<u64>,
+        repology_repos: Option<u64>,
     },
     Option(NixOption),
     Service(NixOption),
     HomeManagerOption(NixOption),
+    DarwinOption(NixOption),
 }
 
 /// Most information about packages in nixpkgs is contained in the meta key
@@ -219,7 +222,8 @@ pub struct Meta {
     pub description: Option<String>,
     #[serde(rename = "longDescription")]
     pub long_description: Option<String>,
-    pub mainProgram: Option<String>,
+    #[serde(rename = "mainProgram")]
+    pub main_program: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -255,6 +259,7 @@ arg_enum! {
         Package,
         Option,
         HomeManagerOption,
+        DarwinOption,
         ModularService,
         All,
     }
@@ -267,6 +272,7 @@ impl AsRef<str> for Kind {
             Kind::Package => "packages",
             Kind::Option => "options",
             Kind::HomeManagerOption => "home-manager-options",
+            Kind::DarwinOption => "darwin-options",
             Kind::ModularService => "services",
             Kind::All => "all",
         }
@@ -609,6 +615,8 @@ mod tests {
                 package,
                 programs: Vec::new(),
                 modular_services: Vec::new(),
+                dep_count: None,
+                repology_repos: None,
             })
             .collect();
     }

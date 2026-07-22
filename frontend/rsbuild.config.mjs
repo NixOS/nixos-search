@@ -39,7 +39,12 @@ export default defineConfig({
         extensions: [".elm", ".js"],
     },
     output: {
-        copy: [{ from: "./src/assets", to: "." }],
+        copy: [
+            {
+                from: "node_modules/@nixos/branding/artifacts/internal",
+                to: "images",
+            },
+        ],
     },
     server: {
         port: 3000,

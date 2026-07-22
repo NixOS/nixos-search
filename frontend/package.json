@@ -10,13 +10,13 @@
     },
     "main": "index.js",
     "scripts": {
-        "analyse": "elm-analyse -s -p 3001 -o",
         "build": "rsbuild build",
-        "dev": "rsbuild dev --port 3000",
-        "nodebug": "NODEBUG=true rsbuild dev --port 3000",
-        "prod": "rsbuild build",
-        "start": "npm run dev",
-        "test": "elm-test"
+        "build:autocomplete": "node scripts/build-autocomplete-corpus.mjs",
+        "dev": "npm run build:autocomplete && rsbuild dev",
+        "preview": "rsbuild preview",
+        "review": "elm-review",
+        "test": "elm-test",
+        "benchmark": "node benchmark/run.mjs"
     },
     "devDependencies": {
         "@rsbuild/core": "^1.2.0",
@@ -29,12 +29,13 @@
         "sass": "^1.43.5"
     },
     "engines": {
-        "node": ">=12"
+        "node": ">=18"
     },
     "prettier": {
         "tabWidth": 4
     },
     "dependencies": {
+        "@nixos/branding": "^0.1.0",
         "elm-keyboard-shortcut": "^1.0.1"
     }
 }

@@ -49,11 +49,12 @@ type OptionSource
     = NixosOptions
     | ModularServiceOptions
     | HomeManagerOptionSource
+    | DarwinOptionSource
 
 
 allOptionSources : List OptionSource
 allOptionSources =
-    [ NixosOptions, ModularServiceOptions, HomeManagerOptionSource ]
+    [ NixosOptions, ModularServiceOptions, HomeManagerOptionSource, DarwinOptionSource ]
 
 
 {-| Default tab when no source is specified in the URL.
@@ -76,6 +77,9 @@ optionSourceId source =
 
         HomeManagerOptionSource ->
             "home_manager"
+
+        DarwinOptionSource ->
+            "darwin"
 
 
 {-| Inverse of `optionSourceId`. Returns `Nothing` for unknown identifiers
@@ -102,6 +106,9 @@ optionSourceDocType source =
         HomeManagerOptionSource ->
             "home-manager-option"
 
+        DarwinOptionSource ->
+            "darwin-option"
+
 
 {-| Human-readable checkbox label.
 -}
@@ -115,7 +122,10 @@ optionSourceLabel source =
             "Modular services"
 
         HomeManagerOptionSource ->
-            "nix-community/home-manager"
+            "Home Manager"
+
+        DarwinOptionSource ->
+            "Darwin"
 
 
 type SearchType

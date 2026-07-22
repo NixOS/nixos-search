@@ -97,6 +97,7 @@
             inherit nixosChannels version;
           };
           nixosChannels = nixosChannelsFile;
+          nixosChannelsJson = pkgs.writeText "nixosChannels.json" (builtins.toJSON nixosChannels);
         };
 
         formatter = treefmt;
@@ -138,10 +139,9 @@
             ];
             extraShellHook = ''
               export PATH=$PWD/frontend/node_modules/.bin:$PATH
-              rm -rf frontend/node_modules
-              ln -sf ${packages.frontend.node_modules}/node_modules frontend/
               echo "==========================================================="
-              echo "= To develop the frontend run: cd frontend && npm run dev ="
+              echo "= To develop the frontend run:                            ="
+              echo "=   cd frontend && npm ci && npm run dev                   ="
               echo "==========================================================="
             '';
           };

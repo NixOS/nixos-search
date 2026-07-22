@@ -1,9 +1,9 @@
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use flake_info::commands::NixCheckError;
 use flake_info::data::import::Kind;
 use flake_info::data::{self, Export, Source};
 use flake_info::elastic::{self, ElasticsearchError, ExistsStrategy};
-use log::{error, info, warn};
+use log::{info, warn};
 use sha2::Digest;
 use std::io;
 use std::path::PathBuf;
@@ -70,6 +70,14 @@ enum Command {
                     Useful for testing a fix against a custom-built file from a nixpkgs branch"
         )]
         packages_json_url: Option<String>,
+
+        #[structopt(
+            long = "repology-counts-file",
+            help = "Read Repology repository counts (JSON object srcname->count) from this \
+                    file instead of crawling repology.org. A missing/unreadable file drops \
+                    the signal."
+        )]
+        repology_counts_file: Option<PathBuf>,
     },
 
     #[structopt(about = "Import nixpkgs channel from archive or local git path")]
@@ -110,6 +118,12 @@ enum Command {
             help = "Run nix garbage collection between every group member evaluation"
         )]
         with_gc: bool,
+    },
+
+    #[structopt(about = "Fetch Repology repository counts and write them as JSON")]
+    RepologyCounts {
+        #[structopt(short, long, help = "Write JSON to this file instead of stdout")]
+        output: Option<PathBuf>,
     },
 }
 
@@ -189,6 +203,23 @@ async fn main() -> Result<()> {
 
     let args = Args::from_args();
 
+    // The producer subcommand only crawls Repology and writes JSON; it must be
+    // handled before the --push/--json assertion, which does not apply to it.
+    if let Command::RepologyCounts { output } = &args.command {
+        // `get_repology_repo_counts` uses `reqwest::blocking`, whose internal
+        // runtime must not be dropped on the `#[tokio::main]` block_on thread.
+        // Run it on a blocking-permitted thread instead.
+        let counts = tokio::task::spawn_blocking(flake_info::commands::get_repology_repo_counts)
+            .await
+            .context("Repology counts task panicked")??;
+        let json = serde_json::to_string(&counts)?;
+        match output {
+            Some(path) => std::fs::write(path, json)?,
+            None => println!("{}", json),
+        }
+        return Ok(());
+    }
+
     anyhow::ensure!(
         args.elastic.enable || args.elastic.json,
         "at least one of --push or --json must be specified"
@@ -240,6 +271,10 @@ async fn run_command(
     flake_info::commands::check_nix_version(env!("MIN_NIX_VERSION"))?;
 
     match command {
+        // Handled in main() before the runtime setup below.
+        Command::RepologyCounts { .. } => {
+            unreachable!("RepologyCounts is handled before run_command")
+        }
         Command::Flake { flake, temp_store } => {
             let source = if flake.starts_with("github:") {
                 let mut s = flake.split(":").skip(1).next().unwrap().split("/");
@@ -268,6 +303,7 @@ async fn run_command(
             channel,
             attribute,
             packages_json_url,
+            repology_counts_file,
         } => {
             let nixpkgs = Source::nixpkgs(channel)
                 .await
@@ -293,6 +329,7 @@ async fn run_command(
                         &kind,
                         &attribute,
                         &packages_json_url,
+                        &repology_counts_file,
                     )
                     .map_err(FlakeInfoError::Nixpkgs)
                 }),
@@ -326,6 +363,7 @@ async fn run_command(
                         &kind,
                         &attribute,
                         &None,
+                        &None,
                     )
                     .map_err(FlakeInfoError::Nixpkgs)
                 }),
@@ -350,7 +388,7 @@ async fn run_command(
                 .iter()
                 .map(|source| match source {
                     Source::Nixpkgs(nixpkgs) => {
-                        flake_info::process_nixpkgs(source, &kind, &None, &None)
+                        flake_info::process_nixpkgs(source, &kind, &None, &None, &None)
                             .with_context(|| {
                                 format!(
                                     "While processing nixpkgs archive {}",
@@ -463,25 +501,74 @@ async fn push_to_elastic(
     // catch error variant if abort strategy was triggered
     let ensure = es.ensure_index(&config).await;
     if let Err(ElasticsearchError::IndexExistsError(_)) = ensure {
-        // abort on abort
-        return Ok(());
+        // The index already exists under the Abort strategy. This is only a
+        // legitimate no-op if the alias already points at it (a previous run
+        // completed successfully). If the alias does not point here, the index
+        // is stale/half-built (e.g. a prior push died before flipping the
+        // alias): clear the stranded index before failing so the next run
+        // rebuilds from scratch, rather than aborting on the same stale index
+        // forever. `alias_points_at` propagates lookup errors and only returns
+        // false on a definitive miss, so a transient check failure fails the
+        // run without wiping a still-good aliased index.
+        match &alias {
+            Some(a) if !elastic.no_alias => {
+                if es.alias_points_at(a, &index).await? {
+                    return Ok(());
+                }
+                warn!(
+                    "index {index} exists but alias {a} does not point at it; \
+                     clearing stranded/half-built index so the next run rebuilds"
+                );
+                if let Err(clear_err) = es.clear_index(&config).await {
+                    warn!("failed to clear stranded index {index}: {clear_err}");
+                }
+                return Err(anyhow!(
+                    "Index {index} existed but alias {a} did not point at it \
+                     (stale/half-built import); cleared it - failing so the next run rebuilds"
+                ));
+            }
+            _ => return Ok(()),
+        }
     } else {
         // throw error if present
         ensure?;
     }
 
+    // From here on this run created the index (Abort or Recreate path). If the
+    // push or alias write fails, best-effort delete the just-created index so a
+    // partial index is never left stranded for the next run to treat as
+    // "already exists". Never clear under Ignore (append): we did not create
+    // the index and must not wipe pre-existing data. CI only uses abort
+    // (nixpkgs) and recreate (flakes), so Ignore-append is not exercised, but
+    // guard it anyway.
+    let created_index = !matches!(elastic.elastic_exists, ExistsStrategy::Ignore);
+
     let successes = exports()?;
 
     info!("Pushing to elastic");
-    es.push_exports(&config, &successes)
-        .await
-        .with_context(|| "Failed to push results to elasticsearch".to_string())?;
+    if let Err(e) = es.push_exports(&config, &successes).await {
+        if created_index {
+            warn!("push failed, clearing partial index {index} so next run rebuilds");
+            if let Err(clear_err) = es.clear_index(&config).await {
+                warn!("failed to clear partial index {index}: {clear_err}");
+            }
+        }
+        return Err(e).with_context(|| "Failed to push results to elasticsearch".to_string());
+    }
 
     if let Some(alias) = alias {
         if !elastic.no_alias {
-            es.write_alias(&config, &index, &alias)
-                .await
-                .with_context(|| "Failed to create alias".to_string())?;
+            if let Err(e) = es.write_alias(&config, &index, &alias).await {
+                if created_index {
+                    warn!(
+                        "alias write failed, clearing partial index {index} so next run rebuilds"
+                    );
+                    if let Err(clear_err) = es.clear_index(&config).await {
+                        warn!("failed to clear partial index {index}: {clear_err}");
+                    }
+                }
+                return Err(e).with_context(|| "Failed to create alias".to_string());
+            }
         } else {
             warn!("Creating alias disabled")
         }
