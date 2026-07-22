@@ -18,6 +18,10 @@ url = "git+https://codeberg.org/raboof/browserify?ref=nix"
 
 [[sources]]
 type = "git"
+url = "git+https://codeberg.org/raboof/mock-oauth2-server?ref=nix"
+
+[[sources]]
+type = "git"
 url = "git+https://codeberg.org/wolfangaukang/python-trovo?ref=main"
 
 # wolfangaukang is no longer in 'maintainers'
