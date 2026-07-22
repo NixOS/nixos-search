@@ -1060,5 +1060,11 @@
         "q": "terminal multiplexer",
         "category": "intent",
         "relevant": ["pkg:tmux"]
+    },
+    {
+        "id": "g151",
+        "q": "continuwuity",
+        "category": "exact",
+        "relevant": ["pkg:matrix-continuwuity"]
     }
 ]
