@@ -39,7 +39,7 @@ jobs:
 
       - name: Save Repology counts to cache
         if: github.repository_owner == 'NixOS'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: repology-counts.json
           # Actions cache keys are immutable, so a rotating date lets each daily

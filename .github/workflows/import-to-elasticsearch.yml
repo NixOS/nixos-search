@@ -66,7 +66,7 @@ jobs:
         run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
 
       - name: Restore Repology counts from cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: repology-counts.json
           # Falls back to the newest available daily cache; a total miss (e.g. a
