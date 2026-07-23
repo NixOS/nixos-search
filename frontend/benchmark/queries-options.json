@@ -1,106 +1,51 @@
 [
     {
-        "id": "g001",
-        "q": "ripgrep",
-        "category": "exact",
-        "relevant": ["pkg:ripgrep"]
-    },
-    {
-        "id": "g002",
-        "q": "htop",
-        "category": "exact",
-        "relevant": ["pkg:htop"]
-    },
-    {
-        "id": "g003",
-        "q": "jq",
-        "category": "exact",
-        "relevant": ["pkg:jq"]
-    },
-    {
-        "id": "g004",
-        "q": "tmux",
-        "category": "exact",
-        "relevant": ["pkg:tmux"]
-    },
-    {
-        "id": "g005",
-        "q": "neovim",
-        "category": "exact",
-        "relevant": ["pkg:neovim"]
-    },
-    {
-        "id": "g006",
-        "q": "fzf",
-        "category": "exact",
-        "relevant": ["pkg:fzf"]
-    },
-    {
-        "id": "g007",
-        "q": "bat",
-        "category": "exact",
-        "relevant": ["pkg:bat"]
-    },
-    {
         "id": "g008",
         "q": "nginx",
         "category": "exact",
-        "relevant": [
-            "pkg:nginx",
-            "pkg:nginxMainline",
-            "pkg:nginxStable",
-            "opt:services.nginx.enable"
-        ]
+        "relevant": ["opt:services.nginx.enable"]
     },
     {
         "id": "g009",
         "q": "grafana",
         "category": "exact",
-        "relevant": ["pkg:grafana", "opt:services.grafana.enable"]
+        "relevant": ["opt:services.grafana.enable"]
     },
     {
         "id": "g010",
         "q": "prometheus",
         "category": "exact",
-        "relevant": ["pkg:prometheus", "opt:services.prometheus.enable"]
+        "relevant": ["opt:services.prometheus.enable"]
     },
     {
         "id": "g011",
         "q": "postgresql",
         "category": "exact",
-        "relevant": [
-            "pkg:postgresql",
-            "pkg:postgresql_14",
-            "pkg:postgresql_15",
-            "pkg:postgresql_16",
-            "pkg:postgresql_17",
-            "pkg:postgresql_18",
-            "opt:services.postgresql.enable"
-        ]
+        "relevant": ["opt:services.postgresql.enable"]
     },
     {
         "id": "g012",
         "q": "openssh",
         "category": "exact",
-        "relevant": ["pkg:openssh", "opt:services.openssh.enable"]
+        "relevant": ["opt:services.openssh.enable"]
     },
     {
         "id": "g013",
         "q": "caddy",
         "category": "exact",
-        "relevant": ["pkg:caddy", "opt:services.caddy.enable"]
+        "relevant": ["opt:services.caddy.enable"]
     },
     {
         "id": "g014",
         "q": "gitea",
         "category": "exact",
-        "relevant": ["pkg:gitea", "opt:services.gitea.enable"]
+        "relevant": ["opt:services.gitea.enable"]
     },
     {
         "id": "g015",
         "q": "jellyfin",
         "category": "exact",
-        "relevant": ["pkg:jellyfin", "opt:services.jellyfin.enable"]
+        "relevant": ["opt:services.jellyfin.enable"]
     },
     {
         "id": "g016",
@@ -166,45 +111,31 @@
         "id": "g026",
         "q": "postgres",
         "category": "prefix",
-        "relevant": [
-            "pkg:postgresql",
-            "pkg:postgresql_14",
-            "pkg:postgresql_15",
-            "pkg:postgresql_16",
-            "pkg:postgresql_17",
-            "pkg:postgresql_18",
-            "opt:services.postgresql.enable"
-        ]
+        "relevant": ["opt:services.postgresql.enable"]
     },
     {
         "id": "g027",
         "q": "graf",
         "category": "prefix",
-        "relevant": ["pkg:grafana", "opt:services.grafana.enable"]
+        "relevant": ["opt:services.grafana.enable"]
     },
     {
         "id": "g028",
         "q": "prom",
         "category": "prefix",
-        "relevant": ["pkg:prometheus", "opt:services.prometheus.enable"]
-    },
-    {
-        "id": "g029",
-        "q": "ripgr",
-        "category": "prefix",
-        "relevant": ["pkg:ripgrep"]
+        "relevant": ["opt:services.prometheus.enable"]
     },
     {
         "id": "g030",
         "q": "jelly",
         "category": "prefix",
-        "relevant": ["pkg:jellyfin", "opt:services.jellyfin.enable"]
+        "relevant": ["opt:services.jellyfin.enable"]
     },
     {
         "id": "g031",
         "q": "syncth",
         "category": "prefix",
-        "relevant": ["pkg:syncthing", "opt:services.syncthing.enable"]
+        "relevant": ["opt:services.syncthing.enable"]
     },
     {
         "id": "g032",
@@ -228,179 +159,97 @@
         "id": "g035",
         "q": "ngin",
         "category": "prefix",
-        "relevant": [
-            "pkg:nginx",
-            "pkg:nginxMainline",
-            "pkg:nginxStable",
-            "pkg:nginxShibboleth",
-            "opt:services.nginx.enable"
-        ]
-    },
-    {
-        "id": "g036",
-        "q": "mariad",
-        "category": "prefix",
-        "relevant": [
-            "pkg:mariadb",
-            "pkg:mariadb_1011",
-            "pkg:mariadb_106",
-            "pkg:mariadb_114",
-            "pkg:mariadb_118"
-        ]
+        "relevant": ["opt:services.nginx.enable"]
     },
     {
         "id": "g037",
         "q": "fail2",
         "category": "prefix",
-        "relevant": ["pkg:fail2ban", "opt:services.fail2ban.enable"]
+        "relevant": ["opt:services.fail2ban.enable"]
     },
     {
         "id": "g038",
         "q": "tailsc",
         "category": "prefix",
-        "relevant": ["pkg:tailscale", "opt:services.tailscale.enable"]
+        "relevant": ["opt:services.tailscale.enable"]
     },
     {
         "id": "g039",
         "q": "nextcl",
         "category": "prefix",
-        "relevant": [
-            "pkg:nextcloud32",
-            "pkg:nextcloud33",
-            "pkg:nextcloud34",
-            "opt:services.nextcloud.enable"
-        ]
+        "relevant": ["opt:services.nextcloud.enable"]
     },
     {
         "id": "g040",
         "q": "traef",
         "category": "prefix",
-        "relevant": ["pkg:traefik", "opt:services.traefik.enable"]
+        "relevant": ["opt:services.traefik.enable"]
     },
     {
         "id": "g041",
         "q": "cadd",
         "category": "prefix",
-        "relevant": ["pkg:caddy", "opt:services.caddy.enable"]
+        "relevant": ["opt:services.caddy.enable"]
     },
     {
         "id": "g042",
         "q": "transm",
         "category": "prefix",
-        "relevant": ["pkg:transmission_4", "opt:services.transmission.enable"]
+        "relevant": ["opt:services.transmission.enable"]
     },
     {
         "id": "g043",
         "q": "unbou",
         "category": "prefix",
-        "relevant": ["pkg:unbound", "opt:services.unbound.enable"]
+        "relevant": ["opt:services.unbound.enable"]
     },
     {
         "id": "g044",
         "q": "dnsma",
         "category": "prefix",
-        "relevant": ["pkg:dnsmasq", "opt:services.dnsmasq.enable"]
-    },
-    {
-        "id": "g045",
-        "q": "neovi",
-        "category": "prefix",
-        "relevant": ["pkg:neovim"]
-    },
-    {
-        "id": "g046",
-        "q": "thunder",
-        "category": "prefix",
-        "relevant": ["pkg:thunderbird"]
-    },
-    {
-        "id": "g047",
-        "q": "chrom",
-        "category": "prefix",
-        "relevant": ["pkg:chromium"]
-    },
-    {
-        "id": "g048",
-        "q": "borgb",
-        "category": "prefix",
-        "relevant": ["pkg:borgbackup"]
+        "relevant": ["opt:services.dnsmasq.enable"]
     },
     {
         "id": "g049",
         "q": "mosqui",
         "category": "prefix",
-        "relevant": ["pkg:mosquitto", "opt:services.mosquitto.enable"]
+        "relevant": ["opt:services.mosquitto.enable"]
     },
     {
         "id": "g050",
         "q": "elastic",
         "category": "prefix",
-        "relevant": [
-            "pkg:elasticsearch",
-            "pkg:elasticsearch7",
-            "opt:services.elasticsearch.enable"
-        ]
+        "relevant": ["opt:services.elasticsearch.enable"]
     },
     {
         "id": "g051",
         "q": "ngnix",
         "category": "typo",
-        "relevant": [
-            "pkg:nginx",
-            "pkg:nginxStable",
-            "pkg:nginxMainline",
-            "opt:services.nginx.enable"
-        ]
+        "relevant": ["opt:services.nginx.enable"]
     },
     {
         "id": "g052",
         "q": "postgrsql",
         "category": "typo",
-        "relevant": [
-            "pkg:postgresql",
-            "pkg:postgresql_14",
-            "pkg:postgresql_15",
-            "pkg:postgresql_16",
-            "pkg:postgresql_17",
-            "pkg:postgresql_18",
-            "pkg:postgresql_jit",
-            "pkg:postgresql_14_jit",
-            "pkg:postgresql_15_jit",
-            "pkg:postgresql_16_jit",
-            "pkg:postgresql_17_jit",
-            "pkg:postgresql_18_jit",
-            "opt:services.postgresql.enable"
-        ]
+        "relevant": ["opt:services.postgresql.enable"]
     },
     {
         "id": "g053",
         "q": "promethues",
         "category": "typo",
-        "relevant": ["pkg:prometheus", "opt:services.prometheus.enable"]
+        "relevant": ["opt:services.prometheus.enable"]
     },
     {
         "id": "g054",
         "q": "grafan",
         "category": "typo",
-        "relevant": ["pkg:grafana", "opt:services.grafana.enable"]
-    },
-    {
-        "id": "g055",
-        "q": "firefx",
-        "category": "typo",
-        "relevant": ["pkg:firefox"]
-    },
-    {
-        "id": "g056",
-        "q": "ripgrap",
-        "category": "typo",
-        "relevant": ["pkg:ripgrep"]
+        "relevant": ["opt:services.grafana.enable"]
     },
     {
         "id": "g057",
         "q": "jellifin",
         "category": "typo",
-        "relevant": ["pkg:jellyfin", "opt:services.jellyfin.enable"]
+        "relevant": ["opt:services.jellyfin.enable"]
     },
     {
         "id": "g058",
@@ -418,120 +267,67 @@
         "id": "g060",
         "q": "samaba",
         "category": "typo",
-        "relevant": [
-            "pkg:samba",
-            "pkg:samba4",
-            "pkg:samba4Full",
-            "pkg:sambaFull",
-            "opt:services.samba.enable"
-        ]
-    },
-    {
-        "id": "g061",
-        "q": "redsi",
-        "category": "typo",
-        "relevant": ["pkg:redis"]
+        "relevant": ["opt:services.samba.enable"]
     },
     {
         "id": "g062",
         "q": "openssg",
         "category": "typo",
-        "relevant": [
-            "pkg:openssh",
-            "pkg:opensshWithKerberos",
-            "pkg:openssh_gssapi",
-            "pkg:openssh_hpn",
-            "pkg:openssh_hpnWithKerberos",
-            "opt:services.openssh.enable"
-        ]
-    },
-    {
-        "id": "g063",
-        "q": "kubctl",
-        "category": "typo",
-        "relevant": ["pkg:kubectl"]
-    },
-    {
-        "id": "g064",
-        "q": "terrafrom",
-        "category": "typo",
-        "relevant": ["pkg:terraform", "pkg:terraform_1"]
-    },
-    {
-        "id": "g065",
-        "q": "chromiun",
-        "category": "typo",
-        "relevant": ["pkg:chromium"]
-    },
-    {
-        "id": "g066",
-        "q": "thunderbrid",
-        "category": "typo",
-        "relevant": ["pkg:thunderbird"]
+        "relevant": ["opt:services.openssh.enable"]
     },
     {
         "id": "g067",
         "q": "dcoker",
         "category": "typo",
-        "relevant": [
-            "pkg:docker",
-            "pkg:docker_25",
-            "pkg:docker_29",
-            "opt:virtualisation.docker.enable"
-        ]
+        "relevant": ["opt:virtualisation.docker.enable"]
     },
     {
         "id": "g068",
         "q": "nextcoud",
         "category": "typo",
-        "relevant": [
-            "pkg:nextcloud32",
-            "pkg:nextcloud33",
-            "pkg:nextcloud34",
-            "opt:services.nextcloud.enable"
-        ]
+        "relevant": ["opt:services.nextcloud.enable"]
     },
     {
         "id": "g069",
         "q": "gitae",
         "category": "typo",
-        "relevant": ["pkg:gitea", "opt:services.gitea.enable"]
+        "relevant": ["opt:services.gitea.enable"]
     },
     {
         "id": "g070",
         "q": "vaultwardn",
         "category": "typo",
-        "relevant": ["pkg:vaultwarden", "opt:services.vaultwarden.enable"]
+        "relevant": ["opt:services.vaultwarden.enable"]
     },
     {
         "id": "g071",
         "q": "tailscle",
         "category": "typo",
-        "relevant": ["pkg:tailscale", "opt:services.tailscale.enable"]
+        "relevant": ["opt:services.tailscale.enable"]
     },
     {
         "id": "g072",
         "q": "fial2ban",
         "category": "typo",
-        "relevant": ["pkg:fail2ban", "opt:services.fail2ban.enable"]
+        "relevant": ["opt:services.fail2ban.enable"]
     },
     {
         "id": "g073",
         "q": "mosquito",
         "category": "typo",
-        "relevant": ["pkg:mosquitto", "opt:services.mosquitto.enable"]
+        "relevant": ["opt:services.mosquitto.enable"]
     },
     {
         "id": "g074",
         "q": "syncthign",
         "category": "typo",
-        "relevant": ["pkg:syncthing", "opt:services.syncthing.enable"]
+        "relevant": ["opt:services.syncthing.enable"]
     },
     {
         "id": "g075",
         "q": "cady",
         "category": "typo",
-        "relevant": ["pkg:caddy", "opt:services.caddy.enable"]
+        "relevant": ["opt:services.caddy.enable"]
     },
     {
         "id": "g076",
@@ -687,66 +483,37 @@
         "id": "g101",
         "q": "docker container",
         "category": "multiterm",
-        "relevant": [
-            "pkg:docker",
-            "pkg:docker_25",
-            "pkg:docker_29",
-            "opt:virtualisation.docker.enable"
-        ]
+        "relevant": ["opt:virtualisation.docker.enable"]
     },
     {
         "id": "g102",
         "q": "ssh daemon",
         "category": "multiterm",
-        "relevant": [
-            "pkg:openssh",
-            "pkg:opensshWithKerberos",
-            "pkg:openssh_gssapi",
-            "pkg:openssh_hpn",
-            "pkg:openssh_hpnWithKerberos",
-            "opt:services.openssh.enable"
-        ]
+        "relevant": ["opt:services.openssh.enable"]
     },
     {
         "id": "g103",
         "q": "home assistant",
         "category": "multiterm",
-        "relevant": ["pkg:home-assistant", "opt:services.home-assistant.enable"]
+        "relevant": ["opt:services.home-assistant.enable"]
     },
     {
         "id": "g104",
         "q": "matrix synapse",
         "category": "multiterm",
-        "relevant": ["pkg:matrix-synapse", "opt:services.matrix-synapse.enable"]
-    },
-    {
-        "id": "g105",
-        "q": "docker compose",
-        "category": "multiterm",
-        "relevant": ["pkg:docker-compose"]
+        "relevant": ["opt:services.matrix-synapse.enable"]
     },
     {
         "id": "g106",
         "q": "vault warden",
         "category": "multiterm",
-        "relevant": ["pkg:vaultwarden", "opt:services.vaultwarden.enable"]
+        "relevant": ["opt:services.vaultwarden.enable"]
     },
     {
         "id": "g107",
         "q": "next cloud",
         "category": "multiterm",
-        "relevant": [
-            "pkg:nextcloud32",
-            "pkg:nextcloud33",
-            "pkg:nextcloud34",
-            "opt:services.nextcloud.enable"
-        ]
-    },
-    {
-        "id": "g108",
-        "q": "paperless ngx",
-        "category": "multiterm",
-        "relevant": ["pkg:paperless-ngx"]
+        "relevant": ["opt:services.nextcloud.enable"]
     },
     {
         "id": "g109",
@@ -806,13 +573,13 @@
         "id": "g118",
         "q": "object storage",
         "category": "multiterm",
-        "relevant": ["pkg:minio", "opt:services.minio.enable"]
+        "relevant": ["opt:services.minio.enable"]
     },
     {
         "id": "g119",
         "q": "secret management",
         "category": "multiterm",
-        "relevant": ["pkg:vault", "opt:services.vault.enable"]
+        "relevant": ["opt:services.vault.enable"]
     },
     {
         "id": "g120",
@@ -831,11 +598,7 @@
         "q": "container runtime",
         "category": "multiterm",
         "relevant": [
-            "pkg:docker",
-            "pkg:docker_25",
-            "pkg:docker_29",
             "opt:virtualisation.docker.enable",
-            "pkg:podman",
             "opt:virtualisation.podman.enable"
         ]
     },
@@ -843,13 +606,13 @@
         "id": "g123",
         "q": "mesh vpn",
         "category": "multiterm",
-        "relevant": ["pkg:tailscale", "opt:services.tailscale.enable"]
+        "relevant": ["opt:services.tailscale.enable"]
     },
     {
         "id": "g124",
         "q": "password manager",
         "category": "multiterm",
-        "relevant": ["pkg:vaultwarden", "opt:services.vaultwarden.enable"]
+        "relevant": ["opt:services.vaultwarden.enable"]
     },
     {
         "id": "g125",
@@ -864,43 +627,17 @@
         "id": "g126",
         "q": "web server",
         "category": "intent",
-        "relevant": [
-            "pkg:nginx",
-            "pkg:nginxMainline",
-            "pkg:nginxStable",
-            "pkg:nginxShibboleth",
-            "opt:services.nginx.enable",
-            "pkg:caddy",
-            "opt:services.caddy.enable"
-        ]
+        "relevant": ["opt:services.nginx.enable", "opt:services.caddy.enable"]
     },
     {
         "id": "g127",
         "q": "reverse proxy",
         "category": "intent",
         "relevant": [
-            "pkg:nginx",
-            "pkg:nginxMainline",
-            "pkg:nginxStable",
-            "pkg:nginxShibboleth",
             "opt:services.nginx.enable",
-            "pkg:caddy",
             "opt:services.caddy.enable",
-            "pkg:traefik",
             "opt:services.traefik.enable"
         ]
-    },
-    {
-        "id": "g128",
-        "q": "version control system",
-        "category": "intent",
-        "relevant": ["pkg:git", "pkg:gitFull", "pkg:gitMinimal", "pkg:gitSVN"]
-    },
-    {
-        "id": "g129",
-        "q": "interactive process viewer",
-        "category": "intent",
-        "relevant": ["pkg:htop", "pkg:btop", "pkg:xfce4-taskmanager"]
     },
     {
         "id": "g130",
@@ -908,7 +645,6 @@
         "category": "intent",
         "relevant": [
             "opt:networking.wireguard.enable",
-            "pkg:tailscale",
             "opt:services.tailscale.enable"
         ]
     },
@@ -916,48 +652,26 @@
         "id": "g131",
         "q": "self hosted password manager",
         "category": "intent",
-        "relevant": ["pkg:vaultwarden", "opt:services.vaultwarden.enable"]
+        "relevant": ["opt:services.vaultwarden.enable"]
     },
     {
         "id": "g132",
         "q": "media streaming server",
         "category": "intent",
-        "relevant": ["pkg:jellyfin", "opt:services.jellyfin.enable"]
-    },
-    {
-        "id": "g133",
-        "q": "backup tool",
-        "category": "intent",
-        "relevant": ["pkg:restic", "pkg:borgbackup"]
+        "relevant": ["opt:services.jellyfin.enable"]
     },
     {
         "id": "g134",
         "q": "file synchronization",
         "category": "intent",
-        "relevant": [
-            "pkg:syncthing",
-            "opt:services.syncthing.enable",
-            "pkg:maestral"
-        ]
+        "relevant": ["opt:services.syncthing.enable"]
     },
     {
         "id": "g135",
         "q": "relational database server",
         "category": "intent",
         "relevant": [
-            "pkg:postgresql",
-            "pkg:postgresql_14",
-            "pkg:postgresql_15",
-            "pkg:postgresql_16",
-            "pkg:postgresql_17",
-            "pkg:postgresql_18",
             "opt:services.postgresql.enable",
-            "pkg:mariadb",
-            "pkg:mariadb_1011",
-            "pkg:mariadb_106",
-            "pkg:mariadb_114",
-            "pkg:mariadb_118",
-            "pkg:mysql84",
             "opt:services.mysql.enable"
         ]
     },
@@ -965,28 +679,26 @@
         "id": "g136",
         "q": "in memory key value store",
         "category": "intent",
-        "relevant": ["pkg:redis", "opt:services.redis.servers.<name>.enable"]
+        "relevant": ["opt:services.redis.servers"]
     },
     {
         "id": "g137",
         "q": "secret storage",
         "category": "intent",
-        "relevant": ["pkg:vault", "opt:services.vault.enable"]
+        "relevant": ["opt:services.vault.enable"]
     },
     {
         "id": "g138",
         "q": "s3 compatible object storage",
         "category": "intent",
-        "relevant": ["pkg:minio", "opt:services.minio.enable"]
+        "relevant": ["opt:services.minio.enable"]
     },
     {
         "id": "g139",
         "q": "metrics monitoring stack",
         "category": "intent",
         "relevant": [
-            "pkg:prometheus",
             "opt:services.prometheus.enable",
-            "pkg:grafana",
             "opt:services.grafana.enable"
         ]
     },
@@ -994,13 +706,13 @@
         "id": "g140",
         "q": "document management",
         "category": "intent",
-        "relevant": ["pkg:paperless-ngx", "opt:services.paperless.enable"]
+        "relevant": ["opt:services.paperless.enable"]
     },
     {
         "id": "g141",
         "q": "printing support",
         "category": "intent",
-        "relevant": ["pkg:cups", "opt:services.printing.enable"]
+        "relevant": ["opt:services.printing.enable"]
     },
     {
         "id": "g142",
@@ -1013,58 +725,14 @@
         "q": "caching dns resolver",
         "category": "intent",
         "relevant": [
-            "pkg:unbound",
             "opt:services.unbound.enable",
-            "pkg:dnsmasq",
             "opt:services.dnsmasq.enable"
         ]
-    },
-    {
-        "id": "g144",
-        "q": "text editor",
-        "category": "intent",
-        "relevant": ["pkg:emacs", "pkg:emacs30", "pkg:neovim", "pkg:vim"]
-    },
-    {
-        "id": "g145",
-        "q": "graphical web browser",
-        "category": "intent",
-        "relevant": ["pkg:firefox", "pkg:chromium"]
-    },
-    {
-        "id": "g146",
-        "q": "desktop email client",
-        "category": "intent",
-        "relevant": ["pkg:thunderbird"]
-    },
-    {
-        "id": "g147",
-        "q": "video player",
-        "category": "intent",
-        "relevant": ["pkg:vlc", "pkg:mpv"]
-    },
-    {
-        "id": "g148",
-        "q": "raster image editor",
-        "category": "intent",
-        "relevant": ["pkg:gimp", "pkg:gimp2", "pkg:gimp2-with-plugins"]
     },
     {
         "id": "g149",
         "q": "bittorrent client",
         "category": "intent",
-        "relevant": ["pkg:transmission_4", "opt:services.transmission.enable"]
-    },
-    {
-        "id": "g150",
-        "q": "terminal multiplexer",
-        "category": "intent",
-        "relevant": ["pkg:tmux"]
-    },
-    {
-        "id": "g151",
-        "q": "continuwuity",
-        "category": "exact",
-        "relevant": ["pkg:matrix-continuwuity"]
+        "relevant": ["opt:services.transmission.enable"]
     }
 ]
