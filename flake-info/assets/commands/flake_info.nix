@@ -279,7 +279,7 @@ let
 
   readFlakeOptions =
     let
-      nixosModulesOpts = builtins.concatLists (
+      raw = builtins.concatLists (
         lib.mapAttrsToList (
           moduleName: module:
           readNixOSOptions {
@@ -291,16 +291,6 @@ let
           }
         ) (resolved.nixosModules or { })
       );
-
-      nixosModuleOpts = lib.optionals (resolved ? nixosModule) (readNixOSOptions {
-        module = resolved.nixosModule;
-        modulePath = [ flake ];
-      });
-
-      raw =
-        # We assume that `nixosModules` includes `nixosModule` when there
-        # are multiple modules
-        if nixosModulesOpts != [ ] then nixosModulesOpts else nixosModuleOpts;
 
       # When a flake re-exports the same module under multiple names
       # (e.g. `default` and `home-manager`), deduplicate by option name,
