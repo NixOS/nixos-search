@@ -2,6 +2,22 @@ import { defineConfig } from "@rsbuild/core";
 import { pluginSass } from "@rsbuild/plugin-sass";
 import * as sass from "sass";
 
+const FAVICON_PATH = "/images/nixos-logomark-default-gradient-none.svg";
+
+const generateOpenSearchXml = (type, title, description) => `<?xml version="1.0"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/"
+                       xmlns:moz="http://www.mozilla.org/2006/browser/search/">
+  <ShortName>${title}</ShortName>
+  <Description>${description}</Description>
+  <Tags>nix nixos ${type}</Tags>
+  <Developer>NixOS Community</Developer>
+  <InputEncoding>UTF-8</InputEncoding>
+  <Image width="16" height="16" type="image/svg+xml">${FAVICON_PATH}</Image>
+  <Url type="text/html" template="https://search.nixos.org/${type}?query={searchTerms}"/>
+  <moz:SearchForm>https://search.nixos.org/${type}</moz:SearchForm>
+</OpenSearchDescription>
+`;
+
 export default defineConfig({
     plugins: [
         pluginSass({
@@ -57,9 +73,28 @@ export default defineConfig({
         },
     },
     tools: {
-        rspack: (config, { env }) => {
+        rspack: (config, { env, rspack }) => {
             const isProd = env === "production";
             const withDebug = process.env.NODEBUG !== "true" && !isProd;
+
+            config.plugins.push({
+                apply(compiler) {
+                    compiler.hooks.compilation.tap("OpenSearchPlugin", (compilation) => {
+                        const manifests = [
+                            ["opensearch-packages.xml", "packages", "NixOS: Search - Packages", "Search NixOS packages by name or description."],
+                            ["opensearch-options.xml", "options", "NixOS: Search - Options", "Search NixOS configuration options."],
+                            ["opensearch-flakes.xml", "flakes", "NixOS: Search - Flakes", "Search Nix ecosystem flakes."],
+                        ];
+
+                        for (const [filename, type, title, desc] of manifests) {
+                            compilation.emitAsset(
+                                filename,
+                                new rspack.sources.RawSource(generateOpenSearchXml(type, title, desc))
+                            );
+                        }
+                    });
+                },
+            });
 
             const elmLoaders = [];
             if (!isProd) {
