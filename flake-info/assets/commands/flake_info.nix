@@ -2,12 +2,11 @@
   targetFlake,
   nixpkgsFlake,
   flake-schemas,
-  targetFlakeUri ? if builtins.isString targetFlake then targetFlake else null,
+  targetFlakeUri ? if nixpkgsFlake.lib.isString targetFlake then targetFlake else null,
 }:
 let
-  resolved = if builtins.isAttrs targetFlake then targetFlake else builtins.getFlake targetFlake;
-
   inherit (nixpkgsFlake) lib;
+  resolved = if lib.isAttrs targetFlake then targetFlake else builtins.getFlake targetFlake;
   nixpkgs = nixpkgsFlake.legacyPackages.${referenceSystem};
 
   # Reference system to use for extracting full package metadata
@@ -80,7 +79,7 @@ let
   # Extract package and app entries using schema inventory functions
   readSchemaItems =
     schemaKey: entryType:
-    builtins.concatLists (
+    lib.concatLists (
       lib.mapAttrsToList (
         system: sysNode:
         lib.filter (x: x != null) (
