@@ -238,7 +238,7 @@ pub fn get_home_manager_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
     let options = get_options_from_script(
         nixpkgs,
         "home-manager-options",
-        Some(("input-flake", &hm_flake_ref)),
+        Some(("targetFlake", &hm_flake_ref)),
     )?;
     Ok(options
         .into_iter()
@@ -262,7 +262,7 @@ pub fn get_darwin_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
     let options = get_options_from_script(
         nixpkgs,
         "darwin-options",
-        Some(("input-flake", &darwin_flake_ref)),
+        Some(("targetFlake", &darwin_flake_ref)),
     )?;
     Ok(options
         .into_iter()

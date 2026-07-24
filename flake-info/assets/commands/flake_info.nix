@@ -1,12 +1,12 @@
 {
-  flake ? null,
-  input-flake ? "input-flake",
-  flake-schemas ? (builtins.getFlake (toString ../../../.)).inputs.flake-schemas,
+  targetFlake,
+  nixpkgsFlake,
+  flake-schemas,
+  targetFlakeUri ? if builtins.isString targetFlake then targetFlake else null,
 }:
 let
-  resolved = builtins.getFlake input-flake;
+  resolved = if builtins.isAttrs targetFlake then targetFlake else builtins.getFlake targetFlake;
 
-  nixpkgsFlake = builtins.getFlake "nixpkgs";
   inherit (nixpkgsFlake) lib;
   nixpkgs = nixpkgsFlake.legacyPackages.${referenceSystem};
 
@@ -291,7 +291,7 @@ let
           readNixOSOptions {
             inherit module;
             modulePath = [
-              flake
+              (if targetFlakeUri != null then targetFlakeUri else targetFlake)
               moduleName
             ];
           }

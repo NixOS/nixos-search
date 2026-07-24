@@ -14,8 +14,10 @@ let
       # Evaluate flake_info.nix with the test flake
       actualOutput =
         (import ../flake_info.nix {
-          flake = flakeUri;
-          input-flake = flakeUri;
+          targetFlake = flakeUri;
+          targetFlakeUri = flakeUri;
+          nixpkgsFlake = pkgs;
+          flake-schemas = builtins.getFlake "github:DeterminateSystems/flake-schemas";
         }).all;
 
       sortByKey = lib.sort (
