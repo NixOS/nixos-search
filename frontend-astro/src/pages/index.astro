@@ -1,0 +1,16 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Search from '../components/Search.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout>
+	<div class="flex flex-col min-h-full w-full">
+		<div class="grow flex items-start w-full justify-center pt-18">
+			<div class="flex flex-col w-full mx-[5%]">
+				<Search />
+			</div>
+		</div>
+		<Footer/>
+	</div>
+</Layout>
