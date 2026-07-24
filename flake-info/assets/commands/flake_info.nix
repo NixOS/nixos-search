@@ -1,6 +1,7 @@
 {
   flake ? null,
   input-flake ? "input-flake",
+  flake-schemas ? (builtins.getFlake (toString ../../../.)).inputs.flake-schemas,
 }:
 let
   resolved = builtins.getFlake input-flake;
@@ -68,56 +69,65 @@ let
     else
       null;
 
-  readPackages =
-    system: drvs:
-    let
-      # Full evaluation - used for reference system
-      processPackageFull =
-        attribute_name: drv:
-        let
-          meta = evalDrvMetadata drv;
-        in
-        if meta != null then
-          {
-            entry_type = "package";
-            inherit attribute_name system;
-          }
-          // meta
-        else
-          null;
+  getSchemaInventory =
+    key:
+    if resolved ? ${key} && schemas ? ${key} then
+      let
+        inv = safeEval (schemas.${key}.inventory resolved.${key});
+      in
+      if inv.success && inv.value ? children then inv.value.children else { }
+    else
+      { };
 
-      # Lightweight evaluation - only attribute name and system, no package evaluation
-      processPackageLight = attribute_name: drv: {
-        entry_type = "package";
-        attribute_name = attribute_name;
-        system = system;
-        # Don't access any attributes of drv to avoid forcing evaluation
-      };
+  # Extract package and app entries using schema inventory functions
+  readSchemaItems =
+    schemaKey: entryType:
+    lib.flatten (
+      lib.mapAttrsToList (
+        system: sysNode:
+        lib.filter (x: x != null) (
+          lib.mapAttrsToList (
+            attribute_name: itemNode:
+            let
+              rawVal = resolved.${schemaKey}.${system}.${attribute_name} or null;
+              val = itemNode.value or itemNode.derivation or itemNode.app or rawVal;
+              binPath =
+                itemNode.program or (if lib.isAttrs val then (val.program or val.outPath or null) else null);
+            in
+            if entryType == "app" then
+              {
+                entry_type = "app";
+                inherit attribute_name system;
+              }
+              // lib.optionalAttrs (binPath != null) { bin = binPath; }
+              // lib.optionalAttrs (itemNode ? type || (lib.isAttrs val && val ? type)) {
+                type = itemNode.type or (if lib.isAttrs val then val.type or "app" else "app");
+              }
+            else if system == referenceSystem then
+              let
+                meta = evalDrvMetadata val;
+              in
+              if meta != null then
+                {
+                  entry_type = "package";
+                  inherit attribute_name system;
+                }
+                // meta
+              else
+                null
+            else
+              {
+                entry_type = "package";
+                inherit attribute_name system;
+              }
+          ) (sysNode.children or { })
+        )
+      ) (getSchemaInventory schemaKey)
+    );
 
-      # Use full processing for reference system, lightweight for others
-      results =
-        if system == referenceSystem then
-          lib.mapAttrsToList processPackageFull drvs
-        else
-          lib.mapAttrsToList processPackageLight drvs;
-    in
-    # Filter out null entries (only relevant for full processing)
-    if system == referenceSystem then lib.filter (x: x != null) results else results;
-  readApps =
-    system: apps:
-    lib.mapAttrsToList (
-      attribute_name: app:
-      (
-        {
-          entry_type = "app";
-          attribute_name = attribute_name;
-          system = system;
-        }
-        // lib.optionalAttrs (app ? outPath) { bin = app.outPath; }
-        // lib.optionalAttrs (app ? program) { bin = app.program; }
-        // lib.optionalAttrs (app ? type) { type = app.type; }
-      )
-    ) apps;
+  legacyPackages' = readSchemaItems "legacyPackages" "package";
+  packages' = readSchemaItems "packages" "package";
+  apps' = readSchemaItems "apps" "app";
 
   # Replace functions by the string <function>
   substFunction =
@@ -261,8 +271,20 @@ let
     in
     lib.mapAttrsToList (_: mergeGroup) grouped;
 
+  # Base schemas from official flake-schemas input extended with custom schemas
+  schemas = flake-schemas.exportedSchemas // (resolved.schemas or { });
+
   readFlakeOptions =
     let
+      invModules = lib.mapAttrs (
+        name: n:
+        if lib.isFunction (n.value or n.module or null) || lib.isAttrs (n.value or n.module or null) then
+          n.value or n.module
+        else
+          resolved.nixosModules.${name} or n
+      ) (getSchemaInventory "nixosModules");
+      moduleSet = if invModules != { } then invModules else resolved.nixosModules or { };
+
       raw = lib.concatLists (
         lib.mapAttrsToList (
           moduleName: module:
@@ -273,7 +295,7 @@ let
               moduleName
             ];
           }
-        ) (resolved.nixosModules or { })
+        ) moduleSet
       );
 
       # When a flake re-exports the same module under multiple names
@@ -330,26 +352,13 @@ let
       };
     };
 
-  read = reader: set: lib.flatten (lib.attrValues (withSystem reader set));
-
-  # Get all package sets by system for potential fallback evaluation
-  allPackageSets = {
-    legacyPackages = resolved.legacyPackages or { };
-    packages = resolved.packages or { };
-  };
-
-  legacyPackages' = read readPackages (resolved.legacyPackages or { });
-  packages' = read readPackages (resolved.packages or { });
-
-  apps' = read readApps (resolved.apps or { });
-
   # Helper to fully evaluate a package from a specific system when needed
   evaluatePackageFromSystem =
-    pkgSet: system: attribute_name:
-    evalDrvMetadata (pkgSet.${system}.${attribute_name} or null);
+    outputKey: system: attribute_name:
+    evalDrvMetadata (resolved.${outputKey}.${system}.${attribute_name} or null);
 
   collectSystems =
-    pkgSet: list:
+    outputKey: list:
     lib.lists.foldr (
       drv@{ attribute_name, system, ... }:
       set:
@@ -392,7 +401,7 @@ let
               # Present lacks metadata, this must be a platform-specific package
               # Evaluate it from this system
               let
-                metadata = evaluatePackageFromSystem pkgSet system attribute_name;
+                metadata = evaluatePackageFromSystem outputKey system attribute_name;
               in
               if metadata != null then
                 present
@@ -455,9 +464,9 @@ let
 in
 
 rec {
-  legacyPackages = lib.attrValues (collectSystems allPackageSets.legacyPackages legacyPackages');
-  packages = lib.attrValues (collectSystems allPackageSets.packages packages');
-  apps = lib.attrValues (collectSystems { } apps'); # apps don't need fallback evaluation
+  legacyPackages = lib.attrValues (collectSystems "legacyPackages" legacyPackages');
+  packages = lib.attrValues (collectSystems "packages" packages');
+  apps = lib.attrValues (collectSystems "apps" apps');
   options = readFlakeOptions;
   darwin-options = readOptionsIf {
     cond =

@@ -18,6 +18,7 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    flake-schemas.url = "github:DeterminateSystems/flake-schemas";
   };
 
   outputs =
@@ -27,6 +28,7 @@
       flake-utils,
       nixos-infra,
       treefmt-nix,
+      flake-schemas,
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
