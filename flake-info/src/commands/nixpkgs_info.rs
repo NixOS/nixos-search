@@ -1,9 +1,8 @@
 use anyhow::{Context, Result};
+use command_run::{Command, LogTo};
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-
-use command_run::{Command, LogTo};
 
 use crate::Source;
 use crate::data::Nixpkgs;
@@ -142,16 +141,16 @@ pub fn get_nixpkgs_package_services(nixpkgs: &Source) -> Result<HashMap<String, 
 }
 
 pub fn get_nixpkgs_programs(nixpkgs: &Nixpkgs) -> Result<HashMap<String, HashSet<String>>> {
-    let mut command = Command::new("nix-instantiate");
+    let mut command = Command::with_args(
+        "nix",
+        &["eval", "--raw", "--impure", "--no-write-lock-file"],
+    );
     command.add_args(&[
-        "--eval",
-        "--json",
         "-I",
         format!("nixpkgs=channel:nixos-{}", nixpkgs.channel).as_str(),
         "--expr",
         "toString <nixpkgs/programs.sqlite>",
     ]);
-
     command.enable_capture();
     command.log_to = LogTo::Log;
     command.log_output_on_error = true;
@@ -160,8 +159,8 @@ pub fn get_nixpkgs_programs(nixpkgs: &Nixpkgs) -> Result<HashMap<String, HashSet
         .run()
         .with_context(|| "Failed to gather information about nixpkgs programs")?;
 
-    let output = &*cow.stdout_string_lossy();
-    let programs_db: &str = serde_json::from_str(output)?;
+    let output = cow.stdout_string_lossy();
+    let programs_db = output.trim();
     let conn = sqlite::open(programs_db)?;
     let cur = conn
         .prepare("SELECT name, package FROM Programs")?
@@ -314,6 +313,20 @@ mod tests {
         assert_eq!(
             info.packages["SP800-90B_EntropyAssessment"].pname,
             "SP800-90B_EntropyAssessment",
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn test_get_nixpkgs_programs() {
+        let nixpkgs = Nixpkgs {
+            channel: "unstable".into(),
+            git_ref: "".into(),
+        };
+        let programs = get_nixpkgs_programs(&nixpkgs).expect("get_nixpkgs_programs failed");
+        assert!(
+            !programs.is_empty(),
+            "programs database should not be empty"
         );
     }
 }
