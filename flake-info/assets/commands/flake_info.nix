@@ -10,8 +10,6 @@ let
   inherit (nixpkgsFlake) lib;
   nixpkgs = nixpkgsFlake.legacyPackages.${referenceSystem};
 
-  # filter = lib.filterAttrs (key: _ : key == "apps" || key == "packages");
-
   # Reference system to use for extracting full package metadata
   # For other systems, we only check attribute names to avoid redundant evaluation
   referenceSystem = "x86_64-linux";
