@@ -1,6 +1,4 @@
-{
-  pkgs ? import <nixpkgs> { },
-}:
+{ pkgs }:
 pkgs.rustPlatform.buildRustPackage rec {
   name = "flake-info";
   src = ./.;

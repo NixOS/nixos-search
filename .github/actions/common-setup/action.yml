@@ -19,6 +19,7 @@ runs:
         nix_path: nixpkgs=channel:nixpkgs-unstable
         extra_nix_config: |
           access-tokens = github.com=${{ inputs.GITHUB_TOKEN }}
+          experimental-features = nix-command flakes pipe-operators
 
     - uses: cachix/cachix-action@v15
       with:

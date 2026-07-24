@@ -1,15 +1,13 @@
 {
-  flake ? null,
-  input-flake ? "input-flake",
+  targetFlake,
+  nixpkgsFlake,
+  flake-schemas,
+  targetFlakeUri ? if nixpkgsFlake.lib.isString targetFlake then targetFlake else null,
 }:
 let
-  resolved = builtins.getFlake input-flake;
-
-  nixpkgsFlake = builtins.getFlake "nixpkgs";
   inherit (nixpkgsFlake) lib;
+  resolved = if lib.isAttrs targetFlake then targetFlake else builtins.getFlake targetFlake;
   nixpkgs = nixpkgsFlake.legacyPackages.${referenceSystem};
-
-  # filter = lib.filterAttrs (key: _ : key == "apps" || key == "packages");
 
   # Reference system to use for extracting full package metadata
   # For other systems, we only check attribute names to avoid redundant evaluation
@@ -17,122 +15,127 @@ let
 
   withSystem = fn: lib.mapAttrs (system: drvs: (fn system drvs));
 
-  readPackages =
-    system: drvs:
+  safeEval = attr: lib.tryEval attr;
+
+  evalDrvMetadata =
+    drv:
     let
-      # Safely evaluate metadata fields that might be expensive or broken
-      # Returns { success = bool; value = any; }
-      safeEval = attr: builtins.tryEval attr;
-
-      # Full evaluation - used for reference system
-      processPackageFull =
-        attribute_name: drv:
-        let
-          # Try to get basic derivation info without forcing expensive evaluation
-          typeCheck = builtins.tryEval (builtins.isAttrs drv && drv ? type);
-
-          # Only proceed if it looks like it could be a derivation
-          derivResult =
-            if typeCheck.success && typeCheck.value then
-              safeEval (lib.isDerivation drv)
-            else
-              {
-                success = false;
-                value = false;
-              };
-
-          # Early exit if not a valid derivation
-          nameResult =
-            if derivResult.success && derivResult.value then
-              safeEval drv.name
-            else
-              {
-                success = false;
-                value = null;
-              };
-
-          # Check if broken - only if we got this far
-          brokenResult =
-            if nameResult.success then
-              safeEval (drv.meta.broken or false)
-            else
-              {
-                success = true;
-                value = false;
-              };
-
-          isBroken = brokenResult.success && brokenResult.value;
-        in
-        # Only build package info if: it's a derivation, has a name, and is not broken
-        if nameResult.success && !isBroken then
-          let
-            versionResult = safeEval (drv.version or "");
-            outputsResult = safeEval drv.outputs;
-            outputNameResult = safeEval drv.outputName;
-            descResult = safeEval (drv.meta.description or null);
-            longDescResult = safeEval (drv.meta.longDescription or null);
-            licenseResult = safeEval (drv.meta.license or null);
-          in
+      derivResult = safeEval (lib.isDerivation drv);
+      nameResult =
+        if derivResult.success && derivResult.value then
+          safeEval drv.name
+        else
           {
-            entry_type = "package";
-            attribute_name = attribute_name;
-            system = system;
-            name = nameResult.value;
-            version = if versionResult.success then versionResult.value else "";
-            outputs = if outputsResult.success then outputsResult.value else [ "out" ];
-            default_output = if outputNameResult.success then outputNameResult.value else "out";
-          }
-          // lib.optionalAttrs (descResult.success && descResult.value != null) {
-            description = descResult.value;
-          }
-          // lib.optionalAttrs (longDescResult.success && longDescResult.value != null) {
-            longDescription = longDescResult.value;
-          }
-          // lib.optionalAttrs (licenseResult.success && licenseResult.value != null) {
-            license = licenseResult.value;
-          }
+            success = false;
+            value = null;
+          };
+      brokenResult =
+        if nameResult.success then
+          safeEval (drv.meta.broken or false)
         else
-          null;
-
-      # Lightweight evaluation - only attribute name and system, no package evaluation
-      processPackageLight = attribute_name: drv: {
-        entry_type = "package";
-        attribute_name = attribute_name;
-        system = system;
-        # Don't access any attributes of drv to avoid forcing evaluation
-      };
-
-      # Use full processing for reference system, lightweight for others
-      results =
-        if system == referenceSystem then
-          lib.mapAttrsToList processPackageFull drvs
-        else
-          lib.mapAttrsToList processPackageLight drvs;
+          {
+            success = true;
+            value = false;
+          };
+      isBroken = brokenResult.success && brokenResult.value;
     in
-    # Filter out null entries (only relevant for full processing)
-    if system == referenceSystem then builtins.filter (x: x != null) results else results;
-  readApps =
-    system: apps:
-    lib.mapAttrsToList (
-      attribute_name: app:
-      (
-        {
-          entry_type = "app";
-          attribute_name = attribute_name;
-          system = system;
-        }
-        // lib.optionalAttrs (app ? outPath) { bin = app.outPath; }
-        // lib.optionalAttrs (app ? program) { bin = app.program; }
-        // lib.optionalAttrs (app ? type) { type = app.type; }
-      )
-    ) apps;
+    if nameResult.success && !isBroken then
+      let
+        versionResult = safeEval (drv.version or "");
+        outputsResult = safeEval drv.outputs;
+        outputNameResult = safeEval drv.outputName;
+        descResult = safeEval (drv.meta.description or null);
+        longDescResult = safeEval (drv.meta.longDescription or null);
+        licenseResult = safeEval (drv.meta.license or null);
+      in
+      {
+        name = nameResult.value;
+        version = if versionResult.success then versionResult.value else "";
+        outputs = if outputsResult.success then outputsResult.value else [ "out" ];
+        default_output = if outputNameResult.success then outputNameResult.value else "out";
+      }
+      // lib.optionalAttrs (descResult.success && descResult.value != null) {
+        description = descResult.value;
+      }
+      // lib.optionalAttrs (longDescResult.success && longDescResult.value != null) {
+        longDescription = longDescResult.value;
+      }
+      // lib.optionalAttrs (licenseResult.success && licenseResult.value != null) {
+        license = licenseResult.value;
+      }
+    else
+      null;
+
+  getSchemaInventory =
+    key:
+    if resolved ? ${key} && schemas ? ${key} then
+      let
+        inv = safeEval (schemas.${key}.inventory resolved.${key});
+      in
+      if inv.success && inv.value ? children then inv.value.children else { }
+    else
+      { };
+
+  # Extract package and app entries using schema inventory functions
+  readSchemaItems =
+    schemaKey: entryType:
+    lib.concatLists (
+      lib.mapAttrsToList (
+        system: sysNode:
+        lib.filter (x: x != null) (
+          lib.mapAttrsToList (
+            attribute_name: itemNode:
+            let
+              rawVal = resolved.${schemaKey}.${system}.${attribute_name} or null;
+              val = lib.findFirst (x: x != null) rawVal [
+                (itemNode.value or null)
+                (itemNode.derivation or null)
+                (itemNode.app or null)
+              ];
+              binPath =
+                itemNode.program or (if lib.isAttrs val then (val.program or val.outPath or null) else null);
+            in
+            if entryType == "app" then
+              {
+                entry_type = "app";
+                inherit attribute_name system;
+              }
+              // lib.optionalAttrs (binPath != null) { bin = binPath; }
+              // lib.optionalAttrs (itemNode ? type || (lib.isAttrs val && val ? type)) {
+                type = itemNode.type or (if lib.isAttrs val then val.type or "app" else "app");
+              }
+            else if system == referenceSystem then
+              let
+                meta = evalDrvMetadata val;
+              in
+              if meta != null then
+                {
+                  entry_type = "package";
+                  inherit attribute_name system;
+                }
+                // meta
+              else
+                null
+            else
+              {
+                entry_type = "package";
+                inherit attribute_name system;
+              }
+          ) (sysNode.children or { })
+        )
+      ) (getSchemaInventory schemaKey)
+    );
+
+  legacyPackages' = readSchemaItems "legacyPackages" "package";
+  packages' = readSchemaItems "packages" "package";
+  apps' = readSchemaItems "apps" "app";
 
   # Replace functions by the string <function>
   substFunction =
     x:
-    if builtins.isAttrs x then
+    if lib.isAttrs x then
       lib.mapAttrs (_: substFunction) x
-    else if builtins.isList x then
+    else if lib.isList x then
       map substFunction x
     else if lib.isFunction x then
       "function"
@@ -142,17 +145,16 @@ let
   # Strip store-path prefix from a declaration path
   mkDeclaration =
     decl:
-    let
-      discard = lib.concatStringsSep "/" (lib.take 4 (lib.splitString "/" decl)) + "/";
-      path = if lib.hasPrefix builtins.storeDir decl then lib.removePrefix discard decl else decl;
-    in
-    path;
+    if lib.hasPrefix builtins.storeDir decl then
+      lib.concatStringsSep "/" (lib.drop 4 (lib.splitString "/" decl))
+    else
+      decl;
 
   # Clean up a raw option attrset for indexing
   cleanUpOption =
     extraAttrs: opt:
     let
-      applyOnAttr = n: f: lib.optionalAttrs (builtins.hasAttr n opt) { ${n} = f opt.${n}; };
+      applyOnAttr = n: f: lib.optionalAttrs (opt ? ${n}) { ${n} = f opt.${n}; };
     in
     opt
     // {
@@ -225,15 +227,15 @@ let
     let
       # Match: <imports = [ pkgs.PKG.services.MODULE ]>.OPTNAME
       # Group 1: package attrname, group 2: module name, group 3: remaining option path
-      m = builtins.match ".*imports.*pkgs\\.([^.]+)\\.services\\.([^ ]+).*>\\.(.*)" opt.name;
+      m = lib.match ".*imports.*pkgs\\.([^.]+)\\.services\\.([^ ]+).*>\\.(.*)" opt.name;
     in
     if m != null then
       opt
       // {
         entry_type = "service";
-        name = builtins.elemAt m 2;
-        service_package = builtins.elemAt m 0;
-        service_module = builtins.elemAt m 1;
+        name = lib.elemAt m 2;
+        service_package = lib.elemAt m 0;
+        service_module = lib.elemAt m 1;
       }
     else
       # Fallback: keep as-is but still tag as service
@@ -247,70 +249,58 @@ let
   # with a canonical service_package and the full list in service_packages.
   deduplicateServices =
     opts:
-    let
-      keyOf =
-        opt:
-        builtins.toJSON [
-          (opt.declarations or [ ])
-          (opt.name or "")
-          (opt.service_module or "")
-        ];
-      addToGroup =
-        acc: opt:
-        let
-          k = keyOf opt;
-        in
-        acc // { ${k} = (acc.${k} or [ ]) ++ [ opt ]; };
-      grouped = lib.foldl' addToGroup { } opts;
-      mergeGroup =
-        entries:
-        let
-          # Sort packages alphabetically; the shortest/unversioned name (e.g.
-          # "php") naturally sorts before versioned variants ("php82").
-          packages = lib.sort (a: b: a < b) (lib.unique (map (e: e.service_package or "") entries));
-        in
-        (builtins.head entries)
-        // {
-          service_package = builtins.head packages;
-          service_packages = packages;
-        };
-    in
-    lib.mapAttrsToList (_: mergeGroup) grouped;
+    opts
+    |> lib.groupBy (
+      opt:
+      lib.toJSON [
+        (opt.declarations or [ ])
+        (opt.name or "")
+        (opt.service_module or "")
+      ]
+    )
+    |> lib.mapAttrsToList (
+      _: entries:
+      let
+        packages = lib.naturalSort (lib.unique (map (e: e.service_package or "") entries));
+      in
+      (lib.head entries)
+      // {
+        service_package = lib.head packages;
+        service_packages = packages;
+      }
+    );
+
+  # Base schemas from official flake-schemas input extended with custom schemas
+  schemas = flake-schemas.exportedSchemas // (resolved.schemas or { });
 
   readFlakeOptions =
     let
-      nixosModulesOpts = builtins.concatLists (
+      invModules = lib.mapAttrs (
+        name: n:
+        if lib.isFunction (n.value or n.module or null) || lib.isAttrs (n.value or n.module or null) then
+          n.value or n.module
+        else
+          resolved.nixosModules.${name} or n
+      ) (getSchemaInventory "nixosModules");
+      moduleSet = if invModules != { } then invModules else resolved.nixosModules or { };
+
+      raw = lib.concatLists (
         lib.mapAttrsToList (
           moduleName: module:
           readNixOSOptions {
             inherit module;
             modulePath = [
-              flake
+              (if targetFlakeUri != null then targetFlakeUri else targetFlake)
               moduleName
             ];
           }
-        ) (resolved.nixosModules or { })
+        ) moduleSet
       );
-
-      nixosModuleOpts = lib.optionals (resolved ? nixosModule) (readNixOSOptions {
-        module = resolved.nixosModule;
-        modulePath = [ flake ];
-      });
-
-      raw =
-        # We assume that `nixosModules` includes `nixosModule` when there
-        # are multiple modules
-        if nixosModulesOpts != [ ] then nixosModulesOpts else nixosModuleOpts;
 
       # When a flake re-exports the same module under multiple names
       # (e.g. `default` and `home-manager`), deduplicate by option name,
       # keeping the first occurrence.
-      dedup =
-        opts:
-        let
-          addOnce = acc: opt: if acc ? ${opt.name} then acc else acc // { ${opt.name} = opt; };
-        in
-        lib.attrValues (lib.foldl' addOnce { } opts);
+      dedup = opts: lib.attrValues (lib.mapAttrs (_: lib.head) (lib.groupBy (opt: opt.name) opts));
     in
     dedup raw;
 
@@ -329,7 +319,7 @@ let
         let
           fn = import hmModulesPath;
         in
-        if builtins.isFunction fn then
+        if lib.isFunction fn then
           fn {
             lib = hmLib;
             pkgs = nixpkgs;
@@ -361,154 +351,45 @@ let
       };
     };
 
-  read = reader: set: lib.flatten (lib.attrValues (withSystem reader set));
-
-  # Get all package sets by system for potential fallback evaluation
-  allPackageSets = {
-    legacyPackages = resolved.legacyPackages or { };
-    packages = resolved.packages or { };
-  };
-
-  legacyPackages' = read readPackages (resolved.legacyPackages or { });
-  packages' = read readPackages (resolved.packages or { });
-
-  apps' = read readApps (resolved.apps or { });
-
   # Helper to fully evaluate a package from a specific system when needed
   evaluatePackageFromSystem =
-    pkgSet: system: attribute_name:
-    let
-      drvs = pkgSet.${system} or { };
-      drv = drvs.${attribute_name} or null;
-      safeEval = attr: builtins.tryEval attr;
-
-      typeCheck = builtins.tryEval (builtins.isAttrs drv && drv ? type);
-      derivResult =
-        if typeCheck.success && typeCheck.value then
-          safeEval (lib.isDerivation drv)
-        else
-          {
-            success = false;
-            value = false;
-          };
-      nameResult =
-        if derivResult.success && derivResult.value then
-          safeEval drv.name
-        else
-          {
-            success = false;
-            value = null;
-          };
-      brokenResult =
-        if nameResult.success then
-          safeEval (drv.meta.broken or false)
-        else
-          {
-            success = true;
-            value = false;
-          };
-      isBroken = brokenResult.success && brokenResult.value;
-    in
-    if nameResult.success && !isBroken then
-      let
-        versionResult = safeEval (drv.version or "");
-        outputsResult = safeEval drv.outputs;
-        outputNameResult = safeEval drv.outputName;
-        descResult = safeEval (drv.meta.description or null);
-        longDescResult = safeEval (drv.meta.longDescription or null);
-        licenseResult = safeEval (drv.meta.license or null);
-      in
-      {
-        name = nameResult.value;
-        version = if versionResult.success then versionResult.value else "";
-        outputs = if outputsResult.success then outputsResult.value else [ "out" ];
-        default_output = if outputNameResult.success then outputNameResult.value else "out";
-      }
-      // lib.optionalAttrs (descResult.success && descResult.value != null) {
-        description = descResult.value;
-      }
-      // lib.optionalAttrs (longDescResult.success && longDescResult.value != null) {
-        longDescription = longDescResult.value;
-      }
-      // lib.optionalAttrs (licenseResult.success && licenseResult.value != null) {
-        license = licenseResult.value;
-      }
-    else
-      null;
+    outputKey: system: attribute_name:
+    evalDrvMetadata (resolved.${outputKey}.${system}.${attribute_name} or null);
 
   collectSystems =
-    pkgSet: list:
-    lib.lists.foldr (
-      drv@{ attribute_name, system, ... }:
-      set:
-      let
-        # Check if this is a lightweight package entry (only has attribute_name, system, entry_type)
-        # Apps are not lightweight - they have bin/type fields
-        isLightweightPackage = !(drv ? name) && drv.entry_type == "package";
-
-        # For apps, check if they have metadata (bin/type fields)
-        isApp = drv.entry_type == "app";
-        appHasMetadata = isApp && (drv ? bin || drv ? type);
-
-        # Get existing entry or create new base
-        present =
-          set."${attribute_name}" or (
-            if isLightweightPackage then
-              {
-                platforms = [ ];
-                entry_type = "package";
-                inherit attribute_name;
-              }
+    outputKey: list:
+    let
+      grouped = lib.groupBy (x: x.attribute_name) list;
+      mergeEntry =
+        attribute_name: entries:
+        let
+          firstWithMeta =
+            let
+              found = lib.findFirst (e: e ? name || e ? bin) null entries;
+            in
+            if found != null then
+              found
             else
-              ({ platforms = [ ]; } // drv)
-          );
-
-        # Check if present entry has metadata
-        presentHasMetadata =
-          present ? name || (present.entry_type == "app" && (present ? bin || present ? type));
-
-        # Merge entries
-        drv' =
-          if isLightweightPackage then
-            if presentHasMetadata then
-              # Present has metadata, just add platform
-              present
-              // {
-                platforms = present.platforms ++ [ system ];
-              }
-            else
-              # Present lacks metadata, this must be a platform-specific package
-              # Evaluate it from this system
               let
-                metadata = evaluatePackageFromSystem pkgSet system attribute_name;
+                firstEntry = lib.head entries;
+                meta = evaluatePackageFromSystem outputKey firstEntry.system attribute_name;
               in
-              if metadata != null then
-                present
-                // metadata
-                // {
-                  platforms = present.platforms ++ [ system ];
-                }
-              else
-                # Evaluation failed, just add platform without metadata
-                present
-                // {
-                  platforms = present.platforms ++ [ system ];
-                }
-          else
-            # Current entry has full metadata (package with name, or app with bin/type)
-            present
-            // drv
-            // {
-              platforms = present.platforms ++ [ system ];
-            };
+              if meta != null then firstEntry // meta else firstEntry;
 
-        drv'' = removeAttrs drv' [ "system" ];
-      in
-      set
-      // {
-        ${attribute_name} = drv'';
-      }
-    ) { } list;
+          rawPlatforms = lib.unique (map (e: e.system) entries);
+          targetOrder = [
+            "x86_64-linux"
+            "x86_64-darwin"
+            "aarch64-linux"
+            "aarch64-darwin"
+          ];
+          platforms =
+            (lib.filter (x: lib.elem x rawPlatforms) targetOrder)
+            ++ (lib.filter (x: !(lib.elem x targetOrder)) rawPlatforms);
+        in
+        removeAttrs (firstWithMeta // { inherit platforms; }) [ "system" ];
+    in
+    lib.mapAttrs mergeEntry grouped;
 
   # nixpkgs-specific, doesn't use the flake argument
   nixpkgsBaseModules = import "${nixpkgsFlake}/nixos/modules/module-list.nix" ++ [
@@ -536,21 +417,21 @@ let
       reader,
     }:
     let
-      check = builtins.tryEval cond;
+      check = lib.tryEval cond;
     in
-    if check.success && check.value then reader else [ ];
+    lib.optionals (check.success && check.value) reader;
 
 in
 
 rec {
-  legacyPackages = lib.attrValues (collectSystems allPackageSets.legacyPackages legacyPackages');
-  packages = lib.attrValues (collectSystems allPackageSets.packages packages');
-  apps = lib.attrValues (collectSystems { } apps'); # apps don't need fallback evaluation
+  legacyPackages = legacyPackages' |> collectSystems "legacyPackages" |> lib.attrValues;
+  packages = packages' |> collectSystems "packages" |> lib.attrValues;
+  apps = apps' |> collectSystems "apps" |> lib.attrValues;
   options = readFlakeOptions;
   darwin-options = readOptionsIf {
     cond =
-      builtins.pathExists "${resolved}/modules/module-list.nix"
-      && builtins.pathExists "${resolved}/modules/system/defaults-write.nix";
+      lib.pathExists "${resolved}/modules/module-list.nix"
+      && lib.pathExists "${resolved}/modules/system/defaults-write.nix";
     reader = readDarwinOptions;
   };
   home-manager-options = readOptionsIf {
@@ -560,35 +441,27 @@ rec {
     # home-manager itself also provides the `stdlib-extended.nix` helper
     # that `readHomeManagerOptions` imports.
     cond =
-      builtins.pathExists "${resolved}/modules/modules.nix"
-      && builtins.pathExists "${resolved}/modules/lib/stdlib-extended.nix";
+      lib.pathExists "${resolved}/modules/modules.nix"
+      && lib.pathExists "${resolved}/modules/lib/stdlib-extended.nix";
     reader = readHomeManagerOptions;
   };
   all = packages ++ apps ++ options;
 
-  nixos-options = builtins.filter (opt: !(isServiceOption opt)) nixpkgsAllOpts;
+  # Partition options into standard NixOS options and modular service options in a single pass
+  nixpkgsOptionsPartition = lib.partition isServiceOption nixpkgsAllOpts;
+  nixos-options = nixpkgsOptionsPartition.wrong;
 
-  nixos-services =
-    let
-      parsed = map parseServiceOption (builtins.filter isServiceOption nixpkgsAllOpts);
-      # Filter out top-level submodule container entries (no service_package means regex didn't match)
-      real = builtins.filter (opt: opt ? service_package) parsed;
-    in
-    deduplicateServices real;
+  # Parsed service options
+  realServices = lib.filter (opt: opt ? service_package) (
+    map parseServiceOption nixpkgsOptionsPartition.right
+  );
+
+  nixos-services = deduplicateServices realServices;
 
   # Map from package attribute name to the list of modular service module
   # names it exposes. Derived from the parsed service options above so it
   # stays in sync with nixpkgs' hand-maintained list.
-  nixos-package-services =
-    let
-      parsed = map parseServiceOption (builtins.filter isServiceOption nixpkgsAllOpts);
-      real = builtins.filter (opt: opt ? service_package) parsed;
-    in
-    lib.foldl' (
-      acc: opt:
-      acc
-      // {
-        ${opt.service_package} = lib.unique ((acc.${opt.service_package} or [ ]) ++ [ opt.service_module ]);
-      }
-    ) { } real;
+  nixos-package-services = lib.zipAttrsWith (_: values: lib.unique values) (
+    map (opt: { ${opt.service_package} = opt.service_module; }) realServices
+  );
 }
