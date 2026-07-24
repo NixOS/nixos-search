@@ -28,18 +28,7 @@ let
       processPackageFull =
         attribute_name: drv:
         let
-          # Try to get basic derivation info without forcing expensive evaluation
-          typeCheck = lib.tryEval (lib.isAttrs drv && drv ? type);
-
-          # Only proceed if it looks like it could be a derivation
-          derivResult =
-            if typeCheck.success && typeCheck.value then
-              safeEval (lib.isDerivation drv)
-            else
-              {
-                success = false;
-                value = false;
-              };
+          derivResult = safeEval (lib.isDerivation drv);
 
           # Early exit if not a valid derivation
           nameResult =
@@ -142,11 +131,10 @@ let
   # Strip store-path prefix from a declaration path
   mkDeclaration =
     decl:
-    let
-      discard = lib.concatStringsSep "/" (lib.take 4 (lib.splitString "/" decl)) + "/";
-      path = if lib.hasPrefix builtins.storeDir decl then lib.removePrefix discard decl else decl;
-    in
-    path;
+    if lib.hasPrefix builtins.storeDir decl then
+      lib.concatStringsSep "/" (lib.drop 4 (lib.splitString "/" decl))
+    else
+      decl;
 
   # Clean up a raw option attrset for indexing
   cleanUpOption =
@@ -255,13 +243,7 @@ let
           (opt.name or "")
           (opt.service_module or "")
         ];
-      addToGroup =
-        acc: opt:
-        let
-          k = keyOf opt;
-        in
-        acc // { ${k} = (acc.${k} or [ ]) ++ [ opt ]; };
-      grouped = lib.foldl' addToGroup { } opts;
+      grouped = lib.groupBy keyOf opts;
       mergeGroup =
         entries:
         let
@@ -295,12 +277,7 @@ let
       # When a flake re-exports the same module under multiple names
       # (e.g. `default` and `home-manager`), deduplicate by option name,
       # keeping the first occurrence.
-      dedup =
-        opts:
-        let
-          addOnce = acc: opt: if acc ? ${opt.name} then acc else acc // { ${opt.name} = opt; };
-        in
-        lib.attrValues (lib.foldl' addOnce { } opts);
+      dedup = opts: lib.attrValues (lib.mapAttrs (_: lib.head) (lib.groupBy (opt: opt.name) opts));
     in
     dedup raw;
 
@@ -372,15 +349,7 @@ let
       drv = drvs.${attribute_name} or null;
       safeEval = attr: lib.tryEval attr;
 
-      typeCheck = lib.tryEval (lib.isAttrs drv && drv ? type);
-      derivResult =
-        if typeCheck.success && typeCheck.value then
-          safeEval (lib.isDerivation drv)
-        else
-          {
-            success = false;
-            value = false;
-          };
+      derivResult = safeEval (lib.isDerivation drv);
       nameResult =
         if derivResult.success && derivResult.value then
           safeEval drv.name
@@ -556,29 +525,25 @@ rec {
   };
   all = packages ++ apps ++ options;
 
-  nixos-options = lib.filter (opt: !(isServiceOption opt)) nixpkgsAllOpts;
+  # Partition options into standard NixOS options and modular service options in a single pass
+  nixpkgsOptionsPartition = lib.partition isServiceOption nixpkgsAllOpts;
+  nixos-options = nixpkgsOptionsPartition.wrong;
 
-  nixos-services =
-    let
-      parsed = map parseServiceOption (lib.filter isServiceOption nixpkgsAllOpts);
-      # Filter out top-level submodule container entries (no service_package means regex didn't match)
-      real = lib.filter (opt: opt ? service_package) parsed;
-    in
-    deduplicateServices real;
+  # Parsed service options
+  realServices = lib.filter (opt: opt ? service_package) (
+    map parseServiceOption nixpkgsOptionsPartition.right
+  );
+
+  nixos-services = deduplicateServices realServices;
 
   # Map from package attribute name to the list of modular service module
   # names it exposes. Derived from the parsed service options above so it
   # stays in sync with nixpkgs' hand-maintained list.
-  nixos-package-services =
-    let
-      parsed = map parseServiceOption (lib.filter isServiceOption nixpkgsAllOpts);
-      real = lib.filter (opt: opt ? service_package) parsed;
-    in
-    lib.foldl' (
-      acc: opt:
-      acc
-      // {
-        ${opt.service_package} = lib.unique ((acc.${opt.service_package} or [ ]) ++ [ opt.service_module ]);
-      }
-    ) { } real;
+  nixos-package-services = lib.foldl' (
+    acc: opt:
+    acc
+    // {
+      ${opt.service_package} = lib.unique ((acc.${opt.service_package} or [ ]) ++ [ opt.service_module ]);
+    }
+  ) { } realServices;
 }
