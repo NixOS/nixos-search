@@ -163,6 +163,13 @@
             nixosChannelsJson = pkgs.writeText "nixosChannels.json" (lib.toJSON nixosChannels);
           };
 
+          checks = {
+            flake-info = import ./flake-info/assets/commands/test {
+              inherit pkgs;
+              inherit (inputs) flake-schemas;
+            };
+          };
+
           formatter = treefmt;
 
           devShells = {
