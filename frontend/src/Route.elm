@@ -12,6 +12,7 @@ module Route exposing
     , optionSourceDocType
     , optionSourceId
     , optionSourceLabel
+    , optionSourceRepoUrl
     , routeToString
     , searchTypeToTitle
     )
@@ -126,6 +127,22 @@ optionSourceLabel source =
 
         DarwinOptionSource ->
             "Darwin"
+
+
+optionSourceRepoUrl : OptionSource -> String
+optionSourceRepoUrl source =
+    case source of
+        NixosOptions ->
+            "https://github.com/NixOS/nixpkgs"
+
+        ModularServiceOptions ->
+            "https://github.com/NixOS/nixpkgs"
+
+        HomeManagerOptionSource ->
+            "https://github.com/nix-community/home-manager"
+
+        DarwinOptionSource ->
+            "https://github.com/nix-darwin/nix-darwin"
 
 
 type SearchType

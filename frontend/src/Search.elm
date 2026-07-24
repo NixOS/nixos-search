@@ -1280,10 +1280,13 @@ viewResults nixosChannels model result viewSuccess outMsg categoryName =
                             []
 
                         Just commit ->
-                            [ text "Data from nixpkgs "
-                            , a [ href ("https://github.com/NixOS/nixpkgs/tree/" ++ commit) ]
+                            let
+                                repoUrl =
+                                    Route.optionSourceRepoUrl model.activeOptionSource
+                            in
+                            [ text "Data from "
+                            , a [ href (repoUrl ++ "/tree/" ++ commit) ]
                                 [ code [] [ text (String.slice 0 8 commit) ] ]
-                            , text "."
                             ]
             )
         ]
