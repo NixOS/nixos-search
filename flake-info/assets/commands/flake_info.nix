@@ -80,7 +80,7 @@ let
   # Extract package and app entries using schema inventory functions
   readSchemaItems =
     schemaKey: entryType:
-    lib.flatten (
+    builtins.concatLists (
       lib.mapAttrsToList (
         system: sysNode:
         lib.filter (x: x != null) (
@@ -88,7 +88,11 @@ let
             attribute_name: itemNode:
             let
               rawVal = resolved.${schemaKey}.${system}.${attribute_name} or null;
-              val = itemNode.value or itemNode.derivation or itemNode.app or rawVal;
+              val = lib.findFirst (x: x != null) rawVal [
+                (itemNode.value or null)
+                (itemNode.derivation or null)
+                (itemNode.app or null)
+              ];
               binPath =
                 itemNode.program or (if lib.isAttrs val then (val.program or val.outPath or null) else null);
             in
@@ -246,28 +250,26 @@ let
   # with a canonical service_package and the full list in service_packages.
   deduplicateServices =
     opts:
-    let
-      keyOf =
-        opt:
-        lib.toJSON [
-          (opt.declarations or [ ])
-          (opt.name or "")
-          (opt.service_module or "")
-        ];
-      grouped = lib.groupBy keyOf opts;
-      mergeGroup =
-        entries:
-        let
-          # Sort packages naturally; unversioned names (e.g. "php") sort before versioned variants ("php82").
-          packages = lib.naturalSort (lib.unique (map (e: e.service_package or "") entries));
-        in
-        (lib.head entries)
-        // {
-          service_package = lib.head packages;
-          service_packages = packages;
-        };
-    in
-    lib.mapAttrsToList (_: mergeGroup) grouped;
+    opts
+    |> lib.groupBy (
+      opt:
+      lib.toJSON [
+        (opt.declarations or [ ])
+        (opt.name or "")
+        (opt.service_module or "")
+      ]
+    )
+    |> lib.mapAttrsToList (
+      _: entries:
+      let
+        packages = lib.naturalSort (lib.unique (map (e: e.service_package or "") entries));
+      in
+      (lib.head entries)
+      // {
+        service_package = lib.head packages;
+        service_packages = packages;
+      }
+    );
 
   # Base schemas from official flake-schemas input extended with custom schemas
   schemas = flake-schemas.exportedSchemas // (resolved.schemas or { });
@@ -423,9 +425,9 @@ let
 in
 
 rec {
-  legacyPackages = lib.attrValues (collectSystems "legacyPackages" legacyPackages');
-  packages = lib.attrValues (collectSystems "packages" packages');
-  apps = lib.attrValues (collectSystems "apps" apps');
+  legacyPackages = legacyPackages' |> collectSystems "legacyPackages" |> lib.attrValues;
+  packages = packages' |> collectSystems "packages" |> lib.attrValues;
+  apps = apps' |> collectSystems "apps" |> lib.attrValues;
   options = readFlakeOptions;
   darwin-options = readOptionsIf {
     cond =
