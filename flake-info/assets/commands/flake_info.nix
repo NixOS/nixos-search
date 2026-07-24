@@ -359,77 +359,38 @@ let
 
   collectSystems =
     outputKey: list:
-    lib.lists.foldr (
-      drv@{ attribute_name, system, ... }:
-      set:
-      let
-        # Check if this is a lightweight package entry (only has attribute_name, system, entry_type)
-        # Apps are not lightweight - they have bin/type fields
-        isLightweightPackage = !(drv ? name) && drv.entry_type == "package";
-
-        # For apps, check if they have metadata (bin/type fields)
-        isApp = drv.entry_type == "app";
-        appHasMetadata = isApp && (drv ? bin || drv ? type);
-
-        # Get existing entry or create new base
-        present =
-          set."${attribute_name}" or (
-            if isLightweightPackage then
-              {
-                platforms = [ ];
-                entry_type = "package";
-                inherit attribute_name;
-              }
+    let
+      grouped = lib.groupBy (x: x.attribute_name) list;
+      mergeEntry =
+        attribute_name: entries:
+        let
+          firstWithMeta =
+            let
+              found = lib.findFirst (e: e ? name || e ? bin) null entries;
+            in
+            if found != null then
+              found
             else
-              ({ platforms = [ ]; } // drv)
-          );
-
-        # Check if present entry has metadata
-        presentHasMetadata =
-          present ? name || (present.entry_type == "app" && (present ? bin || present ? type));
-
-        # Merge entries
-        drv' =
-          if isLightweightPackage then
-            if presentHasMetadata then
-              # Present has metadata, just add platform
-              present
-              // {
-                platforms = present.platforms ++ [ system ];
-              }
-            else
-              # Present lacks metadata, this must be a platform-specific package
-              # Evaluate it from this system
               let
-                metadata = evaluatePackageFromSystem outputKey system attribute_name;
+                firstEntry = lib.head entries;
+                meta = evaluatePackageFromSystem outputKey firstEntry.system attribute_name;
               in
-              if metadata != null then
-                present
-                // metadata
-                // {
-                  platforms = present.platforms ++ [ system ];
-                }
-              else
-                # Evaluation failed, just add platform without metadata
-                present
-                // {
-                  platforms = present.platforms ++ [ system ];
-                }
-          else
-            # Current entry has full metadata (package with name, or app with bin/type)
-            present
-            // drv
-            // {
-              platforms = present.platforms ++ [ system ];
-            };
+              if meta != null then firstEntry // meta else firstEntry;
 
-        drv'' = removeAttrs drv' [ "system" ];
-      in
-      set
-      // {
-        ${attribute_name} = drv'';
-      }
-    ) { } list;
+          rawPlatforms = lib.unique (map (e: e.system) entries);
+          targetOrder = [
+            "x86_64-linux"
+            "x86_64-darwin"
+            "aarch64-linux"
+            "aarch64-darwin"
+          ];
+          platforms =
+            (lib.filter (x: lib.elem x rawPlatforms) targetOrder)
+            ++ (lib.filter (x: !(lib.elem x targetOrder)) rawPlatforms);
+        in
+        removeAttrs (firstWithMeta // { inherit platforms; }) [ "system" ];
+    in
+    lib.mapAttrs mergeEntry grouped;
 
   # nixpkgs-specific, doesn't use the flake argument
   nixpkgsBaseModules = import "${nixpkgsFlake}/nixos/modules/module-list.nix" ++ [
