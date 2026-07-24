@@ -17,69 +17,72 @@ let
 
   withSystem = fn: lib.mapAttrs (system: drvs: (fn system drvs));
 
+  safeEval = attr: lib.tryEval attr;
+
+  evalDrvMetadata =
+    drv:
+    let
+      derivResult = safeEval (lib.isDerivation drv);
+      nameResult =
+        if derivResult.success && derivResult.value then
+          safeEval drv.name
+        else
+          {
+            success = false;
+            value = null;
+          };
+      brokenResult =
+        if nameResult.success then
+          safeEval (drv.meta.broken or false)
+        else
+          {
+            success = true;
+            value = false;
+          };
+      isBroken = brokenResult.success && brokenResult.value;
+    in
+    if nameResult.success && !isBroken then
+      let
+        versionResult = safeEval (drv.version or "");
+        outputsResult = safeEval drv.outputs;
+        outputNameResult = safeEval drv.outputName;
+        descResult = safeEval (drv.meta.description or null);
+        longDescResult = safeEval (drv.meta.longDescription or null);
+        licenseResult = safeEval (drv.meta.license or null);
+      in
+      {
+        name = nameResult.value;
+        version = if versionResult.success then versionResult.value else "";
+        outputs = if outputsResult.success then outputsResult.value else [ "out" ];
+        default_output = if outputNameResult.success then outputNameResult.value else "out";
+      }
+      // lib.optionalAttrs (descResult.success && descResult.value != null) {
+        description = descResult.value;
+      }
+      // lib.optionalAttrs (longDescResult.success && longDescResult.value != null) {
+        longDescription = longDescResult.value;
+      }
+      // lib.optionalAttrs (licenseResult.success && licenseResult.value != null) {
+        license = licenseResult.value;
+      }
+    else
+      null;
+
   readPackages =
     system: drvs:
     let
-      # Safely evaluate metadata fields that might be expensive or broken
-      # Returns { success = bool; value = any; }
-      safeEval = attr: lib.tryEval attr;
-
       # Full evaluation - used for reference system
       processPackageFull =
         attribute_name: drv:
         let
-          derivResult = safeEval (lib.isDerivation drv);
-
-          # Early exit if not a valid derivation
-          nameResult =
-            if derivResult.success && derivResult.value then
-              safeEval drv.name
-            else
-              {
-                success = false;
-                value = null;
-              };
-
-          # Check if broken - only if we got this far
-          brokenResult =
-            if nameResult.success then
-              safeEval (drv.meta.broken or false)
-            else
-              {
-                success = true;
-                value = false;
-              };
-
-          isBroken = brokenResult.success && brokenResult.value;
+          meta = evalDrvMetadata drv;
         in
-        # Only build package info if: it's a derivation, has a name, and is not broken
-        if nameResult.success && !isBroken then
-          let
-            versionResult = safeEval (drv.version or "");
-            outputsResult = safeEval drv.outputs;
-            outputNameResult = safeEval drv.outputName;
-            descResult = safeEval (drv.meta.description or null);
-            longDescResult = safeEval (drv.meta.longDescription or null);
-            licenseResult = safeEval (drv.meta.license or null);
-          in
+        if meta != null then
           {
             entry_type = "package";
-            attribute_name = attribute_name;
-            system = system;
-            name = nameResult.value;
-            version = if versionResult.success then versionResult.value else "";
-            outputs = if outputsResult.success then outputsResult.value else [ "out" ];
-            default_output = if outputNameResult.success then outputNameResult.value else "out";
+            inherit attribute_name system;
           }
-          // lib.optionalAttrs (descResult.success && descResult.value != null) {
-            description = descResult.value;
-          }
-          // lib.optionalAttrs (longDescResult.success && longDescResult.value != null) {
-            longDescription = longDescResult.value;
-          }
-          // lib.optionalAttrs (licenseResult.success && licenseResult.value != null) {
-            license = licenseResult.value;
-          }
+          // meta
         else
           null;
 
@@ -140,7 +143,7 @@ let
   cleanUpOption =
     extraAttrs: opt:
     let
-      applyOnAttr = n: f: lib.optionalAttrs (lib.hasAttr n opt) { ${n} = f opt.${n}; };
+      applyOnAttr = n: f: lib.optionalAttrs (opt ? ${n}) { ${n} = f opt.${n}; };
     in
     opt
     // {
@@ -247,9 +250,8 @@ let
       mergeGroup =
         entries:
         let
-          # Sort packages alphabetically; the shortest/unversioned name (e.g.
-          # "php") naturally sorts before versioned variants ("php82").
-          packages = lib.sort (a: b: a < b) (lib.unique (map (e: e.service_package or "") entries));
+          # Sort packages naturally; unversioned names (e.g. "php") sort before versioned variants ("php82").
+          packages = lib.naturalSort (lib.unique (map (e: e.service_package or "") entries));
         in
         (lib.head entries)
         // {
@@ -344,56 +346,7 @@ let
   # Helper to fully evaluate a package from a specific system when needed
   evaluatePackageFromSystem =
     pkgSet: system: attribute_name:
-    let
-      drvs = pkgSet.${system} or { };
-      drv = drvs.${attribute_name} or null;
-      safeEval = attr: lib.tryEval attr;
-
-      derivResult = safeEval (lib.isDerivation drv);
-      nameResult =
-        if derivResult.success && derivResult.value then
-          safeEval drv.name
-        else
-          {
-            success = false;
-            value = null;
-          };
-      brokenResult =
-        if nameResult.success then
-          safeEval (drv.meta.broken or false)
-        else
-          {
-            success = true;
-            value = false;
-          };
-      isBroken = brokenResult.success && brokenResult.value;
-    in
-    if nameResult.success && !isBroken then
-      let
-        versionResult = safeEval (drv.version or "");
-        outputsResult = safeEval drv.outputs;
-        outputNameResult = safeEval drv.outputName;
-        descResult = safeEval (drv.meta.description or null);
-        longDescResult = safeEval (drv.meta.longDescription or null);
-        licenseResult = safeEval (drv.meta.license or null);
-      in
-      {
-        name = nameResult.value;
-        version = if versionResult.success then versionResult.value else "";
-        outputs = if outputsResult.success then outputsResult.value else [ "out" ];
-        default_output = if outputNameResult.success then outputNameResult.value else "out";
-      }
-      // lib.optionalAttrs (descResult.success && descResult.value != null) {
-        description = descResult.value;
-      }
-      // lib.optionalAttrs (longDescResult.success && longDescResult.value != null) {
-        longDescription = longDescResult.value;
-      }
-      // lib.optionalAttrs (licenseResult.success && licenseResult.value != null) {
-        license = licenseResult.value;
-      }
-    else
-      null;
+    evalDrvMetadata (pkgSet.${system}.${attribute_name} or null);
 
   collectSystems =
     pkgSet: list:
@@ -497,7 +450,7 @@ let
     let
       check = lib.tryEval cond;
     in
-    if check.success && check.value then reader else [ ];
+    lib.optionals (check.success && check.value) reader;
 
 in
 
@@ -539,11 +492,7 @@ rec {
   # Map from package attribute name to the list of modular service module
   # names it exposes. Derived from the parsed service options above so it
   # stays in sync with nixpkgs' hand-maintained list.
-  nixos-package-services = lib.foldl' (
-    acc: opt:
-    acc
-    // {
-      ${opt.service_package} = lib.unique ((acc.${opt.service_package} or [ ]) ++ [ opt.service_module ]);
-    }
-  ) { } realServices;
+  nixos-package-services = lib.zipAttrsWith (_: values: lib.unique values) (
+    map (opt: { ${opt.service_package} = opt.service_module; }) realServices
+  );
 }
