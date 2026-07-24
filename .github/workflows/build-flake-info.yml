@@ -28,9 +28,9 @@ jobs:
       - name: Building flake-info
         shell: sh
         run: |
-          nix --accept-flake-config -vL build .#flake-info
+          nix -vL build .#flake-info --accept-flake-config
 
       - name: Running flake-info tests
         shell: sh
         run: |
-          nix --accept-flake-config flake check --impure
+          nix flake check --impure --accept-flake-config
