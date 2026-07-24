@@ -41,7 +41,7 @@
             allChannels = (import "${nixos-infra}/channels.nix").channels;
             filteredChannels = lib.filterAttrs (
               n: v:
-              builtins.elem v.status [
+              lib.elem v.status [
                 "rolling"
                 "beta"
                 "stable"
@@ -56,19 +56,19 @@
             channels = lib.mapAttrsToList (n: v: {
               id = lib.removePrefix "nixos-" n;
               status = v.status;
-              jobset = builtins.concatStringsSep "/" (lib.init (lib.splitString "/" v.job));
+              jobset = lib.concatStringsSep "/" (lib.init (lib.splitString "/" v.job));
               branch = n;
             }) filteredChannels;
-            default = builtins.head (
-              builtins.sort (e1: e2: !(builtins.lessThan e1 e2)) (
-                builtins.map (lib.removePrefix "nixos-") (
-                  builtins.attrNames (lib.filterAttrs (_: v: v.status == "stable") filteredChannels)
+            default = lib.head (
+              lib.sort (e1: e2: e1 > e2) (
+                map (lib.removePrefix "nixos-") (
+                  lib.attrNames (lib.filterAttrs (_: v: v.status == "stable") filteredChannels)
                 )
               )
             );
           };
         nixosChannelsFile = pkgs.runCommand "nixosChannels.json" { } ''
-          echo '${builtins.toJSON (builtins.map (c: c.id) nixosChannels.channels)}' > $out
+          echo '${lib.toJSON (map (c: c.id) nixosChannels.channels)}' > $out
         '';
 
         treefmt = treefmtEval.config.build.wrapper;
@@ -83,7 +83,7 @@
             inherit inputsFrom;
             packages = [ treefmt ] ++ extraPackages;
             shellHook = ''
-              export NIXOS_CHANNELS='${builtins.toJSON nixosChannels}';
+              export NIXOS_CHANNELS='${lib.toJSON nixosChannels}';
               export ELASTICSEARCH_MAPPING_SCHEMA_VERSION="${version}";
             ''
             + extraShellHook;
@@ -97,7 +97,7 @@
             inherit nixosChannels version;
           };
           nixosChannels = nixosChannelsFile;
-          nixosChannelsJson = pkgs.writeText "nixosChannels.json" (builtins.toJSON nixosChannels);
+          nixosChannelsJson = pkgs.writeText "nixosChannels.json" (lib.toJSON nixosChannels);
         };
 
         formatter = treefmt;

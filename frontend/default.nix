@@ -1,4 +1,5 @@
 {
+  lib,
   stdenvNoCC,
   fetchNpmDeps,
   elmPackages,
@@ -28,7 +29,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
 
   env = {
     ELASTICSEARCH_MAPPING_SCHEMA_VERSION = version;
-    NIXOS_CHANNELS = builtins.toJSON nixosChannels;
+    NIXOS_CHANNELS = lib.toJSON nixosChannels;
   };
 
   nativeBuildInputs = [

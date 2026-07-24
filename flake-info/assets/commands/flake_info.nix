@@ -22,14 +22,14 @@ let
     let
       # Safely evaluate metadata fields that might be expensive or broken
       # Returns { success = bool; value = any; }
-      safeEval = attr: builtins.tryEval attr;
+      safeEval = attr: lib.tryEval attr;
 
       # Full evaluation - used for reference system
       processPackageFull =
         attribute_name: drv:
         let
           # Try to get basic derivation info without forcing expensive evaluation
-          typeCheck = builtins.tryEval (builtins.isAttrs drv && drv ? type);
+          typeCheck = lib.tryEval (lib.isAttrs drv && drv ? type);
 
           # Only proceed if it looks like it could be a derivation
           derivResult =
@@ -110,7 +110,7 @@ let
           lib.mapAttrsToList processPackageLight drvs;
     in
     # Filter out null entries (only relevant for full processing)
-    if system == referenceSystem then builtins.filter (x: x != null) results else results;
+    if system == referenceSystem then lib.filter (x: x != null) results else results;
   readApps =
     system: apps:
     lib.mapAttrsToList (
@@ -130,9 +130,9 @@ let
   # Replace functions by the string <function>
   substFunction =
     x:
-    if builtins.isAttrs x then
+    if lib.isAttrs x then
       lib.mapAttrs (_: substFunction) x
-    else if builtins.isList x then
+    else if lib.isList x then
       map substFunction x
     else if lib.isFunction x then
       "function"
@@ -152,7 +152,7 @@ let
   cleanUpOption =
     extraAttrs: opt:
     let
-      applyOnAttr = n: f: lib.optionalAttrs (builtins.hasAttr n opt) { ${n} = f opt.${n}; };
+      applyOnAttr = n: f: lib.optionalAttrs (lib.hasAttr n opt) { ${n} = f opt.${n}; };
     in
     opt
     // {
@@ -225,15 +225,15 @@ let
     let
       # Match: <imports = [ pkgs.PKG.services.MODULE ]>.OPTNAME
       # Group 1: package attrname, group 2: module name, group 3: remaining option path
-      m = builtins.match ".*imports.*pkgs\\.([^.]+)\\.services\\.([^ ]+).*>\\.(.*)" opt.name;
+      m = lib.match ".*imports.*pkgs\\.([^.]+)\\.services\\.([^ ]+).*>\\.(.*)" opt.name;
     in
     if m != null then
       opt
       // {
         entry_type = "service";
-        name = builtins.elemAt m 2;
-        service_package = builtins.elemAt m 0;
-        service_module = builtins.elemAt m 1;
+        name = lib.elemAt m 2;
+        service_package = lib.elemAt m 0;
+        service_module = lib.elemAt m 1;
       }
     else
       # Fallback: keep as-is but still tag as service
@@ -250,7 +250,7 @@ let
     let
       keyOf =
         opt:
-        builtins.toJSON [
+        lib.toJSON [
           (opt.declarations or [ ])
           (opt.name or "")
           (opt.service_module or "")
@@ -269,9 +269,9 @@ let
           # "php") naturally sorts before versioned variants ("php82").
           packages = lib.sort (a: b: a < b) (lib.unique (map (e: e.service_package or "") entries));
         in
-        (builtins.head entries)
+        (lib.head entries)
         // {
-          service_package = builtins.head packages;
+          service_package = lib.head packages;
           service_packages = packages;
         };
     in
@@ -279,7 +279,7 @@ let
 
   readFlakeOptions =
     let
-      raw = builtins.concatLists (
+      raw = lib.concatLists (
         lib.mapAttrsToList (
           moduleName: module:
           readNixOSOptions {
@@ -319,7 +319,7 @@ let
         let
           fn = import hmModulesPath;
         in
-        if builtins.isFunction fn then
+        if lib.isFunction fn then
           fn {
             lib = hmLib;
             pkgs = nixpkgs;
@@ -370,9 +370,9 @@ let
     let
       drvs = pkgSet.${system} or { };
       drv = drvs.${attribute_name} or null;
-      safeEval = attr: builtins.tryEval attr;
+      safeEval = attr: lib.tryEval attr;
 
-      typeCheck = builtins.tryEval (builtins.isAttrs drv && drv ? type);
+      typeCheck = lib.tryEval (lib.isAttrs drv && drv ? type);
       derivResult =
         if typeCheck.success && typeCheck.value then
           safeEval (lib.isDerivation drv)
@@ -526,7 +526,7 @@ let
       reader,
     }:
     let
-      check = builtins.tryEval cond;
+      check = lib.tryEval cond;
     in
     if check.success && check.value then reader else [ ];
 
@@ -539,8 +539,8 @@ rec {
   options = readFlakeOptions;
   darwin-options = readOptionsIf {
     cond =
-      builtins.pathExists "${resolved}/modules/module-list.nix"
-      && builtins.pathExists "${resolved}/modules/system/defaults-write.nix";
+      lib.pathExists "${resolved}/modules/module-list.nix"
+      && lib.pathExists "${resolved}/modules/system/defaults-write.nix";
     reader = readDarwinOptions;
   };
   home-manager-options = readOptionsIf {
@@ -550,19 +550,19 @@ rec {
     # home-manager itself also provides the `stdlib-extended.nix` helper
     # that `readHomeManagerOptions` imports.
     cond =
-      builtins.pathExists "${resolved}/modules/modules.nix"
-      && builtins.pathExists "${resolved}/modules/lib/stdlib-extended.nix";
+      lib.pathExists "${resolved}/modules/modules.nix"
+      && lib.pathExists "${resolved}/modules/lib/stdlib-extended.nix";
     reader = readHomeManagerOptions;
   };
   all = packages ++ apps ++ options;
 
-  nixos-options = builtins.filter (opt: !(isServiceOption opt)) nixpkgsAllOpts;
+  nixos-options = lib.filter (opt: !(isServiceOption opt)) nixpkgsAllOpts;
 
   nixos-services =
     let
-      parsed = map parseServiceOption (builtins.filter isServiceOption nixpkgsAllOpts);
+      parsed = map parseServiceOption (lib.filter isServiceOption nixpkgsAllOpts);
       # Filter out top-level submodule container entries (no service_package means regex didn't match)
-      real = builtins.filter (opt: opt ? service_package) parsed;
+      real = lib.filter (opt: opt ? service_package) parsed;
     in
     deduplicateServices real;
 
@@ -571,8 +571,8 @@ rec {
   # stays in sync with nixpkgs' hand-maintained list.
   nixos-package-services =
     let
-      parsed = map parseServiceOption (builtins.filter isServiceOption nixpkgsAllOpts);
-      real = builtins.filter (opt: opt ? service_package) parsed;
+      parsed = map parseServiceOption (lib.filter isServiceOption nixpkgsAllOpts);
+      real = lib.filter (opt: opt ? service_package) parsed;
     in
     lib.foldl' (
       acc: opt:
