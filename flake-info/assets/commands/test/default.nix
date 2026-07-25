@@ -1,9 +1,10 @@
 {
-  lib ? import <nixpkgs/lib>,
-  pkgs ? import <nixpkgs> { },
+  pkgs,
+  flake-schemas,
 }:
 
 let
+  inherit (pkgs) lib;
   runTestCase =
     {
       name,
@@ -14,8 +15,10 @@ let
       # Evaluate flake_info.nix with the test flake
       actualOutput =
         (import ../flake_info.nix {
-          flake = flakeUri;
-          input-flake = flakeUri;
+          inherit flake-schemas;
+          targetFlake = flakeUri;
+          targetFlakeUri = flakeUri;
+          nixpkgsFlake = pkgs;
         }).all;
 
       sortByKey = lib.sort (
@@ -29,7 +32,7 @@ let
 
       rmDerivationHash =
         entry:
-        if entry.entry_type == "app" && builtins.hasAttr "bin" entry then
+        if entry.entry_type == "app" && lib.hasAttr "bin" entry then
           entry
           // {
             # the bin field contains a derivation with a hash that changes on each eval
@@ -59,13 +62,13 @@ let
       passed = sortedExpected == sortedActual;
 
       # Build maps for comparison
-      expectedMap = builtins.listToAttrs (
+      expectedMap = lib.listToAttrs (
         map (e: {
           name = e.attribute_name or e.name;
           value = e;
         }) sortedExpected
       );
-      actualMap = builtins.listToAttrs (
+      actualMap = lib.listToAttrs (
         map (e: {
           name = e.attribute_name or e.name;
           value = e;
@@ -73,8 +76,8 @@ let
       );
 
       # Find differences
-      expectedKeys = builtins.attrNames expectedMap;
-      actualKeys = builtins.attrNames actualMap;
+      expectedKeys = lib.attrNames expectedMap;
+      actualKeys = lib.attrNames actualMap;
 
       missingKeys = lib.filter (k: !(actualMap ? ${k})) expectedKeys;
       extraKeys = lib.filter (k: !(expectedMap ? ${k})) actualKeys;
@@ -97,7 +100,7 @@ let
 
   testCases =
     let
-      readExpected = file: builtins.fromJSON (builtins.readFile file);
+      readExpected = file: lib.fromJSON (lib.readFile file);
     in
     [
       {
@@ -176,8 +179,8 @@ let
                 let
                   exp = result.expectedMap.${k};
                   act = result.actualMap.${k};
-                  expJson = builtins.toJSON exp;
-                  actJson = builtins.toJSON act;
+                  expJson = lib.toJSON exp;
+                  actJson = lib.toJSON act;
                 in
                 "  ${k}:\n    Expected: ${expJson}\n    Actual:   ${actJson}"
               ) (lib.take 3 result.mismatchedKeys)
@@ -185,8 +188,8 @@ let
           ''
         else
           ''
-            Want: ${builtins.toJSON result.sortedExpected}
-            Got:  ${builtins.toJSON result.sortedActual}
+            Want: ${lib.toJSON result.sortedExpected}
+            Got:  ${lib.toJSON result.sortedActual}
           ''
       }
     ''

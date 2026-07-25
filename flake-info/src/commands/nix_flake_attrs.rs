@@ -30,8 +30,8 @@ pub fn get_derivation_info<T: AsRef<str> + Display>(
         ]
         .iter(),
     );
-    command.add_args(["--override-flake", "input-flake", flake_ref.as_ref()].iter());
-    command.add_args(["--argstr", "flake", flake_ref.as_ref()].iter());
+    command.add_args(["--override-flake", "targetFlake", flake_ref.as_ref()].iter());
+    command.add_args(["--argstr", "targetFlakeUri", flake_ref.as_ref()].iter());
     command.add_arg(kind.as_ref());
     if temp_store {
         let temp_store_path = PathBuf::from("/tmp/flake-info-store");
