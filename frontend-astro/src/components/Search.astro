@@ -1,0 +1,231 @@
+---
+import Search from "~icons/mdi/magnify"
+---
+
+<div class="w-full max-w-full">
+	<form id="searchForm" class="flex mb-4 border border-white/50 focus-within:border-cyan-800 rounded-2xl">
+		<div class="flex flex-1 relative bg-neutral-700 rounded-l-2xl text-white border-r border-white/10 ">
+			<div id="tags-container" class="flex flex-nowrap gap-2 overflow-x-auto pb-1 scrollbar-hide"></div>
+			<input 
+				type="text" 
+				id="searchInput"
+				name="query" 
+				placeholder="What are you looking for?" 
+				class="flex-1 px-4 py-2 w-full focus:outline-none pl-12 min-h-[48px] min-w-[120px]"
+			>
+		</div>
+		<button type="submit" class="bg-neutral-700 hover:bg-neutral-600 text-white font-medium px-4 py-2 rounded-r-2xl transition-colors">
+			<Search/>
+		</button>
+	</form>
+	<div id="nothing-found" class="p-2 ml-2 text-white text-center">
+		<p>Accidentally clicked? <a href="https://nixos.org" class="underline text-cyan-400">Click here to head back to NixOS.org</a>.</p>
+	</div>
+	<div id="suggestions" class="bg-neutral-800 rounded-lg hidden">
+		<h3 id="mean" class="text-white pt-2 ml-2 text-left mb-1">Did you mean? Try being more specific to get better results.</h3>
+		<ul id="suggestions-list" class="rounded-lg list-none suggestion-list flex flex-col mx-2 mt-1 space-y-1 text-white border-t border-white/5 shadow-lg overflow-hidden">
+			<!-- Suggestions will be inserted here -->
+		</ul>
+	</div>
+</div>
+
+<script>
+	import SearchApplicationClient from '@elastic/search-application-client';
+
+	const liClasses = "w-full bg-neutral-700/20 border rounded-2xl focus:border-cyan-800 border-none"
+	const aClasses = "block ml-3"
+
+	interface Suggestion {
+		value: string,
+		type?: "option" | "package" | "modular-service" | "documentation",
+		repo?: string
+	}
+
+	function renderSuggestions(suggestions: Suggestion[], repo_specified: boolean) {
+		const suggestionsContainer = document.getElementById('suggestions');
+		const suggestionsList = document.getElementById('suggestions-list');
+		const nothingFound = document.getElementById('nothing-found');
+		if (!suggestionsContainer || !suggestionsList || !nothingFound) return;
+		if (suggestions.length > 0) {
+			suggestionsList.innerHTML = '';
+			nothingFound.classList.add("hidden");
+			suggestionsList.classList.remove("hidden")
+			
+			suggestions.forEach((suggestion) => {
+				const li = document.createElement('li');
+				li.className = liClasses;
+				
+				const a = document.createElement('a');
+				a.href = suggestion.type ? `/${suggestion.type}/${suggestion.value}` : `/${suggestion.value}`;
+				a.className = aClasses;
+				a.textContent = `${suggestion.value}${suggestion.repo ? ` (${suggestion.repo})` : ''}`;
+				
+				li.appendChild(a);
+				suggestionsList.appendChild(li);
+			});
+		} else {
+			suggestionsList.classList.add("hidden");
+			nothingFound.classList.remove("hidden");
+		}
+	}
+
+	function queryES() {
+		//TODO.
+		renderSuggestions([
+			{
+				type: "package",
+				value: "discord",
+				repo: "nixos/nixpkgs",
+			},
+			{
+				type: "option",
+				value: "programs.discord.enable",
+				repo: "nix-community/home-manager"
+			}
+		], false);
+	}
+
+	function loadTagsFromURL() {
+		const urlParams = new URLSearchParams(window.location.search);
+		const repo = urlParams.get('repo');
+		const channel = urlParams.get('channel');
+		const type = urlParams.get('type');
+		const branch = urlParams.get('branch');
+		
+		if (repo) addTag('repo', repo);
+		if (channel) addTag('channel', channel);
+		if (type) addTag('type', type);
+		if (branch) addTag('branch', branch);
+	}
+
+	// Handle tag creation from input
+	function handleInput(inputElement: HTMLInputElement) {
+		const value = inputElement.value;
+		
+		if (!value.endsWith(' ')) {
+			return false;
+		}
+		
+		const valueWithoutSpace = value.slice(0, -1);
+		// Support explicit tag formats: repo:owner/name, channel:<channel-branch>, type:<types>, branch:<branch>
+		const tagRegex = /^(repo:(\w+\/\w+)|channel:(.+)|type:(.+)|branch:(.+))$/;
+		const match = valueWithoutSpace.match(tagRegex);
+		
+		if (match) {
+			const tagType = match[1].split(':')[0];
+			const tagValue = match[1].split(':')[1];
+			addTag(tagType, tagValue);
+			inputElement.value = '';
+			return true;
+		}
+		
+		return false;
+	}
+
+	function handleBackspace(inputElement: HTMLInputElement) {
+		const value = inputElement.value;
+		const cursorPosition = inputElement.selectionStart || 0;
+		if (cursorPosition === 0 && value.length === 0) {
+			const tagsContainer = document.getElementById('tags-container');
+			if (!tagsContainer || tagsContainer.children.length === 0) return;
+			const lastTag = tagsContainer.lastChild;
+			if (lastTag) {
+				tagsContainer.removeChild(lastTag);
+				updateURLParams();
+			}
+			return true;
+		}
+		
+		return false;
+	}
+
+	function addTag(tagType: string, tagValue: string) {
+		const tagsContainer = document.getElementById('tags-container');
+		if (!tagsContainer) return;
+		
+		// Validate tag types
+		const validTypes = ['repo', 'channel', 'type', 'branch'];
+		if (!validTypes.includes(tagType)) {
+			return;
+		}
+		
+		// Prevent duplicate tags
+		const existingTags = Array.from(tagsContainer.children);
+		for (const existingTag of existingTags) {
+			const tagText = existingTag.querySelector('span')?.textContent;
+			if (tagText === `${tagType}:${tagValue}`) {
+				return; 
+			}
+		}
+		
+		// Create tag element
+		const tag = document.createElement('div');
+		tag.className = "flex items-center bg-cyan-800/50 text-white px-2 py-0.5 rounded-full text-xs whitespace-nowrap";
+		const tagText = document.createElement('span');
+		tagText.textContent = `${tagType}:${tagValue}`;
+		tag.appendChild(tagText);
+		
+		// Add remove functionality
+		tag.addEventListener('click', () => {
+			tagsContainer.removeChild(tag);
+			updateURLParams();
+		});
+		
+		tagsContainer.appendChild(tag);
+		updateURLParams();
+	}
+
+	function updateURLParams() {
+		const tagsContainer = document.getElementById('tags-container');
+		if (!tagsContainer) return;
+		
+		const tags = Array.from(tagsContainer.children).map(tag => {
+			const tagText = tag.querySelector('span')?.textContent;
+			if (tagText) {
+				const [type, value] = tagText.split(':');
+				return { type, value };
+			}
+			return null;
+		}).filter(Boolean) as {type: string, value: string}[];
+		
+		const url = new URL(window.location.href);
+		// Clear existing params
+		url.search = '';
+		
+		// Add new params
+		tags.forEach(tag => {
+			url.searchParams.set(tag.type, tag.value);
+		});
+		
+		// Update URL without reloading
+		window.history.replaceState({}, '', url);
+	}
+
+	const searchInput = document.getElementById('searchInput');
+	if (searchInput) {
+		const urlParams = new URLSearchParams(window.location.search);
+		const queryParam = urlParams.get('query');
+		if (queryParam) {
+			searchInput.value = queryParam;
+			queryES()
+		}
+		loadTagsFromURL();
+
+		searchInput.addEventListener('input', (e) => {
+			const inputElement = e.target as HTMLInputElement;
+			const query = inputElement.value;
+			if (handleInput(inputElement)) {
+				return;
+			}
+			
+			if (query.trim() !== '') {queryES()} else renderSuggestions([], false);
+		});
+		
+		searchInput.addEventListener('keydown', (e) => {
+			if (e.key === 'Backspace') {
+				handleBackspace(searchInput);
+			}
+		});
+	}
+</script>
+

@@ -1,5 +1,6 @@
 frontend/public/autocomplete/
 *.log
+.astro
 .DS_Store
 .cache
 .idea
