@@ -249,26 +249,27 @@ let
   # with a canonical service_package and the full list in service_packages.
   deduplicateServices =
     opts:
-    opts
-    |> lib.groupBy (
-      opt:
-      lib.toJSON [
-        (opt.declarations or [ ])
-        (opt.name or "")
-        (opt.service_module or "")
-      ]
-    )
-    |> lib.mapAttrsToList (
-      _: entries:
-      let
-        packages = lib.naturalSort (lib.unique (map (e: e.service_package or "") entries));
-      in
-      (lib.head entries)
-      // {
-        service_package = lib.head packages;
-        service_packages = packages;
-      }
-    );
+    let
+      keyOf =
+        opt:
+        lib.toJSON [
+          (opt.declarations or [ ])
+          (opt.name or "")
+          (opt.service_module or "")
+        ];
+      grouped = lib.groupBy keyOf opts;
+      mergeGroup =
+        entries:
+        let
+          packages = lib.naturalSort (lib.unique (map (e: e.service_package or "") entries));
+        in
+        (lib.head entries)
+        // {
+          service_package = lib.head packages;
+          service_packages = packages;
+        };
+    in
+    lib.mapAttrsToList (_: mergeGroup) grouped;
 
   # Base schemas from official flake-schemas input extended with custom schemas
   schemas = flake-schemas.exportedSchemas // (resolved.schemas or { });
@@ -424,9 +425,9 @@ let
 in
 
 rec {
-  legacyPackages = legacyPackages' |> collectSystems "legacyPackages" |> lib.attrValues;
-  packages = packages' |> collectSystems "packages" |> lib.attrValues;
-  apps = apps' |> collectSystems "apps" |> lib.attrValues;
+  legacyPackages = lib.attrValues (collectSystems "legacyPackages" legacyPackages');
+  packages = lib.attrValues (collectSystems "packages" packages');
+  apps = lib.attrValues (collectSystems "apps" apps');
   options = readFlakeOptions;
   darwin-options = readOptionsIf {
     cond =
