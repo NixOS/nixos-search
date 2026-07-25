@@ -95,6 +95,7 @@ packagesBody query from size sort selectedBuckets =
         , ( "flake_name", 0.5 )
         ]
         [ "package_description^3", "package_longDescription^1" ]
+        [ "package_repology_repos" ]
         (Just "package_attr_name")
 
 
@@ -140,6 +141,7 @@ optionsBody types query from size sort =
         , ( "service_packages", 3.0 )
         ]
         [ "option_description^3" ]
+        []
         Nothing
 
 
@@ -390,6 +392,26 @@ shouldClauses primaryField positiveWords phraseFields =
         termClause :: prefixClause :: phraseClause
 
 
+popularityClauses : List String -> List (List ( String, Json.Encode.Value ))
+popularityClauses fields =
+    List.map
+        (\field ->
+            [ ( "rank_feature"
+              , Json.Encode.object
+                    [ ( "field", Json.Encode.string field )
+                    , ( "boost", Json.Encode.float 5.0 )
+                    , ( "_name", Json.Encode.string ("popularity_" ++ field) )
+                    , ( "saturation"
+                      , Json.Encode.object
+                            [ ( "pivot", Json.Encode.float 20.0 ) ]
+                      )
+                    ]
+              )
+            ]
+        )
+        fields
+
+
 rescoreQuery : String -> ( String, Json.Encode.Value )
 rescoreQuery field =
     ( "rescore"
@@ -436,9 +458,10 @@ encodeRequestBody :
     -> List String
     -> List ( String, Float )
     -> List String
+    -> List String
     -> Maybe String
     -> Json.Encode.Value
-encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets mainFields fields phraseFields rescoreField =
+encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets mainFields fields phraseFields popularityFields rescoreField =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -528,7 +551,9 @@ encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms 
                           )
                         , ( "should"
                           , Json.Encode.list Json.Encode.object
-                                (shouldClauses primaryField positiveWords phraseFields)
+                                (shouldClauses primaryField positiveWords phraseFields
+                                    ++ popularityClauses popularityFields
+                                )
                           )
                         ]
                   )
