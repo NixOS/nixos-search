@@ -151,7 +151,9 @@ function successAtK(ranked, relevant, k) {
 function recallAtK(ranked, relevant, k) {
     const rel = new Set(relevant);
     const hits = ranked.slice(0, k).filter((id) => rel.has(id)).length;
-    return relevant.length > 0 ? hits / relevant.length : 0;
+
+    const denom = Math.min(k, rel.size);
+    return denom > 0 ? hits / denom : 0;
 }
 
 const queries = JSON.parse(readFileSync(args.queries, "utf8"));
