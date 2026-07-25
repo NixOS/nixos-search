@@ -13,6 +13,15 @@ runs:
   using: "composite"
 
   steps:
+    - name: Setting `USER` for container-based runners
+      shell: bash
+      run: |
+        # Container-based hosted runners leave `USER` unset, which `cachix use`
+        # rejects. VM-based runners already export it, so this is a no-op there.
+        if [ -z "${USER:-}" ]; then
+          echo "USER=$(id -un 2>/dev/null || echo root)" >> "$GITHUB_ENV"
+        fi
+
     - name: Installing Nix
       uses: cachix/install-nix-action@v30
       with:
