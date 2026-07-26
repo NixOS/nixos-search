@@ -769,4 +769,39 @@ mod tests {
             panic!("Expected LicenseExpression::Leaf");
         }
     }
+
+    #[test]
+    fn test_license_display_name_fallback() {
+        let l1 = License {
+            fullName: Some("MIT License".to_string()),
+            shortName: Some("mit".to_string()),
+            spdxId: Some("MIT".to_string()),
+            url: None,
+        };
+        assert_eq!(l1.display_name(), "MIT");
+
+        let l2 = License {
+            fullName: Some("MIT License".to_string()),
+            shortName: Some("mit".to_string()),
+            spdxId: None,
+            url: None,
+        };
+        assert_eq!(l2.display_name(), "mit");
+
+        let l3 = License {
+            fullName: Some("Custom License".to_string()),
+            shortName: None,
+            spdxId: None,
+            url: None,
+        };
+        assert_eq!(l3.display_name(), "Custom License");
+
+        let l4 = License {
+            fullName: None,
+            shortName: None,
+            spdxId: None,
+            url: None,
+        };
+        assert_eq!(l4.display_name(), "custom");
+    }
 }
