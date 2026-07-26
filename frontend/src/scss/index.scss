@@ -352,20 +352,13 @@ footer {
 
   // Search section title title
   & > h1 {
+    display: flex;
+    gap: .5ch; // 1 space = ~1/2 '0'
     font-weight: normal;
     font-size: 2.3em;
 
-    &:before {
-      content: "\2315";
-      display: inline-block;
-      font-size: 2em;
-      margin-right: 0.2em;
-      -moz-transform: scale(-1, 1);
-      -webkit-transform: scale(-1, 1);
-      -o-transform: scale(-1, 1);
-      -ms-transform: scale(-1, 1);
-      transform: translateY(0.15em) scaleX(-1);
-      font-family: monospace;
+    svg {
+      fill: currentColor;
     }
   }
 
