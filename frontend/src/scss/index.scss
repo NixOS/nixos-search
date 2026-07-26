@@ -8,8 +8,8 @@
 :root {
   --text-color: #333;
   --background-color: #fff;
-  --terminal-background: #333;
-  --terminal-color: #fff;
+  --terminal-background: #343748;
+  --terminal-color: #e8effc;
   --result-item-show-more-background: #fff;
   --result-item-show-more-color: #666;
   --search-sidebar-container-border-color: #ccc;
@@ -72,8 +72,7 @@
     --button-hover-background: #454545;
     --button-active-background: #656565;
     --button-active-hover-background: #707070;
-    --terminal-background: #353535;
-    --terminal-color: var(--text-color);
+    --terminal-background: #343748;
     --line-color: #ffffff26; // Color for separating lines
 
     --result-item-show-more-background: var(--background-color);
@@ -315,6 +314,10 @@ body {
 }
 
 .code-block,.sourceCode,.elmsh > code {
+  a {
+    color: var(--light-blue);
+  }
+
   display: block;
   cursor: text;
 }
@@ -992,6 +995,20 @@ a:focus-visible {
   // commands but a nested <pre> for option values, so match either.
   & pre {
     padding-right: 4em;
+  }
+
+  // Custom theming that override the parsed fragments of SyntaxHighlighting
+  // becaues the provided themes dont support light/dark theming
+
+  // see: https://github.com/pablohirafuji/elm-syntax-highlight/blob/3.6.0/src/SyntaxHighlight.elm#L347
+  //  and https://github.com/pablohirafuji/elm-syntax-highlight/blob/3.6.0/src/SyntaxHighlight/Language/Nix.elm#L322
+  .elmsh {
+    &-comm { color: #aeaeae; }
+    &-nix-o { color: #f08d94;}
+    &-nix-p { color: #d991d2; }
+    &-nix-s { color: #6fc488; }
+    &-nix-k { color: #87adfa; }
+    &-nix-n { color: #e99861; }
   }
 }
 

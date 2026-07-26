@@ -63,7 +63,7 @@ import Search
         , decodeResolvedFlake
         )
 import Search.Query
-import SyntaxHighlight exposing (elm, oneDark, toBlockHtml, useTheme)
+import SyntaxHighlight exposing (nix, toBlockHtml)
 import Task
 import Url
 import Utils
@@ -455,8 +455,7 @@ viewResultItem nixosChannels channel show activeSource item =
 asHighlightPreCode : String -> Html msg
 asHighlightPreCode value =
     div []
-        [ useTheme oneDark
-        , elm value
+        [ nix value
             |> Result.map (toBlockHtml (Just 1))
             |> Result.withDefault
                 (pre [] [ code [ class "code-block" ] [ text value ] ])
