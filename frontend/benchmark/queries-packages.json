@@ -9,7 +9,8 @@
         "id": "g002",
         "q": "htop",
         "category": "exact",
-        "relevant": ["pkg:htop"]
+        "exhaustive": true,
+        "relevant": ["pkg:htop", "pkg:htop-vim"]
     },
     {
         "id": "g003",
@@ -39,6 +40,7 @@
         "id": "g007",
         "q": "bat",
         "category": "exact",
+        "exhaustive": true,
         "relevant": ["pkg:bat"]
     },
     {
@@ -63,13 +65,22 @@
         "id": "g011",
         "q": "postgresql",
         "category": "exact",
+        "exhaustive": true,
         "relevant": [
             "pkg:postgresql",
             "pkg:postgresql_14",
             "pkg:postgresql_15",
             "pkg:postgresql_16",
             "pkg:postgresql_17",
-            "pkg:postgresql_18"
+            "pkg:postgresql_18",
+            "pkg:postgresql_19",
+            "pkg:postgresql_jit",
+            "pkg:postgresql_14_jit",
+            "pkg:postgresql_15_jit",
+            "pkg:postgresql_16_jit",
+            "pkg:postgresql_17_jit",
+            "pkg:postgresql_18_jit",
+            "pkg:postgresql_19_jit"
         ]
     },
     {
@@ -82,6 +93,7 @@
         "id": "g013",
         "q": "caddy",
         "category": "exact",
+        "exhaustive": true,
         "relevant": ["pkg:caddy"]
     },
     {
@@ -100,13 +112,22 @@
         "id": "g026",
         "q": "postgres",
         "category": "prefix",
+        "exhaustive": true,
         "relevant": [
             "pkg:postgresql",
             "pkg:postgresql_14",
             "pkg:postgresql_15",
             "pkg:postgresql_16",
             "pkg:postgresql_17",
-            "pkg:postgresql_18"
+            "pkg:postgresql_18",
+            "pkg:postgresql_19",
+            "pkg:postgresql_jit",
+            "pkg:postgresql_14_jit",
+            "pkg:postgresql_15_jit",
+            "pkg:postgresql_16_jit",
+            "pkg:postgresql_17_jit",
+            "pkg:postgresql_18_jit",
+            "pkg:postgresql_19_jit"
         ]
     },
     {
@@ -166,6 +187,7 @@
         "id": "g037",
         "q": "fail2",
         "category": "prefix",
+        "exhaustive": true,
         "relevant": ["pkg:fail2ban"]
     },
     {
@@ -256,6 +278,7 @@
         "id": "g052",
         "q": "postgrsql",
         "category": "typo",
+        "exhaustive": true,
         "relevant": [
             "pkg:postgresql",
             "pkg:postgresql_14",
@@ -268,7 +291,9 @@
             "pkg:postgresql_15_jit",
             "pkg:postgresql_16_jit",
             "pkg:postgresql_17_jit",
-            "pkg:postgresql_18_jit"
+            "pkg:postgresql_18_jit",
+            "pkg:postgresql_19",
+            "pkg:postgresql_19_jit"
         ]
     },
     {
@@ -287,7 +312,13 @@
         "id": "g055",
         "q": "firefx",
         "category": "typo",
-        "relevant": ["pkg:firefox"]
+        "exhaustive": true,
+        "relevant": [
+            "pkg:firefox",
+            "pkg:firefox-unwrapped",
+            "pkg:firefox-esr-140-unwrapped",
+            "pkg:firefox-esr-153-unwrapped"
+        ]
     },
     {
         "id": "g056",
@@ -305,6 +336,7 @@
         "id": "g060",
         "q": "samaba",
         "category": "typo",
+        "exhaustive": true,
         "relevant": [
             "pkg:samba",
             "pkg:samba4",
@@ -316,12 +348,14 @@
         "id": "g061",
         "q": "redsi",
         "category": "typo",
+        "exhaustive": true,
         "relevant": ["pkg:redis"]
     },
     {
         "id": "g062",
         "q": "openssg",
         "category": "typo",
+        "exhaustive": true,
         "relevant": [
             "pkg:openssh",
             "pkg:opensshWithKerberos",
@@ -346,19 +380,39 @@
         "id": "g065",
         "q": "chromiun",
         "category": "typo",
-        "relevant": ["pkg:chromium"]
+        "exhaustive": true,
+        "relevant": ["pkg:chromium", "pkg:ungoogled-chromium"]
     },
     {
         "id": "g066",
         "q": "thunderbrid",
         "category": "typo",
-        "relevant": ["pkg:thunderbird"]
+        "exhaustive": true,
+        "relevant": [
+            "pkg:thunderbird",
+            "pkg:thunderbird-bin",
+            "pkg:thunderbird-esr",
+            "pkg:thunderbird-esr-bin",
+            "pkg:thunderbird-latest",
+            "pkg:thunderbird-latest-bin",
+            "pkg:thunderbird-140",
+            "pkg:thunderbird-153",
+            "pkg:thunderbird-latest-unwrapped",
+            "pkg:thunderbird-140-unwrapped",
+            "pkg:thunderbird-153-unwrapped"
+        ]
     },
     {
         "id": "g067",
         "q": "dcoker",
         "category": "typo",
-        "relevant": ["pkg:docker", "pkg:docker_25", "pkg:docker_29"]
+        "exhaustive": true,
+        "relevant": [
+            "pkg:docker",
+            "pkg:docker_25",
+            "pkg:docker_29",
+            "pkg:docker-client"
+        ]
     },
     {
         "id": "g068",
@@ -376,36 +430,48 @@
         "id": "g070",
         "q": "vaultwardn",
         "category": "typo",
-        "relevant": ["pkg:vaultwarden"]
+        "exhaustive": true,
+        "relevant": [
+            "pkg:vaultwarden",
+            "pkg:vaultwarden-mysql",
+            "pkg:vaultwarden-postgresql",
+            "pkg:vaultwarden-sqlite",
+            "pkg:vaultwarden-webvault"
+        ]
     },
     {
         "id": "g071",
         "q": "tailscle",
         "category": "typo",
+        "exhaustive": true,
         "relevant": ["pkg:tailscale"]
     },
     {
         "id": "g072",
         "q": "fial2ban",
         "category": "typo",
+        "exhaustive": true,
         "relevant": ["pkg:fail2ban"]
     },
     {
         "id": "g073",
         "q": "mosquito",
         "category": "typo",
+        "exhaustive": true,
         "relevant": ["pkg:mosquitto"]
     },
     {
         "id": "g074",
         "q": "syncthign",
         "category": "typo",
+        "exhaustive": true,
         "relevant": ["pkg:syncthing"]
     },
     {
         "id": "g075",
         "q": "cady",
         "category": "typo",
+        "exhaustive": true,
         "relevant": ["pkg:caddy"]
     },
     {
@@ -671,6 +737,7 @@
         "id": "g151",
         "q": "continuwuity",
         "category": "exact",
+        "exhaustive": true,
         "relevant": ["pkg:matrix-continuwuity"]
     }
 ]
