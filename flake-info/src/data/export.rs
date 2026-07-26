@@ -523,8 +523,12 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                 let service_environments: Vec<ServiceEnvironment> =
                     service_environments.into_iter().map(Into::into).collect();
 
+                // Only environments the service actually supports: this drives
+                // the bucket filter, where picking one must narrow the results
+                // to services usable there.
                 let service_environments_set = service_environments
                     .iter()
+                    .filter(|e| e.supported)
                     .map(|e| e.environment.to_owned())
                     .collect();
 
@@ -620,13 +624,16 @@ impl TryFrom<import::NixOption> for Derivation {
     }
 }
 
-/// One environment (e.g. "system") a modular service is registered for, with the
-/// import expression that reaches it and the maintainers of that half.
+/// One of the environments the registry knows about (e.g. "system"), as it
+/// applies to a given modular service. Environments the service is not
+/// registered for are listed too, with `supported` false and nothing to import.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ServiceEnvironment {
     environment: String,
-    #[serde(rename = "import")]
-    import_expr: String,
+    supported: bool,
+    #[serde(rename = "import", skip_serializing_if = "Option::is_none")]
+    import_expr: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     maintainers: Vec<Maintainer>,
 }
 
@@ -634,6 +641,7 @@ impl From<import::ServiceEnvironment> for ServiceEnvironment {
     fn from(env: import::ServiceEnvironment) -> Self {
         ServiceEnvironment {
             environment: env.environment,
+            supported: env.supported,
             import_expr: env.import_expr,
             maintainers: env.maintainers.into_iter().map(Into::into).collect(),
         }
@@ -647,6 +655,8 @@ pub struct PackageService {
     service: String,
     #[serde(rename = "import")]
     import_expr: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    maintainers: Vec<Maintainer>,
     environments: Vec<ServiceEnvironment>,
 }
 
@@ -655,6 +665,7 @@ impl From<import::PackageService> for PackageService {
         PackageService {
             service: service.service,
             import_expr: service.import_expr,
+            maintainers: service.maintainers.into_iter().map(Into::into).collect(),
             environments: service.environments.into_iter().map(Into::into).collect(),
         }
     }

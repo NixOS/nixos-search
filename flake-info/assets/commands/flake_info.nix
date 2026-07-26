@@ -387,14 +387,21 @@ let
       grouped = lib.groupBy (x: "${x.package}.${x.service}") (
         lib.filter (x: !(lib.elem x.package undocumentedServices)) flat
       );
+
+      # Every environment the registry knows about, so a service can report the
+      # ones it does *not* support alongside the ones it does.
+      knownEnvironments = lib.attrNames modularServices;
     in
     lib.mapAttrsToList (
       _: entries:
       let
-        environments = map (x: {
-          name = x.environment;
-          inherit (x) module;
-        }) entries;
+        registered = lib.listToAttrs (map (x: lib.nameValuePair x.environment x.module) entries);
+
+        environments = map (name: {
+          inherit name;
+          supported = registered ? ${name};
+          module = registered.${name} or null;
+        }) knownEnvironments;
       in
       {
         inherit (lib.head entries) package service;
@@ -442,6 +449,7 @@ let
           environments = [
             {
               name = "system";
+              supported = true;
               module = null;
             }
           ];
@@ -453,13 +461,20 @@ let
         )
       );
 
-  # [ { package; service; module; environments = [ { name; module; } ]; } ]
+  # [ { package; service; module; environments = [ { name; supported; module; } ]; } ]
+  #
+  # `environments` lists every environment the registry knows, not just the ones
+  # this service is registered for; `supported` tells them apart.
   serviceRegistry = if lib.pathExists serviceRegistryPath then registryServices else legacyServices;
 
   # The environment a NixOS configuration gets, falling back to whichever
-  # environment happens to be registered first.
+  # supported environment happens to be registered first.
   primaryEnvironment =
-    environments: lib.findFirst (env: env.name == "system") (lib.head environments) environments;
+    environments:
+    let
+      supported = lib.filter (env: env.supported) environments;
+    in
+    lib.findFirst (env: env.name == "system") (lib.head supported) supported;
 
   # The portable half, which every environment builds on.
   baseImportOf = e: "pkgs.${e.package}.services.${e.service}";
@@ -472,9 +487,13 @@ let
     system = "config.modularServices";
   };
 
+  # `null` for an environment the service is not registered for: there is
+  # nothing to import there.
   envImportOf =
     e: env:
-    if env.module != null && environmentAccessors ? ${env.name} then
+    if !env.supported then
+      null
+    else if env.module != null && environmentAccessors ? ${env.name} then
       "${environmentAccessors.${env.name}}.${e.package}.${e.service}"
     # Do not merge these branches: the accessor is per environment, the
     # portable half is not.
@@ -585,16 +604,24 @@ let
       service_package = e.package;
       service_module = e.service;
       service_import = baseImportOf e;
-      service_environments = map (env: {
-        environment = env.name;
-        import = envImportOf e env;
-        maintainers = map projectMaintainer (
-          let
-            source = sourceOf env;
-          in
-          if source == null then [ ] else bySource.${source} or [ ]
-        );
-      }) e.environments;
+      # Every known environment, so the frontend can show which ones a service
+      # does not support. Unsupported ones carry no import and no maintainers.
+      service_environments = map (
+        env:
+        {
+          environment = env.name;
+          inherit (env) supported;
+        }
+        // lib.optionalAttrs env.supported {
+          import = envImportOf e env;
+          maintainers = map projectMaintainer (
+            let
+              source = sourceOf env;
+            in
+            if source == null then [ ] else bySource.${source} or [ ]
+          );
+        }
+      ) e.environments;
       service_maintainers = map projectMaintainer (
         lib.concatLists (
           lib.attrValues (lib.filterAttrs (file: _: !(lib.elem file environmentSources)) bySource)
@@ -670,18 +697,23 @@ rec {
     map (e: { ${e.package} = e.service; }) serviceRegistry
   );
 
-  # Per-package import expressions for those same services, so the package
-  # page can show a snippet that matches the channel it is looking at.
+  # Per-package service metadata: import expressions, environment support and
+  # each half's maintainers. The package page is where a modular service is
+  # described as a whole, so it carries what the option pages link out to.
   nixos-package-service-imports = lib.zipAttrsWith (_: values: values) (
-    map (e: {
-      ${e.package} = {
-        service = e.service;
-        import = baseImportOf e;
-        environments = map (env: {
-          environment = env.name;
-          import = envImportOf e env;
-        }) e.environments;
-      };
-    }) serviceRegistry
+    map (
+      e:
+      let
+        info = serviceInfo e;
+      in
+      {
+        ${e.package} = {
+          service = e.service;
+          import = info.service_import;
+          maintainers = info.service_maintainers;
+          environments = info.service_environments;
+        };
+      }
+    ) serviceRegistry
   );
 }

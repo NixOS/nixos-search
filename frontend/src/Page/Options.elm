@@ -335,6 +335,7 @@ viewBuckets activeSource bucketsAsString result =
             |> Search.viewBucket
                 Search.CheckboxInput
                 "Environments"
+                Search.ModularService.environmentLabel
                 (result.aggregations.service_environments_set.buckets |> sortBuckets)
                 (createBucketsMsg .environments (\s v -> { s | environments = v }))
                 initialBuckets.environments
@@ -460,8 +461,13 @@ viewResultItem nixosChannels channel show activeSource item =
                                 else
                                     []
                                )
+                            ++ (if isService then
+                                    viewServiceLink channel item.source
+
+                                else
+                                    []
+                               )
                             ++ viewServiceEnvironments item.source
-                            ++ viewServiceMaintainers item.source
                             ++ viewUsageSnippet item.source
                             ++ [ div [] [ text "Declared in" ]
                                , div [] <| findSource nixosChannels channel item.source
@@ -508,56 +514,115 @@ asHighlightPreCode value =
         ]
 
 
-{-| The environments a modular service is registered for. Each environment has
-its own half of the service, reached by its own import expression and looked
-after by its own maintainers.
+{-| Every environment the registry knows about, marked for whether this service
+supports it. A supported environment expands to its import expression, the
+maintainers of that half and a snippet in the block that environment exposes;
+an unsupported one is a leaf, since there is nothing behind it.
+
+Environment-level detail repeats across every option of the same service, so it
+stays collapsed until asked for.
+
 -}
 viewServiceEnvironments : ResultItemSource -> List (Html Msg)
 viewServiceEnvironments source =
-    if List.isEmpty source.serviceEnvironments then
-        []
+    let
+        marker supported =
+            span
+                [ class "service-environment-support"
+                , Html.Attributes.title
+                    (if supported then
+                        "Supported"
 
-    else
-        [ div [] [ text "Environments" ]
-        , div []
-            [ ul []
-                (List.map
-                    (\env ->
-                        li []
-                            (strong [] [ text env.environment ]
-                                :: text " "
-                                :: code [] [ text env.importExpr ]
+                     else
+                        "Not supported"
+                    )
+                ]
+                [ text
+                    (if supported then
+                        "✅"
+
+                     else
+                        "❌"
+                    )
+                ]
+
+        heading env =
+            [ marker env.supported
+            , text " "
+            , strong [] [ text (Search.ModularService.environmentLabel env.environment) ]
+            ]
+
+        viewEnvironment env =
+            case ( env.supported, env.importExpr ) of
+                ( True, Just importExpr ) ->
+                    li []
+                        [ Html.details []
+                            (Html.summary [] (heading env)
+                                :: div [] [ code [] [ text importExpr ] ]
                                 :: (if List.isEmpty env.maintainers then
                                         []
 
                                     else
                                         [ ul [] (List.map showMaintainer env.maintainers) ]
                                    )
+                                ++ viewEnvironmentSnippet source env.environment importExpr
                             )
-                    )
-                    source.serviceEnvironments
-                )
-            ]
-        ]
+                        ]
 
-
-{-| Maintainers of the portable half, which every environment builds on.
--}
-viewServiceMaintainers : ResultItemSource -> List (Html Msg)
-viewServiceMaintainers source =
-    if List.isEmpty source.serviceMaintainers then
+                _ ->
+                    li [] (heading env)
+    in
+    if List.isEmpty source.serviceEnvironments then
         []
 
     else
-        [ div [] [ text "Maintainers" ]
-        , div []
-            [ ul []
-                (List.map showMaintainer source.serviceMaintainers
-                    ++ Search.Maintainer.linkAllMaintainers CopyToClipboard source.serviceMaintainers
-                    ++ Search.Maintainer.mailtoAllMaintainers source.serviceMaintainers
-                )
-            ]
+        [ div [] [ text "Environments" ]
+        , div [] [ ul [ class "service-environments" ] (List.map viewEnvironment source.serviceEnvironments) ]
         ]
+
+
+{-| The import expression for the portable half.
+
+Indices written before the base/environment split carry no import expression,
+so compose it from the package and service names there.
+
+-}
+portableImport : ResultItemSource -> Maybe String
+portableImport source =
+    case source.serviceImport of
+        Just expr ->
+            Just expr
+
+        Nothing ->
+            case ( source.servicePackage, source.serviceModule ) of
+                ( Just pkg, Just service ) ->
+                    Just ("pkgs." ++ pkg ++ ".services." ++ service)
+
+                _ ->
+                    Nothing
+
+
+{-| The service this option belongs to, pointing at the package page where its
+maintainers and environment support are shown once rather than once per option.
+
+Named by its import expression rather than by `<package>.<service>`, since that
+is the string a reader would go on to write.
+
+-}
+viewServiceLink : String -> ResultItemSource -> List (Html Msg)
+viewServiceLink channel source =
+    case ( source.servicePackage, portableImport source ) of
+        ( Just pkg, Just importExpr ) ->
+            [ div [] [ text "Service" ]
+            , div []
+                [ a
+                    [ href ("/packages?channel=" ++ channel ++ "&query=" ++ pkg ++ "#show=" ++ Url.percentEncode pkg) ]
+                    [ code [] [ text importExpr ] ]
+                ]
+            ]
+
+        _ ->
+            []
 
 
 showMaintainer : Search.Maintainer.Maintainer -> Html Msg
@@ -565,14 +630,15 @@ showMaintainer =
     Search.Maintainer.showMaintainer CopyToClipboard
 
 
-{-| Render a "Usage" section showing how to use this option.
+{-| `<option> = <value>;`, indented, with the option's default when that default
+is a plain Nix expression.
 -}
-viewUsageSnippet : ResultItemSource -> List (Html Msg)
-viewUsageSnippet source =
+optionLine : ResultItemSource -> String -> String
+optionLine source indent =
     let
         -- Re-indent a (possibly multi-line) value so every line after the
         -- first aligns with `indent`.
-        indentValue indent val =
+        indentValue val =
             case String.split "\n" val of
                 [] ->
                     val
@@ -586,70 +652,76 @@ viewUsageSnippet source =
         isNixLiteral val =
             not (String.contains "<" val)
 
-        leafValue indent =
+        value =
             source.default
                 |> Maybe.andThen
                     (\val ->
                         if isNixLiteral val then
-                            Just (indentValue indent val)
+                            Just (indentValue val)
 
                         else
                             Nothing
                     )
                 |> Maybe.withDefault "..."
+    in
+    indent ++ source.name ++ " = " ++ value ++ ";\n"
 
-        nestedOption indent =
-            indent ++ source.name ++ " = " ++ leafValue indent ++ ";\n"
 
-        usage snippet =
-            [ div [] [ text "Usage" ]
-            , Utils.copyable CopyToClipboard snippet (asHighlightPreCode snippet)
+{-| What a modular service contributes to whatever service block its environment
+exposes: the import, and the option being looked at.
+-}
+serviceSnippetBody : ResultItemSource -> String -> String -> String
+serviceSnippetBody source indent importExpr =
+    indent ++ "imports = [ " ++ importExpr ++ " ];\n" ++ optionLine source indent
+
+
+usageSection : String -> List (Html Msg)
+usageSection snippet =
+    [ div [] [ text "Usage" ]
+    , Utils.copyable CopyToClipboard snippet (asHighlightPreCode snippet)
+    ]
+
+
+{-| The same body wrapped in the block a specific environment exposes, for
+environments whose shape we know.
+-}
+viewEnvironmentSnippet : ResultItemSource -> String -> String -> List (Html Msg)
+viewEnvironmentSnippet source environment importExpr =
+    case Search.ModularService.environmentUsagePath environment of
+        Just path ->
+            [ div []
+                [ let
+                    snippet =
+                        path ++ " = {\n" ++ serviceSnippetBody source "  " importExpr ++ "};"
+                  in
+                  Utils.copyable CopyToClipboard snippet (asHighlightPreCode snippet)
+                ]
             ]
+
+        Nothing ->
+            []
+
+
+{-| Render a "Usage" section showing how to use this option.
+-}
+viewUsageSnippet : ResultItemSource -> List (Html Msg)
+viewUsageSnippet source =
+    let
+        usage =
+            usageSection
+
+        nestedOption =
+            optionLine source
     in
     case source.docType of
         "service" ->
-            let
-                -- Indices written before the base/environment split carry
-                -- neither import expression, so compose the portable half's
-                -- from the package and service names.
-                composedImport =
-                    case ( source.servicePackage, source.serviceModule ) of
-                        ( Just pkg, Just mod_ ) ->
-                            Just ("pkgs." ++ pkg ++ ".services." ++ mod_)
-
-                        _ ->
-                            Nothing
-
-                -- A NixOS configuration wants the environment half; importing
-                -- the portable one alone would silently omit the systemd
-                -- integration.
-                importExpr =
-                    case source.serviceEnvironments of
-                        [] ->
-                            case source.serviceImport of
-                                Just base ->
-                                    Just base
-
-                                Nothing ->
-                                    composedImport
-
-                        environments ->
-                            Just
-                                (Search.ModularService.preferredImport
-                                    (Maybe.withDefault "" source.serviceImport)
-                                    environments
-                                )
-            in
-            case importExpr of
+            -- The portable half is the one every environment builds on, so it
+            -- is what an environment-agnostic snippet can name. The block these
+            -- lines go in differs per environment -- `system.services.<name>`
+            -- on NixOS -- and is shown under that environment instead.
+            case portableImport source of
                 Just expr ->
-                    usage
-                        ("system.services.<name> = {\n"
-                            ++ "  imports = [ "
-                            ++ expr
-                            ++ " ];\n"
-                            ++ nestedOption "  "
-                            ++ "};"
-                        )
+                    usage (serviceSnippetBody source "" expr)
 
                 Nothing ->
                     []

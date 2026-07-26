@@ -95,13 +95,22 @@ pub struct NixOption {
     pub service_maintainers: Vec<Maintainer>,
 }
 
-/// One environment (e.g. "system") a modular service is registered for.
+fn default_true() -> bool {
+    true
+}
+
+/// One of the environments the registry knows about (e.g. "system"), as it
+/// applies to a given modular service.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ServiceEnvironment {
     pub environment: String,
-    /// `import` is a Rust keyword, hence the rename.
-    #[serde(rename = "import")]
-    pub import_expr: String,
+    /// Whether the service is registered for this environment. Unsupported
+    /// environments are listed too, so the frontend can show the gap.
+    #[serde(default = "default_true")]
+    pub supported: bool,
+    /// `import` is a Rust keyword, hence the rename. `None` when unsupported.
+    #[serde(default, rename = "import")]
+    pub import_expr: Option<String>,
     /// Maintainers of this environment's half, empty on nixpkgs revisions that
     /// predate the base/environment split.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -116,6 +125,9 @@ pub struct PackageService {
     /// `import` is a Rust keyword, hence the rename.
     #[serde(rename = "import")]
     pub import_expr: String,
+    /// Maintainers of the portable half; each environment half carries its own.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub maintainers: Vec<Maintainer>,
     #[serde(default)]
     pub environments: Vec<ServiceEnvironment>,
 }

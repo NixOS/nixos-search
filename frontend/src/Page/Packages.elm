@@ -336,30 +336,35 @@ viewBuckets bucketsAsString result =
         |> viewBucket
             Search.RadioInput
             "Package sets"
+            identity
             (result.aggregations.package_attr_set.buckets |> sortBuckets)
             (createBucketsMsg True .packageSets (\s v -> { s | packageSets = v }))
             selectedBucket.packageSets
         |> viewBucket
             Search.CheckboxInput
             "Licenses"
+            identity
             (result.aggregations.package_license_set.buckets |> sortBuckets)
             (createBucketsMsg False .licenses (\s v -> { s | licenses = v }))
             selectedBucket.licenses
         |> viewBucket
             Search.CheckboxInput
             "Maintainers"
+            identity
             (result.aggregations.package_maintainers_set.buckets |> sortBuckets)
             (createBucketsMsg False .maintainers (\s v -> { s | maintainers = v }))
             selectedBucket.maintainers
         |> viewBucket
             Search.CheckboxInput
             "Teams"
+            identity
             (result.aggregations.package_teams_set.buckets |> sortBuckets)
             (createBucketsMsg False .teams (\s v -> { s | teams = v }))
             selectedBucket.teams
         |> viewBucket
             Search.CheckboxInput
             "Platforms"
+            identity
             (result.aggregations.package_platforms.buckets |> sortBuckets)
             (createBucketsMsg False .platforms (\s v -> { s | platforms = v }))
             selectedBucket.platforms
@@ -830,55 +835,7 @@ viewResultItem nixosChannels channel showUsageDetails show item =
                     , programs
                     , maintainersTeamsAndPlatforms
                     , optionsLink
-                    , let
-                        -- The import expressions come from the index, so they
-                        -- match the channel being looked at. Indices written
-                        -- before the base/environment split carry only the
-                        -- service names, from which the portable half's import
-                        -- can be composed.
-                        serviceImports =
-                            case item.source.modularServiceImports of
-                                [] ->
-                                    List.map
-                                        (\mod_ -> "pkgs." ++ item.source.attr_name ++ ".services." ++ mod_)
-                                        item.source.modularServices
-
-                                packageServices ->
-                                    List.map
-                                        (\service ->
-                                            Search.ModularService.preferredImport
-                                                service.importExpr
-                                                service.environments
-                                        )
-                                        packageServices
-                      in
-                      if List.isEmpty serviceImports then
-                        text ""
-
-                      else
-                        div []
-                            [ h4 []
-                                [ text "Modular Services"
-                                , text " "
-                                , a
-                                    [ href "https://nixos.org/manual/nixos/stable/#modular-services"
-                                    , Html.Attributes.target "_blank"
-                                    , Html.Attributes.title "What are modular services?"
-                                    ]
-                                    [ text "(?)" ]
-                                ]
-                            , ul []
-                                (List.map
-                                    (\importExpr ->
-                                        li []
-                                            [ a
-                                                [ href ("/options?channel=" ++ channel ++ "&query=" ++ item.source.attr_name ++ "&include_nixos_options=0") ]
-                                                [ code [] [ text importExpr ] ]
-                                            ]
-                                    )
-                                    serviceImports
-                                )
-                            ]
+                    , viewModularServices channel item.source
                     ]
                 ]
 
@@ -924,6 +881,144 @@ viewResultItem nixosChannels channel showUsageDetails show item =
          ]
             ++ longerPackageDetails
         )
+
+
+{-| The modular services this package exposes, and which environments each of
+them can be used in.
+
+Environments the registry knows but a service is not registered for are listed
+too, so the list answers "is this usable here yet?" rather than only listing
+what happens to work. Indices written before the base/environment split carry
+only the service names, from which the portable half's import can be composed.
+
+Each half carries its own maintainers: the ones next to the service maintain the
+portable module every environment builds on, the ones under an environment
+maintain that environment's integration only.
+
+Environments are stacked rather than laid out side by side, since the registry
+is expected to grow more of them than fit across a page.
+
+-}
+viewModularServices : String -> ResultItemSource -> Html Msg
+viewModularServices channel source =
+    let
+        services =
+            case source.modularServiceImports of
+                [] ->
+                    List.map
+                        (\service ->
+                            { service = service
+                            , importExpr = "pkgs." ++ source.attr_name ++ ".services." ++ service
+                            , maintainers = []
+                            , environments = []
+                            }
+                        )
+                        source.modularServices
+
+                packageServices ->
+                    packageServices
+
+        -- The service's options live on the Modular services tab, so the link
+        -- has to select that source; the options page otherwise opens on NixOS
+        -- options, which carry none of them.
+        serviceRoute =
+            Route.Options
+                { query = Just source.attr_name
+                , channel = Just channel
+                , show = Nothing
+                , from = Nothing
+                , size = Nothing
+                , buckets = Nothing
+                , sort = Nothing
+                , type_ = Just Route.OptionSearch
+                , activeOptionSource = Route.ModularServiceOptions
+                }
+
+        serviceLink service =
+            a [ Route.href serviceRoute ] [ code [] [ text service.importExpr ] ]
+
+        maintainerList maintainers =
+            if List.isEmpty maintainers then
+                []
+
+            else
+                [ ul [ class "modular-service-maintainers" ]
+                    (List.map (Search.Maintainer.showMaintainer CopyToClipboard) maintainers)
+                ]
+
+        marker supported =
+            span
+                [ class "service-environment-support"
+                , title
+                    (if supported then
+                        "Supported"
+
+                     else
+                        "Not supported"
+                    )
+                ]
+                [ text
+                    (if supported then
+                        "✅"
+
+                     else
+                        "❌"
+                    )
+                ]
+
+        heading env =
+            [ marker env.supported
+            , text " "
+            , strong [] [ text (Search.ModularService.environmentLabel env.environment) ]
+            ]
+
+        -- A supported environment expands to the import of its half and the
+        -- maintainers of that half; an unsupported one has nothing behind it.
+        viewEnvironment env =
+            case ( env.supported, env.importExpr ) of
+                ( True, Just importExpr ) ->
+                    li []
+                        [ Html.details []
+                            (Html.summary [] (heading env)
+                                :: div [] [ code [] [ text importExpr ] ]
+                                :: maintainerList env.maintainers
+                            )
+                        ]
+
+                _ ->
+                    li [] (heading env)
+
+        viewService service =
+            li []
+                (serviceLink service
+                    :: maintainerList service.maintainers
+                    ++ (if List.isEmpty service.environments then
+                            []
+
+                        else
+                            [ ul [ class "service-environments" ]
+                                (List.map viewEnvironment service.environments)
+                            ]
+                       )
+                )
+    in
+    if List.isEmpty services then
+        text ""
+
+    else
+        div []
+            [ h4 []
+                [ text "Modular Services"
+                , text " "
+                , a
+                    [ href "https://nixos.org/manual/nixos/stable/#modular-services"
+                    , Html.Attributes.target "_blank"
+                    , Html.Attributes.title "What are modular services?"
+                    ]
+                    [ text "(?)" ]
+                ]
+            , ul [ class "modular-services" ] (List.map viewService services)
+            ]
 
 
 inlineListElementsCopyableCode : (a -> String) -> (a -> String) -> (a -> Html Msg) -> List a -> Html Msg
