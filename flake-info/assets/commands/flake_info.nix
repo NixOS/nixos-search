@@ -476,8 +476,8 @@ let
     e: env:
     if env.module != null && environmentAccessors ? ${env.name} then
       "${environmentAccessors.${env.name}}.${e.package}.${e.service}"
-      # Do not merge these branches: the accessor is per environment, the
-      # portable half is not.
+    # Do not merge these branches: the accessor is per environment, the
+    # portable half is not.
     else
       baseImportOf e;
 

@@ -82,8 +82,9 @@ pub fn get_nixpkgs_info(
                 .into_iter()
                 .collect();
             let modular_services = package_services.remove(&attribute).unwrap_or_default();
-            let modular_service_imports =
-                package_service_imports.remove(&attribute).unwrap_or_default();
+            let modular_service_imports = package_service_imports
+                .remove(&attribute)
+                .unwrap_or_default();
             let dep_count = dep_counts.get(&attribute).copied();
             let repology_repos = repology_counts.get(&attribute).copied();
             NixpkgsEntry::Derivation {
