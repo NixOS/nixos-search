@@ -396,6 +396,8 @@ footer {
 
     .search-input-options {
       display: flex;
+      flex-flow: wrap;
+      gap: 1em;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 1.5em;
