@@ -26,6 +26,9 @@
   /* When search results are expanded, they show tabbed help for installing the result. This is the border color for that tabbed thing.
        It is only half of the border, the other half is styled by bootstrap. */
   --search-result-expanded-tab-border: #ccc;
+
+  --line-color: #ccc;
+
   /* Color of the animation above the `Loading` text that is shown when searching */
   --loader-color: #000;
   /* Background color of the experimental badge next to the flakes search */
