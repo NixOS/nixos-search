@@ -152,7 +152,7 @@ fn get_package_map<T: serde::de::DeserializeOwned>(
 }
 
 pub fn get_nixpkgs_package_services(nixpkgs: &Source) -> Result<HashMap<String, Vec<String>>> {
-    get_package_map(nixpkgs, "nixos-package-services")
+    get_package_map(nixpkgs, "nixpkgs-package-services")
 }
 
 /// The import expressions for each package's modular services, so the package
@@ -160,7 +160,7 @@ pub fn get_nixpkgs_package_services(nixpkgs: &Source) -> Result<HashMap<String, 
 pub fn get_nixpkgs_package_service_imports(
     nixpkgs: &Source,
 ) -> Result<HashMap<String, Vec<PackageService>>> {
-    get_package_map(nixpkgs, "nixos-package-service-imports")
+    get_package_map(nixpkgs, "nixpkgs-package-service-imports")
 }
 
 pub fn get_nixpkgs_programs(nixpkgs: &Nixpkgs) -> Result<HashMap<String, HashSet<String>>> {

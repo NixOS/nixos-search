@@ -693,14 +693,14 @@ rec {
 
   # Map from package attribute name to the list of modular service names it
   # exposes.
-  nixos-package-services = lib.zipAttrsWith (_: lib.unique) (
+  nixpkgs-package-services = lib.zipAttrsWith (_: lib.unique) (
     map (e: { ${e.package} = e.service; }) serviceRegistry
   );
 
   # Per-package service metadata: import expressions, environment support and
   # each half's maintainers. The package page is where a modular service is
   # described as a whole, so it carries what the option pages link out to.
-  nixos-package-service-imports = lib.zipAttrsWith (_: values: values) (
+  nixpkgs-package-service-imports = lib.zipAttrsWith (_: values: values) (
     map (
       e:
       let

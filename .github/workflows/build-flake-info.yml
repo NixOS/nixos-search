@@ -45,4 +45,4 @@ jobs:
 
           nix eval --json --no-write-lock-file \
             -f ./flake-info/assets/commands/flake_info.nix \
-            nixos-package-services >/dev/null
+            nixpkgs-package-services >/dev/null
