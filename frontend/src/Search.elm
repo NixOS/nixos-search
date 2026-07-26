@@ -101,6 +101,8 @@ import Route
         , searchTypeToTitle
         )
 import Search.Typeahead as Typeahead
+import Svg exposing (Svg, path, rect, svg)
+import Svg.Attributes as SA
 import Task
 
 
@@ -761,6 +763,30 @@ fromSortId id =
             Nothing
 
 
+searchIconSvg : Html msg
+searchIconSvg =
+    -- Made by Sigmanificient (figma), based on the previous icon, CC-BY-SA 4.0
+    svg
+        [ SA.width "40"
+        , SA.height "40"
+        , SA.viewBox "0 0 40 40"
+        , SA.fill "none"
+        ]
+        [ path
+            [ SA.fillRule "evenodd"
+            , SA.clipRule "evenodd"
+            , SA.d "M17.8936 6C24.4618 6.00023 29.7861 11.3252 29.7861 17.8936C29.786 24.4617 24.4617 29.7859 17.8936 29.7861C11.3253 29.7861 6.00016 24.4619 6 17.8936C6 11.3251 11.3252 6 17.8936 6ZM17.8936 10.3555C13.7305 10.3555 10.3555 13.7304 10.3555 17.8936C10.3556 22.0565 13.7306 25.4316 17.8936 25.4316C22.0563 25.4314 25.4305 22.0564 25.4307 17.8936C25.4307 13.7306 22.0564 10.3557 17.8936 10.3555Z"
+            ]
+            []
+        , rect
+            [ SA.width "3.75"
+            , SA.height "10.0026"
+            , SA.transform "matrix(0.707103 -0.70711 0.707103 0.70711 24.3203 26.9268)"
+            ]
+            []
+        ]
+
+
 view :
     { categoryName : String
     }
@@ -801,7 +827,7 @@ view { categoryName } title nixosChannels model viewSuccess viewBuckets outMsg s
     in
     div
         [ class <| "search-page " ++ resultStatus ]
-        ([ h1 [] title
+        ([ h1 [] (searchIconSvg :: title)
          , viewSearchInput nixosChannels outMsg categoryName (Just model.channel) model.query (Just model.typeahead) model.sort
          ]
             ++ (case model.redirectedChannel of
