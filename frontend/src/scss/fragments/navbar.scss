@@ -38,6 +38,12 @@
     }
   }
 
+  @media (max-width:979px) {
+    // save a bunch of real-estage be merging
+    .nav { order: 3;  }
+    .theme-toggle { order: 2; }
+  }
+
   .nav {
     margin: unset;
     display: flex;
@@ -110,5 +116,4 @@
   @media(min-width:768px) and (max-width:979px) {
     width: 724px;
   }
-
 }
