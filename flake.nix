@@ -155,7 +155,10 @@
         rec {
           packages = {
             default = packages.flake-info;
-            flake-info = import ./flake-info { inherit pkgs; };
+            flake-info = import ./flake-info {
+              inherit pkgs;
+              inherit (inputs) flake-schemas;
+            };
             frontend = pkgs.callPackage ./frontend {
               inherit nixosChannels version;
             };
