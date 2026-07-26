@@ -955,7 +955,7 @@ viewResultItem nixosChannels channel showUsageDetails show item =
                 _ ->
                     [ a
                         [ onClick toggle
-                        , href ""
+                        , href ("#show=" ++ item.source.attr_name)
                         ]
                         [ text item.source.attr_name ]
                     ]
