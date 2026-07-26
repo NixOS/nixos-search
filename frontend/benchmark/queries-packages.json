@@ -1,0 +1,676 @@
+[
+    {
+        "id": "g001",
+        "q": "ripgrep",
+        "category": "exact",
+        "relevant": ["pkg:ripgrep"]
+    },
+    {
+        "id": "g002",
+        "q": "htop",
+        "category": "exact",
+        "relevant": ["pkg:htop"]
+    },
+    {
+        "id": "g003",
+        "q": "jq",
+        "category": "exact",
+        "relevant": ["pkg:jq"]
+    },
+    {
+        "id": "g004",
+        "q": "tmux",
+        "category": "exact",
+        "relevant": ["pkg:tmux"]
+    },
+    {
+        "id": "g005",
+        "q": "neovim",
+        "category": "exact",
+        "relevant": ["pkg:neovim"]
+    },
+    {
+        "id": "g006",
+        "q": "fzf",
+        "category": "exact",
+        "relevant": ["pkg:fzf"]
+    },
+    {
+        "id": "g007",
+        "q": "bat",
+        "category": "exact",
+        "relevant": ["pkg:bat"]
+    },
+    {
+        "id": "g008",
+        "q": "nginx",
+        "category": "exact",
+        "relevant": ["pkg:nginx", "pkg:nginxMainline", "pkg:nginxStable"]
+    },
+    {
+        "id": "g009",
+        "q": "grafana",
+        "category": "exact",
+        "relevant": ["pkg:grafana"]
+    },
+    {
+        "id": "g010",
+        "q": "prometheus",
+        "category": "exact",
+        "relevant": ["pkg:prometheus"]
+    },
+    {
+        "id": "g011",
+        "q": "postgresql",
+        "category": "exact",
+        "relevant": [
+            "pkg:postgresql",
+            "pkg:postgresql_14",
+            "pkg:postgresql_15",
+            "pkg:postgresql_16",
+            "pkg:postgresql_17",
+            "pkg:postgresql_18"
+        ]
+    },
+    {
+        "id": "g012",
+        "q": "openssh",
+        "category": "exact",
+        "relevant": ["pkg:openssh"]
+    },
+    {
+        "id": "g013",
+        "q": "caddy",
+        "category": "exact",
+        "relevant": ["pkg:caddy"]
+    },
+    {
+        "id": "g014",
+        "q": "gitea",
+        "category": "exact",
+        "relevant": ["pkg:gitea"]
+    },
+    {
+        "id": "g015",
+        "q": "jellyfin",
+        "category": "exact",
+        "relevant": ["pkg:jellyfin"]
+    },
+    {
+        "id": "g026",
+        "q": "postgres",
+        "category": "prefix",
+        "relevant": [
+            "pkg:postgresql",
+            "pkg:postgresql_14",
+            "pkg:postgresql_15",
+            "pkg:postgresql_16",
+            "pkg:postgresql_17",
+            "pkg:postgresql_18"
+        ]
+    },
+    {
+        "id": "g027",
+        "q": "graf",
+        "category": "prefix",
+        "relevant": ["pkg:grafana"]
+    },
+    {
+        "id": "g028",
+        "q": "prom",
+        "category": "prefix",
+        "relevant": ["pkg:prometheus"]
+    },
+    {
+        "id": "g029",
+        "q": "ripgr",
+        "category": "prefix",
+        "relevant": ["pkg:ripgrep"]
+    },
+    {
+        "id": "g030",
+        "q": "jelly",
+        "category": "prefix",
+        "relevant": ["pkg:jellyfin"]
+    },
+    {
+        "id": "g031",
+        "q": "syncth",
+        "category": "prefix",
+        "relevant": ["pkg:syncthing"]
+    },
+    {
+        "id": "g035",
+        "q": "ngin",
+        "category": "prefix",
+        "relevant": [
+            "pkg:nginx",
+            "pkg:nginxMainline",
+            "pkg:nginxStable",
+            "pkg:nginxShibboleth"
+        ]
+    },
+    {
+        "id": "g036",
+        "q": "mariad",
+        "category": "prefix",
+        "relevant": [
+            "pkg:mariadb",
+            "pkg:mariadb_1011",
+            "pkg:mariadb_106",
+            "pkg:mariadb_114",
+            "pkg:mariadb_118"
+        ]
+    },
+    {
+        "id": "g037",
+        "q": "fail2",
+        "category": "prefix",
+        "relevant": ["pkg:fail2ban"]
+    },
+    {
+        "id": "g038",
+        "q": "tailsc",
+        "category": "prefix",
+        "relevant": ["pkg:tailscale"]
+    },
+    {
+        "id": "g039",
+        "q": "nextcl",
+        "category": "prefix",
+        "relevant": ["pkg:nextcloud32", "pkg:nextcloud33", "pkg:nextcloud34"]
+    },
+    {
+        "id": "g040",
+        "q": "traef",
+        "category": "prefix",
+        "relevant": ["pkg:traefik"]
+    },
+    {
+        "id": "g041",
+        "q": "cadd",
+        "category": "prefix",
+        "relevant": ["pkg:caddy"]
+    },
+    {
+        "id": "g042",
+        "q": "transm",
+        "category": "prefix",
+        "relevant": ["pkg:transmission_4"]
+    },
+    {
+        "id": "g043",
+        "q": "unbou",
+        "category": "prefix",
+        "relevant": ["pkg:unbound"]
+    },
+    {
+        "id": "g044",
+        "q": "dnsma",
+        "category": "prefix",
+        "relevant": ["pkg:dnsmasq"]
+    },
+    {
+        "id": "g045",
+        "q": "neovi",
+        "category": "prefix",
+        "relevant": ["pkg:neovim"]
+    },
+    {
+        "id": "g046",
+        "q": "thunder",
+        "category": "prefix",
+        "relevant": ["pkg:thunderbird"]
+    },
+    {
+        "id": "g047",
+        "q": "chrom",
+        "category": "prefix",
+        "relevant": ["pkg:chromium"]
+    },
+    {
+        "id": "g048",
+        "q": "borgb",
+        "category": "prefix",
+        "relevant": ["pkg:borgbackup"]
+    },
+    {
+        "id": "g049",
+        "q": "mosqui",
+        "category": "prefix",
+        "relevant": ["pkg:mosquitto"]
+    },
+    {
+        "id": "g050",
+        "q": "elastic",
+        "category": "prefix",
+        "relevant": ["pkg:elasticsearch", "pkg:elasticsearch7"]
+    },
+    {
+        "id": "g051",
+        "q": "ngnix",
+        "category": "typo",
+        "relevant": ["pkg:nginx", "pkg:nginxStable", "pkg:nginxMainline"]
+    },
+    {
+        "id": "g052",
+        "q": "postgrsql",
+        "category": "typo",
+        "relevant": [
+            "pkg:postgresql",
+            "pkg:postgresql_14",
+            "pkg:postgresql_15",
+            "pkg:postgresql_16",
+            "pkg:postgresql_17",
+            "pkg:postgresql_18",
+            "pkg:postgresql_jit",
+            "pkg:postgresql_14_jit",
+            "pkg:postgresql_15_jit",
+            "pkg:postgresql_16_jit",
+            "pkg:postgresql_17_jit",
+            "pkg:postgresql_18_jit"
+        ]
+    },
+    {
+        "id": "g053",
+        "q": "promethues",
+        "category": "typo",
+        "relevant": ["pkg:prometheus"]
+    },
+    {
+        "id": "g054",
+        "q": "grafan",
+        "category": "typo",
+        "relevant": ["pkg:grafana"]
+    },
+    {
+        "id": "g055",
+        "q": "firefx",
+        "category": "typo",
+        "relevant": ["pkg:firefox"]
+    },
+    {
+        "id": "g056",
+        "q": "ripgrap",
+        "category": "typo",
+        "relevant": ["pkg:ripgrep"]
+    },
+    {
+        "id": "g057",
+        "q": "jellifin",
+        "category": "typo",
+        "relevant": ["pkg:jellyfin"]
+    },
+    {
+        "id": "g060",
+        "q": "samaba",
+        "category": "typo",
+        "relevant": [
+            "pkg:samba",
+            "pkg:samba4",
+            "pkg:samba4Full",
+            "pkg:sambaFull"
+        ]
+    },
+    {
+        "id": "g061",
+        "q": "redsi",
+        "category": "typo",
+        "relevant": ["pkg:redis"]
+    },
+    {
+        "id": "g062",
+        "q": "openssg",
+        "category": "typo",
+        "relevant": [
+            "pkg:openssh",
+            "pkg:opensshWithKerberos",
+            "pkg:openssh_gssapi",
+            "pkg:openssh_hpn",
+            "pkg:openssh_hpnWithKerberos"
+        ]
+    },
+    {
+        "id": "g063",
+        "q": "kubctl",
+        "category": "typo",
+        "relevant": ["pkg:kubectl"]
+    },
+    {
+        "id": "g064",
+        "q": "terrafrom",
+        "category": "typo",
+        "relevant": ["pkg:terraform", "pkg:terraform_1"]
+    },
+    {
+        "id": "g065",
+        "q": "chromiun",
+        "category": "typo",
+        "relevant": ["pkg:chromium"]
+    },
+    {
+        "id": "g066",
+        "q": "thunderbrid",
+        "category": "typo",
+        "relevant": ["pkg:thunderbird"]
+    },
+    {
+        "id": "g067",
+        "q": "dcoker",
+        "category": "typo",
+        "relevant": ["pkg:docker", "pkg:docker_25", "pkg:docker_29"]
+    },
+    {
+        "id": "g068",
+        "q": "nextcoud",
+        "category": "typo",
+        "relevant": ["pkg:nextcloud32", "pkg:nextcloud33", "pkg:nextcloud34"]
+    },
+    {
+        "id": "g069",
+        "q": "gitae",
+        "category": "typo",
+        "relevant": ["pkg:gitea"]
+    },
+    {
+        "id": "g070",
+        "q": "vaultwardn",
+        "category": "typo",
+        "relevant": ["pkg:vaultwarden"]
+    },
+    {
+        "id": "g071",
+        "q": "tailscle",
+        "category": "typo",
+        "relevant": ["pkg:tailscale"]
+    },
+    {
+        "id": "g072",
+        "q": "fial2ban",
+        "category": "typo",
+        "relevant": ["pkg:fail2ban"]
+    },
+    {
+        "id": "g073",
+        "q": "mosquito",
+        "category": "typo",
+        "relevant": ["pkg:mosquitto"]
+    },
+    {
+        "id": "g074",
+        "q": "syncthign",
+        "category": "typo",
+        "relevant": ["pkg:syncthing"]
+    },
+    {
+        "id": "g075",
+        "q": "cady",
+        "category": "typo",
+        "relevant": ["pkg:caddy"]
+    },
+    {
+        "id": "g101",
+        "q": "docker container",
+        "category": "multiterm",
+        "relevant": ["pkg:docker", "pkg:docker_25", "pkg:docker_29"]
+    },
+    {
+        "id": "g102",
+        "q": "ssh daemon",
+        "category": "multiterm",
+        "relevant": [
+            "pkg:openssh",
+            "pkg:opensshWithKerberos",
+            "pkg:openssh_gssapi",
+            "pkg:openssh_hpn",
+            "pkg:openssh_hpnWithKerberos"
+        ]
+    },
+    {
+        "id": "g103",
+        "q": "home assistant",
+        "category": "multiterm",
+        "relevant": ["pkg:home-assistant"]
+    },
+    {
+        "id": "g104",
+        "q": "matrix synapse",
+        "category": "multiterm",
+        "relevant": ["pkg:matrix-synapse"]
+    },
+    {
+        "id": "g105",
+        "q": "docker compose",
+        "category": "multiterm",
+        "relevant": ["pkg:docker-compose"]
+    },
+    {
+        "id": "g106",
+        "q": "vault warden",
+        "category": "multiterm",
+        "relevant": ["pkg:vaultwarden"]
+    },
+    {
+        "id": "g107",
+        "q": "next cloud",
+        "category": "multiterm",
+        "relevant": ["pkg:nextcloud32", "pkg:nextcloud33", "pkg:nextcloud34"]
+    },
+    {
+        "id": "g108",
+        "q": "paperless ngx",
+        "category": "multiterm",
+        "relevant": ["pkg:paperless-ngx"]
+    },
+    {
+        "id": "g118",
+        "q": "object storage",
+        "category": "multiterm",
+        "relevant": ["pkg:minio"]
+    },
+    {
+        "id": "g119",
+        "q": "secret management",
+        "category": "multiterm",
+        "relevant": ["pkg:vault"]
+    },
+    {
+        "id": "g122",
+        "q": "container runtime",
+        "category": "multiterm",
+        "relevant": [
+            "pkg:docker",
+            "pkg:docker_25",
+            "pkg:docker_29",
+            "pkg:podman"
+        ]
+    },
+    {
+        "id": "g123",
+        "q": "mesh vpn",
+        "category": "multiterm",
+        "relevant": ["pkg:tailscale"]
+    },
+    {
+        "id": "g124",
+        "q": "password manager",
+        "category": "multiterm",
+        "relevant": ["pkg:vaultwarden"]
+    },
+    {
+        "id": "g126",
+        "q": "web server",
+        "category": "intent",
+        "relevant": [
+            "pkg:nginx",
+            "pkg:nginxMainline",
+            "pkg:nginxStable",
+            "pkg:nginxShibboleth",
+            "pkg:caddy"
+        ]
+    },
+    {
+        "id": "g127",
+        "q": "reverse proxy",
+        "category": "intent",
+        "relevant": [
+            "pkg:nginx",
+            "pkg:nginxMainline",
+            "pkg:nginxStable",
+            "pkg:nginxShibboleth",
+            "pkg:caddy",
+            "pkg:traefik"
+        ]
+    },
+    {
+        "id": "g128",
+        "q": "version control system",
+        "category": "intent",
+        "relevant": ["pkg:git", "pkg:gitFull", "pkg:gitMinimal", "pkg:gitSVN"]
+    },
+    {
+        "id": "g129",
+        "q": "interactive process viewer",
+        "category": "intent",
+        "relevant": ["pkg:htop", "pkg:btop", "pkg:xfce4-taskmanager"]
+    },
+    {
+        "id": "g130",
+        "q": "virtual private network",
+        "category": "intent",
+        "relevant": ["pkg:tailscale"]
+    },
+    {
+        "id": "g131",
+        "q": "self hosted password manager",
+        "category": "intent",
+        "relevant": ["pkg:vaultwarden"]
+    },
+    {
+        "id": "g132",
+        "q": "media streaming server",
+        "category": "intent",
+        "relevant": ["pkg:jellyfin"]
+    },
+    {
+        "id": "g133",
+        "q": "backup tool",
+        "category": "intent",
+        "relevant": ["pkg:restic", "pkg:borgbackup"]
+    },
+    {
+        "id": "g134",
+        "q": "file synchronization",
+        "category": "intent",
+        "relevant": ["pkg:syncthing", "pkg:maestral"]
+    },
+    {
+        "id": "g135",
+        "q": "relational database server",
+        "category": "intent",
+        "relevant": [
+            "pkg:postgresql",
+            "pkg:postgresql_14",
+            "pkg:postgresql_15",
+            "pkg:postgresql_16",
+            "pkg:postgresql_17",
+            "pkg:postgresql_18",
+            "pkg:mariadb",
+            "pkg:mariadb_1011",
+            "pkg:mariadb_106",
+            "pkg:mariadb_114",
+            "pkg:mariadb_118",
+            "pkg:mysql84"
+        ]
+    },
+    {
+        "id": "g136",
+        "q": "in memory key value store",
+        "category": "intent",
+        "relevant": ["pkg:redis"]
+    },
+    {
+        "id": "g137",
+        "q": "secret storage",
+        "category": "intent",
+        "relevant": ["pkg:vault"]
+    },
+    {
+        "id": "g138",
+        "q": "s3 compatible object storage",
+        "category": "intent",
+        "relevant": ["pkg:minio"]
+    },
+    {
+        "id": "g139",
+        "q": "metrics monitoring stack",
+        "category": "intent",
+        "relevant": ["pkg:prometheus", "pkg:grafana"]
+    },
+    {
+        "id": "g140",
+        "q": "document management",
+        "category": "intent",
+        "relevant": ["pkg:paperless-ngx"]
+    },
+    {
+        "id": "g141",
+        "q": "printing support",
+        "category": "intent",
+        "relevant": ["pkg:cups"]
+    },
+    {
+        "id": "g143",
+        "q": "caching dns resolver",
+        "category": "intent",
+        "relevant": ["pkg:unbound", "pkg:dnsmasq"]
+    },
+    {
+        "id": "g144",
+        "q": "text editor",
+        "category": "intent",
+        "relevant": ["pkg:emacs", "pkg:emacs30", "pkg:neovim", "pkg:vim"]
+    },
+    {
+        "id": "g145",
+        "q": "graphical web browser",
+        "category": "intent",
+        "relevant": ["pkg:firefox", "pkg:chromium"]
+    },
+    {
+        "id": "g146",
+        "q": "desktop email client",
+        "category": "intent",
+        "relevant": ["pkg:thunderbird"]
+    },
+    {
+        "id": "g147",
+        "q": "video player",
+        "category": "intent",
+        "relevant": ["pkg:vlc", "pkg:mpv"]
+    },
+    {
+        "id": "g148",
+        "q": "raster image editor",
+        "category": "intent",
+        "relevant": ["pkg:gimp", "pkg:gimp2", "pkg:gimp2-with-plugins"]
+    },
+    {
+        "id": "g149",
+        "q": "bittorrent client",
+        "category": "intent",
+        "relevant": ["pkg:transmission_4"]
+    },
+    {
+        "id": "g150",
+        "q": "terminal multiplexer",
+        "category": "intent",
+        "relevant": ["pkg:tmux"]
+    },
+    {
+        "id": "g151",
+        "q": "continuwuity",
+        "category": "exact",
+        "relevant": ["pkg:matrix-continuwuity"]
+    }
+]

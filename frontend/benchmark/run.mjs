@@ -5,7 +5,7 @@
  * scores curated queries against our live ES instance.
  *
  * Usage:
- *   node benchmark/run.mjs [--queries <path>] [--channel <branch>] [--schema <n>] [--k <n>]
+ *   node benchmark/run.mjs [--packages <path>] [--options <path>] [--channel <branch>] [--schema <n>] [--k <n>]
  *
  */
 
@@ -34,7 +34,14 @@ function frontendSchema() {
 const { values: args } = parseArgs({
     args: process.argv.slice(2),
     options: {
-        queries: { type: "string", default: join(__dirname, "queries.json") },
+        packages: {
+            type: "string",
+            default: join(__dirname, "queries-packages.json"),
+        },
+        options: {
+            type: "string",
+            default: join(__dirname, "queries-options.json"),
+        },
         channel: { type: "string", default: "nixos-unstable" },
         schema: { type: "string" },
         k: { type: "string", default: "10" },
@@ -112,24 +119,18 @@ async function esSearch(bodyJson) {
     throw lastErr;
 }
 
-function mergeHits(pkgData, optData, k) {
-    const hits = [];
-    for (const h of pkgData.hits.hits) {
-        const name = h._source?.package_attr_name;
-        if (name) hits.push([h._score, "pkg:" + name]);
-    }
-    for (const h of optData.hits.hits) {
-        const name = h._source?.option_name;
-        if (name) hits.push([h._score, "opt:" + name]);
-    }
-    hits.sort((a, b) => b[0] - a[0]);
-    const out = [];
-    const seen = new Set();
-    for (const [, id] of hits) {
-        if (!seen.has(id)) {
-            seen.add(id);
-            out.push(id);
-        }
+// ES returns hits in score order per index, so no re-sort is needed;
+// dedup is kept for parity with the previous merged ranker.
+function rankHits(hits, field, prefix, k) {
+    const out = [],
+        seen = new Set();
+    for (const h of hits) {
+        const name = h._source?.[field];
+        if (!name) continue;
+        const id = prefix + name;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        out.push(id);
         if (out.length === k) break;
     }
     return out;
@@ -156,9 +157,6 @@ function recallAtK(ranked, relevant, k) {
     return denom > 0 ? hits / denom : 0;
 }
 
-const queries = JSON.parse(readFileSync(args.queries, "utf8"));
-const results = [];
-
 function nextBody(query, k) {
     return new Promise((resolve) => {
         const sub = app.ports.gotBodies.subscribe(function handler(bodies) {
@@ -169,40 +167,52 @@ function nextBody(query, k) {
     });
 }
 
-console.error(`[benchmark] scoring ${queries.length} queries against ${INDEX}`);
-
-for (const q of queries) {
-    const bodies = await nextBody(q.q, K);
-    const [pkgData, optData] = await Promise.all([
-        esSearch(bodies.packages),
-        esSearch(bodies.options),
-    ]);
-    const ranked = mergeHits(pkgData, optData, K);
-    results.push({
-        id: q.id,
-        q: q.q,
-        category: q.category,
-        relevant: q.relevant,
-        ranked,
-        mrr: reciprocalRank(ranked, q.relevant),
-        success: successAtK(ranked, q.relevant, K),
-        recall: recallAtK(ranked, q.relevant, K),
-    });
+// Score one curated file against a single index. `bodyKey` selects which of the
+// two bodies the Elm worker emits; `field`/`prefix` build the ranked ids.
+async function scoreTrack(queries, bodyKey, field, prefix) {
+    const results = [];
+    for (const q of queries) {
+        const bodies = await nextBody(q.q, K);
+        const data = await esSearch(bodies[bodyKey]);
+        const ranked = rankHits(data.hits.hits, field, prefix, K);
+        results.push({
+            id: q.id,
+            q: q.q,
+            category: q.category,
+            relevant: q.relevant,
+            ranked,
+            mrr: reciprocalRank(ranked, q.relevant),
+            success: successAtK(ranked, q.relevant, K),
+            recall: recallAtK(ranked, q.relevant, K),
+        });
+    }
+    return results;
 }
+
+const pkgQueries = JSON.parse(readFileSync(args.packages, "utf8"));
+const optQueries = JSON.parse(readFileSync(args.options, "utf8"));
+
+console.error(
+    `[benchmark] scoring ${pkgQueries.length} package queries against ${INDEX}`,
+);
+const pkgResults = await scoreTrack(
+    pkgQueries,
+    "packages",
+    "package_attr_name",
+    "pkg:",
+);
+console.error(
+    `[benchmark] scoring ${optQueries.length} option queries against ${INDEX}`,
+);
+const optResults = await scoreTrack(
+    optQueries,
+    "options",
+    "option_name",
+    "opt:",
+);
 
 function mean(arr) {
     return arr.reduce((a, b) => a + b, 0) / arr.length;
-}
-
-const overall = {
-    success: mean(results.map((r) => r.success)),
-    mrr: mean(results.map((r) => r.mrr)),
-    recall: mean(results.map((r) => r.recall)),
-};
-
-const byCategory = {};
-for (const r of results) {
-    (byCategory[r.category] ??= []).push(r);
 }
 
 const table = (header, rows) =>
@@ -212,44 +222,72 @@ const table = (header, rows) =>
         ...rows.map((r) => `| ${r.join(" | ")} |`),
     ].join("\n");
 
+// One `## <label>` section: Overall + By-category tables for a single track.
+function section(label, results) {
+    const overall = {
+        success: mean(results.map((r) => r.success)),
+        mrr: mean(results.map((r) => r.mrr)),
+        recall: mean(results.map((r) => r.recall)),
+    };
+    const byCategory = {};
+    for (const r of results) {
+        (byCategory[r.category] ??= []).push(r);
+    }
+    return [
+        `## ${label}`,
+        "",
+        `> ${results.length} queries, k=${K}.`,
+        "",
+        "### Overall",
+        "",
+        table(
+            ["metric", "value"],
+            [
+                ["Success@" + K, overall.success.toFixed(3)],
+                ["MRR", overall.mrr.toFixed(3)],
+                ["Recall@" + K, overall.recall.toFixed(3)],
+            ],
+        ),
+        "",
+        "### By category",
+        "",
+        table(
+            ["category", "n", "Success@" + K, "MRR"],
+            Object.entries(byCategory)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([cat, rs]) => [
+                    cat,
+                    String(rs.length),
+                    mean(rs.map((r) => r.success)).toFixed(3),
+                    mean(rs.map((r) => r.mrr)).toFixed(3),
+                ]),
+        ),
+        "",
+    ];
+}
+
+// Combined per-query table with a `track` column so a weak `pkg` row sits next
+// to its `opt` sibling for the same query.
+const perQuery = [
+    ...pkgResults.map((r) => ({ track: "pkg", ...r })),
+    ...optResults.map((r) => ({ track: "opt", ...r })),
+].sort((a, b) => a.id.localeCompare(b.id) || a.track.localeCompare(b.track));
+
 const lines = [
-    "## Relevance benchmark: frontend query vs deployed ES",
+    "# Relevance benchmark: frontend query vs deployed ES",
     "",
-    `> Index: \`${INDEX}\` (${results.length} queries, k=${K})  `,
-    `> metrics: (Success@${K}, MRR, Recall@${K}).`,
+    `> Index: \`${INDEX}\`. metrics: (Success@${K}, MRR, Recall@${K}).`,
     "",
-    "### Overall",
-    "",
-    table(
-        ["metric", "value"],
-        [
-            ["Success@" + K, overall.success.toFixed(3)],
-            ["MRR", overall.mrr.toFixed(3)],
-            ["Recall@" + K, overall.recall.toFixed(3)],
-        ],
-    ),
-    "",
-    "### By category",
-    "",
-    table(
-        ["category", "n", "Success@" + K, "MRR"],
-        Object.entries(byCategory)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([cat, rs]) => [
-                cat,
-                String(rs.length),
-                mean(rs.map((r) => r.success)).toFixed(3),
-                mean(rs.map((r) => r.mrr)).toFixed(3),
-            ]),
-    ),
-    "",
+    ...section("Packages", pkgResults),
+    ...section("Options", optResults),
     "<details>",
     "<summary>Per-query results</summary>",
     "",
     table(
-        ["id", "q", "category", "success", "mrr", "top-3 ranked"],
-        results.map((r) => [
+        ["id", "track", "q", "category", "success", "mrr", "top-3 ranked"],
+        perQuery.map((r) => [
             r.id,
+            r.track,
             r.q,
             r.category,
             r.success.toFixed(0),
