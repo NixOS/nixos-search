@@ -93,6 +93,17 @@ jobs:
             curl -sS ${{ secrets.ELASTICSEARCH_URL2 }}/latest-$(nix eval --raw --file ./version.nix import)-nixos-${{ matrix.channel }}/_search | jq -ce '.took // error'
           done
 
+      # Modular service discovery depends on nixpkgs internals that move
+      # underneath us, and an empty result set is not an import error. Assert
+      # the documents are actually there so a silent loss fails the job.
+      - name: Assert ${{ matrix.channel }} channel has modular services
+        if: github.repository_owner == 'NixOS'
+        shell: sh
+        run: |
+          curl -sS "${{ secrets.ELASTICSEARCH_URL2 }}/latest-$(nix eval --raw --file ./version.nix import)-nixos-${{ matrix.channel }}/_count" \
+            -H 'Content-Type: application/json' \
+            -d '{"query":{"term":{"type":"service"}}}' | jq -e '.count > 0'
+
       - name: Create issue if failed
         if: failure()
         env:

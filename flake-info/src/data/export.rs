@@ -207,6 +207,7 @@ pub enum Derivation {
         package_homepage: Vec<String>,
         package_position: Option<String>,
         package_modular_services: Vec<String>,
+        package_modular_service_imports: Vec<PackageService>,
         #[serde(skip_serializing_if = "Option::is_none")]
         package_dep_count: Option<u64>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -247,7 +248,11 @@ pub enum Derivation {
         option_flake: Option<ModulePath>,
         service_package: Option<String>,
         service_module: Option<String>,
-        service_packages: Vec<String>,
+        service_import: Option<String>,
+        service_environments: Vec<ServiceEnvironment>,
+        service_environments_set: Vec<String>,
+        service_maintainers: Vec<Maintainer>,
+        service_maintainers_set: Vec<String>,
     },
     #[serde(rename = "home-manager-option")]
     HomeManagerOption {
@@ -346,6 +351,7 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                     package_homepage: Vec::new(),
                     package_position: None,
                     package_modular_services: Vec::new(),
+                    package_modular_service_imports: Vec::new(),
                     package_dep_count: None,
                     package_repology_repos: None,
                 }
@@ -376,6 +382,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                 package,
                 programs,
                 modular_services,
+                modular_service_imports,
                 dep_count,
                 repology_repos,
             } => {
@@ -488,6 +495,10 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                         .map_or(Default::default(), OneOrMany::into_list),
                     package_position: position,
                     package_modular_services: modular_services,
+                    package_modular_service_imports: modular_service_imports
+                        .into_iter()
+                        .map(Into::into)
+                        .collect(),
                     package_dep_count: dep_count,
                     package_repology_repos: repology_repos,
                 }
@@ -504,8 +515,27 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     flake,
                     service_package,
                     service_module,
-                    service_packages,
+                    service_import,
+                    service_environments,
+                    service_maintainers,
                 } = option;
+
+                let service_environments: Vec<ServiceEnvironment> =
+                    service_environments.into_iter().map(Into::into).collect();
+
+                let service_environments_set = service_environments
+                    .iter()
+                    .map(|e| e.environment.to_owned())
+                    .collect();
+
+                let service_maintainers: Vec<Maintainer> =
+                    service_maintainers.into_iter().map(Into::into).collect();
+
+                let service_maintainers_set = service_maintainers
+                    .iter()
+                    .flat_map(|m| m.name.to_owned())
+                    .collect();
+
                 Derivation::Service {
                     option_source: declarations.get(0).map(Clone::clone),
                     option_name: name,
@@ -516,7 +546,11 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     option_type,
                     service_package,
                     service_module,
-                    service_packages,
+                    service_import,
+                    service_environments,
+                    service_environments_set,
+                    service_maintainers,
+                    service_maintainers_set,
                 }
             }
             import::NixpkgsEntry::HomeManagerOption(NixOption {
@@ -583,6 +617,46 @@ impl TryFrom<import::NixOption> for Derivation {
             option_flake: flake,
             option_type,
         })
+    }
+}
+
+/// One environment (e.g. "system") a modular service is registered for, with the
+/// import expression that reaches it and the maintainers of that half.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ServiceEnvironment {
+    environment: String,
+    #[serde(rename = "import")]
+    import_expr: String,
+    maintainers: Vec<Maintainer>,
+}
+
+impl From<import::ServiceEnvironment> for ServiceEnvironment {
+    fn from(env: import::ServiceEnvironment) -> Self {
+        ServiceEnvironment {
+            environment: env.environment,
+            import_expr: env.import_expr,
+            maintainers: env.maintainers.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+/// A modular service a package exposes, with the import expressions for its
+/// portable half and for each environment.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PackageService {
+    service: String,
+    #[serde(rename = "import")]
+    import_expr: String,
+    environments: Vec<ServiceEnvironment>,
+}
+
+impl From<import::PackageService> for PackageService {
+    fn from(service: import::PackageService) -> Self {
+        PackageService {
+            service: service.service,
+            import_expr: service.import_expr,
+            environments: service.environments.into_iter().map(Into::into).collect(),
+        }
     }
 }
 

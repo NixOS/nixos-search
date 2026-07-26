@@ -69,6 +69,8 @@ import Search
         , NixOSChannel
         , viewBucket
         )
+import Search.Maintainer
+import Search.ModularService
 import Search.Query
 import Utils
 
@@ -104,6 +106,7 @@ type alias ResultItemSource =
     , flakeDescription : Maybe String
     , flakeUrl : Maybe ( String, String )
     , modularServices : List String
+    , modularServiceImports : List Search.ModularService.PackageService
     }
 
 
@@ -134,10 +137,7 @@ type LicenseExpression
 
 
 type alias ResultPackageMaintainer =
-    { name : Maybe String
-    , email : Maybe String
-    , github : Maybe String
-    }
+    Search.Maintainer.Maintainer
 
 
 type alias ResultPackageTeam =
@@ -493,63 +493,11 @@ viewResultItem nixosChannels channel showUsageDetails show item =
                        )
                 )
 
-        showMaintainer maintainer =
-            let
-                githubHandle =
-                    Maybe.map (String.append "@") maintainer.github
+        showMaintainer =
+            Search.Maintainer.showMaintainer CopyToClipboard
 
-                name =
-                    Maybe.withDefault (Maybe.withDefault "Unknown" maintainer.github) maintainer.name
-
-                nameHtml =
-                    case maintainer.github of
-                        Just github ->
-                            a [ href ("https://github.com/" ++ github) ] [ text name ]
-
-                        Nothing ->
-                            text name
-
-                githubHtml =
-                    case githubHandle of
-                        Just handle ->
-                            [ text " ("
-                            , code [] [ text handle ]
-                            , text ")"
-                            ]
-
-                        Nothing ->
-                            []
-
-                emailHtml =
-                    case maintainer.email of
-                        Just email ->
-                            [ text " <"
-                            , a [ href ("mailto:" ++ email) ] [ text email ]
-                            , text ">"
-                            ]
-
-                        Nothing ->
-                            []
-
-                ( onClickAttr, _ ) =
-                    case githubHandle of
-                        Just handle ->
-                            ( [ onClick (CopyToClipboard handle) ], [] )
-
-                        Nothing ->
-                            ( [], [] )
-            in
-            li (class "maintainer-list-item" :: onClickAttr) (nameHtml :: githubHtml ++ emailHtml)
-
-        linkAllMaintainers maintainers =
-            let
-                ghHandles =
-                    List.filterMap (\m -> Maybe.map (String.append "@") m.github) maintainers
-            in
-            optionals (not (List.isEmpty ghHandles))
-                [ li [ class "maintainer-list-item", onClick (CopyToClipboard (String.join " " ghHandles)) ]
-                    [ text "Copy all maintainers' GitHub handles" ]
-                ]
+        linkAllMaintainers =
+            Search.Maintainer.linkAllMaintainers CopyToClipboard
 
         showTeam team =
             let
@@ -583,18 +531,8 @@ viewResultItem nixosChannels channel showUsageDetails show item =
                             :: List.concatMap showTeamEntry githubTeams
                             ++ scope
 
-        mailtoAllMaintainers maintainers =
-            let
-                maintainerMails =
-                    List.filterMap (\m -> m.email) maintainers
-            in
-            optionals (List.length maintainerMails > 1)
-                [ a
-                    [ href ("mailto:" ++ String.join "," maintainerMails) ]
-                    [ li [ class "maintainer-list-item" ]
-                        [ text "✉️ Mail to all maintainers" ]
-                    ]
-                ]
+        mailtoAllMaintainers =
+            Search.Maintainer.mailtoAllMaintainers
 
         showPlatform platform =
             case List.Extra.find (\x -> x.id == channel) nixosChannels of
@@ -892,7 +830,29 @@ viewResultItem nixosChannels channel showUsageDetails show item =
                     , programs
                     , maintainersTeamsAndPlatforms
                     , optionsLink
-                    , if List.isEmpty item.source.modularServices then
+                    , let
+                        -- The import expressions come from the index, so they
+                        -- match the channel being looked at. Indices written
+                        -- before the base/environment split carry only the
+                        -- service names, from which the portable half's import
+                        -- can be composed.
+                        serviceImports =
+                            case item.source.modularServiceImports of
+                                [] ->
+                                    List.map
+                                        (\mod_ -> "pkgs." ++ item.source.attr_name ++ ".services." ++ mod_)
+                                        item.source.modularServices
+
+                                packageServices ->
+                                    List.map
+                                        (\service ->
+                                            Search.ModularService.preferredImport
+                                                service.importExpr
+                                                service.environments
+                                        )
+                                        packageServices
+                      in
+                      if List.isEmpty serviceImports then
                         text ""
 
                       else
@@ -909,22 +869,14 @@ viewResultItem nixosChannels channel showUsageDetails show item =
                                 ]
                             , ul []
                                 (List.map
-                                    (\mod_ ->
-                                        let
-                                            suffix =
-                                                if mod_ == "default" then
-                                                    ""
-
-                                                else
-                                                    "." ++ mod_
-                                        in
+                                    (\importExpr ->
                                         li []
                                             [ a
                                                 [ href ("/options?channel=" ++ channel ++ "&query=" ++ item.source.attr_name ++ "&include_nixos_options=0") ]
-                                                [ code [] [ text ("pkgs." ++ item.source.attr_name ++ ".services" ++ suffix) ] ]
+                                                [ code [] [ text importExpr ] ]
                                             ]
                                     )
-                                    item.source.modularServices
+                                    serviceImports
                                 )
                             ]
                     ]
@@ -1275,6 +1227,9 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "flake_description" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_resolved" (Json.Decode.map Just decodeResolvedFlake) Nothing
         |> Json.Decode.Pipeline.optional "package_modular_services" (Json.Decode.list Json.Decode.string) []
+        |> Json.Decode.Pipeline.optional "package_modular_service_imports"
+            (Json.Decode.list Search.ModularService.decodePackageService)
+            []
 
 
 type alias ResolvedFlake =
@@ -1413,16 +1368,7 @@ decodeLicenseExpression =
 
 decodeResultPackageMaintainer : Json.Decode.Decoder ResultPackageMaintainer
 decodeResultPackageMaintainer =
-    Json.Decode.map3 ResultPackageMaintainer
-        (Json.Decode.oneOf
-            [ Json.Decode.field "name" (Json.Decode.map Just Json.Decode.string)
-            , Json.Decode.field "email" (Json.Decode.map Just Json.Decode.string)
-            , Json.Decode.field "github" (Json.Decode.map Just Json.Decode.string)
-            , Json.Decode.succeed Nothing
-            ]
-        )
-        (Json.Decode.field "email" (Json.Decode.nullable Json.Decode.string))
-        (Json.Decode.field "github" (Json.Decode.nullable Json.Decode.string))
+    Search.Maintainer.decode
 
 
 decodeResultPackageTeam : Json.Decode.Decoder ResultPackageTeam

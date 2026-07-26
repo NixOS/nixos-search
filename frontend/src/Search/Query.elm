@@ -120,8 +120,51 @@ optionsBody :
     -> Int
     -> Int
     -> Sort
+    -> List ( String, List String )
     -> Json.Encode.Value
-optionsBody types query from size sort =
+optionsBody types query from size sort selectedBuckets =
+    let
+        -- Only modular service documents carry these, so the buckets stay empty
+        -- on the other option tabs.
+        terms : List Terms
+        terms =
+            [ { field = "service_environments_set", size = 20, include = Nothing } ]
+
+        selectionFor : String -> List String
+        selectionFor field =
+            selectedBuckets
+                |> List.filter (\( f, _ ) -> f == field)
+                |> List.head
+                |> Maybe.map Tuple.second
+                |> Maybe.withDefault []
+
+        filterByBuckets : List ( String, Json.Encode.Value )
+        filterByBuckets =
+            [ ( "bool"
+              , Json.Encode.object
+                    [ ( "must"
+                      , Json.Encode.list Json.Encode.object
+                            (List.map
+                                (\term ->
+                                    [ ( "bool"
+                                      , Json.Encode.object
+                                            [ ( "should"
+                                              , Json.Encode.list Json.Encode.object <|
+                                                    List.map
+                                                        (filterByBucket term.field)
+                                                        (selectionFor term.field)
+                                              )
+                                            ]
+                                      )
+                                    ]
+                                )
+                                terms
+                            )
+                      )
+                    ]
+              )
+            ]
+    in
     encodeRequestBody
         (String.trim query)
         from
@@ -130,15 +173,14 @@ optionsBody types query from size sort =
         types
         "option_name"
         []
-        []
-        []
+        terms
+        filterByBuckets
         [ "option_name", "option_name_query" ]
         [ ( "option_name", 6.0 )
         , ( "option_name_query", 6.0 )
         , ( "option_description", 1.0 )
         , ( "flake_name", 0.5 )
         , ( "service_package", 3.0 )
-        , ( "service_packages", 3.0 )
         ]
         [ "option_description^3" ]
         []

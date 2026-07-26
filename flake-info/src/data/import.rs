@@ -80,10 +80,44 @@ pub struct NixOption {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub service_module: Option<String>,
 
-    /// For modular service options: all packages that expose this same service
-    /// module (e.g. ["php", "php82", "php83", "php84", "php85"]).
+    /// For modular service options: the import expression of the portable half
+    /// (e.g. "pkgs.php.services.default")
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub service_import: Option<String>,
+
+    /// For modular service options: the environments (e.g. "system") the service
+    /// is registered for, each with its own import expression and maintainers
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub service_packages: Vec<String>,
+    pub service_environments: Vec<ServiceEnvironment>,
+
+    /// For modular service options: maintainers of the portable half
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub service_maintainers: Vec<Maintainer>,
+}
+
+/// One environment (e.g. "system") a modular service is registered for.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ServiceEnvironment {
+    pub environment: String,
+    /// `import` is a Rust keyword, hence the rename.
+    #[serde(rename = "import")]
+    pub import_expr: String,
+    /// Maintainers of this environment's half, empty on nixpkgs revisions that
+    /// predate the base/environment split.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub maintainers: Vec<Maintainer>,
+}
+
+/// A modular service a package exposes, along with the import expressions the
+/// package page shows for it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PackageService {
+    pub service: String,
+    /// `import` is a Rust keyword, hence the rename.
+    #[serde(rename = "import")]
+    pub import_expr: String,
+    #[serde(default)]
+    pub environments: Vec<ServiceEnvironment>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -198,6 +232,7 @@ pub enum NixpkgsEntry {
         package: Package,
         programs: Vec<String>,
         modular_services: Vec<String>,
+        modular_service_imports: Vec<PackageService>,
         dep_count: Option<u64>,
         repology_repos: Option<u64>,
     },
@@ -615,6 +650,7 @@ mod tests {
                 package,
                 programs: Vec::new(),
                 modular_services: Vec::new(),
+                modular_service_imports: Vec::new(),
                 dep_count: None,
                 repology_repos: None,
             })

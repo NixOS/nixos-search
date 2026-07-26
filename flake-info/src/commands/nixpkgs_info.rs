@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use crate::Source;
 use crate::data::Nixpkgs;
-use crate::data::import::{NixOption, NixpkgsEntry, Package};
+use crate::data::import::{NixOption, NixpkgsEntry, Package, PackageService};
 
 /// Wrapper for the channel `packages.json` format.
 #[derive(Deserialize)]
@@ -59,6 +59,8 @@ pub fn get_nixpkgs_info(
     let mut programs = get_nixpkgs_programs(nixpkgs)?;
     let mut package_services =
         get_nixpkgs_package_services(&Source::Nixpkgs(nixpkgs.clone())).unwrap_or_default();
+    let mut package_service_imports =
+        get_nixpkgs_package_service_imports(&Source::Nixpkgs(nixpkgs.clone())).unwrap_or_default();
     // Skip the slow eval when only importing a single attribute.
     let dep_counts = if attribute.is_none() {
         super::get_nixpkgs_dep_counts(nixpkgs)?
@@ -80,6 +82,8 @@ pub fn get_nixpkgs_info(
                 .into_iter()
                 .collect();
             let modular_services = package_services.remove(&attribute).unwrap_or_default();
+            let modular_service_imports =
+                package_service_imports.remove(&attribute).unwrap_or_default();
             let dep_count = dep_counts.get(&attribute).copied();
             let repology_repos = repology_counts.get(&attribute).copied();
             NixpkgsEntry::Derivation {
@@ -87,6 +91,7 @@ pub fn get_nixpkgs_info(
                 package,
                 programs,
                 modular_services,
+                modular_service_imports,
                 dep_count,
                 repology_repos,
             }
@@ -124,20 +129,37 @@ fn resolve_repology_counts(file: &Option<PathBuf>) -> HashMap<String, u64> {
     }
 }
 
-pub fn get_nixpkgs_package_services(nixpkgs: &Source) -> Result<HashMap<String, Vec<String>>> {
+/// Evaluate `attribute` in the flake-info nix script and parse it as a map from
+/// package attribute name to `T`.
+fn get_package_map<T: serde::de::DeserializeOwned>(
+    nixpkgs: &Source,
+    attribute: &str,
+) -> Result<HashMap<String, T>> {
     let mut command = super::nix_eval_command(&["eval", "--json", "--no-write-lock-file"]);
     super::add_flake_arg(&mut command, "nixpkgsFlake", &nixpkgs.to_flake_ref());
-    command.add_arg("nixos-package-services");
+    command.add_arg(attribute);
 
     let cow = command
         .run()
-        .with_context(|| "Failed to gather modular service mapping for packages")?;
+        .with_context(|| format!("Failed to gather {} for packages", attribute))?;
 
     let output = &*cow.stdout_string_lossy();
     let de = &mut serde_json::Deserializer::from_str(output);
-    let map: HashMap<String, Vec<String>> = serde_path_to_error::deserialize(de)
-        .with_context(|| "Could not parse package-services map")?;
+    let map: HashMap<String, T> = serde_path_to_error::deserialize(de)
+        .with_context(|| format!("Could not parse {}", attribute))?;
     Ok(map)
+}
+
+pub fn get_nixpkgs_package_services(nixpkgs: &Source) -> Result<HashMap<String, Vec<String>>> {
+    get_package_map(nixpkgs, "nixos-package-services")
+}
+
+/// The import expressions for each package's modular services, so the package
+/// page can show a snippet matching the channel it is looking at.
+pub fn get_nixpkgs_package_service_imports(
+    nixpkgs: &Source,
+) -> Result<HashMap<String, Vec<PackageService>>> {
+    get_package_map(nixpkgs, "nixos-package-service-imports")
 }
 
 pub fn get_nixpkgs_programs(nixpkgs: &Nixpkgs) -> Result<HashMap<String, HashSet<String>>> {
