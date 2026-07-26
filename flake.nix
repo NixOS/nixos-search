@@ -38,12 +38,9 @@
       flake = {
         lib = {
           evalFlake =
-            {
-              targetFlake,
-              targetFlakeUri ? null,
-            }:
+            { targetFlake }:
             import ./flake-info/assets/commands/flake_info.nix {
-              inherit targetFlake targetFlakeUri;
+              inherit targetFlake;
               nixpkgsFlake = inputs.nixpkgs;
               flake-schemas = inputs.flake-schemas;
             };

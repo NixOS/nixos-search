@@ -126,7 +126,7 @@ fn resolve_repology_counts(file: &Option<PathBuf>) -> HashMap<String, u64> {
 
 pub fn get_nixpkgs_package_services(nixpkgs: &Source) -> Result<HashMap<String, Vec<String>>> {
     let mut command = super::nix_eval_command(&["eval", "--json", "--no-write-lock-file"]);
-    command.add_args(["--override-flake", "nixpkgs", &nixpkgs.to_flake_ref()].iter());
+    super::add_flake_arg(&mut command, "nixpkgsFlake", &nixpkgs.to_flake_ref());
     command.add_arg("nixos-package-services");
 
     let cow = command
@@ -182,12 +182,12 @@ pub fn get_nixpkgs_programs(nixpkgs: &Nixpkgs) -> Result<HashMap<String, HashSet
 fn get_options_from_script(
     nixpkgs: &Source,
     attribute: &str,
-    override_flake: Option<(&str, &str)>,
+    target_flake: Option<&str>,
 ) -> Result<Vec<NixOption>> {
     let mut command = super::nix_eval_command(&["eval", "--json", "--no-write-lock-file"]);
-    command.add_args(["--override-flake", "nixpkgs", &nixpkgs.to_flake_ref()].iter());
-    if let Some((name, flake_ref)) = override_flake {
-        command.add_args(["--override-flake", name, flake_ref].iter());
+    super::add_flake_arg(&mut command, "nixpkgsFlake", &nixpkgs.to_flake_ref());
+    if let Some(flake_ref) = target_flake {
+        super::add_flake_arg(&mut command, "targetFlake", flake_ref);
     }
     command.add_arg(attribute);
 
@@ -235,11 +235,7 @@ fn home_manager_flake_ref(nixpkgs: &Source) -> String {
 
 pub fn get_home_manager_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
     let hm_flake_ref = home_manager_flake_ref(nixpkgs);
-    let options = get_options_from_script(
-        nixpkgs,
-        "home-manager-options",
-        Some(("targetFlake", &hm_flake_ref)),
-    )?;
+    let options = get_options_from_script(nixpkgs, "home-manager-options", Some(&hm_flake_ref))?;
     Ok(options
         .into_iter()
         .map(NixpkgsEntry::HomeManagerOption)
@@ -259,11 +255,7 @@ fn darwin_flake_ref(nixpkgs: &Source) -> String {
 
 pub fn get_darwin_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
     let darwin_flake_ref = darwin_flake_ref(nixpkgs);
-    let options = get_options_from_script(
-        nixpkgs,
-        "darwin-options",
-        Some(("targetFlake", &darwin_flake_ref)),
-    )?;
+    let options = get_options_from_script(nixpkgs, "darwin-options", Some(&darwin_flake_ref))?;
     Ok(options
         .into_iter()
         .map(NixpkgsEntry::DarwinOption)

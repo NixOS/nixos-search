@@ -17,7 +17,6 @@ let
         (import ../flake_info.nix {
           inherit flake-schemas;
           targetFlake = flakeUri;
-          targetFlakeUri = flakeUri;
           nixpkgsFlake = pkgs;
         }).all;
 

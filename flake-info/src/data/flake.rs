@@ -9,7 +9,7 @@ use super::Source;
 pub struct Flake {
     #[serde(rename(serialize = "flake_description"))]
     pub description: Option<String>,
-    #[serde(rename(serialize = "flake_path"), skip_serializing)]
+    #[serde(default, rename(serialize = "flake_path"), skip_serializing)]
     pub path: PathBuf,
     #[serde(rename(serialize = "flake_resolved"))]
     pub resolved: Repo,

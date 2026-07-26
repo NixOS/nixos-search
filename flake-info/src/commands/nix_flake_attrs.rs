@@ -22,16 +22,10 @@ pub fn get_derivation_info<T: AsRef<str> + Display>(
     command
         .env
         .insert("NIXPKGS_ALLOW_UNSUPPORTED_SYSTEM".into(), "1".into());
-    command.add_args(
-        [
-            "--override-flake",
-            "nixpkgs",
-            "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixpkgs-unstable.tar.gz",
-        ]
-        .iter(),
-    );
-    command.add_args(["--override-flake", "targetFlake", flake_ref.as_ref()].iter());
-    command.add_args(["--argstr", "targetFlakeUri", flake_ref.as_ref()].iter());
+    if let Some(schemas_ref) = option_env!("FLAKE_SCHEMAS_REF") {
+        super::add_flake_arg(&mut command, "flake-schemas", schemas_ref);
+    }
+    command.add_args(["--argstr", "targetFlake", flake_ref.as_ref()].iter());
     command.add_arg(kind.as_ref());
     if temp_store {
         let temp_store_path = PathBuf::from("/tmp/flake-info-store");
