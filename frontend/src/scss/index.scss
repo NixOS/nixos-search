@@ -1134,6 +1134,7 @@ ul.inline-list {
 }
 
 sort-select-wrapper select {
+  color: var(--text-color);
   outline: none;
 }
 
@@ -1164,6 +1165,7 @@ sort-select-wrapper select {
     }
   }
 }
+
 
 .sort-select::picker(select) {
   appearance: base-select;
