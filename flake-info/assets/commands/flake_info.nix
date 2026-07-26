@@ -1,17 +1,11 @@
 {
-  # Either an already-resolved flake attrset (when imported from Nix, e.g. via
-  # `self.lib.evalFlake`) or a flake reference string. `flake-info` drives this
-  # file with `nix eval -f` and supplies the flake through the registry
-  # (`--override-flake targetFlake <ref>`), which can only fill the defaults
-  # below -- not function formals.
-  targetFlake ? builtins.getFlake "targetFlake",
-  nixpkgsFlake ? builtins.getFlake "nixpkgs",
-  flake-schemas ? builtins.getFlake "flake-schemas",
-  targetFlakeUri ? if nixpkgsFlake.lib.isString targetFlake then targetFlake else null,
+  targetFlake ? null,
+  nixpkgsFlake ? builtins.getFlake "https://github.com/NixOS/nixpkgs/archive/refs/heads/nixpkgs-unstable.tar.gz",
+  flake-schemas ? builtins.getFlake "github:DeterminateSystems/flake-schemas",
 }:
 let
   inherit (nixpkgsFlake) lib;
-  resolved = if lib.isAttrs targetFlake then targetFlake else builtins.getFlake targetFlake;
+  resolved = if targetFlake != null then builtins.getFlake targetFlake else null;
   nixpkgs = nixpkgsFlake.legacyPackages.${referenceSystem};
 
   # Reference system to use for extracting full package metadata
@@ -296,7 +290,7 @@ let
           readNixOSOptions {
             inherit module;
             modulePath = [
-              (if targetFlakeUri != null then targetFlakeUri else targetFlake)
+              targetFlake
               moduleName
             ];
           }
@@ -312,7 +306,7 @@ let
 
   # Extract options from home-manager's module system.
   # Evaluated separately during the nixpkgs channel import (via
-  # `--override-flake targetFlake github:nix-community/home-manager`) so that
+  # `--arg targetFlake 'builtins.getFlake "github:nix-community/home-manager"'`) so that
   # home-manager options land in the channel index alongside NixOS options.
   readHomeManagerOptions =
     let
@@ -343,7 +337,7 @@ let
 
   # Extract options from nix-darwin's module system.
   # Evaluated separately during the nixpkgs channel import (via
-  # `--override-flake targetFlake github:nix-darwin/nix-darwin`) so that
+  # `--arg targetFlake 'builtins.getFlake "github:nix-darwin/nix-darwin"'`) so that
   # nix-darwin options land in the channel index alongside NixOS options.
   readDarwinOptions =
     let
