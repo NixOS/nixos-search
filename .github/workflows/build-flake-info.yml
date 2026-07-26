@@ -34,3 +34,16 @@ jobs:
         shell: sh
         run: |
           nix flake check --impure --accept-flake-config
+
+      # Exercises the CLI's argument-passing path, which the Nix-level tests
+      # bypass by importing `flake_info.nix` directly.
+      - name: flake-info CLI smoke test
+        shell: sh
+        run: |
+          nix run --accept-flake-config .#flake-info -- \
+            --json flake github:ryantm/agenix | jq -e 'length > 0'
+
+          nix eval --json --no-write-lock-file \
+            -f ./flake-info/assets/commands/flake_info.nix \
+            --override-flake nixpkgs https://github.com/NixOS/nixpkgs/archive/refs/heads/nixpkgs-unstable.tar.gz \
+            nixos-package-services >/dev/null

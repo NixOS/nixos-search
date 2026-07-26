@@ -40,6 +40,14 @@ pub fn run_garbage_collection() -> Result<()> {
 pub fn nix_eval_command(args: &[&str]) -> Command {
     let mut command = Command::with_args("nix", args.iter());
     command.add_arg_pair("-f", EXTRACT_SCRIPT.clone());
+    command.add_args(
+        [
+            "--override-flake",
+            "flake-schemas",
+            option_env!("FLAKE_SCHEMAS_REF").unwrap_or("github:DeterminateSystems/flake-schemas"),
+        ]
+        .iter(),
+    );
     command.enable_capture();
     command.log_to = LogTo::Log;
     command.log_output_on_error = true;

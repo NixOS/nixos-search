@@ -1,7 +1,12 @@
 {
-  targetFlake,
-  nixpkgsFlake,
-  flake-schemas,
+  # Either an already-resolved flake attrset (when imported from Nix, e.g. via
+  # `self.lib.evalFlake`) or a flake reference string. `flake-info` drives this
+  # file with `nix eval -f` and supplies the flake through the registry
+  # (`--override-flake targetFlake <ref>`), which can only fill the defaults
+  # below -- not function formals.
+  targetFlake ? builtins.getFlake "targetFlake",
+  nixpkgsFlake ? builtins.getFlake "nixpkgs",
+  flake-schemas ? builtins.getFlake "flake-schemas",
   targetFlakeUri ? if nixpkgsFlake.lib.isString targetFlake then targetFlake else null,
 }:
 let
@@ -307,7 +312,7 @@ let
 
   # Extract options from home-manager's module system.
   # Evaluated separately during the nixpkgs channel import (via
-  # `--override-flake input-flake github:nix-community/home-manager`) so that
+  # `--override-flake targetFlake github:nix-community/home-manager`) so that
   # home-manager options land in the channel index alongside NixOS options.
   readHomeManagerOptions =
     let
@@ -338,7 +343,7 @@ let
 
   # Extract options from nix-darwin's module system.
   # Evaluated separately during the nixpkgs channel import (via
-  # `--override-flake input-flake github:nix-darwin/nix-darwin`) so that
+  # `--override-flake targetFlake github:nix-darwin/nix-darwin`) so that
   # nix-darwin options land in the channel index alongside NixOS options.
   readDarwinOptions =
     let
