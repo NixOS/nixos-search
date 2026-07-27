@@ -18,8 +18,6 @@ let
   # For other systems, we only check attribute names to avoid redundant evaluation
   referenceSystem = "x86_64-linux";
 
-  withSystem = fn: lib.mapAttrs (system: drvs: (fn system drvs));
-
   safeEval = attr: lib.tryEval attr;
 
   evalDrvMetadata =
