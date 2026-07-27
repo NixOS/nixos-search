@@ -4,11 +4,43 @@
   flake-schemas ? builtins.getFlake "github:DeterminateSystems/flake-schemas",
 }:
 let
-  inherit (nixpkgsFlake) lib;
+  inherit (nixpkgsFlake.lib)
+    attrValues
+    concatLists
+    concatStringsSep
+    drop
+    elem
+    elemAt
+    filter
+    findFirst
+    groupBy
+    hasPrefix
+    head
+    isAttrs
+    isDerivation
+    isFunction
+    isList
+    mapAttrs
+    mapAttrsToList
+    match
+    mkForce
+    naturalSort
+    optionAttrSetToDocList
+    optionalAttrs
+    optionals
+    partition
+    pathExists
+    splitString
+    toJSON
+    tryEval
+    unique
+    zipAttrsWith
+    ;
+
   resolved =
     if targetFlake == null then
       null
-    else if lib.isAttrs targetFlake then
+    else if isAttrs targetFlake then
       targetFlake
     else
       builtins.getFlake targetFlake;
@@ -18,12 +50,12 @@ let
   # For other systems, we only check attribute names to avoid redundant evaluation
   referenceSystem = "x86_64-linux";
 
-  safeEval = attr: lib.tryEval attr;
+  safeEval = attr: tryEval attr;
 
   evalDrvMetadata =
     drv:
     let
-      derivResult = safeEval (lib.isDerivation drv);
+      derivResult = safeEval (isDerivation drv);
       nameResult =
         if derivResult.success && derivResult.value then
           safeEval drv.name
@@ -57,13 +89,13 @@ let
         outputs = if outputsResult.success then outputsResult.value else [ "out" ];
         default_output = if outputNameResult.success then outputNameResult.value else "out";
       }
-      // lib.optionalAttrs (descResult.success && descResult.value != null) {
+      // optionalAttrs (descResult.success && descResult.value != null) {
         description = descResult.value;
       }
-      // lib.optionalAttrs (longDescResult.success && longDescResult.value != null) {
+      // optionalAttrs (longDescResult.success && longDescResult.value != null) {
         longDescription = longDescResult.value;
       }
-      // lib.optionalAttrs (licenseResult.success && licenseResult.value != null) {
+      // optionalAttrs (licenseResult.success && licenseResult.value != null) {
         license = licenseResult.value;
       }
     else
@@ -82,8 +114,8 @@ let
   # Extract package and app entries using schema inventory functions
   readSchemaItems =
     schemaKey: entryType:
-    lib.concatLists (
-      lib.mapAttrsToList (
+    concatLists (
+      mapAttrsToList (
         system: sysNode:
         let
           # Forcing the per-system inventory node evaluates the flake's whole
@@ -91,29 +123,28 @@ let
           # no longer supports. Skip that system rather than the whole flake.
           childrenResult = safeEval (sysNode.children or { });
         in
-        lib.filter (x: x != null) (
-          lib.mapAttrsToList (
+        filter (x: x != null) (
+          mapAttrsToList (
             attribute_name: itemNode:
             let
               res = safeEval (
                 let
                   rawVal = resolved.${schemaKey}.${system}.${attribute_name} or null;
-                  val = lib.findFirst (x: x != null) rawVal [
+                  val = findFirst (x: x != null) rawVal [
                     (itemNode.value or null)
                     (itemNode.derivation or null)
                     (itemNode.app or null)
                   ];
-                  binPath =
-                    itemNode.program or (if lib.isAttrs val then (val.program or val.outPath or null) else null);
+                  binPath = itemNode.program or (if isAttrs val then (val.program or val.outPath or null) else null);
                 in
                 if entryType == "app" then
                   {
                     entry_type = "app";
                     inherit attribute_name system;
                   }
-                  // lib.optionalAttrs (binPath != null) { bin = binPath; }
-                  // lib.optionalAttrs (itemNode ? type || (lib.isAttrs val && val ? type)) {
-                    type = itemNode.type or (if lib.isAttrs val then val.type or "app" else "app");
+                  // optionalAttrs (binPath != null) { bin = binPath; }
+                  // optionalAttrs (itemNode ? type || (isAttrs val && val ? type)) {
+                    type = itemNode.type or (if isAttrs val then val.type or "app" else "app");
                   }
                 else if system == referenceSystem then
                   let
@@ -147,11 +178,11 @@ let
   # Replace functions by the string <function>
   substFunction =
     x:
-    if lib.isAttrs x then
-      lib.mapAttrs (_: substFunction) x
-    else if lib.isList x then
+    if isAttrs x then
+      mapAttrs (_: substFunction) x
+    else if isList x then
       map substFunction x
-    else if lib.isFunction x then
+    else if isFunction x then
       "function"
     else
       x;
@@ -159,8 +190,8 @@ let
   # Strip store-path prefix from a declaration path
   mkDeclaration =
     decl:
-    if lib.hasPrefix builtins.storeDir decl then
-      lib.concatStringsSep "/" (lib.drop 4 (lib.splitString "/" decl))
+    if hasPrefix builtins.storeDir decl then
+      concatStringsSep "/" (drop 4 (splitString "/" decl))
     else
       decl;
 
@@ -168,7 +199,7 @@ let
   cleanUpOption =
     extraAttrs: opt:
     let
-      applyOnAttr = n: f: lib.optionalAttrs (opt ? ${n}) { ${n} = f opt.${n}; };
+      applyOnAttr = n: f: optionalAttrs (opt ? ${n}) { ${n} = f opt.${n}; };
     in
     opt
     // {
@@ -181,11 +212,11 @@ let
     // extraAttrs;
 
   # Filter for user-visible, non-internal options
-  filterOptions = opts: lib.filter (x: x.visible && !x.internal && lib.head x.loc != "_module") opts;
+  filterOptions = opts: filter (x: x.visible && !x.internal && head x.loc != "_module") opts;
 
   evalOptionsWith =
     {
-      evalModules ? lib.evalModules,
+      evalModules ? nixpkgsFlake.lib.evalModules,
       modules,
       specialArgs ? { },
       class ? null,
@@ -196,22 +227,19 @@ let
         (evalModules (
           {
             modules = modules ++ [
-              (
-                { lib, ... }:
-                {
-                  _module.check = lib.mkForce false;
-                }
-              )
+              {
+                _module.check = mkForce false;
+              }
             ];
             specialArgs = {
               pkgs = nixpkgs;
             }
             // specialArgs;
           }
-          // lib.optionalAttrs (class != null) { inherit class; }
+          // optionalAttrs (class != null) { inherit class; }
         )).options;
 
-      opts = lib.optionAttrSetToDocList declarations;
+      opts = optionAttrSetToDocList declarations;
     in
     map (cleanUpOption extraAttrs) (filterOptions opts);
 
@@ -221,7 +249,7 @@ let
       modulePath ? null,
     }:
     evalOptionsWith {
-      modules = if lib.isList module then module else [ module ];
+      modules = if isList module then module else [ module ];
       specialArgs = {
         # !!! NixOS-specific. Unfortunately, NixOS modules can rely on the `modulesPath`
         # argument to import modules from the nixos tree. However, most of the time
@@ -229,7 +257,7 @@ let
         # can allow it.
         modulesPath = "${nixpkgsFlake}/nixos/modules";
       };
-      extraAttrs = lib.optionalAttrs (modulePath != null) {
+      extraAttrs = optionalAttrs (modulePath != null) {
         flake = modulePath;
       };
     };
@@ -241,15 +269,15 @@ let
     let
       # Match: <imports = [ pkgs.PKG.services.MODULE ]>.OPTNAME
       # Group 1: package attrname, group 2: module name, group 3: remaining option path
-      m = lib.match ".*imports.*pkgs\\.([^.]+)\\.services\\.([^ ]+).*>\\.(.*)" opt.name;
+      m = match ".*imports.*pkgs\\.([^.]+)\\.services\\.([^ ]+).*>\\.(.*)" opt.name;
     in
     if m != null then
       opt
       // {
         entry_type = "service";
-        name = lib.elemAt m 2;
-        service_package = lib.elemAt m 0;
-        service_module = lib.elemAt m 1;
+        name = elemAt m 2;
+        service_package = elemAt m 0;
+        service_module = elemAt m 1;
       }
     else
       # Fallback: keep as-is but still tag as service
@@ -266,41 +294,41 @@ let
     let
       keyOf =
         opt:
-        lib.toJSON [
+        toJSON [
           (opt.declarations or [ ])
           (opt.name or "")
           (opt.service_module or "")
         ];
-      grouped = lib.groupBy keyOf opts;
+      grouped = groupBy keyOf opts;
       mergeGroup =
         entries:
         let
-          packages = lib.naturalSort (lib.unique (map (e: e.service_package or "") entries));
+          packages = naturalSort (unique (map (e: e.service_package or "") entries));
         in
-        (lib.head entries)
+        (head entries)
         // {
-          service_package = lib.head packages;
+          service_package = head packages;
           service_packages = packages;
         };
     in
-    lib.mapAttrsToList (_: mergeGroup) grouped;
+    mapAttrsToList (_: mergeGroup) grouped;
 
   # Base schemas from official flake-schemas input extended with custom schemas
   schemas = flake-schemas.exportedSchemas // (resolved.schemas or { });
 
   readFlakeOptions =
     let
-      invModules = lib.mapAttrs (
+      invModules = mapAttrs (
         name: n:
-        if lib.isFunction (n.value or n.module or null) || lib.isAttrs (n.value or n.module or null) then
+        if isFunction (n.value or n.module or null) || isAttrs (n.value or n.module or null) then
           n.value or n.module
         else
           resolved.nixosModules.${name} or n
       ) (getSchemaInventory "nixosModules");
       moduleSet = if invModules != { } then invModules else resolved.nixosModules or { };
 
-      raw = lib.concatLists (
-        lib.mapAttrsToList (
+      raw = concatLists (
+        mapAttrsToList (
           moduleName: module:
           readNixOSOptions {
             inherit module;
@@ -315,7 +343,7 @@ let
       # When a flake re-exports the same module under multiple names
       # (e.g. `default` and `home-manager`), deduplicate by option name,
       # keeping the first occurrence.
-      dedup = opts: lib.attrValues (lib.mapAttrs (_: lib.head) (lib.groupBy (opt: opt.name) opts));
+      dedup = opts: attrValues (mapAttrs (_: head) (groupBy (opt: opt.name) opts));
     in
     dedup raw;
 
@@ -327,14 +355,14 @@ let
     let
       # Home-manager modules use `lib.hm.*` helpers; extend nixpkgs' lib with
       # HM's custom library so module evaluation does not fail.
-      hmLib = import "${resolved}/modules/lib/stdlib-extended.nix" lib;
+      hmLib = import "${resolved}/modules/lib/stdlib-extended.nix" nixpkgsFlake.lib;
 
       hmModulesPath = "${resolved}/modules/modules.nix";
       hmModuleList =
         let
           fn = import hmModulesPath;
         in
-        if lib.isFunction fn then
+        if isFunction fn then
           fn {
             lib = hmLib;
             pkgs = nixpkgs;
@@ -343,7 +371,7 @@ let
           fn;
     in
     evalOptionsWith {
-      evalModules = hmLib.evalModules;
+      inherit (hmLib) evalModules;
       modules = hmModuleList;
       extraAttrs = {
         entry_type = "home-manager-option";
@@ -374,24 +402,24 @@ let
   collectSystems =
     outputKey: list:
     let
-      grouped = lib.groupBy (x: x.attribute_name) list;
+      grouped = groupBy (x: x.attribute_name) list;
       mergeEntry =
         attribute_name: entries:
         let
           firstWithMeta =
             let
-              found = lib.findFirst (e: e ? name || e ? bin) null entries;
+              found = findFirst (e: e ? name || e ? bin) null entries;
             in
             if found != null then
               found
             else
               let
-                firstEntry = lib.head entries;
+                firstEntry = head entries;
                 meta = evaluatePackageFromSystem outputKey firstEntry.system attribute_name;
               in
               if meta != null then firstEntry // meta else firstEntry;
 
-          rawPlatforms = lib.unique (map (e: e.system) entries);
+          rawPlatforms = unique (map (e: e.system) entries);
           targetOrder = [
             "x86_64-linux"
             "x86_64-darwin"
@@ -399,8 +427,7 @@ let
             "aarch64-darwin"
           ];
           platforms =
-            (lib.filter (x: lib.elem x rawPlatforms) targetOrder)
-            ++ (lib.filter (x: !(lib.elem x targetOrder)) rawPlatforms);
+            (filter (x: elem x rawPlatforms) targetOrder) ++ (filter (x: !(elem x targetOrder)) rawPlatforms);
         in
         # A package that never evaluated on any system carries no `name`, which
         # `FlakeEntry::Package` requires -- keeping it fails deserialization for
@@ -411,10 +438,10 @@ let
         else
           removeAttrs (firstWithMeta // { inherit platforms; }) [ "system" ];
     in
-    lib.mapAttrs mergeEntry grouped;
+    mapAttrs mergeEntry grouped;
 
   collectSystemEntries =
-    outputKey: list: lib.filter (x: x != null) (lib.attrValues (collectSystems outputKey list));
+    outputKey: list: filter (x: x != null) (attrValues (collectSystems outputKey list));
 
   # nixpkgs-specific, doesn't use the flake argument
   nixpkgsBaseModules = import "${nixpkgsFlake}/nixos/modules/module-list.nix" ++ [
@@ -427,7 +454,7 @@ let
   # and is too expensive -- see NixOS/nixpkgs#509117).
   serviceDocModules =
     (import "${nixpkgsFlake}/nixos/modules/misc/documentation/modular-services.nix" {
-      inherit lib;
+      inherit (nixpkgsFlake) lib;
       pkgs = nixpkgs;
     }).documentation.nixos.extraModules;
 
@@ -435,16 +462,16 @@ let
   # depend on base option types). Then partition: options whose name starts
   # with "<" come from modular services.
   nixpkgsAllOpts = readNixOSOptions { module = nixpkgsBaseModules ++ serviceDocModules; };
-  isServiceOption = opt: lib.hasPrefix "<" opt.name;
+  isServiceOption = opt: hasPrefix "<" opt.name;
   readOptionsIf =
     {
       cond,
       reader,
     }:
     let
-      check = lib.tryEval cond;
+      check = safeEval cond;
     in
-    lib.optionals (check.success && check.value) reader;
+    optionals (check.success && check.value) reader;
 
 in
 
@@ -455,8 +482,8 @@ rec {
   options = readFlakeOptions;
   darwin-options = readOptionsIf {
     cond =
-      lib.pathExists "${resolved}/modules/module-list.nix"
-      && lib.pathExists "${resolved}/modules/system/defaults-write.nix";
+      pathExists "${resolved}/modules/module-list.nix"
+      && pathExists "${resolved}/modules/system/defaults-write.nix";
     reader = readDarwinOptions;
   };
   home-manager-options = readOptionsIf {
@@ -466,18 +493,18 @@ rec {
     # home-manager itself also provides the `stdlib-extended.nix` helper
     # that `readHomeManagerOptions` imports.
     cond =
-      lib.pathExists "${resolved}/modules/modules.nix"
-      && lib.pathExists "${resolved}/modules/lib/stdlib-extended.nix";
+      pathExists "${resolved}/modules/modules.nix"
+      && pathExists "${resolved}/modules/lib/stdlib-extended.nix";
     reader = readHomeManagerOptions;
   };
   all = packages ++ apps ++ options;
 
   # Partition options into standard NixOS options and modular service options in a single pass
-  nixpkgsOptionsPartition = lib.partition isServiceOption nixpkgsAllOpts;
+  nixpkgsOptionsPartition = partition isServiceOption nixpkgsAllOpts;
   nixos-options = nixpkgsOptionsPartition.wrong;
 
   # Parsed service options
-  realServices = lib.filter (opt: opt ? service_package) (
+  realServices = filter (opt: opt ? service_package) (
     map parseServiceOption nixpkgsOptionsPartition.right
   );
 
@@ -486,7 +513,7 @@ rec {
   # Map from package attribute name to the list of modular service module
   # names it exposes. Derived from the parsed service options above so it
   # stays in sync with nixpkgs' hand-maintained list.
-  nixos-package-services = lib.zipAttrsWith (_: values: lib.unique values) (
+  nixos-package-services = zipAttrsWith (_: values: unique values) (
     map (opt: { ${opt.service_package} = opt.service_module; }) realServices
   );
 }
