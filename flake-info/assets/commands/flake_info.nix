@@ -50,15 +50,13 @@ let
   # For other systems, we only check attribute names to avoid redundant evaluation
   referenceSystem = "x86_64-linux";
 
-  safeEval = attr: tryEval attr;
-
   evalDrvMetadata =
     drv:
     let
-      derivResult = safeEval (isDerivation drv);
+      derivResult = tryEval (isDerivation drv);
       nameResult =
         if derivResult.success && derivResult.value then
-          safeEval drv.name
+          tryEval drv.name
         else
           {
             success = false;
@@ -66,7 +64,7 @@ let
           };
       brokenResult =
         if nameResult.success then
-          safeEval (drv.meta.broken or false)
+          tryEval (drv.meta.broken or false)
         else
           {
             success = true;
@@ -76,12 +74,12 @@ let
     in
     if nameResult.success && !isBroken then
       let
-        versionResult = safeEval (drv.version or "");
-        outputsResult = safeEval drv.outputs;
-        outputNameResult = safeEval drv.outputName;
-        descResult = safeEval (drv.meta.description or null);
-        longDescResult = safeEval (drv.meta.longDescription or null);
-        licenseResult = safeEval (drv.meta.license or null);
+        versionResult = tryEval (drv.version or "");
+        outputsResult = tryEval drv.outputs;
+        outputNameResult = tryEval drv.outputName;
+        descResult = tryEval (drv.meta.description or null);
+        longDescResult = tryEval (drv.meta.longDescription or null);
+        licenseResult = tryEval (drv.meta.license or null);
       in
       {
         name = nameResult.value;
@@ -105,7 +103,7 @@ let
     key:
     if resolved ? ${key} && schemas ? ${key} then
       let
-        inv = safeEval (schemas.${key}.inventory resolved.${key});
+        inv = tryEval (schemas.${key}.inventory resolved.${key});
       in
       if inv.success && inv.value ? children then inv.value.children else { }
     else
@@ -121,13 +119,13 @@ let
           # Forcing the per-system inventory node evaluates the flake's whole
           # output set for that system, which throws for e.g. a system nixpkgs
           # no longer supports. Skip that system rather than the whole flake.
-          childrenResult = safeEval (sysNode.children or { });
+          childrenResult = tryEval (sysNode.children or { });
         in
         filter (x: x != null) (
           mapAttrsToList (
             attribute_name: itemNode:
             let
-              res = safeEval (
+              res = tryEval (
                 let
                   rawVal = resolved.${schemaKey}.${system}.${attribute_name} or null;
                   val = findFirst (x: x != null) rawVal [
@@ -469,7 +467,7 @@ let
       reader,
     }:
     let
-      check = safeEval cond;
+      check = tryEval cond;
     in
     optionals (check.success && check.value) reader;
 
