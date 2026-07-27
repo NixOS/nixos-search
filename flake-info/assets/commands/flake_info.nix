@@ -5,7 +5,13 @@
 }:
 let
   inherit (nixpkgsFlake) lib;
-  resolved = if targetFlake != null then builtins.getFlake targetFlake else null;
+  resolved =
+    if targetFlake == null then
+      null
+    else if lib.isAttrs targetFlake then
+      targetFlake
+    else
+      builtins.getFlake targetFlake;
   nixpkgs = nixpkgsFlake.legacyPackages.${referenceSystem};
 
   # Reference system to use for extracting full package metadata
