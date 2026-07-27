@@ -34,6 +34,17 @@ pub struct License {
     spdxId: Option<String>,
 }
 
+impl License {
+    pub fn display_name(&self) -> String {
+        self.spdxId
+            .as_ref()
+            .or(self.shortName.as_ref())
+            .or(self.fullName.as_ref())
+            .cloned()
+            .unwrap_or_else(|| "custom".to_string())
+    }
+}
+
 impl From<import::License> for License {
     #[allow(non_snake_case)]
     fn from(license: import::License) -> Self {
@@ -308,17 +319,8 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                     .flat_map(|sos| sos.0.flatten())
                     .map(|l| l.into())
                     .collect();
-                let package_license_set: Vec<String> = package_license
-                    .iter()
-                    .map(|l| {
-                        l.fullName
-                            .as_ref()
-                            .or(l.shortName.as_ref())
-                            .or(l.spdxId.as_ref())
-                            .map(|s| s.to_owned())
-                            .unwrap_or_else(|| "custom".to_string())
-                    })
-                    .collect();
+                let package_license_set: Vec<String> =
+                    package_license.iter().map(|l| l.display_name()).collect();
 
                 let maintainer: Maintainer = f.into();
 
@@ -402,14 +404,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
 
                 let package_license_set = package_license
                     .iter()
-                    .map(|l: &License| {
-                        l.fullName
-                            .as_ref()
-                            .or(l.shortName.as_ref())
-                            .or(l.spdxId.as_ref())
-                            .map(|s| s.to_owned())
-                            .unwrap_or_else(|| "custom".to_string())
-                    })
+                    .map(|l: &License| l.display_name())
                     .collect();
 
                 let platforms: HashSet<String> =
@@ -773,5 +768,40 @@ mod tests {
         } else {
             panic!("Expected LicenseExpression::Leaf");
         }
+    }
+
+    #[test]
+    fn test_license_display_name_fallback() {
+        let l1 = License {
+            fullName: Some("MIT License".to_string()),
+            shortName: Some("mit".to_string()),
+            spdxId: Some("MIT".to_string()),
+            url: None,
+        };
+        assert_eq!(l1.display_name(), "MIT");
+
+        let l2 = License {
+            fullName: Some("MIT License".to_string()),
+            shortName: Some("mit".to_string()),
+            spdxId: None,
+            url: None,
+        };
+        assert_eq!(l2.display_name(), "mit");
+
+        let l3 = License {
+            fullName: Some("Custom License".to_string()),
+            shortName: None,
+            spdxId: None,
+            url: None,
+        };
+        assert_eq!(l3.display_name(), "Custom License");
+
+        let l4 = License {
+            fullName: None,
+            shortName: None,
+            spdxId: None,
+            url: None,
+        };
+        assert_eq!(l4.display_name(), "custom");
     }
 }
