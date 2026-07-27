@@ -214,7 +214,7 @@ let
 
   evalOptionsWith =
     {
-      evalModules ? nixpkgsFlake.lib.evalModules,
+      evalModules ? nixpkgsFlake.lib.evalModules, # some flakes provide their own evalModules function
       modules,
       specialArgs ? { },
       class ? null,
