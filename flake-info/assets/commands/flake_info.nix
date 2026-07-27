@@ -85,41 +85,46 @@ let
           lib.mapAttrsToList (
             attribute_name: itemNode:
             let
-              rawVal = resolved.${schemaKey}.${system}.${attribute_name} or null;
-              val = lib.findFirst (x: x != null) rawVal [
-                (itemNode.value or null)
-                (itemNode.derivation or null)
-                (itemNode.app or null)
-              ];
-              binPath =
-                itemNode.program or (if lib.isAttrs val then (val.program or val.outPath or null) else null);
+              res = safeEval (
+                let
+                  rawVal = resolved.${schemaKey}.${system}.${attribute_name} or null;
+                  val = lib.findFirst (x: x != null) rawVal [
+                    (itemNode.value or null)
+                    (itemNode.derivation or null)
+                    (itemNode.app or null)
+                  ];
+                  binPath =
+                    itemNode.program or (if lib.isAttrs val then (val.program or val.outPath or null) else null);
+                in
+                if entryType == "app" then
+                  {
+                    entry_type = "app";
+                    inherit attribute_name system;
+                  }
+                  // lib.optionalAttrs (binPath != null) { bin = binPath; }
+                  // lib.optionalAttrs (itemNode ? type || (lib.isAttrs val && val ? type)) {
+                    type = itemNode.type or (if lib.isAttrs val then val.type or "app" else "app");
+                  }
+                else if system == referenceSystem then
+                  let
+                    meta = evalDrvMetadata val;
+                  in
+                  if meta != null then
+                    {
+                      entry_type = "package";
+                      inherit attribute_name system;
+                    }
+                    // meta
+                  else
+                    null
+                else
+                  {
+                    entry_type = "package";
+                    inherit attribute_name system;
+                  }
+              );
             in
-            if entryType == "app" then
-              {
-                entry_type = "app";
-                inherit attribute_name system;
-              }
-              // lib.optionalAttrs (binPath != null) { bin = binPath; }
-              // lib.optionalAttrs (itemNode ? type || (lib.isAttrs val && val ? type)) {
-                type = itemNode.type or (if lib.isAttrs val then val.type or "app" else "app");
-              }
-            else if system == referenceSystem then
-              let
-                meta = evalDrvMetadata val;
-              in
-              if meta != null then
-                {
-                  entry_type = "package";
-                  inherit attribute_name system;
-                }
-                // meta
-              else
-                null
-            else
-              {
-                entry_type = "package";
-                inherit attribute_name system;
-              }
+            if res.success then res.value else null
           ) (sysNode.children or { })
         )
       ) (getSchemaInventory schemaKey)
