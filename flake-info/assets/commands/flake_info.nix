@@ -87,6 +87,12 @@ let
     lib.concatLists (
       lib.mapAttrsToList (
         system: sysNode:
+        let
+          # Forcing the per-system inventory node evaluates the flake's whole
+          # output set for that system, which throws for e.g. a system nixpkgs
+          # no longer supports. Skip that system rather than the whole flake.
+          childrenResult = safeEval (sysNode.children or { });
+        in
         lib.filter (x: x != null) (
           lib.mapAttrsToList (
             attribute_name: itemNode:
@@ -131,7 +137,7 @@ let
               );
             in
             if res.success then res.value else null
-          ) (sysNode.children or { })
+          ) (if childrenResult.success then childrenResult.value else { })
         )
       ) (getSchemaInventory schemaKey)
     );
@@ -398,9 +404,19 @@ let
             (lib.filter (x: lib.elem x rawPlatforms) targetOrder)
             ++ (lib.filter (x: !(lib.elem x targetOrder)) rawPlatforms);
         in
-        removeAttrs (firstWithMeta // { inherit platforms; }) [ "system" ];
+        # A package that never evaluated on any system carries no `name`, which
+        # `FlakeEntry::Package` requires -- keeping it fails deserialization for
+        # the entire flake. Apps have no `name` by design, so this is restricted
+        # to packages. Dropped by `collectSystemEntries`.
+        if (firstWithMeta.entry_type or null) == "package" && !(firstWithMeta ? name) then
+          null
+        else
+          removeAttrs (firstWithMeta // { inherit platforms; }) [ "system" ];
     in
     lib.mapAttrs mergeEntry grouped;
+
+  collectSystemEntries =
+    outputKey: list: lib.filter (x: x != null) (lib.attrValues (collectSystems outputKey list));
 
   # nixpkgs-specific, doesn't use the flake argument
   nixpkgsBaseModules = import "${nixpkgsFlake}/nixos/modules/module-list.nix" ++ [
@@ -435,9 +451,9 @@ let
 in
 
 rec {
-  legacyPackages = lib.attrValues (collectSystems "legacyPackages" legacyPackages');
-  packages = lib.attrValues (collectSystems "packages" packages');
-  apps = lib.attrValues (collectSystems "apps" apps');
+  legacyPackages = collectSystemEntries "legacyPackages" legacyPackages';
+  packages = collectSystemEntries "packages" packages';
+  apps = collectSystemEntries "apps" apps';
   options = readFlakeOptions;
   darwin-options = readOptionsIf {
     cond =
