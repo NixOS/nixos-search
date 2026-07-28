@@ -33,10 +33,9 @@ url = "git+https://codeberg.org/wolfangaukang/python-trovo?ref=main"
 type = "git"
 url = "git+https://github.com/hannesgith/rquickshare?ref=flake"
 
-# missing field 'name'
-#[[sources]]
-#type = "git"
-#url = "git+https://github.com/hannesgith/neohtop?ref=nixify"
+[[sources]]
+type = "git"
+url = "git+https://github.com/hannesgith/neohtop?ref=nixify"
 
 [[sources]]
 type = "git"
@@ -345,11 +344,10 @@ type = "github"
 owner = "nix-community"
 repo = "autofirma-nix"
 
-# x86_64-darwin throws deprecated
-# [[sources]]
-# type = "github"
-# owner = "nix-community"
-# repo = "fenix"
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "fenix"
 
 [[sources]]
 type = "github"
