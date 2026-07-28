@@ -129,8 +129,7 @@ pub fn get_nixpkgs_package_services(nixpkgs: &Source) -> Result<HashMap<String, 
     super::add_flake_arg(&mut command, "nixpkgsFlake", &nixpkgs.to_flake_ref());
     command.add_arg("nixos-package-services");
 
-    let cow = command
-        .run()
+    let cow = super::run_capturing_stderr(&mut command)
         .with_context(|| "Failed to gather modular service mapping for packages")?;
 
     let output = &*cow.stdout_string_lossy();
@@ -155,8 +154,7 @@ pub fn get_nixpkgs_programs(nixpkgs: &Nixpkgs) -> Result<HashMap<String, HashSet
     command.log_to = LogTo::Log;
     command.log_output_on_error = true;
 
-    let cow = command
-        .run()
+    let cow = super::run_capturing_stderr(&mut command)
         .with_context(|| "Failed to gather information about nixpkgs programs")?;
 
     let output = cow.stdout_string_lossy();
@@ -191,8 +189,7 @@ fn get_options_from_script(
     }
     command.add_arg(attribute);
 
-    let cow = command
-        .run()
+    let cow = super::run_capturing_stderr(&mut command)
         .with_context(|| format!("Failed to gather information about {}", attribute))?;
 
     let output = &*cow.stdout_string_lossy();

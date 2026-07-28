@@ -14,8 +14,8 @@ pub use nixpkgs_info::{
 };
 pub use repology::{get_repology_repo_counts, load_repology_repo_counts};
 
-use anyhow::{Context, Result};
-use command_run::{Command, LogTo};
+use anyhow::{Context, Result, anyhow};
+use command_run::{Command, LogTo, Output};
 use lazy_static::lazy_static;
 use log::info;
 use std::path::PathBuf;
@@ -49,4 +49,50 @@ pub fn nix_eval_command(args: &[&str]) -> Command {
     command.log_to = LogTo::Log;
     command.log_output_on_error = true;
     command
+}
+
+/// How much of a `nix` trace to keep in the returned error. Group imports paste
+/// the aggregated error verbatim into an auto-filed issue, and a full trace can
+/// run to thousands of lines.
+const STDERR_TAIL_LINES: usize = 40;
+
+/// Run `command`, including its stderr in the error when it exits non-zero.
+///
+/// `command_run`'s own failure renders as just `command '...' failed: exit
+/// status: 1` -- the actual `nix` message reaches only the log, so the error
+/// that surfaces to the user carries no diagnostic information at all.
+pub fn run_capturing_stderr(command: &mut Command) -> Result<Output> {
+    let check = command.check;
+    command.disable_check();
+    let output = command.run();
+    command.check = check;
+
+    let output = output?;
+    if output.status.success() {
+        return Ok(output);
+    }
+
+    let stderr = output.stderr_string_lossy();
+    let lines: Vec<&str> = stderr.lines().collect();
+    let truncated = lines.len() > STDERR_TAIL_LINES;
+    let tail = lines[lines.len().saturating_sub(STDERR_TAIL_LINES)..].join("\n");
+
+    Err(anyhow!(
+        "command '{}' failed: {}{}{}",
+        command.command_line_lossy(),
+        output.status,
+        if truncated {
+            format!(
+                "\n[... {} earlier stderr lines omitted]",
+                lines.len() - STDERR_TAIL_LINES
+            )
+        } else {
+            String::new()
+        },
+        if tail.is_empty() {
+            String::new()
+        } else {
+            format!("\n{}", tail)
+        },
+    ))
 }

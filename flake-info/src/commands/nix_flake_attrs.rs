@@ -37,8 +37,7 @@ pub fn get_derivation_info<T: AsRef<str> + Display>(
     }
     command.add_args(extra);
 
-    let parsed: Result<Vec<FlakeEntry>> = command
-        .run()
+    let parsed: Result<Vec<FlakeEntry>> = super::run_capturing_stderr(&mut command)
         .with_context(|| format!("Failed to gather information about {}", flake_ref))
         .and_then(|o| {
             let output = &*o.stdout_string_lossy();
