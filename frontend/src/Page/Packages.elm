@@ -610,7 +610,7 @@ viewResultItem nixosChannels channel showUsageDetails show item =
 
         maintainersTeamsAndPlatforms =
             div []
-                [ div []
+                [ div [ class "package-details-maintainers" ]
                     [ h4 [] [ text "Maintainers" ]
                     , if List.isEmpty item.source.maintainers then
                         p [] [ text "This package has no maintainers. If you find it useful, please consider becoming a maintainer!" ]

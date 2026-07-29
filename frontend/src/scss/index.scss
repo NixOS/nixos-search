@@ -1178,3 +1178,21 @@ sort-select-wrapper select {
   position-area: bottom span-right;
   margin-block: 4px;
 }
+
+.package-details-maintainers {
+  width: 100%;
+  overflow: hidden;
+
+  li {
+    display: flex;
+    white-space: nowrap;
+  }
+
+  a {
+    display: inline-block;
+    text-overflow: ellipsis;
+    text-wrap: nowrap;
+    overflow: hidden;
+    height: 100%;
+  }
+}
