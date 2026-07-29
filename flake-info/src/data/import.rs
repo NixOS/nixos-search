@@ -43,6 +43,7 @@ pub enum FlakeEntry {
         bin: Option<PathBuf>,
         attribute_name: String,
         platforms: Vec<String>,
+        #[serde(rename = "type")]
         app_type: Option<String>,
     },
     /// an option defined in a module of a flake
