@@ -1047,6 +1047,13 @@ a:focus-visible {
   font-weight: bold;
 }
 
+@media (min-width: 761px) {
+  .search-sidebar {
+    max-width: 320px;
+  }
+}
+
+// TODO: we should inverse the constrain to be on pc version!
 @media (max-width: 760px) {
   .search-page {
     & .search-results {
