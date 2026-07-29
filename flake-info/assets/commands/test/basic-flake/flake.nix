@@ -44,6 +44,50 @@
               };
             };
 
+            # Package with dynamic & custom metadata
+            custom-meta-package = pkgs.stdenv.mkDerivation {
+              pname = "custom-meta-package";
+              version = "2.0.0";
+              src = pkgs.writeText "test.txt" "content";
+              dontUnpack = true;
+              meta = {
+                description = "Package with custom metadata";
+                customAttr = "new_future_field";
+                mainProgram = "custom-binary";
+              };
+            };
+
+            # Package with one broken meta field that throws
+            field-throwing-package = pkgs.stdenv.mkDerivation {
+              pname = "field-throwing-package";
+              version = "1.0.0";
+              src = pkgs.writeText "test.txt" "content";
+              dontUnpack = true;
+              meta = {
+                description = "Package with one broken meta key";
+                brokenKey = throw "this meta key throws";
+              };
+            };
+
+            # Package explicitly marked broken
+            broken-package = pkgs.stdenv.mkDerivation {
+              pname = "broken-package";
+              version = "1.0.0";
+              src = pkgs.writeText "test.txt" "content";
+              dontUnpack = true;
+              meta = {
+                description = "Broken package";
+                broken = true;
+              };
+            };
+
+            # Package whose derivation name throws an evaluation error
+            throwing-package = pkgs.stdenv.mkDerivation {
+              name = throw "derivation name throws";
+              src = pkgs.writeText "test.txt" "content";
+              dontUnpack = true;
+            };
+
             # Not a derivation, so it has no `name` -- must be dropped rather
             # than emitted as a name-less package entry.
             not-a-derivation = {

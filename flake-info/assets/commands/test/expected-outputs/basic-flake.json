@@ -1,17 +1,83 @@
 [
   {
+    "attribute_name": "app-hello",
+    "bin": "/nix/store/sqw9kyl8zrfnkklb3vp6gji9jw9qfgb5-hello-2.12.2/bin/hello",
+    "entry_type": "app",
+    "eval_status": "passing",
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "aarch64-linux",
+      "aarch64-darwin"
+    ],
+    "type": "app"
+  },
+  {
+    "attribute_name": "broken-package",
+    "default_output": "out",
+    "description": "Broken package",
+    "entry_type": "package",
+    "eval_status": "failing",
+    "name": "broken-package-1.0.0",
+    "outputs": ["out"],
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "aarch64-linux",
+      "aarch64-darwin"
+    ],
+    "reasons": ["marked_broken"],
+    "version": "1.0.0"
+  },
+  {
+    "attribute_name": "custom-meta-package",
+    "customAttr": "new_future_field",
+    "default_output": "out",
+    "description": "Package with custom metadata",
+    "entry_type": "package",
+    "eval_status": "passing",
+    "mainProgram": "custom-binary",
+    "name": "custom-meta-package-2.0.0",
+    "outputs": ["out"],
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "aarch64-linux",
+      "aarch64-darwin"
+    ],
+    "version": "2.0.0"
+  },
+  {
     "attribute_name": "darwin-specific",
     "default_output": "out",
     "entry_type": "package",
+    "eval_status": "passing",
     "name": "darwin-test",
     "outputs": ["out"],
     "platforms": ["x86_64-darwin", "aarch64-darwin"],
     "version": ""
   },
   {
+    "attribute_name": "field-throwing-package",
+    "default_output": "out",
+    "description": "Package with one broken meta key",
+    "entry_type": "package",
+    "eval_status": "passing",
+    "name": "field-throwing-package-1.0.0",
+    "outputs": ["out"],
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "aarch64-linux",
+      "aarch64-darwin"
+    ],
+    "version": "1.0.0"
+  },
+  {
     "attribute_name": "hello",
     "default_output": "out",
     "entry_type": "package",
+    "eval_status": "passing",
     "name": "hello",
     "outputs": ["out"],
     "platforms": [
@@ -26,16 +92,47 @@
     "attribute_name": "linux-specific",
     "default_output": "out",
     "entry_type": "package",
+    "eval_status": "passing",
     "name": "linux-test",
     "outputs": ["out"],
     "platforms": ["x86_64-linux", "aarch64-linux"],
     "version": ""
   },
   {
+    "attribute_name": "nestedSet.nested-package",
+    "default_output": "out",
+    "entry_type": "package",
+    "eval_status": "passing",
+    "name": "nested-package",
+    "outputs": ["out"],
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "aarch64-linux",
+      "aarch64-darwin"
+    ],
+    "version": ""
+  },
+  {
+    "attribute_name": "partly-throwing-app",
+    "bin": "/nix/store/sqw9kyl8zrfnkklb3vp6gji9jw9qfgb5-hello-2.12.2/bin/hello",
+    "entry_type": "app",
+    "eval_status": "partial",
+    "platform_status": {
+      "aarch64-darwin": { "reason": "eval_failure", "status": "failing" },
+      "aarch64-linux": { "status": "passing" },
+      "x86_64-darwin": { "reason": "eval_failure", "status": "failing" },
+      "x86_64-linux": { "status": "passing" }
+    },
+    "platforms": ["x86_64-linux", "aarch64-linux"],
+    "type": "app"
+  },
+  {
     "attribute_name": "test-package",
     "default_output": "out",
     "description": "A test package",
     "entry_type": "package",
+    "eval_status": "passing",
     "license": {
       "deprecated": false,
       "free": true,
@@ -57,36 +154,16 @@
     "version": "1.2.3"
   },
   {
-    "attribute_name": "app-hello",
-    "bin": "/nix/store/sqw9kyl8zrfnkklb3vp6gji9jw9qfgb5-hello-2.12.2/bin/hello",
+    "attribute_name": "throwing-app",
     "entry_type": "app",
-    "platforms": [
-      "x86_64-linux",
-      "x86_64-darwin",
-      "aarch64-linux",
-      "aarch64-darwin"
-    ],
+    "eval_status": "failing",
+    "reasons": ["eval_failure"],
     "type": "app"
   },
   {
-    "attribute_name": "nestedSet.nested-package",
-    "default_output": "out",
+    "attribute_name": "throwing-package",
     "entry_type": "package",
-    "name": "nested-package",
-    "outputs": ["out"],
-    "platforms": [
-      "x86_64-linux",
-      "x86_64-darwin",
-      "aarch64-linux",
-      "aarch64-darwin"
-    ],
-    "version": ""
-  },
-  {
-    "attribute_name": "partly-throwing-app",
-    "bin": "/nix/store/sqw9kyl8zrfnkklb3vp6gji9jw9qfgb5-hello-2.12.2/bin/hello",
-    "entry_type": "app",
-    "platforms": ["x86_64-linux", "aarch64-linux"],
-    "type": "app"
+    "eval_status": "failing",
+    "reasons": ["eval_failure"]
   }
 ]
