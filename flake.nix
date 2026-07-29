@@ -28,11 +28,28 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     flake-schemas.url = "github:DeterminateSystems/flake-schemas";
+    nix-unit = {
+      url = "github:nix-community/nix-unit";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.treefmt-nix.follows = "treefmt-nix";
+    };
+    namaka = {
+      url = "github:nix-community/namaka";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
-    inputs@{ flake-parts, ... }:
+    inputs@{
+      flake-parts,
+      nix-unit,
+      namaka,
+      ...
+    }:
     flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [
+        inputs.nix-unit.modules.flake.default
+      ];
       systems = import inputs.systems;
 
       flake = {
@@ -150,6 +167,10 @@
             };
         in
         rec {
+          nix-unit.inputs = {
+            inherit (inputs) nixpkgs flake-parts nix-unit;
+          };
+
           packages = {
             default = packages.flake-info;
             flake-info = import ./flake-info {
@@ -168,6 +189,15 @@
               inherit pkgs;
               inherit (inputs) flake-schemas;
             };
+            namaka =
+              pkgs.runCommand "namaka-snapshot-check"
+                {
+                  nativeBuildInputs = [ inputs.namaka.packages.${system}.default ];
+                }
+                ''
+                  ${inputs.namaka.packages.${system}.default}/bin/namaka check --flake ${inputs.self}
+                  touch $out
+                '';
           };
 
           formatter = treefmt;
@@ -182,6 +212,8 @@
                 opensearch-cli
                 rustfmt
                 rust-analyzer
+                inputs.nix-unit.packages.${system}.default
+                inputs.namaka.packages.${system}.default
               ];
               extraShellHook = ''
                 export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
