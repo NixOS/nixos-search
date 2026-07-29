@@ -270,7 +270,7 @@ let
                   binPathRes = tryEval (
                     itemNode.program or (if isAttrs val then (val.program or val.outPath or null) else null)
                   );
-                  binPath = if binPathRes.success then binPathRes.value else null;
+                  binPath = if binPathRes.success then sanitizeBinPath binPathRes.value else null;
                 in
                 if entryType == "app" then
                   [
@@ -313,15 +313,41 @@ let
     else
       x;
 
-  # Strip store-path prefix from a declaration path
+  # Parse a Nix store path into its store component and relative path
+  splitStorePath =
+    path:
+    if isString path && hasPrefix "${builtins.storeDir}/" path then
+      let
+        parts = splitString "/" (removePrefix "${builtins.storeDir}/" path);
+      in
+      {
+        storeComp = head parts;
+        relativePath = concatStringsSep "/" (tail parts);
+      }
+    else
+      null;
+
+  # Format app binary paths (e.g. "hello-2.12.2/bin/hello")
+  sanitizeBinPath =
+    path:
+    let
+      parsed = splitStorePath path;
+    in
+    if parsed != null then
+      let
+        pkgNameVer = concatStringsSep "-" (tail (splitString "-" parsed.storeComp));
+      in
+      if pkgNameVer != "" then "${pkgNameVer}/${parsed.relativePath}" else parsed.relativePath
+    else
+      path;
+
+  # Strip store-path prefix from a declaration path (e.g. "nixos/modules/services/web-servers/nginx.nix")
   mkDeclaration =
     decl:
     let
-      parts = optionals (hasPrefix "${builtins.storeDir}/" decl) (
-        tail (splitString "/" (removePrefix "${builtins.storeDir}/" decl))
-      );
+      parsed = splitStorePath decl;
     in
-    if parts != [ ] then concatStringsSep "/" parts else decl;
+    if parsed != null && parsed.relativePath != "" then parsed.relativePath else decl;
 
   # Clean up a raw option attrset for indexing
   cleanUpOption =
@@ -680,7 +706,9 @@ rec {
       && pathExists "${resolved}/modules/lib/stdlib-extended.nix";
     reader = readHomeManagerOptions;
   };
-  all = legacyPackages ++ packages ++ apps ++ options;
+  all = map (entry: builtins.fromJSON (builtins.unsafeDiscardStringContext (toJSON entry))) (
+    legacyPackages ++ packages ++ apps ++ options
+  );
 
   # Partition options into standard NixOS options and modular service options in a single pass
   nixpkgsOptionsPartition = partition isServiceOption nixpkgsAllOpts;

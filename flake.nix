@@ -184,20 +184,20 @@
             nixosChannelsJson = pkgs.writeText "nixosChannels.json" (lib.toJSON nixosChannels);
           };
 
-          checks = {
-            flake-info = import ./flake-info/assets/commands/test {
-              inherit pkgs;
-              inherit (inputs) flake-schemas;
-            };
-            namaka =
-              pkgs.runCommand "namaka-snapshot-check"
+          checks = namaka.lib.load {
+            src = ./flake-info/assets/commands/test;
+            inputs = {
+              evalTarget =
+                targetFlake:
                 {
-                  nativeBuildInputs = [ inputs.namaka.packages.${system}.default ];
-                }
-                ''
-                  ${inputs.namaka.packages.${system}.default}/bin/namaka check --flake ${inputs.self}
-                  touch $out
-                '';
+                  expr = lib.listToAttrs (
+                    map (e: {
+                      name = e.attribute_name or e.name;
+                      value = e;
+                    }) (inputs.self.lib.evalFlake { inherit targetFlake; }).all
+                  );
+                };
+            };
           };
 
           formatter = treefmt;
