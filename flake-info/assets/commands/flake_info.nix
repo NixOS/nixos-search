@@ -30,7 +30,9 @@ let
     optionals
     partition
     pathExists
+    removePrefix
     splitString
+    tail
     toJSON
     tryEval
     unique
@@ -188,10 +190,12 @@ let
   # Strip store-path prefix from a declaration path
   mkDeclaration =
     decl:
-    if hasPrefix builtins.storeDir decl then
-      concatStringsSep "/" (drop 4 (splitString "/" decl))
-    else
-      decl;
+    let
+      parts = optionals (hasPrefix "${builtins.storeDir}/" decl) (
+        tail (splitString "/" (removePrefix "${builtins.storeDir}/" decl))
+      );
+    in
+    if parts != [ ] then concatStringsSep "/" parts else decl;
 
   # Clean up a raw option attrset for indexing
   cleanUpOption =
