@@ -69,6 +69,20 @@
     "type": "app"
   },
   {
+    "attribute_name": "nestedSet.nested-package",
+    "default_output": "out",
+    "entry_type": "package",
+    "name": "nested-package",
+    "outputs": ["out"],
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "aarch64-linux",
+      "aarch64-darwin"
+    ],
+    "version": ""
+  },
+  {
     "attribute_name": "partly-throwing-app",
     "bin": "/nix/store/sqw9kyl8zrfnkklb3vp6gji9jw9qfgb5-hello-2.12.2/bin/hello",
     "entry_type": "app",

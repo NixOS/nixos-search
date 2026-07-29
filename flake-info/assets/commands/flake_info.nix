@@ -5,6 +5,8 @@
 }:
 let
   inherit (nixpkgsFlake.lib)
+    attrByPath
+    attrNames
     attrValues
     concatLists
     concatStringsSep
@@ -111,6 +113,61 @@ let
     else
       { };
 
+  evalPackageOrSet =
+    system: attribute_name: val:
+    let
+      derivResult = tryEval (isDerivation val);
+      isDrv = derivResult.success && derivResult.value;
+    in
+    if isDrv then
+      if system == referenceSystem then
+        let
+          meta = evalDrvMetadata val;
+        in
+        if meta != null then
+          [
+            (
+              {
+                entry_type = "package";
+                inherit attribute_name system;
+              }
+              // meta
+            )
+          ]
+        else
+          [ ]
+      else
+        [
+          {
+            entry_type = "package";
+            inherit attribute_name system;
+          }
+        ]
+    else if isAttrs val && (val.recurseForDerivations or false) then
+      let
+        attrRes = tryEval (attrNames val);
+      in
+      if attrRes.success then
+        concatLists (
+          map (
+            child:
+            if child == "recurseForDerivations" then
+              [ ]
+            else
+              let
+                childValRes = tryEval val.${child};
+              in
+              if childValRes.success && childValRes.value != null then
+                evalPackageOrSet system "${attribute_name}.${child}" childValRes.value
+              else
+                [ ]
+          ) attrRes.value
+        )
+      else
+        [ ]
+    else
+      [ ];
+
   # Extract package and app entries using schema inventory functions
   readSchemaItems =
     schemaKey: entryType:
@@ -123,49 +180,44 @@ let
           # no longer supports. Skip that system rather than the whole flake.
           childrenResult = tryEval (sysNode.children or { });
         in
-        filter (x: x != null) (
+        concatLists (
           mapAttrsToList (
             attribute_name: itemNode:
             let
               res = tryEval (
                 let
-                  rawVal = resolved.${schemaKey}.${system}.${attribute_name} or null;
+                  rawVal = attrByPath (splitString "." attribute_name) null (resolved.${schemaKey}.${system} or { });
                   val = findFirst (x: x != null) rawVal [
                     (itemNode.value or null)
                     (itemNode.derivation or null)
                     (itemNode.app or null)
                   ];
-                  binPath = itemNode.program or (if isAttrs val then (val.program or val.outPath or null) else null);
+                  binPathRes = tryEval (
+                    itemNode.program or (if isAttrs val then (val.program or val.outPath or null) else null)
+                  );
+                  binPath = if binPathRes.success then binPathRes.value else null;
                 in
                 if entryType == "app" then
-                  {
-                    entry_type = "app";
-                    inherit attribute_name system;
-                  }
-                  // optionalAttrs (binPath != null) { bin = binPath; }
-                  // optionalAttrs (itemNode ? type || (isAttrs val && val ? type)) {
-                    type = itemNode.type or (if isAttrs val then val.type or "app" else "app");
-                  }
-                else if system == referenceSystem then
-                  let
-                    meta = evalDrvMetadata val;
-                  in
-                  if meta != null then
-                    {
-                      entry_type = "package";
-                      inherit attribute_name system;
-                    }
-                    // meta
+                  if binPathRes.success then
+                    [
+                      (
+                        {
+                          entry_type = "app";
+                          inherit attribute_name system;
+                        }
+                        // optionalAttrs (binPath != null) { bin = binPath; }
+                        // optionalAttrs (itemNode ? type || (isAttrs val && val ? type)) {
+                          type = itemNode.type or (if isAttrs val then val.type or "app" else "app");
+                        }
+                      )
+                    ]
                   else
-                    null
+                    [ ]
                 else
-                  {
-                    entry_type = "package";
-                    inherit attribute_name system;
-                  }
+                  evalPackageOrSet system attribute_name val
               );
             in
-            if res.success then res.value else null
+            if res.success then res.value else [ ]
           ) (if childrenResult.success then childrenResult.value else { })
         )
       ) (getSchemaInventory schemaKey)
@@ -499,7 +551,7 @@ rec {
       && pathExists "${resolved}/modules/lib/stdlib-extended.nix";
     reader = readHomeManagerOptions;
   };
-  all = packages ++ apps ++ options;
+  all = legacyPackages ++ packages ++ apps ++ options;
 
   # Partition options into standard NixOS options and modular service options in a single pass
   nixpkgsOptionsPartition = partition isServiceOption nixpkgsAllOpts;

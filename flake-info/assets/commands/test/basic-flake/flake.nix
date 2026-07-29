@@ -99,5 +99,19 @@
           };
         }
       );
+
+      legacyPackages = forAllSystems (
+        system:
+        let
+          pkgs = import nixpkgs { inherit system; };
+        in
+        {
+          nestedSet = pkgs.lib.recurseIntoAttrs {
+            nested-package = pkgs.writeShellScriptBin "nested-package" ''
+              echo "Nested package"
+            '';
+          };
+        }
+      );
     };
 }
