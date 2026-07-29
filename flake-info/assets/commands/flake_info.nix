@@ -22,6 +22,7 @@ let
     isDerivation
     isFunction
     isList
+    listToAttrs
     mapAttrs
     mapAttrsToList
     match
@@ -54,52 +55,86 @@ let
   # For other systems, we only check attribute names to avoid redundant evaluation
   referenceSystem = "x86_64-linux";
 
+  evalMetaDynamic =
+    meta:
+    let
+      namesRes = tryEval (if isAttrs meta then attrNames meta else { });
+    in
+    if namesRes.success then
+      listToAttrs (
+        concatLists (
+          map (
+            key:
+            let
+              valRes = tryEval meta.${key};
+            in
+            if valRes.success && valRes.value != null then
+              [
+                {
+                  name = key;
+                  value = valRes.value;
+                }
+              ]
+            else
+              [ ]
+          ) namesRes.value
+        )
+      )
+    else
+      { };
+
   evalDrvMetadata =
     drv:
     let
       derivResult = tryEval (isDerivation drv);
-      nameResult =
-        if derivResult.success && derivResult.value then
-          tryEval drv.name
-        else
-          {
-            success = false;
-            value = null;
-          };
-      brokenResult =
-        if nameResult.success then
-          tryEval (drv.meta.broken or false)
-        else
-          {
-            success = true;
-            value = false;
-          };
-      isBroken = brokenResult.success && brokenResult.value;
     in
-    if nameResult.success && !isBroken then
+    if derivResult.success && derivResult.value then
       let
-        versionResult = tryEval (drv.version or "");
-        outputsResult = tryEval drv.outputs;
-        outputNameResult = tryEval drv.outputName;
-        descResult = tryEval (drv.meta.description or null);
-        longDescResult = tryEval (drv.meta.longDescription or null);
-        licenseResult = tryEval (drv.meta.license or null);
+        nameResult = tryEval drv.name;
+        brokenResult = tryEval (drv.meta.broken or false);
+        isBroken = brokenResult.success && brokenResult.value;
       in
-      {
-        name = nameResult.value;
-        version = if versionResult.success then versionResult.value else "";
-        outputs = if outputsResult.success then outputsResult.value else [ "out" ];
-        default_output = if outputNameResult.success then outputNameResult.value else "out";
-      }
-      // optionalAttrs (descResult.success && descResult.value != null) {
-        description = descResult.value;
-      }
-      // optionalAttrs (longDescResult.success && longDescResult.value != null) {
-        longDescription = longDescResult.value;
-      }
-      // optionalAttrs (licenseResult.success && licenseResult.value != null) {
-        license = licenseResult.value;
-      }
+      if nameResult.success && !isBroken then
+        let
+          versionResult = tryEval (drv.version or "");
+          outputsResult = tryEval drv.outputs;
+          outputNameResult = tryEval drv.outputName;
+          metaDynamic = evalMetaDynamic (drv.meta or { });
+        in
+        {
+          name = nameResult.value;
+          version = if versionResult.success then versionResult.value else "";
+          outputs = if outputsResult.success then outputsResult.value else [ "out" ];
+          default_output = if outputNameResult.success then outputNameResult.value else "out";
+          eval_status = "passing";
+        }
+        // metaDynamic
+      else if isBroken then
+        let
+          versionResult = tryEval (drv.version or "");
+          outputsResult = tryEval drv.outputs;
+          outputNameResult = tryEval drv.outputName;
+          descResult = tryEval (drv.meta.description or null);
+        in
+        {
+          name = if nameResult.success then nameResult.value else drv.pname or "unnamed";
+          version = if versionResult.success then versionResult.value else "";
+          outputs = if outputsResult.success then outputsResult.value else [ "out" ];
+          default_output = if outputNameResult.success then outputNameResult.value else "out";
+          eval_status = "failing";
+          reasons = [ "marked_broken" ];
+        }
+        // optionalAttrs (descResult.success && descResult.value != null) {
+          description = descResult.value;
+        }
+      else if !nameResult.success then
+        {
+          name = drv.pname or "unnamed";
+          eval_status = "failing";
+          reasons = [ "eval_failure" ];
+        }
+      else
+        null
     else
       null;
 
@@ -135,12 +170,20 @@ let
             )
           ]
         else
-          [ ]
+          [
+            {
+              entry_type = "package";
+              inherit attribute_name system;
+              eval_status = "failing";
+              reasons = [ "eval_failure" ];
+            }
+          ]
       else
         [
           {
             entry_type = "package";
             inherit attribute_name system;
+            eval_status = "passing";
           }
         ]
     else if isAttrs val && (val.recurseForDerivations or false) then
@@ -186,7 +229,8 @@ let
             let
               res = tryEval (
                 let
-                  rawVal = attrByPath (splitString "." attribute_name) null (resolved.${schemaKey}.${system} or { });
+                  rawVal =
+                    attrByPath (splitString "." attribute_name) null (resolved.${schemaKey}.${system} or { });
                   val = findFirst (x: x != null) rawVal [
                     (itemNode.value or null)
                     (itemNode.derivation or null)
@@ -198,21 +242,20 @@ let
                   binPath = if binPathRes.success then binPathRes.value else null;
                 in
                 if entryType == "app" then
-                  if binPathRes.success then
-                    [
-                      (
-                        {
-                          entry_type = "app";
-                          inherit attribute_name system;
-                        }
-                        // optionalAttrs (binPath != null) { bin = binPath; }
-                        // optionalAttrs (itemNode ? type || (isAttrs val && val ? type)) {
-                          type = itemNode.type or (if isAttrs val then val.type or "app" else "app");
-                        }
-                      )
-                    ]
-                  else
-                    [ ]
+                  [
+                    (
+                      {
+                        entry_type = "app";
+                        inherit attribute_name system;
+                        eval_status = if binPathRes.success then "passing" else "failing";
+                      }
+                      // optionalAttrs binPathRes.success { bin = binPath; }
+                      // optionalAttrs (!binPathRes.success) { reasons = [ "eval_failure" ]; }
+                      // optionalAttrs (itemNode ? type || (isAttrs val && val ? type)) {
+                        type = itemNode.type or (if isAttrs val then val.type or "app" else "app");
+                      }
+                    )
+                  ]
                 else
                   evalPackageOrSet system attribute_name val
               );
@@ -473,24 +516,75 @@ let
               in
               if meta != null then firstEntry // meta else firstEntry;
 
-          rawPlatforms = unique (map (e: e.system) entries);
           targetOrder = [
             "x86_64-linux"
             "x86_64-darwin"
             "aarch64-linux"
             "aarch64-darwin"
           ];
+
+          passingEntries = filter (e: (e.eval_status or "passing") == "passing") entries;
+          failingEntries = filter (e: (e.eval_status or "passing") == "failing") entries;
+
+          rawPlatforms = unique (map (e: e.system) passingEntries);
           platforms =
             (filter (x: elem x rawPlatforms) targetOrder) ++ (filter (x: !(elem x targetOrder)) rawPlatforms);
+
+          hasPassing = passingEntries != [ ];
+          hasFailing = failingEntries != [ ];
+
+          overallStatus =
+            if hasPassing && hasFailing then
+              "partial"
+            else if hasFailing then
+              "failing"
+            else
+              "passing";
+
+          platformStatus =
+            if overallStatus == "partial" then
+              listToAttrs (
+                map (s: {
+                  name = s;
+                  value =
+                    let
+                      matching = findFirst (e: e.system == s) null entries;
+                    in
+                    if matching != null && (matching.eval_status or "passing") == "failing" then
+                      {
+                        status = "failing";
+                        reason = head (matching.reasons or [ "eval_failure" ]);
+                      }
+                    else if matching != null then
+                      { status = "passing"; }
+                    else
+                      {
+                        status = "failing";
+                        reason = "eval_failure";
+                      };
+                }) targetOrder
+              )
+            else
+              null;
         in
         # A package that never evaluated on any system carries no `name`, which
         # `FlakeEntry::Package` requires -- keeping it fails deserialization for
         # the entire flake. Apps have no `name` by design, so this is restricted
         # to packages. Dropped by `collectSystemEntries`.
-        if (firstWithMeta.entry_type or null) == "package" && !(firstWithMeta ? name) then
+        if (firstWithMeta.entry_type or null) == "package" && !(firstWithMeta ? name) && overallStatus != "failing" then
           null
         else
-          removeAttrs (firstWithMeta // { inherit platforms; }) [ "system" ];
+          removeAttrs (
+            firstWithMeta
+            // {
+              inherit platforms;
+              eval_status = overallStatus;
+            }
+            // optionalAttrs (platformStatus != null) { platform_status = platformStatus; }
+            // optionalAttrs (overallStatus == "failing" && firstWithMeta ? reasons) {
+              reasons = firstWithMeta.reasons;
+            }
+          ) [ "system" ];
     in
     mapAttrs mergeEntry grouped;
 
