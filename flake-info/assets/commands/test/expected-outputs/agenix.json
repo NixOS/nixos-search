@@ -1,49 +1,5 @@
 [
   {
-    "attribute_name": "agenix",
-    "default_output": "out",
-    "description": "age-encrypted secrets for NixOS",
-    "entry_type": "package",
-    "name": "agenix-0.15.0",
-    "outputs": ["out"],
-    "platforms": [
-      "x86_64-linux",
-      "x86_64-darwin",
-      "aarch64-linux",
-      "aarch64-darwin"
-    ],
-    "version": "0.15.0"
-  },
-  {
-    "attribute_name": "default",
-    "default_output": "out",
-    "description": "age-encrypted secrets for NixOS",
-    "entry_type": "package",
-    "name": "agenix-0.15.0",
-    "outputs": ["out"],
-    "platforms": [
-      "x86_64-linux",
-      "x86_64-darwin",
-      "aarch64-linux",
-      "aarch64-darwin"
-    ],
-    "version": "0.15.0"
-  },
-  {
-    "attribute_name": "doc",
-    "default_output": "out",
-    "entry_type": "package",
-    "name": "agenix-doc",
-    "outputs": ["out"],
-    "platforms": [
-      "x86_64-linux",
-      "x86_64-darwin",
-      "aarch64-linux",
-      "aarch64-darwin"
-    ],
-    "version": ""
-  },
-  {
     "declarations": ["modules/age.nix"],
     "default": {
       "_type": "literalExpression",
@@ -270,5 +226,55 @@
     "readOnly": false,
     "type": "string (with check: non-empty without trailing slash)",
     "visible": true
+  },
+  {
+    "attribute_name": "agenix",
+    "default_output": "out",
+    "description": "age-encrypted secrets for NixOS",
+    "entry_type": "package",
+    "name": "agenix-0.15.0",
+    "outputs": ["out"],
+    "outputsToInstall": ["out"],
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "aarch64-linux",
+      "aarch64-darwin"
+    ],
+    "position": "pkgs/agenix.nix:65",
+    "version": "0.15.0"
+  },
+  {
+    "attribute_name": "default",
+    "default_output": "out",
+    "description": "age-encrypted secrets for NixOS",
+    "entry_type": "package",
+    "name": "agenix-0.15.0",
+    "outputs": ["out"],
+    "outputsToInstall": ["out"],
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "aarch64-linux",
+      "aarch64-darwin"
+    ],
+    "position": "pkgs/agenix.nix:65",
+    "version": "0.15.0"
+  },
+  {
+    "attribute_name": "doc",
+    "default_output": "out",
+    "entry_type": "package",
+    "name": "agenix-doc",
+    "outputs": ["out"],
+    "outputsToInstall": ["out"],
+    "platforms": [
+      "x86_64-linux",
+      "x86_64-darwin",
+      "aarch64-linux",
+      "aarch64-darwin"
+    ],
+    "position": "pkgs/doc.nix:7",
+    "version": ""
   }
 ]

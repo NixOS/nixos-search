@@ -22,6 +22,7 @@ let
     isDerivation
     isFunction
     isList
+    isString
     listToAttrs
     mapAttrs
     mapAttrsToList
@@ -55,6 +56,23 @@ let
   # For other systems, we only check attribute names to avoid redundant evaluation
   referenceSystem = "x86_64-linux";
 
+  sanitizePosition =
+    pos:
+    if isString pos && hasPrefix "${toString resolved}/" pos then
+      removePrefix "${toString resolved}/" pos
+    else if isString pos && hasPrefix "${builtins.storeDir}/" pos then
+      let
+        parts = splitString "/" (removePrefix "${builtins.storeDir}/" pos);
+      in
+      concatStringsSep "/" (tail parts)
+    else
+      pos;
+
+  ignoredMetaKeys = [
+    "available"
+    "maintainersPosition"
+  ];
+
   evalMetaDynamic =
     meta:
     let
@@ -65,18 +83,26 @@ let
         concatLists (
           map (
             key:
-            let
-              valRes = tryEval meta.${key};
-            in
-            if valRes.success && valRes.value != null then
-              [
-                {
-                  name = key;
-                  value = valRes.value;
-                }
-              ]
-            else
+            if elem key ignoredMetaKeys then
               [ ]
+            else
+              let
+                valRes = tryEval meta.${key};
+              in
+              if valRes.success && valRes.value != null then
+                if builtins.isBool valRes.value && !valRes.value then
+                  [ ]
+                else if isList valRes.value && valRes.value == [ ] then
+                  [ ]
+                else
+                  [
+                    {
+                      name = key;
+                      value = if key == "position" then sanitizePosition valRes.value else valRes.value;
+                    }
+                  ]
+              else
+                [ ]
           ) namesRes.value
         )
       )
@@ -106,7 +132,6 @@ let
           version = if versionResult.success then versionResult.value else "";
           outputs = if outputsResult.success then outputsResult.value else [ "out" ];
           default_output = if outputNameResult.success then outputNameResult.value else "out";
-          eval_status = "passing";
         }
         // metaDynamic
       else if isBroken then
@@ -179,12 +204,19 @@ let
             }
           ]
       else
+        let
+          brokenResult = tryEval (val.meta.broken or false);
+          isBroken = brokenResult.success && brokenResult.value;
+        in
         [
-          {
-            entry_type = "package";
-            inherit attribute_name system;
-            eval_status = "passing";
-          }
+          (
+            {
+              entry_type = "package";
+              inherit attribute_name system;
+              eval_status = if isBroken then "failing" else "passing";
+            }
+            // optionalAttrs isBroken { reasons = [ "marked_broken" ]; }
+          )
         ]
     else if isAttrs val && (val.recurseForDerivations or false) then
       let
@@ -229,8 +261,7 @@ let
             let
               res = tryEval (
                 let
-                  rawVal =
-                    attrByPath (splitString "." attribute_name) null (resolved.${schemaKey}.${system} or { });
+                  rawVal = attrByPath (splitString "." attribute_name) null (resolved.${schemaKey}.${system} or { });
                   val = findFirst (x: x != null) rawVal [
                     (itemNode.value or null)
                     (itemNode.derivation or null)
@@ -571,15 +602,19 @@ let
         # `FlakeEntry::Package` requires -- keeping it fails deserialization for
         # the entire flake. Apps have no `name` by design, so this is restricted
         # to packages. Dropped by `collectSystemEntries`.
-        if (firstWithMeta.entry_type or null) == "package" && !(firstWithMeta ? name) && overallStatus != "failing" then
+        if
+          (firstWithMeta.entry_type or null) == "package"
+          && !(firstWithMeta ? name)
+          && overallStatus != "failing"
+        then
           null
         else
           removeAttrs (
             firstWithMeta
             // {
               inherit platforms;
-              eval_status = overallStatus;
             }
+            // optionalAttrs (overallStatus != "passing") { eval_status = overallStatus; }
             // optionalAttrs (platformStatus != null) { platform_status = platformStatus; }
             // optionalAttrs (overallStatus == "failing" && firstWithMeta ? reasons) {
               reasons = firstWithMeta.reasons;

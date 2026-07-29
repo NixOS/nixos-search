@@ -1,7 +1,7 @@
 [
   {
     "attribute_name": "app-hello",
-    "bin": "/nix/store/sqw9kyl8zrfnkklb3vp6gji9jw9qfgb5-hello-2.12.2/bin/hello",
+    "bin": "hello-2.12.2/bin/hello",
     "entry_type": "app",
     "eval_status": "passing",
     "platforms": [
@@ -20,12 +20,7 @@
     "eval_status": "failing",
     "name": "broken-package-1.0.0",
     "outputs": ["out"],
-    "platforms": [
-      "x86_64-linux",
-      "x86_64-darwin",
-      "aarch64-linux",
-      "aarch64-darwin"
-    ],
+    "platforms": [],
     "reasons": ["marked_broken"],
     "version": "1.0.0"
   },
@@ -35,16 +30,43 @@
     "default_output": "out",
     "description": "Package with custom metadata",
     "entry_type": "package",
-    "eval_status": "passing",
+    "identifiers": {
+      "cpeParts": {
+        "edition": "*",
+        "language": "*",
+        "other": "*",
+        "part": "a",
+        "product": "custom-meta-package",
+        "sw_edition": "*",
+        "target_hw": "*",
+        "target_sw": "*"
+      },
+      "possibleCPEs": [],
+      "v1": {
+        "cpeParts": {
+          "edition": "*",
+          "language": "*",
+          "other": "*",
+          "part": "a",
+          "product": "custom-meta-package",
+          "sw_edition": "*",
+          "target_hw": "*",
+          "target_sw": "*"
+        },
+        "possibleCPEs": []
+      }
+    },
     "mainProgram": "custom-binary",
     "name": "custom-meta-package-2.0.0",
     "outputs": ["out"],
+    "outputsToInstall": ["out"],
     "platforms": [
       "x86_64-linux",
       "x86_64-darwin",
       "aarch64-linux",
       "aarch64-darwin"
     ],
+    "position": "flake.nix:54",
     "version": "2.0.0"
   },
   {
@@ -52,9 +74,36 @@
     "default_output": "out",
     "entry_type": "package",
     "eval_status": "passing",
+    "identifiers": {
+      "cpeParts": {
+        "edition": "*",
+        "language": "*",
+        "other": "*",
+        "part": "a",
+        "sw_edition": "*",
+        "target_hw": "*",
+        "target_sw": "*"
+      },
+      "possibleCPEs": [],
+      "v1": {
+        "cpeParts": {
+          "edition": "*",
+          "language": "*",
+          "other": "*",
+          "part": "a",
+          "sw_edition": "*",
+          "target_hw": "*",
+          "target_sw": "*"
+        },
+        "possibleCPEs": []
+      }
+    },
+    "mainProgram": "darwin-test",
     "name": "darwin-test",
     "outputs": ["out"],
+    "outputsToInstall": ["out"],
     "platforms": ["x86_64-darwin", "aarch64-darwin"],
+    "position": "pkgs/build-support/trivial-builders/default.nix:80",
     "version": ""
   },
   {
@@ -62,67 +111,182 @@
     "default_output": "out",
     "description": "Package with one broken meta key",
     "entry_type": "package",
-    "eval_status": "passing",
+    "identifiers": {
+      "cpeParts": {
+        "edition": "*",
+        "language": "*",
+        "other": "*",
+        "part": "a",
+        "product": "field-throwing-package",
+        "sw_edition": "*",
+        "target_hw": "*",
+        "target_sw": "*"
+      },
+      "possibleCPEs": [],
+      "v1": {
+        "cpeParts": {
+          "edition": "*",
+          "language": "*",
+          "other": "*",
+          "part": "a",
+          "product": "field-throwing-package",
+          "sw_edition": "*",
+          "target_hw": "*",
+          "target_sw": "*"
+        },
+        "possibleCPEs": []
+      }
+    },
     "name": "field-throwing-package-1.0.0",
     "outputs": ["out"],
+    "outputsToInstall": ["out"],
     "platforms": [
       "x86_64-linux",
       "x86_64-darwin",
       "aarch64-linux",
       "aarch64-darwin"
     ],
+    "position": "flake.nix:67",
     "version": "1.0.0"
   },
   {
     "attribute_name": "hello",
     "default_output": "out",
     "entry_type": "package",
-    "eval_status": "passing",
+    "identifiers": {
+      "cpeParts": {
+        "edition": "*",
+        "language": "*",
+        "other": "*",
+        "part": "a",
+        "sw_edition": "*",
+        "target_hw": "*",
+        "target_sw": "*"
+      },
+      "possibleCPEs": [],
+      "v1": {
+        "cpeParts": {
+          "edition": "*",
+          "language": "*",
+          "other": "*",
+          "part": "a",
+          "sw_edition": "*",
+          "target_hw": "*",
+          "target_sw": "*"
+        },
+        "possibleCPEs": []
+      }
+    },
+    "mainProgram": "hello",
     "name": "hello",
     "outputs": ["out"],
+    "outputsToInstall": ["out"],
     "platforms": [
       "x86_64-linux",
       "x86_64-darwin",
       "aarch64-linux",
       "aarch64-darwin"
     ],
+    "position": "pkgs/build-support/trivial-builders/default.nix:80",
     "version": ""
   },
   {
     "attribute_name": "linux-specific",
     "default_output": "out",
     "entry_type": "package",
-    "eval_status": "passing",
+    "identifiers": {
+      "cpeParts": {
+        "edition": "*",
+        "language": "*",
+        "other": "*",
+        "part": "a",
+        "sw_edition": "*",
+        "target_hw": "*",
+        "target_sw": "*"
+      },
+      "possibleCPEs": [],
+      "v1": {
+        "cpeParts": {
+          "edition": "*",
+          "language": "*",
+          "other": "*",
+          "part": "a",
+          "sw_edition": "*",
+          "target_hw": "*",
+          "target_sw": "*"
+        },
+        "possibleCPEs": []
+      }
+    },
+    "mainProgram": "linux-test",
     "name": "linux-test",
     "outputs": ["out"],
+    "outputsToInstall": ["out"],
     "platforms": ["x86_64-linux", "aarch64-linux"],
+    "position": "pkgs/build-support/trivial-builders/default.nix:80",
     "version": ""
   },
   {
     "attribute_name": "nestedSet.nested-package",
     "default_output": "out",
     "entry_type": "package",
-    "eval_status": "passing",
+    "identifiers": {
+      "cpeParts": {
+        "edition": "*",
+        "language": "*",
+        "other": "*",
+        "part": "a",
+        "sw_edition": "*",
+        "target_hw": "*",
+        "target_sw": "*"
+      },
+      "possibleCPEs": [],
+      "v1": {
+        "cpeParts": {
+          "edition": "*",
+          "language": "*",
+          "other": "*",
+          "part": "a",
+          "sw_edition": "*",
+          "target_hw": "*",
+          "target_sw": "*"
+        },
+        "possibleCPEs": []
+      }
+    },
+    "mainProgram": "nested-package",
     "name": "nested-package",
     "outputs": ["out"],
+    "outputsToInstall": ["out"],
     "platforms": [
       "x86_64-linux",
       "x86_64-darwin",
       "aarch64-linux",
       "aarch64-darwin"
     ],
+    "position": "pkgs/build-support/trivial-builders/default.nix:80",
     "version": ""
   },
   {
     "attribute_name": "partly-throwing-app",
-    "bin": "/nix/store/sqw9kyl8zrfnkklb3vp6gji9jw9qfgb5-hello-2.12.2/bin/hello",
+    "bin": "hello-2.12.2/bin/hello",
     "entry_type": "app",
     "eval_status": "partial",
     "platform_status": {
-      "aarch64-darwin": { "reason": "eval_failure", "status": "failing" },
-      "aarch64-linux": { "status": "passing" },
-      "x86_64-darwin": { "reason": "eval_failure", "status": "failing" },
-      "x86_64-linux": { "status": "passing" }
+      "aarch64-darwin": {
+        "reason": "eval_failure",
+        "status": "failing"
+      },
+      "aarch64-linux": {
+        "status": "passing"
+      },
+      "x86_64-darwin": {
+        "reason": "eval_failure",
+        "status": "failing"
+      },
+      "x86_64-linux": {
+        "status": "passing"
+      }
     },
     "platforms": ["x86_64-linux", "aarch64-linux"],
     "type": "app"
@@ -132,7 +296,32 @@
     "default_output": "out",
     "description": "A test package",
     "entry_type": "package",
-    "eval_status": "passing",
+    "identifiers": {
+      "cpeParts": {
+        "edition": "*",
+        "language": "*",
+        "other": "*",
+        "part": "a",
+        "product": "test-package",
+        "sw_edition": "*",
+        "target_hw": "*",
+        "target_sw": "*"
+      },
+      "possibleCPEs": [],
+      "v1": {
+        "cpeParts": {
+          "edition": "*",
+          "language": "*",
+          "other": "*",
+          "part": "a",
+          "product": "test-package",
+          "sw_edition": "*",
+          "target_hw": "*",
+          "target_sw": "*"
+        },
+        "possibleCPEs": []
+      }
+    },
     "license": {
       "deprecated": false,
       "free": true,
@@ -145,25 +334,45 @@
     "longDescription": "This is a longer description for testing",
     "name": "test-package-1.2.3",
     "outputs": ["out"],
+    "outputsToInstall": ["out"],
     "platforms": [
       "x86_64-linux",
       "x86_64-darwin",
       "aarch64-linux",
       "aarch64-darwin"
     ],
+    "position": "flake.nix:41",
     "version": "1.2.3"
   },
   {
     "attribute_name": "throwing-app",
     "entry_type": "app",
     "eval_status": "failing",
+    "platforms": [],
     "reasons": ["eval_failure"],
     "type": "app"
   },
   {
     "attribute_name": "throwing-package",
     "entry_type": "package",
-    "eval_status": "failing",
+    "eval_status": "partial",
+    "name": "unnamed",
+    "platform_status": {
+      "aarch64-darwin": {
+        "status": "passing"
+      },
+      "aarch64-linux": {
+        "status": "passing"
+      },
+      "x86_64-darwin": {
+        "status": "passing"
+      },
+      "x86_64-linux": {
+        "reason": "eval_failure",
+        "status": "failing"
+      }
+    },
+    "platforms": ["x86_64-darwin", "aarch64-linux", "aarch64-darwin"],
     "reasons": ["eval_failure"]
   }
 ]

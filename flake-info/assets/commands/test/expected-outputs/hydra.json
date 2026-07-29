@@ -6,7 +6,9 @@
     "entry_type": "package",
     "name": "hydra-0.1.20251106.241ab71",
     "outputs": ["out", "doc"],
+    "outputsToInstall": ["out"],
     "platforms": ["x86_64-linux", "aarch64-linux"],
+    "position": "package.nix:280",
     "version": "0.1.20251106.241ab71"
   },
   {
@@ -16,7 +18,9 @@
     "entry_type": "package",
     "name": "hydra-0.1.20251106.241ab71",
     "outputs": ["out", "doc"],
+    "outputsToInstall": ["out"],
     "platforms": ["x86_64-linux", "aarch64-linux"],
+    "position": "package.nix:280",
     "version": "0.1.20251106.241ab71"
   },
   {
@@ -24,6 +28,7 @@
     "default_output": "out",
     "description": "Hydra's builtin hydra-eval-jobs as a standalone",
     "entry_type": "package",
+    "homepage": "https://github.com/nix-community/nix-eval-jobs",
     "license": {
       "deprecated": true,
       "free": true,
@@ -33,9 +38,27 @@
       "spdxId": "GPL-3.0",
       "url": "https://spdx.org/licenses/GPL-3.0.html"
     },
+    "maintainers": [
+      {
+        "email": "adisbladis@gmail.com",
+        "github": "adisbladis",
+        "githubId": 63286,
+        "matrix": "@adis:blad.is",
+        "name": "Adam Hose"
+      },
+      {
+        "email": "joerg@thalheim.io",
+        "github": "Mic92",
+        "githubId": 96200,
+        "matrix": "@joerg:thalheim.io",
+        "name": "Jörg Thalheim"
+      }
+    ],
     "name": "nix-eval-jobs-2.32.1",
     "outputs": ["out"],
+    "outputsToInstall": ["out"],
     "platforms": ["x86_64-linux", "aarch64-linux"],
+    "position": "default.nix:50",
     "version": "2.32.1"
   },
   {
@@ -86,7 +109,10 @@
   },
   {
     "declarations": ["nixos-modules/hydra.nix"],
-    "default": { "_type": "literalExpression", "text": "false" },
+    "default": {
+      "_type": "literalExpression",
+      "text": "false"
+    },
     "description": "Whether to run the server in debug mode.",
     "entry_type": "option",
     "flake": [
@@ -102,7 +128,10 @@
   },
   {
     "declarations": ["nixos-modules/hydra.nix"],
-    "default": { "_type": "literalExpression", "text": "false" },
+    "default": {
+      "_type": "literalExpression",
+      "text": "false"
+    },
     "description": "Whether to run Hydra services.\n",
     "entry_type": "option",
     "flake": [
@@ -133,7 +162,10 @@
   },
   {
     "declarations": ["nixos-modules/hydra.nix"],
-    "default": { "_type": "literalExpression", "text": "{ }" },
+    "default": {
+      "_type": "literalExpression",
+      "text": "{ }"
+    },
     "description": "Extra environment variables for Hydra.",
     "entry_type": "option",
     "flake": [
@@ -183,10 +215,16 @@
   },
   {
     "declarations": ["nixos-modules/hydra.nix"],
-    "default": { "_type": "literalExpression", "text": "\"*\"" },
+    "default": {
+      "_type": "literalExpression",
+      "text": "\"*\""
+    },
     "description": "The hostname or address to listen on or <literal>*</literal> to listen\non all interfaces.\n",
     "entry_type": "option",
-    "example": { "_type": "literalExpression", "text": "\"localhost\"" },
+    "example": {
+      "_type": "literalExpression",
+      "text": "\"localhost\""
+    },
     "flake": [
       "github:NixOS/hydra/241ab718002ca5740b7e3f659d0fbd483ab40523",
       "hydra"
@@ -200,7 +238,10 @@
   },
   {
     "declarations": ["nixos-modules/hydra.nix"],
-    "default": { "_type": "literalExpression", "text": "null" },
+    "default": {
+      "_type": "literalExpression",
+      "text": "null"
+    },
     "description": "Path to a file containing the logo of your Hydra instance.\n",
     "entry_type": "option",
     "flake": [
@@ -216,7 +257,10 @@
   },
   {
     "declarations": ["nixos-modules/hydra.nix"],
-    "default": { "_type": "literalExpression", "text": "0" },
+    "default": {
+      "_type": "literalExpression",
+      "text": "0"
+    },
     "description": "Threshold of minimum disk space (GiB) to determine if the queue runner should run or not.\n",
     "entry_type": "option",
     "flake": [
@@ -232,7 +276,10 @@
   },
   {
     "declarations": ["nixos-modules/hydra.nix"],
-    "default": { "_type": "literalExpression", "text": "0" },
+    "default": {
+      "_type": "literalExpression",
+      "text": "0"
+    },
     "description": "Threshold of minimum disk space (GiB) to determine if the evaluator should run or not.\n",
     "entry_type": "option",
     "flake": [
@@ -278,7 +325,10 @@
   },
   {
     "declarations": ["nixos-modules/hydra.nix"],
-    "default": { "_type": "literalExpression", "text": "3000" },
+    "default": {
+      "_type": "literalExpression",
+      "text": "3000"
+    },
     "description": "TCP port the web server should listen to.\n",
     "entry_type": "option",
     "flake": [
@@ -294,7 +344,10 @@
   },
   {
     "declarations": ["nixos-modules/hydra.nix"],
-    "default": { "_type": "literalExpression", "text": "null" },
+    "default": {
+      "_type": "literalExpression",
+      "text": "null"
+    },
     "description": "Hostname of the SMTP server to use to send email.\n",
     "entry_type": "option",
     "example": {
@@ -314,7 +367,10 @@
   },
   {
     "declarations": ["nixos-modules/hydra.nix"],
-    "default": { "_type": "literalExpression", "text": "\"\"" },
+    "default": {
+      "_type": "literalExpression",
+      "text": "\"\""
+    },
     "description": "Piece of HTML that is included on all pages.\n",
     "entry_type": "option",
     "flake": [
@@ -330,7 +386,10 @@
   },
   {
     "declarations": ["nixos-modules/hydra.nix"],
-    "default": { "_type": "literalExpression", "text": "false" },
+    "default": {
+      "_type": "literalExpression",
+      "text": "false"
+    },
     "description": "Whether to use binary caches for downloading store paths. Note that\nbinary substitutions trigger (a potentially large number of) additional\nHTTP requests that slow down the queue monitor thread significantly.\nAlso, this Hydra instance will serve those downloaded store paths to\nits users with its own signature attached as if it had built them\nitself, so don't enable this feature unless your active binary caches\nare absolute trustworthy.\n",
     "entry_type": "option",
     "flake": [
