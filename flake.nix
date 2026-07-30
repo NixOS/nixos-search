@@ -187,16 +187,9 @@
           checks = namaka.lib.load {
             src = ./flake-info/assets/commands/test;
             inputs = {
-              evalTarget =
-                targetFlake:
-                {
-                  expr = lib.listToAttrs (
-                    map (e: {
-                      name = e.attribute_name or e.name;
-                      value = e;
-                    }) (inputs.self.lib.evalFlake { inherit targetFlake; }).all
-                  );
-                };
+              evalTarget = targetFlake: {
+                expr = (inputs.self.lib.evalFlake { inherit targetFlake; }).outputs;
+              };
             };
           };
 

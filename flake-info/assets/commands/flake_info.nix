@@ -15,6 +15,9 @@ let
     elemAt
     filter
     findFirst
+    foldl'
+    fromJSON
+    genAttrs'
     groupBy
     hasPrefix
     head
@@ -28,18 +31,22 @@ let
     mapAttrsToList
     match
     mkForce
+    nameValuePair
     naturalSort
     optionAttrSetToDocList
     optionalAttrs
     optionals
     partition
     pathExists
+    recursiveUpdate
     removePrefix
+    setAttrByPath
     splitString
     tail
     toJSON
     tryEval
     unique
+    unsafeDiscardStringContext
     zipAttrsWith
     ;
 
@@ -188,18 +195,19 @@ let
           [
             (
               {
-                entry_type = "package";
+                what = "package";
                 inherit attribute_name system;
+                forSystems = [ system ];
               }
               // meta
+              // optionalAttrs (meta ? description) { shortDescription = meta.description; }
             )
           ]
         else
           [
             {
-              entry_type = "package";
+              what = "package";
               inherit attribute_name system;
-              eval_status = "failing";
               reasons = [ "eval_failure" ];
             }
           ]
@@ -211,9 +219,8 @@ let
         [
           (
             {
-              entry_type = "package";
+              what = "package";
               inherit attribute_name system;
-              eval_status = if isBroken then "failing" else "passing";
             }
             // optionalAttrs isBroken { reasons = [ "marked_broken" ]; }
           )
@@ -243,16 +250,18 @@ let
     else
       [ ];
 
-  # Extract package and app entries using schema inventory functions
+  toAttrTree =
+    list:
+    foldl' recursiveUpdate { } (
+      map (e: setAttrByPath (splitString "." (e.attribute_name or e.name)) e) list
+    );
+
   readSchemaItems =
     schemaKey: entryType:
     concatLists (
       mapAttrsToList (
         system: sysNode:
         let
-          # Forcing the per-system inventory node evaluates the flake's whole
-          # output set for that system, which throws for e.g. a system nixpkgs
-          # no longer supports. Skip that system rather than the whole flake.
           childrenResult = tryEval (sysNode.children or { });
         in
         concatLists (
@@ -276,9 +285,11 @@ let
                   [
                     (
                       {
-                        entry_type = "app";
+                        what = "app";
                         inherit attribute_name system;
-                        eval_status = if binPathRes.success then "passing" else "failing";
+                        forSystems = [ system ];
+                        shortDescription =
+                          itemNode.shortDescription or (if isAttrs val then val.meta.description or "" else "");
                       }
                       // optionalAttrs binPathRes.success { bin = binPath; }
                       // optionalAttrs (!binPathRes.success) { reasons = [ "eval_failure" ]; }
@@ -296,6 +307,57 @@ let
         )
       ) (getSchemaInventory schemaKey)
     );
+
+  readSchemaItemsPerSystem =
+    schemaKey: entryType:
+    mapAttrs (
+      system: sysNode:
+      let
+        childrenResult = tryEval (sysNode.children or { });
+        items = concatLists (
+          mapAttrsToList (
+            attribute_name: itemNode:
+            let
+              res = tryEval (
+                let
+                  rawVal = attrByPath (splitString "." attribute_name) null (resolved.${schemaKey}.${system} or { });
+                  val = findFirst (x: x != null) rawVal [
+                    (itemNode.value or null)
+                    (itemNode.derivation or null)
+                    (itemNode.app or null)
+                  ];
+                  binPathRes = tryEval (
+                    itemNode.program or (if isAttrs val then (val.program or val.outPath or null) else null)
+                  );
+                  binPath = if binPathRes.success then sanitizeBinPath binPathRes.value else null;
+                in
+                if entryType == "app" then
+                  [
+                    (
+                      {
+                        what = "app";
+                        inherit attribute_name system;
+                        forSystems = [ system ];
+                        shortDescription =
+                          itemNode.shortDescription or (if isAttrs val then val.meta.description or "" else "");
+                      }
+                      // optionalAttrs binPathRes.success { bin = binPath; }
+                      // optionalAttrs (!binPathRes.success) { reasons = [ "eval_failure" ]; }
+                      // optionalAttrs (itemNode ? type || (isAttrs val && val ? type)) {
+                        type = itemNode.type or (if isAttrs val then val.type or "app" else "app");
+                      }
+                    )
+                  ]
+                else
+                  evalPackageOrSet system attribute_name val
+              );
+            in
+            if res.success then res.value else [ ]
+          ) (if childrenResult.success then childrenResult.value else { })
+        );
+      in
+      toAttrTree items
+    ) (getSchemaInventory schemaKey);
 
   legacyPackages' = readSchemaItems "legacyPackages" "package";
   packages' = readSchemaItems "packages" "package";
@@ -684,7 +746,7 @@ let
 
 in
 
-rec {
+let
   legacyPackages = collectSystemEntries "legacyPackages" legacyPackages';
   packages = collectSystemEntries "packages" packages';
   apps = collectSystemEntries "apps" apps';
@@ -696,19 +758,49 @@ rec {
     reader = readDarwinOptions;
   };
   home-manager-options = readOptionsIf {
-    # Require both `modules/modules.nix` and `modules/lib/stdlib-extended.nix`
-    # to avoid false positives. Other flakes (e.g. `nix-bitcoin`) ship a
-    # `modules/modules.nix` that is unrelated to home-manager; only
-    # home-manager itself also provides the `stdlib-extended.nix` helper
-    # that `readHomeManagerOptions` imports.
     cond =
       pathExists "${resolved}/modules/modules.nix"
       && pathExists "${resolved}/modules/lib/stdlib-extended.nix";
     reader = readHomeManagerOptions;
   };
-  all = map (entry: builtins.fromJSON (builtins.unsafeDiscardStringContext (toJSON entry))) (
-    legacyPackages ++ packages ++ apps ++ options
-  );
+
+  nixosModules = toAttrTree (map (e: e // { what = "nixos-module"; }) options);
+  darwinModules = toAttrTree (map (e: e // { what = "darwin-module"; }) darwin-options);
+  homeModules = toAttrTree (map (e: e // { what = "home-module"; }) home-manager-options);
+
+  allSchemas =
+    (flake-schemas.schemas or { })
+    // (resolved.schemas or resolved.exportedSchemas or { });
+
+  evalSchemaInventory =
+    schemaKey: schemaDef:
+    if resolved ? ${schemaKey} && schemaDef ? inventory then
+      let
+        invRes = tryEval (schemaDef.inventory resolved.${schemaKey});
+      in
+      if invRes.success && invRes.value ? children then
+        invRes.value.children
+      else
+        { }
+    else
+      { };
+
+  builtInOutputs = {
+    packages = readSchemaItemsPerSystem "packages" "package";
+    apps = readSchemaItemsPerSystem "apps" "app";
+    legacyPackages = readSchemaItemsPerSystem "legacyPackages" "package";
+    inherit nixosModules darwinModules homeModules;
+  };
+
+  dynamicOutputs = mapAttrs (
+    schemaKey: schemaDef:
+    if builtInOutputs ? ${schemaKey} then
+      builtInOutputs.${schemaKey}
+    else
+      evalSchemaInventory schemaKey schemaDef
+  ) allSchemas;
+
+  outputs = fromJSON (unsafeDiscardStringContext (toJSON dynamicOutputs));
 
   # Partition options into standard NixOS options and modular service options in a single pass
   nixpkgsOptionsPartition = partition isServiceOption nixpkgsAllOpts;
@@ -727,4 +819,12 @@ rec {
   nixos-package-services = zipAttrsWith (_: values: unique values) (
     map (opt: { ${opt.service_package} = opt.service_module; }) realServices
   );
+in
+{
+  inherit
+    outputs
+    nixos-options
+    nixos-services
+    nixos-package-services
+    ;
 }
