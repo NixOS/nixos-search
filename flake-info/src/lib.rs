@@ -55,6 +55,7 @@ pub fn process_nixpkgs(
     kind: &Kind,
     attribute: &Option<String>,
     packages_json_url: &Option<String>,
+    options_json_url: &Option<String>,
     repology_counts_file: &Option<PathBuf>,
 ) -> Result<Vec<Export>, anyhow::Error> {
     let drvs = if matches!(kind, Kind::All | Kind::Package) {
@@ -64,7 +65,7 @@ pub fn process_nixpkgs(
     };
 
     let mut options = if matches!(kind, Kind::All | Kind::Option) {
-        commands::get_nixpkgs_options(nixpkgs)?
+        commands::get_nixpkgs_options(nixpkgs, options_json_url)?
     } else {
         Vec::new()
     };

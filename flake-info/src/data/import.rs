@@ -544,7 +544,7 @@ where
 
 /// Deserializes an Option<T> by passing `null` along to T's deserializer instead
 /// of treating it as a missing field
-fn optional_field<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
+pub(crate) fn optional_field<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
 where
     D: Deserializer<'de>,
     T: Deserialize<'de>,

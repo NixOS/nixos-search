@@ -14,6 +14,36 @@ struct PackagesInfo {
     packages: HashMap<String, Package>,
 }
 
+fn fetch_channel_json<T: serde::de::DeserializeOwned>(
+    channel: &str,
+    filename: &str,
+    override_url: &Option<String>,
+) -> Result<T> {
+    let url = override_url
+        .clone()
+        .unwrap_or_else(|| format!("https://channels.nixos.org/nixos-{channel}/{filename}"));
+    log::info!("Fetching {filename} from {url}");
+
+    let fetch_bytes = async {
+        let res = reqwest::get(&url)
+            .await
+            .with_context(|| format!("Failed to download {url}"))?
+            .error_for_status()
+            .with_context(|| format!("HTTP error fetching {url}"))?;
+        res.bytes()
+            .await
+            .with_context(|| format!("Failed to read body from {url}"))
+    };
+
+    let bytes = if let Ok(handle) = tokio::runtime::Handle::try_current() {
+        tokio::task::block_in_place(|| handle.block_on(fetch_bytes))?
+    } else {
+        tokio::runtime::Runtime::new()?.block_on(fetch_bytes)?
+    };
+
+    serde_json::from_slice(&bytes).with_context(|| format!("Could not parse channel {filename}"))
+}
+
 pub fn get_nixpkgs_info(
     nixpkgs: &Source,
     attribute: &Option<String>,
@@ -28,24 +58,8 @@ pub fn get_nixpkgs_info(
         ),
     };
 
-    let url = packages_json_url.clone().unwrap_or_else(|| {
-        format!(
-            "https://channels.nixos.org/nixos-{}/packages.json.br",
-            nixpkgs.channel,
-        )
-    });
-    log::info!("Fetching packages from {}", url);
-
-    let response = reqwest::blocking::Client::new()
-        .get(&url)
-        .send()
-        .with_context(|| format!("Failed to download {}", url))?
-        .error_for_status()
-        .with_context(|| format!("HTTP error fetching {}", url))?;
-
-    let body = response.bytes()?;
     let info: PackagesInfo =
-        serde_json::from_slice(&body).with_context(|| "Could not parse channel packages.json")?;
+        fetch_channel_json(&nixpkgs.channel, "packages.json.br", packages_json_url)?;
 
     let attr_set: HashMap<String, Package> = match attribute {
         Some(prefix) => info
@@ -200,7 +214,49 @@ fn get_options_from_script(
     Ok(attr_set)
 }
 
-pub fn get_nixpkgs_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
+#[derive(Deserialize)]
+struct ChannelOption {
+    #[serde(default)]
+    declarations: Vec<String>,
+    description: Option<crate::data::import::DocString>,
+    #[serde(rename = "type")]
+    option_type: Option<String>,
+    #[serde(deserialize_with = "crate::data::import::optional_field", default)]
+    default: Option<crate::data::import::DocValue>,
+    #[serde(deserialize_with = "crate::data::import::optional_field", default)]
+    example: Option<crate::data::import::DocValue>,
+}
+
+pub fn get_nixpkgs_options(
+    nixpkgs: &Source,
+    options_json_url: &Option<String>,
+) -> Result<Vec<NixpkgsEntry>> {
+    if let Source::Nixpkgs(src) = nixpkgs {
+        if let Ok(raw_map) = fetch_channel_json::<HashMap<String, ChannelOption>>(
+            &src.channel,
+            "options.json.br",
+            options_json_url,
+        ) {
+            return Ok(raw_map
+                .into_iter()
+                .map(|(name, item)| {
+                    NixpkgsEntry::Option(NixOption {
+                        declarations: item.declarations,
+                        description: item.description,
+                        name,
+                        option_type: item.option_type,
+                        default: item.default,
+                        example: item.example,
+                        flake: None,
+                        service_package: None,
+                        service_module: None,
+                        service_packages: Vec::new(),
+                    })
+                })
+                .collect());
+        }
+    }
+
     let options = get_options_from_script(nixpkgs, "nixos-options", None)?;
     Ok(options.into_iter().map(NixpkgsEntry::Option).collect())
 }
