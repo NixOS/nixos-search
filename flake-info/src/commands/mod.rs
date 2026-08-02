@@ -21,7 +21,7 @@ use log::info;
 use std::path::PathBuf;
 
 lazy_static! {
-    static ref EXTRACT_SCRIPT: PathBuf = crate::DATADIR.join("commands/flake_info.nix");
+    static ref EXTRACT_SCRIPT: PathBuf = crate::DATADIR.join("commands/evalFlake.nix");
 }
 
 pub fn run_garbage_collection() -> Result<()> {
