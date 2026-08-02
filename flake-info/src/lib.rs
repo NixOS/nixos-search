@@ -70,29 +70,8 @@ pub fn process_nixpkgs(
         Vec::new()
     };
 
-    let mut services = if matches!(kind, Kind::All | Kind::ModularService) {
-        commands::get_nixpkgs_services(nixpkgs)?
-    } else {
-        Vec::new()
-    };
-
-    let mut hm_options = if matches!(kind, Kind::All | Kind::HomeManagerOption) {
-        commands::get_home_manager_options(nixpkgs)?
-    } else {
-        Vec::new()
-    };
-
-    let mut darwin_options = if matches!(kind, Kind::All | Kind::DarwinOption) {
-        commands::get_darwin_options(nixpkgs)?
-    } else {
-        Vec::new()
-    };
-
     let mut all = drvs;
     all.append(&mut options);
-    all.append(&mut services);
-    all.append(&mut hm_options);
-    all.append(&mut darwin_options);
 
     let exports = all
         .into_iter()

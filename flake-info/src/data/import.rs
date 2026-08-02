@@ -72,19 +72,6 @@ pub struct NixOption {
 
     /// If defined in a flake, contains defining flake and optionally a module
     pub flake: Option<ModulePath>,
-
-    /// For modular service options: the canonical package attrname providing this service
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub service_package: Option<String>,
-
-    /// For modular service options: the module name (e.g. "default")
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub service_module: Option<String>,
-
-    /// For modular service options: all packages that expose this same service
-    /// module (e.g. ["php", "php82", "php83", "php84", "php85"]).
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub service_packages: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -203,9 +190,6 @@ pub enum NixpkgsEntry {
         repology_repos: Option<u64>,
     },
     Option(NixOption),
-    Service(NixOption),
-    HomeManagerOption(NixOption),
-    DarwinOption(NixOption),
 }
 
 /// Most information about packages in nixpkgs is contained in the meta key
@@ -259,9 +243,6 @@ arg_enum! {
         App,
         Package,
         Option,
-        HomeManagerOption,
-        DarwinOption,
-        ModularService,
         All,
     }
 }
@@ -272,9 +253,6 @@ impl AsRef<str> for Kind {
             Kind::App => "apps",
             Kind::Package => "packages",
             Kind::Option => "options",
-            Kind::HomeManagerOption => "home-manager-options",
-            Kind::DarwinOption => "darwin-options",
-            Kind::ModularService => "services",
             Kind::All => "all",
         }
     }

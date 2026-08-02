@@ -173,21 +173,7 @@ lazy_static! {
                 "option_type": {"type": "keyword"},
                 "option_default": {"type": "text"},
                 "option_example": {"type": "text"},
-                "option_source": {"type": "keyword"},
-                // Modular service fields
-                "service_package": {
-                    "type": "keyword",
-                    "fields": {
-                        "edge": {"type": "text", "analyzer": "edge"}
-                    },
-                },
-                "service_module": {"type": "keyword"},
-                "service_packages": {
-                    "type": "keyword",
-                    "fields": {
-                        "edge": {"type": "text", "analyzer": "edge"}
-                    },
-                },
+                "option_source": {"type": "keyword"}
             }
         },
         "settings": {
@@ -589,8 +575,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_push() -> Result<(), Box<dyn std::error::Error>> {
-        let sources: Vec<data::Source> =
-            data::Source::read_sources_file(Path::new("./examples/examples.in.json"))?;
+        let sources: Vec<data::Source> = data::Source::read_sources_file(Path::new(
+            "./assets/commands/test/_fixtures/examples.in.json",
+        ))?;
 
         let exports = sources
             .iter()
