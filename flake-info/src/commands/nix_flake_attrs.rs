@@ -4,6 +4,8 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use std::path::PathBuf;
 
+const SELF_FLAKE_REF: &str = env!("SELF_FLAKE_REF");
+
 const ARGS: [&str; 4] = [
     "eval",
     "--json",
@@ -17,15 +19,16 @@ pub fn get_derivation_info<T: AsRef<str> + Display>(
     temp_store: bool,
     extra: &[String],
 ) -> Result<Vec<FlakeEntry>> {
+    let expr = format!(
+        "((builtins.getFlake \"{self}\").lib.evalFlake {{ targetFlake = \"{target}\"; }}).evalFlakeManifest",
+        self = SELF_FLAKE_REF,
+        target = flake_ref.as_ref(),
+    );
     let mut command = super::nix_eval_command(&ARGS);
     command
         .env
         .insert("NIXPKGS_ALLOW_UNSUPPORTED_SYSTEM".into(), "1".into());
-    if let Some(schemas_ref) = option_env!("FLAKE_SCHEMAS_REF") {
-        super::add_flake_arg(&mut command, "flake-schemas", schemas_ref);
-    }
-    command.add_args(["--argstr", "targetFlake", flake_ref.as_ref()].iter());
-    command.add_arg("evalFlakeManifest");
+    command.add_args(["--expr", &expr].iter());
     if temp_store {
         let temp_store_path = PathBuf::from("/tmp/flake-info-store");
         if !temp_store_path.exists() {

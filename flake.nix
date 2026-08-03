@@ -145,7 +145,7 @@
             default = packages.flake-info;
             flake-info = import ./flake-info {
               inherit pkgs;
-              inherit (inputs) flake-schemas;
+              inherit (inputs) self;
             };
             frontend = pkgs.callPackage ./frontend {
               inherit nixosChannels version;

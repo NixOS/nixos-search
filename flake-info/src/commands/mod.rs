@@ -13,13 +13,7 @@ pub use repology::{get_repology_repo_counts, load_repology_repo_counts};
 
 use anyhow::{Context, Result, anyhow};
 use command_run::{Command, LogTo, Output};
-use lazy_static::lazy_static;
 use log::info;
-use std::path::PathBuf;
-
-lazy_static! {
-    static ref EXTRACT_SCRIPT: PathBuf = crate::DATADIR.join("commands/evalFlake.nix");
-}
 
 pub fn run_garbage_collection() -> Result<()> {
     info!("Running nix garbage collection");
@@ -34,14 +28,8 @@ pub fn run_garbage_collection() -> Result<()> {
     Ok(())
 }
 
-pub fn add_flake_arg(command: &mut Command, name: &str, flake_ref: &str) {
-    let expr = format!("builtins.getFlake \"{}\"", flake_ref);
-    command.add_args(["--arg", name, &expr].iter());
-}
-
 pub fn nix_eval_command(args: &[&str]) -> Command {
     let mut command = Command::with_args("nix", args.iter());
-    command.add_arg_pair("-f", EXTRACT_SCRIPT.clone());
     command.enable_capture();
     command.log_to = LogTo::Log;
     command.log_output_on_error = true;

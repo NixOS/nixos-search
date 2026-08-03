@@ -1,21 +1,14 @@
 {
-  targetFlake ? null,
-  nixpkgsFlake ? builtins.getFlake "github:NixOS/nixpkgs",
-  flake-schemas ? builtins.getFlake "github:DeterminateSystems/flake-schemas",
+  targetFlake,
+  nixpkgsFlake,
+  flake-schemas,
 }:
 let
   lib = nixpkgsFlake.lib;
 
-  resolved =
-    if targetFlake == null then
-      null
-    else if lib.isAttrs targetFlake then
-      targetFlake
-    else
-      builtins.getFlake targetFlake;
+  resolved = if lib.isAttrs targetFlake then targetFlake else builtins.getFlake targetFlake;
 
-  allSchemas =
-    (flake-schemas.schemas or { }) // (resolved.schemas or resolved.exportedSchemas or { });
+  allSchemas = flake-schemas.schemas // (resolved.schemas or resolved.exportedSchemas or { });
 
   exportedDerivationKeys = [
     "name"
@@ -128,18 +121,12 @@ let
       ) inv;
 
   # Pure Nix-native flake-schemas evaluator (un-enriched, lazy)
-  evalFlake =
-    if resolved == null then
-      { }
-    else
-      lib.mapAttrs (schemaKey: schemaDef: evalSchemaInventory schemaKey schemaDef) allSchemas;
+  evalFlake = lib.mapAttrs (schemaKey: schemaDef: evalSchemaInventory schemaKey schemaDef) allSchemas;
 
   # Enriched JSON-serializable manifest evaluator for tools, MCPs, and frontends
-  evalFlakeManifest =
-    if resolved == null then
-      { }
-    else
-      lib.mapAttrs (schemaKey: schemaDef: enrichSchemaInventory schemaKey schemaDef) allSchemas;
+  evalFlakeManifest = lib.mapAttrs (
+    schemaKey: schemaDef: enrichSchemaInventory schemaKey schemaDef
+  ) allSchemas;
 in
 {
   inherit evalFlake evalFlakeManifest;
