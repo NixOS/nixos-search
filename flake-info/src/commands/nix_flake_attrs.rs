@@ -20,7 +20,7 @@ pub fn get_derivation_info<T: AsRef<str> + Display>(
     extra: &[String],
 ) -> Result<Vec<FlakeEntry>> {
     let expr = format!(
-        "((builtins.getFlake \"{self}\").lib.evalFlake {{ targetFlake = \"{target}\"; }}).evalFlakeManifest",
+        "((builtins.getFlake \"{self}\").lib.evalFlake {{ targetFlake = \"{target}\"; }}).manifest",
         self = SELF_FLAKE_REF,
         target = flake_ref.as_ref(),
     );

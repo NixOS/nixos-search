@@ -61,8 +61,7 @@
             { targetFlake }:
             import ./flake-info/assets/commands/evalFlake.nix {
               inherit targetFlake;
-              nixpkgsFlake = inputs.nixpkgs;
-              flake-schemas = inputs.flake-schemas;
+              inherit (inputs) nixpkgs flake-schemas;
             };
         };
 
@@ -158,7 +157,7 @@
             src = ./flake-info/assets/commands/test;
             inputs = {
               evalTarget = targetFlake: {
-                expr = (inputs.self.lib.evalFlake { inherit targetFlake; }).evalFlake;
+                expr = (inputs.self.lib.evalFlake { inherit targetFlake; }).inventory;
               };
             };
           };

@@ -1,10 +1,10 @@
 {
   targetFlake,
-  nixpkgsFlake,
+  nixpkgs,
   flake-schemas,
 }:
 let
-  inherit (nixpkgsFlake) lib;
+  inherit (nixpkgs) lib;
 
   resolved = if lib.isAttrs targetFlake then targetFlake else builtins.getFlake targetFlake;
 
@@ -121,13 +121,13 @@ let
       ) inv;
 
   # Pure Nix-native flake-schemas evaluator (un-enriched, lazy)
-  evalFlake = lib.mapAttrs (schemaKey: schemaDef: evalSchemaInventory schemaKey schemaDef) allSchemas;
+  inventory = lib.mapAttrs (schemaKey: schemaDef: evalSchemaInventory schemaKey schemaDef) allSchemas;
 
   # Enriched JSON-serializable manifest evaluator for external consumers (enriched, eager)
-  evalFlakeManifest = lib.mapAttrs (
+  manifest = lib.mapAttrs (
     schemaKey: schemaDef: enrichSchemaInventory schemaKey schemaDef
   ) allSchemas;
 in
 {
-  inherit evalFlake evalFlakeManifest;
+  inherit inventory manifest;
 }
