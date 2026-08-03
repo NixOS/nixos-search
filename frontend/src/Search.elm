@@ -552,6 +552,7 @@ update toRoute navKey msg model nixosChannels =
             { model
                 | from = 0
                 , show = Nothing
+                , buckets = Nothing
                 , typeahead = Typeahead.hideModel model.typeahead
             }
                 |> ensureLoading nixosChannels
