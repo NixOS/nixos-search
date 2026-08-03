@@ -119,7 +119,8 @@ let
         else
           sysNode
       ) inv;
-
+in
+{
   # Pure Nix-native flake-schemas evaluator (un-enriched, lazy)
   inventory = lib.mapAttrs (schemaKey: schemaDef: evalSchemaInventory schemaKey schemaDef) allSchemas;
 
@@ -127,7 +128,4 @@ let
   manifest = lib.mapAttrs (
     schemaKey: schemaDef: enrichSchemaInventory schemaKey schemaDef
   ) allSchemas;
-in
-{
-  inherit inventory manifest;
 }
