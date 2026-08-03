@@ -1,5 +1,5 @@
 { pkgs, self }:
-pkgs.rustPlatform.buildRustPackage rec {
+pkgs.rustPlatform.buildRustPackage {
   name = "flake-info";
   src = ./.;
   cargoLock = {
@@ -23,7 +23,7 @@ pkgs.rustPlatform.buildRustPackage rec {
 
   checkInputs = with pkgs; [ pandoc ];
 
-  ROOTDIR = builtins.placeholder "out";
+  ROOTDIR = placeholder "out";
   LINK_MANPAGES_PANDOC_FILTER = import src/data/link-manpages.nix { inherit pkgs; };
   # Baked in at build time so `nix eval --expr` can reference the locked flake
   # via `(builtins.getFlake SELF_FLAKE_REF).lib.evalFlake { ... }`.
