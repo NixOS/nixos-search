@@ -4,7 +4,7 @@
   flake-schemas,
 }:
 let
-  lib = nixpkgsFlake.lib;
+  inherit (nixpkgsFlake) lib;
 
   resolved = if lib.isAttrs targetFlake then targetFlake else builtins.getFlake targetFlake;
 
