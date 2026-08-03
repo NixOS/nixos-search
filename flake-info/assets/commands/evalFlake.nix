@@ -123,7 +123,7 @@ let
   # Pure Nix-native flake-schemas evaluator (un-enriched, lazy)
   evalFlake = lib.mapAttrs (schemaKey: schemaDef: evalSchemaInventory schemaKey schemaDef) allSchemas;
 
-  # Enriched JSON-serializable manifest evaluator for tools, MCPs, and frontends
+  # Enriched JSON-serializable manifest evaluator for external consumers (enriched, eager)
   evalFlakeManifest = lib.mapAttrs (
     schemaKey: schemaDef: enrichSchemaInventory schemaKey schemaDef
   ) allSchemas;
