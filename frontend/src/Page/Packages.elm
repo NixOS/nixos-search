@@ -69,6 +69,8 @@ import Search
         , NixOSChannel
         , viewBucket
         )
+import Search.Maintainer
+import Search.ModularService
 import Search.Query
 import Utils
 
@@ -104,6 +106,7 @@ type alias ResultItemSource =
     , flakeDescription : Maybe String
     , flakeUrl : Maybe ( String, String )
     , modularServices : List String
+    , modularServiceImports : List Search.ModularService.PackageService
     }
 
 
@@ -134,10 +137,7 @@ type LicenseExpression
 
 
 type alias ResultPackageMaintainer =
-    { name : Maybe String
-    , email : Maybe String
-    , github : Maybe String
-    }
+    Search.Maintainer.Maintainer
 
 
 type alias ResultPackageTeam =
@@ -336,30 +336,35 @@ viewBuckets bucketsAsString result =
         |> viewBucket
             Search.RadioInput
             "Package sets"
+            identity
             (result.aggregations.package_attr_set.buckets |> sortBuckets)
             (createBucketsMsg True .packageSets (\s v -> { s | packageSets = v }))
             selectedBucket.packageSets
         |> viewBucket
             Search.CheckboxInput
             "Licenses"
+            identity
             (result.aggregations.package_license_set.buckets |> sortBuckets)
             (createBucketsMsg False .licenses (\s v -> { s | licenses = v }))
             selectedBucket.licenses
         |> viewBucket
             Search.CheckboxInput
             "Maintainers"
+            identity
             (result.aggregations.package_maintainers_set.buckets |> sortBuckets)
             (createBucketsMsg False .maintainers (\s v -> { s | maintainers = v }))
             selectedBucket.maintainers
         |> viewBucket
             Search.CheckboxInput
             "Teams"
+            identity
             (result.aggregations.package_teams_set.buckets |> sortBuckets)
             (createBucketsMsg False .teams (\s v -> { s | teams = v }))
             selectedBucket.teams
         |> viewBucket
             Search.CheckboxInput
             "Platforms"
+            identity
             (result.aggregations.package_platforms.buckets |> sortBuckets)
             (createBucketsMsg False .platforms (\s v -> { s | platforms = v }))
             selectedBucket.platforms
@@ -493,63 +498,11 @@ viewResultItem nixosChannels channel showUsageDetails show item =
                        )
                 )
 
-        showMaintainer maintainer =
-            let
-                githubHandle =
-                    Maybe.map (String.append "@") maintainer.github
+        showMaintainer =
+            Search.Maintainer.showMaintainer CopyToClipboard
 
-                name =
-                    Maybe.withDefault (Maybe.withDefault "Unknown" maintainer.github) maintainer.name
-
-                nameHtml =
-                    case maintainer.github of
-                        Just github ->
-                            a [ href ("https://github.com/" ++ github) ] [ text name ]
-
-                        Nothing ->
-                            text name
-
-                githubHtml =
-                    case githubHandle of
-                        Just handle ->
-                            [ text " ("
-                            , code [] [ text handle ]
-                            , text ")"
-                            ]
-
-                        Nothing ->
-                            []
-
-                emailHtml =
-                    case maintainer.email of
-                        Just email ->
-                            [ text " <"
-                            , a [ href ("mailto:" ++ email) ] [ text email ]
-                            , text ">"
-                            ]
-
-                        Nothing ->
-                            []
-
-                ( onClickAttr, _ ) =
-                    case githubHandle of
-                        Just handle ->
-                            ( [ onClick (CopyToClipboard handle) ], [] )
-
-                        Nothing ->
-                            ( [], [] )
-            in
-            li (class "maintainer-list-item" :: onClickAttr) (nameHtml :: githubHtml ++ emailHtml)
-
-        linkAllMaintainers maintainers =
-            let
-                ghHandles =
-                    List.filterMap (\m -> Maybe.map (String.append "@") m.github) maintainers
-            in
-            optionals (not (List.isEmpty ghHandles))
-                [ li [ class "maintainer-list-item", onClick (CopyToClipboard (String.join " " ghHandles)) ]
-                    [ text "Copy all maintainers' GitHub handles" ]
-                ]
+        linkAllMaintainers =
+            Search.Maintainer.linkAllMaintainers CopyToClipboard
 
         showTeam team =
             let
@@ -583,18 +536,8 @@ viewResultItem nixosChannels channel showUsageDetails show item =
                             :: List.concatMap showTeamEntry githubTeams
                             ++ scope
 
-        mailtoAllMaintainers maintainers =
-            let
-                maintainerMails =
-                    List.filterMap (\m -> m.email) maintainers
-            in
-            optionals (List.length maintainerMails > 1)
-                [ a
-                    [ href ("mailto:" ++ String.join "," maintainerMails) ]
-                    [ li [ class "maintainer-list-item" ]
-                        [ text "✉️ Mail to all maintainers" ]
-                    ]
-                ]
+        mailtoAllMaintainers =
+            Search.Maintainer.mailtoAllMaintainers
 
         showPlatform platform =
             case List.Extra.find (\x -> x.id == channel) nixosChannels of
@@ -892,41 +835,7 @@ viewResultItem nixosChannels channel showUsageDetails show item =
                     , programs
                     , maintainersTeamsAndPlatforms
                     , optionsLink
-                    , if List.isEmpty item.source.modularServices then
-                        text ""
-
-                      else
-                        div []
-                            [ h4 []
-                                [ text "Modular Services"
-                                , text " "
-                                , a
-                                    [ href "https://nixos.org/manual/nixos/stable/#modular-services"
-                                    , Html.Attributes.target "_blank"
-                                    , Html.Attributes.title "What are modular services?"
-                                    ]
-                                    [ text "(?)" ]
-                                ]
-                            , ul []
-                                (List.map
-                                    (\mod_ ->
-                                        let
-                                            suffix =
-                                                if mod_ == "default" then
-                                                    ""
-
-                                                else
-                                                    "." ++ mod_
-                                        in
-                                        li []
-                                            [ a
-                                                [ href ("/options?channel=" ++ channel ++ "&query=" ++ item.source.attr_name ++ "&include_nixos_options=0") ]
-                                                [ code [] [ text ("pkgs." ++ item.source.attr_name ++ ".services" ++ suffix) ] ]
-                                            ]
-                                    )
-                                    item.source.modularServices
-                                )
-                            ]
+                    , viewModularServices channel item.source
                     ]
                 ]
 
@@ -972,6 +881,144 @@ viewResultItem nixosChannels channel showUsageDetails show item =
          ]
             ++ longerPackageDetails
         )
+
+
+{-| The modular services this package exposes, and which environments each of
+them can be used in.
+
+Environments the registry knows but a service is not registered for are listed
+too, so the list answers "is this usable here yet?" rather than only listing
+what happens to work. Indices written before the base/environment split carry
+only the service names, from which the portable half's import can be composed.
+
+Each half carries its own maintainers: the ones next to the service maintain the
+portable module every environment builds on, the ones under an environment
+maintain that environment's integration only.
+
+Environments are stacked rather than laid out side by side, since the registry
+is expected to grow more of them than fit across a page.
+
+-}
+viewModularServices : String -> ResultItemSource -> Html Msg
+viewModularServices channel source =
+    let
+        services =
+            case source.modularServiceImports of
+                [] ->
+                    List.map
+                        (\service ->
+                            { service = service
+                            , importExpr = "pkgs." ++ source.attr_name ++ ".services." ++ service
+                            , maintainers = []
+                            , environments = []
+                            }
+                        )
+                        source.modularServices
+
+                packageServices ->
+                    packageServices
+
+        -- The service's options live on the Modular services tab, so the link
+        -- has to select that source; the options page otherwise opens on NixOS
+        -- options, which carry none of them.
+        serviceRoute =
+            Route.Options
+                { query = Just source.attr_name
+                , channel = Just channel
+                , show = Nothing
+                , from = Nothing
+                , size = Nothing
+                , buckets = Nothing
+                , sort = Nothing
+                , type_ = Just Route.OptionSearch
+                , activeOptionSource = Route.ModularServiceOptions
+                }
+
+        serviceLink service =
+            a [ Route.href serviceRoute ] [ code [] [ text service.importExpr ] ]
+
+        maintainerList maintainers =
+            if List.isEmpty maintainers then
+                []
+
+            else
+                [ ul [ class "modular-service-maintainers" ]
+                    (List.map (Search.Maintainer.showMaintainer CopyToClipboard) maintainers)
+                ]
+
+        marker supported =
+            span
+                [ class "service-environment-support"
+                , title
+                    (if supported then
+                        "Supported"
+
+                     else
+                        "Not supported"
+                    )
+                ]
+                [ text
+                    (if supported then
+                        "✅"
+
+                     else
+                        "❌"
+                    )
+                ]
+
+        heading env =
+            [ marker env.supported
+            , text " "
+            , strong [] [ text (Search.ModularService.environmentLabel env.environment) ]
+            ]
+
+        -- A supported environment expands to the import of its half and the
+        -- maintainers of that half; an unsupported one has nothing behind it.
+        viewEnvironment env =
+            case ( env.supported, env.importExpr ) of
+                ( True, Just importExpr ) ->
+                    li []
+                        [ Html.details []
+                            (Html.summary [] (heading env)
+                                :: div [] [ code [] [ text importExpr ] ]
+                                :: maintainerList env.maintainers
+                            )
+                        ]
+
+                _ ->
+                    li [] (heading env)
+
+        viewService service =
+            li []
+                (serviceLink service
+                    :: maintainerList service.maintainers
+                    ++ (if List.isEmpty service.environments then
+                            []
+
+                        else
+                            [ ul [ class "service-environments" ]
+                                (List.map viewEnvironment service.environments)
+                            ]
+                       )
+                )
+    in
+    if List.isEmpty services then
+        text ""
+
+    else
+        div []
+            [ h4 []
+                [ text "Modular Services"
+                , text " "
+                , a
+                    [ href "https://nixos.org/manual/nixos/stable/#modular-services"
+                    , Html.Attributes.target "_blank"
+                    , Html.Attributes.title "What are modular services?"
+                    ]
+                    [ text "(?)" ]
+                ]
+            , ul [ class "modular-services" ] (List.map viewService services)
+            ]
 
 
 inlineListElementsCopyableCode : (a -> String) -> (a -> String) -> (a -> Html Msg) -> List a -> Html Msg
@@ -1275,6 +1322,9 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "flake_description" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_resolved" (Json.Decode.map Just decodeResolvedFlake) Nothing
         |> Json.Decode.Pipeline.optional "package_modular_services" (Json.Decode.list Json.Decode.string) []
+        |> Json.Decode.Pipeline.optional "package_modular_service_imports"
+            (Json.Decode.list Search.ModularService.decodePackageService)
+            []
 
 
 type alias ResolvedFlake =
@@ -1413,16 +1463,7 @@ decodeLicenseExpression =
 
 decodeResultPackageMaintainer : Json.Decode.Decoder ResultPackageMaintainer
 decodeResultPackageMaintainer =
-    Json.Decode.map3 ResultPackageMaintainer
-        (Json.Decode.oneOf
-            [ Json.Decode.field "name" (Json.Decode.map Just Json.Decode.string)
-            , Json.Decode.field "email" (Json.Decode.map Just Json.Decode.string)
-            , Json.Decode.field "github" (Json.Decode.map Just Json.Decode.string)
-            , Json.Decode.succeed Nothing
-            ]
-        )
-        (Json.Decode.field "email" (Json.Decode.nullable Json.Decode.string))
-        (Json.Decode.field "github" (Json.Decode.nullable Json.Decode.string))
+    Search.Maintainer.decode
 
 
 decodeResultPackageTeam : Json.Decode.Decoder ResultPackageTeam

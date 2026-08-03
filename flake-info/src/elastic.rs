@@ -150,6 +150,8 @@ lazy_static! {
                 "package_modular_services": {
                     "type": "keyword"
                 },
+                // Display-only: returned in `_source` without indexing cost.
+                "package_modular_service_imports": {"type": "object", "enabled": false},
                 "package_dep_count": {
                     "type": "rank_feature"
                 },
@@ -182,12 +184,20 @@ lazy_static! {
                     },
                 },
                 "service_module": {"type": "keyword"},
-                "service_packages": {
-                    "type": "keyword",
-                    "fields": {
-                        "edge": {"type": "text", "analyzer": "edge"}
+                "service_import": {"type": "keyword"},
+                // Display-only: returned in `_source` without indexing cost.
+                // Filtering and aggregation go through `service_environments_set`.
+                "service_environments": {"type": "object", "enabled": false},
+                "service_environments_set": {"type": "keyword"},
+                "service_maintainers": {
+                    "type": "nested",
+                    "properties": {
+                        "name": {"type": "text"},
+                        "email": {"type": "text"},
+                        "github": {"type": "text"},
                     },
                 },
+                "service_maintainers_set": {"type": "keyword"},
             }
         },
         "settings": {

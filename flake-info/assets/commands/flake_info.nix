@@ -179,37 +179,42 @@ let
   # Filter for user-visible, non-internal options
   filterOptions = opts: lib.filter (x: x.visible && !x.internal && lib.head x.loc != "_module") opts;
 
-  evalOptionsWith =
+  evalModulesWith =
     {
       evalModules ? lib.evalModules,
       modules,
       specialArgs ? { },
       class ? null,
-      extraAttrs ? { },
     }:
-    let
-      declarations =
-        (evalModules (
-          {
-            modules = modules ++ [
-              (
-                { lib, ... }:
-                {
-                  _module.check = lib.mkForce false;
-                }
-              )
-            ];
-            specialArgs = {
-              pkgs = nixpkgs;
+    evalModules (
+      {
+        modules = modules ++ [
+          (
+            { lib, ... }:
+            {
+              _module.check = lib.mkForce false;
             }
-            // specialArgs;
-          }
-          // lib.optionalAttrs (class != null) { inherit class; }
-        )).options;
+          )
+        ];
+        specialArgs = {
+          pkgs = nixpkgs;
+        }
+        // specialArgs;
+      }
+      // lib.optionalAttrs (class != null) { inherit class; }
+    );
 
-      opts = lib.optionAttrSetToDocList declarations;
-    in
-    map (cleanUpOption extraAttrs) (filterOptions opts);
+  # Turn an evaluation's option set into the flat, indexable list of options
+  docListOf =
+    extraAttrs: eval:
+    map (cleanUpOption extraAttrs) (filterOptions (lib.optionAttrSetToDocList eval.options));
+
+  evalOptionsWith =
+    {
+      extraAttrs ? { },
+      ...
+    }@args:
+    docListOf extraAttrs (evalModulesWith (removeAttrs args [ "extraAttrs" ]));
 
   readNixOSOptions =
     {
@@ -229,57 +234,6 @@ let
         flake = modulePath;
       };
     };
-
-  # Parses the angle-bracket prefix from modular service option names to extract
-  # service_package and service_module, strips the prefix, and tags as entry_type = "service".
-  parseServiceOption =
-    opt:
-    let
-      # Match: <imports = [ pkgs.PKG.services.MODULE ]>.OPTNAME
-      # Group 1: package attrname, group 2: module name, group 3: remaining option path
-      m = lib.match ".*imports.*pkgs\\.([^.]+)\\.services\\.([^ ]+).*>\\.(.*)" opt.name;
-    in
-    if m != null then
-      opt
-      // {
-        entry_type = "service";
-        name = lib.elemAt m 2;
-        service_package = lib.elemAt m 0;
-        service_module = lib.elemAt m 1;
-      }
-    else
-      # Fallback: keep as-is but still tag as service
-      opt // { entry_type = "service"; };
-
-  # Deduplicate service options that share the same underlying module. When
-  # several packages re-export the same service module (e.g. php, php82..php85
-  # all point to the same pkgs/development/interpreters/php/service.nix), we
-  # end up with identical option entries differing only by service_package.
-  # Group by (declarations, parsed name) and keep a single entry per group,
-  # with a canonical service_package and the full list in service_packages.
-  deduplicateServices =
-    opts:
-    let
-      keyOf =
-        opt:
-        lib.toJSON [
-          (opt.declarations or [ ])
-          (opt.name or "")
-          (opt.service_module or "")
-        ];
-      grouped = lib.groupBy keyOf opts;
-      mergeGroup =
-        entries:
-        let
-          packages = lib.naturalSort (lib.unique (map (e: e.service_package or "") entries));
-        in
-        (lib.head entries)
-        // {
-          service_package = lib.head packages;
-          service_packages = packages;
-        };
-    in
-    lib.mapAttrsToList (_: mergeGroup) grouped;
 
   # Base schemas from official flake-schemas input extended with custom schemas
   schemas = flake-schemas.exportedSchemas // (resolved.schemas or { });
@@ -408,20 +362,300 @@ let
     { nixpkgs.hostPlatform = "x86_64-linux"; }
   ];
 
-  # Use nixpkgs' hand-maintained modular services list rather than walking all
-  # `pkgs` attributes (which would force shallow evaluation of every package
-  # and is too expensive -- see NixOS/nixpkgs#509117).
-  serviceDocModules =
-    (import "${nixpkgsFlake}/nixos/modules/misc/documentation/modular-services.nix" {
-      inherit lib;
-      pkgs = nixpkgs;
-    }).documentation.nixos.extraModules;
+  # Kept in sync with `undocumented` in nixpkgs'
+  # nixos/modules/misc/documentation/modular-services.nix: a fixture for
+  # nixos/tests/modular-service-etc rather than a service anyone would import.
+  undocumentedServices = [ "python-http-server" ];
 
-  # Evaluate base + service documentation modules together (service modules
-  # depend on base option types). Then partition: options whose name starts
-  # with "<" come from modular services.
-  nixpkgsAllOpts = readNixOSOptions { module = nixpkgsBaseModules ++ serviceDocModules; };
-  isServiceOption = opt: lib.hasPrefix "<" opt.name;
+  serviceRegistryPath = "${nixpkgsFlake}/nixos/modules/system/service/modular/default.nix";
+
+  # Discovery from nixpkgs' modular service registry, which enumerates every
+  # `<environment>.<package>.<service>` variant. `module` is the variant a
+  # NixOS configuration actually gets.
+  registryServices =
+    let
+      modularServices = (import "${nixpkgsFlake}/nixos/lib" { }).modularServices;
+
+      flat = lib.concatLists (
+        lib.mapAttrsToList (
+          environment: packages:
+          lib.concatLists (
+            lib.mapAttrsToList (
+              package: services:
+              lib.mapAttrsToList (service: module: {
+                inherit
+                  environment
+                  package
+                  service
+                  module
+                  ;
+              }) services
+            ) packages
+          )
+        ) modularServices
+      );
+
+      grouped = lib.groupBy (x: "${x.package}.${x.service}") (
+        lib.filter (x: !(lib.elem x.package undocumentedServices)) flat
+      );
+
+      # Every environment the registry knows about, so a service can report the
+      # ones it does *not* support alongside the ones it does.
+      knownEnvironments = lib.attrNames modularServices;
+    in
+    lib.mapAttrsToList (
+      _: entries:
+      let
+        registered = lib.listToAttrs (map (x: lib.nameValuePair x.environment x.module) entries);
+
+        environments = map (name: {
+          inherit name;
+          supported = registered ? ${name};
+          module = registered.${name} or null;
+        }) knownEnvironments;
+      in
+      {
+        inherit (lib.head entries) package service;
+        module = (primaryEnvironment environments).module;
+        inherit environments;
+      }
+    ) grouped;
+
+  # Discovery on nixpkgs revisions that predate the registry: nixpkgs' own
+  # documentation module is hand-maintained there, so harvest the service
+  # names it declares. Before the split the portable module *was* the NixOS
+  # module, so there is no separate environment half -- `module = null` marks
+  # that, and keeps environment-specific maintainers empty rather than
+  # duplicating the base half's.
+  legacyServices =
+    let
+      docModules =
+        (import "${nixpkgsFlake}/nixos/modules/misc/documentation/modular-services.nix" {
+          inherit lib;
+          pkgs = nixpkgs;
+        }).documentation.nixos.extraModules;
+
+      names = lib.concatMap (module: lib.attrNames (module.options or { })) docModules;
+
+      parse =
+        name:
+        let
+          # `\]` is not a valid POSIX ERE escape; an unpaired `]` is literal.
+          m = lib.match "<imports = \\[ pkgs\\.([^.]+)\\.services\\.([^ ]+) ]>" name;
+        in
+        if m == null then
+          null
+        else
+          {
+            package = lib.elemAt m 0;
+            service = lib.elemAt m 1;
+          };
+    in
+    map
+      (
+        entry:
+        entry
+        // {
+          module = nixpkgs.${entry.package}.services.${entry.service};
+          environments = [
+            {
+              name = "system";
+              supported = true;
+              module = null;
+            }
+          ];
+        }
+      )
+      (
+        lib.filter (entry: entry != null && !(lib.elem entry.package undocumentedServices)) (
+          map parse names
+        )
+      );
+
+  # [ { package; service; module; environments = [ { name; supported; module; } ]; } ]
+  #
+  # `environments` lists every environment the registry knows, not just the ones
+  # this service is registered for; `supported` tells them apart.
+  serviceRegistry = if lib.pathExists serviceRegistryPath then registryServices else legacyServices;
+
+  # The environment a NixOS configuration gets, falling back to whichever
+  # supported environment happens to be registered first.
+  primaryEnvironment =
+    environments:
+    let
+      supported = lib.filter (env: env.supported) environments;
+    in
+    lib.findFirst (env: env.name == "system") (lib.head supported) supported;
+
+  # The portable half, which every environment builds on.
+  baseImportOf = e: "pkgs.${e.package}.services.${e.service}";
+
+  # The registry names environments but does not carry the option that exposes
+  # them, so this is a small lookup. Falls back to the portable module for
+  # environments we do not know an accessor for, and for nixpkgs revisions
+  # that predate the split.
+  environmentAccessors = {
+    system = "config.modularServices";
+  };
+
+  # `null` for an environment the service is not registered for: there is
+  # nothing to import there.
+  envImportOf =
+    e: env:
+    if !env.supported then
+      null
+    else if env.module != null && environmentAccessors ? ${env.name} then
+      "${environmentAccessors.${env.name}}.${e.package}.${e.service}"
+    # Do not merge these branches: the accessor is per environment, the
+    # portable half is not.
+    else
+      baseImportOf e;
+
+  primaryImportOf = e: envImportOf e (primaryEnvironment e.environments);
+
+  # Option names are keyed by an import expression we generate ourselves, so
+  # the prefix is an exact key rather than something to parse back out.
+  serviceOptionPrefix = e: "<imports = [ ${primaryImportOf e} ]>";
+  serviceByPrefix = lib.listToAttrs (
+    map (e: lib.nameValuePair (serviceOptionPrefix e) e) serviceRegistry
+  );
+  isServiceOption = opt: serviceByPrefix ? ${lib.head opt.loc};
+
+  # Mirrors `fakeSubmodule` in nixpkgs'
+  # nixos/modules/misc/documentation/modular-services.nix. `pkgs` has to be a
+  # special argument: a variant reaches its portable half through
+  # `imports = [ pkgs.<pkg>.services.<svc> ]`, which is evaluated before
+  # `_module.args`.
+  fakeServiceSubmodule =
+    module:
+    lib.mkOption {
+      type = lib.types.submoduleWith {
+        specialArgs = {
+          pkgs = nixpkgs;
+        };
+        modules = [ module ];
+      };
+      description = "This is a [modular service](https://nixos.org/manual/nixos/unstable/#modular-services), which can be imported into a NixOS configuration using the [`system.services`](https://search.nixos.org/options?channel=unstable&show=system.services&query=modular+service) option.";
+    };
+
+  serviceOptionsModule = {
+    options = lib.listToAttrs (
+      map (e: lib.nameValuePair (serviceOptionPrefix e) (fakeServiceSubmodule e.module)) serviceRegistry
+    );
+  };
+
+  serviceKey = e: "${e.package}.${e.service}";
+
+  # Attaching the services as real configuration makes their `meta.maintainers`
+  # readable. It declares no options, and laziness keeps everything but
+  # `meta.maintainers` unevaluated.
+  serviceAttachModule = {
+    system.services = lib.listToAttrs (
+      map (e: lib.nameValuePair (serviceKey e) { imports = [ e.module ]; }) serviceRegistry
+    );
+  };
+
+  # Evaluate base + service modules together (service modules depend on base
+  # option types).
+  nixpkgsEval = evalModulesWith {
+    modules = nixpkgsBaseModules ++ [
+      serviceOptionsModule
+      serviceAttachModule
+    ];
+    specialArgs = {
+      # !!! NixOS-specific, see `readNixOSOptions`.
+      modulesPath = "${nixpkgsFlake}/nixos/modules";
+    };
+  };
+
+  nixpkgsAllOpts = docListOf { } nixpkgsEval;
+
+  # `meta.maintainers` merges to an attrset of defining file -> maintainer list
+  # (nixpkgs' modules/generic/meta-maintainers.nix), so a service's maintainers
+  # arrive already split by the half that declared them.
+  maintainersBySource =
+    e:
+    let
+      result = safeEval (nixpkgsEval.config.system.services.${serviceKey e}.meta.maintainers or { });
+      raw = if result.success && lib.isAttrs result.value then result.value else { };
+    in
+    lib.filterAttrs (
+      file: maintainers:
+      # A lone empty list is the option's `default` attributed to its declaring
+      # file, not a maintainer claim.
+      maintainers != [ ]
+      # A module that lost its `_file` is attributed to wherever the
+      # `deferredModule` was defined, so its provenance is unknown. That is a
+      # nixpkgs bug, guarded upstream by `nixosTests.modularServiceVariants`.
+      && !(lib.hasInfix ", via option " file)
+      # The file that *declares* `meta.maintainers` is imported by every module
+      # system that offers the option, so where it still names maintainers of
+      # its own they belong to that file rather than to any service.
+      && file != maintainerOptionFile
+    ) (lib.mapAttrs' (file: maintainers: lib.nameValuePair (mkDeclaration file) maintainers) raw);
+
+  maintainerOptionFile = "modules/generic/meta-maintainers.nix";
+
+  projectMaintainer =
+    m:
+    lib.optionalAttrs (m ? name) { inherit (m) name; }
+    // lib.optionalAttrs (m ? email) { inherit (m) email; }
+    // lib.optionalAttrs (m ? github) { inherit (m) github; };
+
+  # Per-service indexed fields, derived once per service and shared by all of
+  # its options.
+  serviceInfo =
+    e:
+    let
+      bySource = maintainersBySource e;
+      sourceOf = env: if env.module == null then null else mkDeclaration (toString env.module);
+      environmentSources = lib.filter (x: x != null) (map sourceOf e.environments);
+    in
+    {
+      service_package = e.package;
+      service_module = e.service;
+      service_import = baseImportOf e;
+      # Every known environment, so the frontend can show which ones a service
+      # does not support. Unsupported ones carry no import and no maintainers.
+      service_environments = map (
+        env:
+        {
+          environment = env.name;
+          inherit (env) supported;
+        }
+        // lib.optionalAttrs env.supported {
+          import = envImportOf e env;
+          maintainers = map projectMaintainer (
+            let
+              source = sourceOf env;
+            in
+            if source == null then [ ] else bySource.${source} or [ ]
+          );
+        }
+      ) e.environments;
+      service_maintainers = map projectMaintainer (
+        lib.concatLists (
+          lib.attrValues (lib.filterAttrs (file: _: !(lib.elem file environmentSources)) bySource)
+        )
+      );
+    };
+
+  serviceInfoByPrefix = lib.mapAttrs (_: serviceInfo) serviceByPrefix;
+
+  # Strip the generated prefix and attach the service's metadata. The entry
+  # whose name *is* the prefix is the submodule root rather than an option.
+  parseServiceOption =
+    opt:
+    let
+      prefix = lib.head opt.loc;
+    in
+    opt
+    // {
+      entry_type = "service";
+      name = lib.removePrefix "${prefix}." opt.name;
+    }
+    // serviceInfoByPrefix.${prefix};
+
   readOptionsIf =
     {
       cond,
@@ -462,17 +696,35 @@ rec {
   nixpkgsOptionsPartition = lib.partition isServiceOption nixpkgsAllOpts;
   nixos-options = nixpkgsOptionsPartition.wrong;
 
-  # Parsed service options
-  realServices = lib.filter (opt: opt ? service_package) (
-    map parseServiceOption nixpkgsOptionsPartition.right
+  # A single-element `loc` is the submodule root itself rather than one of the
+  # service's options.
+  nixos-services = map parseServiceOption (
+    lib.filter (opt: lib.length opt.loc > 1) nixpkgsOptionsPartition.right
   );
 
-  nixos-services = deduplicateServices realServices;
+  # Map from package attribute name to the list of modular service names it
+  # exposes.
+  nixpkgs-package-services = lib.zipAttrsWith (_: lib.unique) (
+    map (e: { ${e.package} = e.service; }) serviceRegistry
+  );
 
-  # Map from package attribute name to the list of modular service module
-  # names it exposes. Derived from the parsed service options above so it
-  # stays in sync with nixpkgs' hand-maintained list.
-  nixos-package-services = lib.zipAttrsWith (_: values: lib.unique values) (
-    map (opt: { ${opt.service_package} = opt.service_module; }) realServices
+  # Per-package service metadata: import expressions, environment support and
+  # each half's maintainers. The package page is where a modular service is
+  # described as a whole, so it carries what the option pages link out to.
+  nixpkgs-package-service-imports = lib.zipAttrsWith (_: values: values) (
+    map (
+      e:
+      let
+        info = serviceInfo e;
+      in
+      {
+        ${e.package} = {
+          service = e.service;
+          import = info.service_import;
+          maintainers = info.service_maintainers;
+          environments = info.service_environments;
+        };
+      }
+    ) serviceRegistry
   );
 }

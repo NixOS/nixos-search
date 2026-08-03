@@ -52,6 +52,7 @@ import Html.Events
 import Http exposing (Body)
 import Json.Decode
 import Json.Decode.Pipeline
+import Json.Encode
 import List.Extra
 import Ports
 import RemoteData
@@ -62,6 +63,8 @@ import Search
         , NixOSChannel
         , decodeResolvedFlake
         )
+import Search.Maintainer
+import Search.ModularService
 import Search.Query
 import SyntaxHighlight exposing (elm, oneDark, toBlockHtml, useTheme)
 import Task
@@ -98,18 +101,43 @@ type alias ResultItemSource =
     -- modular service metadata (populated only for `service` docs)
     , servicePackage : Maybe String
     , serviceModule : Maybe String
-    , servicePackages : List String
+    , serviceImport : Maybe String
+    , serviceEnvironments : List Search.ModularService.Environment
+    , serviceMaintainers : List Search.Maintainer.Maintainer
     }
 
 
 type alias ResultAggregations =
     { all : AggregationsAll
+    , service_environments_set : Search.Aggregation
     }
 
 
 type alias AggregationsAll =
     { doc_count : Int
     }
+
+
+{-| Modular services are the only option documents with anything to filter on,
+so this is the whole sidebar for the "Modular services" tab.
+-}
+type alias Buckets =
+    { environments : List String
+    }
+
+
+emptyBuckets : Buckets
+emptyBuckets =
+    { environments = []
+    }
+
+
+initBuckets : Maybe String -> Buckets
+initBuckets bucketsAsString =
+    bucketsAsString
+        |> Maybe.map (Json.Decode.decodeString decodeBuckets)
+        |> Maybe.andThen Result.toMaybe
+        |> Maybe.withDefault emptyBuckets
 
 
 init :
@@ -190,7 +218,7 @@ view nixosChannels model =
         nixosChannels
         model
         (viewSuccess model.activeOptionSource)
-        viewBuckets
+        (viewBuckets model.activeOptionSource)
         SearchMsg
         [ viewSourceTabs model.activeOptionSource model.sourceCounts ]
 
@@ -277,11 +305,40 @@ formatCount n =
 
 
 viewBuckets :
-    Maybe String
+    OptionSource
+    -> Maybe String
     -> Search.SearchResult ResultItemSource ResultAggregations
     -> List (Html Msg)
-viewBuckets _ _ =
-    []
+viewBuckets activeSource bucketsAsString result =
+    let
+        initialBuckets =
+            initBuckets bucketsAsString
+
+        createBucketsMsg getBucket mergeBuckets value =
+            Utils.toggleList (getBucket initialBuckets) value
+                |> mergeBuckets initialBuckets
+                |> encodeBuckets
+                |> Json.Encode.encode 0
+                |> Search.BucketsChange
+                |> SearchMsg
+
+        sortBuckets items =
+            items
+                |> List.sortBy .doc_count
+                |> List.reverse
+    in
+    if activeSource /= Route.ModularServiceOptions then
+        []
+
+    else
+        []
+            |> Search.viewBucket
+                Search.CheckboxInput
+                "Environments"
+                Search.ModularService.environmentLabel
+                (result.aggregations.service_environments_set.buckets |> sortBuckets)
+                (createBucketsMsg .environments (\s v -> { s | environments = v }))
+                initialBuckets.environments
 
 
 viewSuccess :
@@ -392,31 +449,25 @@ viewResultItem nixosChannels channel show activeSource item =
                                     []
                                )
                             ++ (if isService then
-                                    case item.source.servicePackages of
-                                        [] ->
-                                            item.source.servicePackage
-                                                |> Maybe.map
-                                                    (\pkg ->
-                                                        [ div [] [ text "Provided by package" ]
-                                                        , div [] [ pkgLink pkg ]
-                                                        ]
-                                                    )
-                                                |> Maybe.withDefault []
-
-                                        [ single ] ->
-                                            [ div [] [ text "Provided by package" ]
-                                            , div [] [ pkgLink single ]
-                                            ]
-
-                                        many ->
-                                            [ div [] [ text "Provided by packages" ]
-                                            , div []
-                                                (List.intersperse (text ", ") (List.map pkgLink many))
-                                            ]
+                                    item.source.servicePackage
+                                        |> Maybe.map
+                                            (\pkg ->
+                                                [ div [] [ text "Provided by package" ]
+                                                , div [] [ pkgLink pkg ]
+                                                ]
+                                            )
+                                        |> Maybe.withDefault []
 
                                 else
                                     []
                                )
+                            ++ (if isService then
+                                    viewServiceLink channel item.source
+
+                                else
+                                    []
+                               )
+                            ++ viewServiceEnvironments item.source
                             ++ viewUsageSnippet item.source
                             ++ [ div [] [ text "Declared in" ]
                                , div [] <| findSource nixosChannels channel item.source
@@ -463,14 +514,131 @@ asHighlightPreCode value =
         ]
 
 
-{-| Render a "Usage" section showing how to use this option.
+{-| Every environment the registry knows about, marked for whether this service
+supports it. A supported environment expands to its import expression, the
+maintainers of that half and a snippet in the block that environment exposes;
+an unsupported one is a leaf, since there is nothing behind it.
+
+Environment-level detail repeats across every option of the same service, so it
+stays collapsed until asked for.
+
 -}
-viewUsageSnippet : ResultItemSource -> List (Html Msg)
-viewUsageSnippet source =
+viewServiceEnvironments : ResultItemSource -> List (Html Msg)
+viewServiceEnvironments source =
+    let
+        marker supported =
+            span
+                [ class "service-environment-support"
+                , Html.Attributes.title
+                    (if supported then
+                        "Supported"
+
+                     else
+                        "Not supported"
+                    )
+                ]
+                [ text
+                    (if supported then
+                        "✅"
+
+                     else
+                        "❌"
+                    )
+                ]
+
+        heading env =
+            [ marker env.supported
+            , text " "
+            , strong [] [ text (Search.ModularService.environmentLabel env.environment) ]
+            ]
+
+        viewEnvironment env =
+            case ( env.supported, env.importExpr ) of
+                ( True, Just importExpr ) ->
+                    li []
+                        [ Html.details []
+                            (Html.summary [] (heading env)
+                                :: div [] [ code [] [ text importExpr ] ]
+                                :: (if List.isEmpty env.maintainers then
+                                        []
+
+                                    else
+                                        [ ul [] (List.map showMaintainer env.maintainers) ]
+                                   )
+                                ++ viewEnvironmentSnippet source env.environment importExpr
+                            )
+                        ]
+
+                _ ->
+                    li [] (heading env)
+    in
+    if List.isEmpty source.serviceEnvironments then
+        []
+
+    else
+        [ div [] [ text "Environments" ]
+        , div [] [ ul [ class "service-environments" ] (List.map viewEnvironment source.serviceEnvironments) ]
+        ]
+
+
+{-| The import expression for the portable half.
+
+Indices written before the base/environment split carry no import expression,
+so compose it from the package and service names there.
+
+-}
+portableImport : ResultItemSource -> Maybe String
+portableImport source =
+    case source.serviceImport of
+        Just expr ->
+            Just expr
+
+        Nothing ->
+            case ( source.servicePackage, source.serviceModule ) of
+                ( Just pkg, Just service ) ->
+                    Just ("pkgs." ++ pkg ++ ".services." ++ service)
+
+                _ ->
+                    Nothing
+
+
+{-| The service this option belongs to, pointing at the package page where its
+maintainers and environment support are shown once rather than once per option.
+
+Named by its import expression rather than by `<package>.<service>`, since that
+is the string a reader would go on to write.
+
+-}
+viewServiceLink : String -> ResultItemSource -> List (Html Msg)
+viewServiceLink channel source =
+    case ( source.servicePackage, portableImport source ) of
+        ( Just pkg, Just importExpr ) ->
+            [ div [] [ text "Service" ]
+            , div []
+                [ a
+                    [ href ("/packages?channel=" ++ channel ++ "&query=" ++ pkg ++ "#show=" ++ Url.percentEncode pkg) ]
+                    [ code [] [ text importExpr ] ]
+                ]
+            ]
+
+        _ ->
+            []
+
+
+showMaintainer : Search.Maintainer.Maintainer -> Html Msg
+showMaintainer =
+    Search.Maintainer.showMaintainer CopyToClipboard
+
+
+{-| `<option> = <value>;`, indented, with the option's default when that default
+is a plain Nix expression.
+-}
+optionLine : ResultItemSource -> String -> String
+optionLine source indent =
     let
         -- Re-indent a (possibly multi-line) value so every line after the
         -- first aligns with `indent`.
-        indentValue indent val =
+        indentValue val =
             case String.split "\n" val of
                 [] ->
                     val
@@ -484,42 +652,78 @@ viewUsageSnippet source =
         isNixLiteral val =
             not (String.contains "<" val)
 
-        leafValue indent =
+        value =
             source.default
                 |> Maybe.andThen
                     (\val ->
                         if isNixLiteral val then
-                            Just (indentValue indent val)
+                            Just (indentValue val)
 
                         else
                             Nothing
                     )
                 |> Maybe.withDefault "..."
+    in
+    indent ++ source.name ++ " = " ++ value ++ ";\n"
 
-        nestedOption indent =
-            indent ++ source.name ++ " = " ++ leafValue indent ++ ";\n"
 
-        usage snippet =
-            [ div [] [ text "Usage" ]
-            , Utils.copyable CopyToClipboard snippet (asHighlightPreCode snippet)
+{-| What a modular service contributes to whatever service block its environment
+exposes: the import, and the option being looked at.
+-}
+serviceSnippetBody : ResultItemSource -> String -> String -> String
+serviceSnippetBody source indent importExpr =
+    indent ++ "imports = [ " ++ importExpr ++ " ];\n" ++ optionLine source indent
+
+
+usageSection : String -> List (Html Msg)
+usageSection snippet =
+    [ div [] [ text "Usage" ]
+    , Utils.copyable CopyToClipboard snippet (asHighlightPreCode snippet)
+    ]
+
+
+{-| The same body wrapped in the block a specific environment exposes, for
+environments whose shape we know.
+-}
+viewEnvironmentSnippet : ResultItemSource -> String -> String -> List (Html Msg)
+viewEnvironmentSnippet source environment importExpr =
+    case Search.ModularService.environmentUsagePath environment of
+        Just path ->
+            [ div []
+                [ let
+                    snippet =
+                        path ++ " = {\n" ++ serviceSnippetBody source "  " importExpr ++ "};"
+                  in
+                  Utils.copyable CopyToClipboard snippet (asHighlightPreCode snippet)
+                ]
             ]
+
+        Nothing ->
+            []
+
+
+{-| Render a "Usage" section showing how to use this option.
+-}
+viewUsageSnippet : ResultItemSource -> List (Html Msg)
+viewUsageSnippet source =
+    let
+        usage =
+            usageSection
+
+        nestedOption =
+            optionLine source
     in
     case source.docType of
         "service" ->
-            case ( source.servicePackage, source.serviceModule ) of
-                ( Just pkg, Just mod_ ) ->
-                    usage
-                        ("system.services.<name> = {\n"
-                            ++ "  imports = [ pkgs."
-                            ++ pkg
-                            ++ ".services."
-                            ++ mod_
-                            ++ " ];\n"
-                            ++ nestedOption "  "
-                            ++ "};"
-                        )
+            -- The portable half is the one every environment builds on, so it
+            -- is what an environment-agnostic snippet can name. The block these
+            -- lines go in differs per environment -- `system.services.<name>`
+            -- on NixOS -- and is shown under that environment instead.
+            case portableImport source of
+                Just expr ->
+                    usage (serviceSnippetBody source "" expr)
 
-                _ ->
+                Nothing ->
                     []
 
         "option" ->
@@ -763,7 +967,7 @@ makeRequest :
     -> Search.Sort
     -> OptionSource
     -> Cmd Msg
-makeRequest options nixosChannels _ channel query from size _ sort activeSource =
+makeRequest options nixosChannels _ channel query from size maybeBuckets sort activeSource =
     let
         activeQuery : Cmd (Search.Msg ResultItemSource ResultAggregations)
         activeQuery =
@@ -773,6 +977,7 @@ makeRequest options nixosChannels _ channel query from size _ sort activeSource 
                     query
                     from
                     size
+                    maybeBuckets
                     sort
                 )
                 nixosChannels
@@ -790,6 +995,10 @@ makeRequest options nixosChannels _ channel query from size _ sort activeSource 
                     query
                     0
                     0
+                    -- Buckets belong to the tab they are shown on: only
+                    -- modular services carry `service_environments_set`, so
+                    -- applying the filter here would empty every other badge.
+                    Nothing
                     sort
                 )
                 nixosChannels
@@ -821,9 +1030,20 @@ makeRequest options nixosChannels _ channel query from size _ sort activeSource 
         |> Cmd.map SearchMsg
 
 
-makeRequestBody : List String -> String -> Int -> Int -> Search.Sort -> Body
-makeRequestBody types query from size sort =
-    Http.jsonBody (Search.Query.optionsBody types query from size sort)
+makeRequestBody : List String -> String -> Int -> Int -> Maybe String -> Search.Sort -> Body
+makeRequestBody types query from size maybeBuckets sort =
+    let
+        currentBuckets =
+            initBuckets maybeBuckets
+    in
+    Http.jsonBody
+        (Search.Query.optionsBody types
+            query
+            from
+            size
+            sort
+            [ ( "service_environments_set", currentBuckets.environments ) ]
+        )
 
 
 
@@ -849,16 +1069,49 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "revision" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "service_package" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "service_module" (Json.Decode.map Just Json.Decode.string) Nothing
-        |> Json.Decode.Pipeline.optional "service_packages" (Json.Decode.list Json.Decode.string) []
+        |> Json.Decode.Pipeline.optional "service_import" (Json.Decode.map Just Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "service_environments"
+            (Json.Decode.list Search.ModularService.decodeEnvironment)
+            []
+        |> Json.Decode.Pipeline.optional "service_maintainers"
+            (Json.Decode.list Search.Maintainer.decode)
+            []
 
 
 decodeResultAggregations : Json.Decode.Decoder ResultAggregations
 decodeResultAggregations =
-    Json.Decode.map ResultAggregations
+    Json.Decode.map2 ResultAggregations
         (Json.Decode.field "all" decodeResultAggregationsAll)
+        -- Absent on index 50, and on any index whose mapping predates the
+        -- field; an empty aggregation just means no bucket is rendered.
+        (Json.Decode.oneOf
+            [ Json.Decode.field "service_environments_set" Search.decodeAggregation
+            , Json.Decode.succeed emptyAggregation
+            ]
+        )
+
+
+emptyAggregation : Search.Aggregation
+emptyAggregation =
+    { doc_count_error_upper_bound = 0
+    , sum_other_doc_count = 0
+    , buckets = []
+    }
 
 
 decodeResultAggregationsAll : Json.Decode.Decoder AggregationsAll
 decodeResultAggregationsAll =
     Json.Decode.map AggregationsAll
         (Json.Decode.field "doc_count" Json.Decode.int)
+
+
+encodeBuckets : Buckets -> Json.Encode.Value
+encodeBuckets buckets =
+    Json.Encode.object
+        [ ( "service_environments_set", Json.Encode.list Json.Encode.string buckets.environments ) ]
+
+
+decodeBuckets : Json.Decode.Decoder Buckets
+decodeBuckets =
+    Json.Decode.map Buckets
+        (Json.Decode.field "service_environments_set" (Json.Decode.list Json.Decode.string))

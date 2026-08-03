@@ -218,6 +218,7 @@ pub enum Derivation {
         package_homepage: Vec<String>,
         package_position: Option<String>,
         package_modular_services: Vec<String>,
+        package_modular_service_imports: Vec<PackageService>,
         #[serde(skip_serializing_if = "Option::is_none")]
         package_dep_count: Option<u64>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -258,7 +259,11 @@ pub enum Derivation {
         option_flake: Option<ModulePath>,
         service_package: Option<String>,
         service_module: Option<String>,
-        service_packages: Vec<String>,
+        service_import: Option<String>,
+        service_environments: Vec<ServiceEnvironment>,
+        service_environments_set: Vec<String>,
+        service_maintainers: Vec<Maintainer>,
+        service_maintainers_set: Vec<String>,
     },
     #[serde(rename = "home-manager-option")]
     HomeManagerOption {
@@ -348,6 +353,7 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                     package_homepage: Vec::new(),
                     package_position: None,
                     package_modular_services: Vec::new(),
+                    package_modular_service_imports: Vec::new(),
                     package_dep_count: None,
                     package_repology_repos: None,
                 }
@@ -378,6 +384,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                 package,
                 programs,
                 modular_services,
+                modular_service_imports,
                 dep_count,
                 repology_repos,
             } => {
@@ -483,6 +490,10 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                         .map_or(Default::default(), OneOrMany::into_list),
                     package_position: position,
                     package_modular_services: modular_services,
+                    package_modular_service_imports: modular_service_imports
+                        .into_iter()
+                        .map(Into::into)
+                        .collect(),
                     package_dep_count: dep_count,
                     package_repology_repos: repology_repos,
                 }
@@ -499,8 +510,31 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     flake,
                     service_package,
                     service_module,
-                    service_packages,
+                    service_import,
+                    service_environments,
+                    service_maintainers,
                 } = option;
+
+                let service_environments: Vec<ServiceEnvironment> =
+                    service_environments.into_iter().map(Into::into).collect();
+
+                // Only environments the service actually supports: this drives
+                // the bucket filter, where picking one must narrow the results
+                // to services usable there.
+                let service_environments_set = service_environments
+                    .iter()
+                    .filter(|e| e.supported)
+                    .map(|e| e.environment.to_owned())
+                    .collect();
+
+                let service_maintainers: Vec<Maintainer> =
+                    service_maintainers.into_iter().map(Into::into).collect();
+
+                let service_maintainers_set = service_maintainers
+                    .iter()
+                    .flat_map(|m| m.name.to_owned())
+                    .collect();
+
                 Derivation::Service {
                     option_source: declarations.get(0).map(Clone::clone),
                     option_name: name,
@@ -511,7 +545,11 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     option_type,
                     service_package,
                     service_module,
-                    service_packages,
+                    service_import,
+                    service_environments,
+                    service_environments_set,
+                    service_maintainers,
+                    service_maintainers_set,
                 }
             }
             import::NixpkgsEntry::HomeManagerOption(NixOption {
@@ -578,6 +616,53 @@ impl TryFrom<import::NixOption> for Derivation {
             option_flake: flake,
             option_type,
         })
+    }
+}
+
+/// One of the environments the registry knows about (e.g. "system"), as it
+/// applies to a given modular service. Environments the service is not
+/// registered for are listed too, with `supported` false and nothing to import.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ServiceEnvironment {
+    environment: String,
+    supported: bool,
+    #[serde(rename = "import", skip_serializing_if = "Option::is_none")]
+    import_expr: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    maintainers: Vec<Maintainer>,
+}
+
+impl From<import::ServiceEnvironment> for ServiceEnvironment {
+    fn from(env: import::ServiceEnvironment) -> Self {
+        ServiceEnvironment {
+            environment: env.environment,
+            supported: env.supported,
+            import_expr: env.import_expr,
+            maintainers: env.maintainers.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+/// A modular service a package exposes, with the import expressions for its
+/// portable half and for each environment.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PackageService {
+    service: String,
+    #[serde(rename = "import")]
+    import_expr: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    maintainers: Vec<Maintainer>,
+    environments: Vec<ServiceEnvironment>,
+}
+
+impl From<import::PackageService> for PackageService {
+    fn from(service: import::PackageService) -> Self {
+        PackageService {
+            service: service.service,
+            import_expr: service.import_expr,
+            maintainers: service.maintainers.into_iter().map(Into::into).collect(),
+            environments: service.environments.into_iter().map(Into::into).collect(),
+        }
     }
 }
 

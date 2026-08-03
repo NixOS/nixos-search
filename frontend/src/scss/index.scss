@@ -933,6 +933,71 @@ a:focus-visible {
   }
 }
 
+// Environment support for a modular service, on the expanded option view.
+// Each supported environment is a `<details>` whose body repeats across every
+// option of the same service, so it stays shut until asked for; unsupported
+// ones are plain leaves and get the same indent as a `<summary>`.
+.service-environments {
+  list-style: none;
+  padding-left: 0;
+
+  & > li {
+    margin-bottom: 0.25em;
+  }
+
+  summary {
+    cursor: pointer;
+  }
+
+  // Align leaves with the text of a `<summary>`, past its disclosure marker.
+  & > li:not(:has(details)) {
+    padding-left: 1.1em;
+  }
+
+  details > *:not(summary) {
+    margin: 0.25em 0 0.25em 1.1em;
+  }
+}
+
+.service-environment-support {
+  // Keep the check/cross from resizing the line when a font renders them
+  // wider than a normal glyph.
+  display: inline-block;
+  width: 1.2em;
+}
+
+// Which environments each of a package's modular services supports. Nested
+// lists rather than a matrix: the registry keeps gaining environments, and
+// stacking them keeps the block growing downwards instead of off the page.
+ul.modular-services {
+  list-style: none;
+  padding-left: 0;
+
+  & > li {
+    margin-bottom: 0.5em;
+  }
+
+  .service-environments {
+    margin: 0.25em 0 0 1.1em;
+  }
+}
+
+// A half's maintainers sit directly under that half.
+.modular-service-maintainers {
+  list-style: none;
+  margin: 0.25em 0 0 1.1em;
+  padding: 0;
+  font-size: 0.85em;
+
+  .maintainer-list-item {
+    cursor: pointer;
+
+    &:hover {
+      background-color: var(--hovered-item-background);
+    }
+  }
+}
+
 // The Name code block in the expanded option view hosts a floating copy
 // button at its right edge. Keep the block as the positioning context so
 // the button overlays the code without jostling its layout.

@@ -38,7 +38,7 @@ emit { query, k } =
             Search.Query.packagesBody query 0 k Search.Relevance []
 
         optBody =
-            Search.Query.optionsBody [ "option" ] query 0 k Search.Relevance
+            Search.Query.optionsBody [ "option" ] query 0 k Search.Relevance []
     in
     gotBodies
         { packages = Json.Encode.encode 0 pkgBody

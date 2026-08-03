@@ -853,6 +853,7 @@ viewFlakes outMsg selectedCategory =
     viewBucket
         RadioInput
         "Category"
+        identity
         (List.map (\cat -> { key = searchTypeToTitle cat, doc_count = 0 }) allTypes)
         (\title ->
             outMsg
@@ -1073,15 +1074,19 @@ type BucketInputType
     | RadioInput
 
 
+{-| `labelFor` renders a bucket key for display; the key itself still drives
+selection, so it must not be folded into the label.
+-}
 viewBucket :
     BucketInputType
     -> String
+    -> (String -> String)
     -> List AggregationsBucketItem
     -> (String -> a)
     -> List String
     -> List (Html a)
     -> List (Html a)
-viewBucket inputType title buckets searchMsgFor selectedBucket sets =
+viewBucket inputType title labelFor buckets searchMsgFor selectedBucket sets =
     List.append
         sets
         (if List.isEmpty buckets then
@@ -1107,7 +1112,7 @@ viewBucket inputType title buckets searchMsgFor selectedBucket sets =
                             label
                                 [ classList [ ( "selected", isSelected ) ]
                                 ]
-                                [ span [] [ text bucket.key ]
+                                [ span [] [ text (labelFor bucket.key) ]
                                 , if isSelected || bucket.doc_count <= 0 then
                                     closeButton
 
