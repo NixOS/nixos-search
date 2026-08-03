@@ -152,6 +152,21 @@
         "url": "https://channels.nixos.org/nixos-unstable/nixexprs.tar.xz"
       }
     },
+    "process-compose-flake": {
+      "locked": {
+        "lastModified": 1782060835,
+        "narHash": "sha256-Q8HH2t1l3MITtWCWY4ytcH5F/Q7aAHo3Iq/QTMAKTe0=",
+        "owner": "Platonic-Systems",
+        "repo": "process-compose-flake",
+        "rev": "464ff6880737f063c3f0d3d2c7781fda9190868f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Platonic-Systems",
+        "repo": "process-compose-flake",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "flake-parts": "flake-parts",
@@ -160,8 +175,25 @@
         "nix-unit": "nix-unit",
         "nixos-infra": "nixos-infra",
         "nixpkgs": "nixpkgs",
+        "process-compose-flake": "process-compose-flake",
+        "services-flake": "services-flake",
         "systems": "systems",
         "treefmt-nix": "treefmt-nix"
+      }
+    },
+    "services-flake": {
+      "locked": {
+        "lastModified": 1784799366,
+        "narHash": "sha256-aK4fmqmGbk0J2sUhex79NAZTd1002DNWNsfubO6aic0=",
+        "owner": "juspay",
+        "repo": "services-flake",
+        "rev": "eed1ab55413afbb8fd7bc929076c73894e5104e0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "juspay",
+        "repo": "services-flake",
+        "type": "github"
       }
     },
     "systems": {
