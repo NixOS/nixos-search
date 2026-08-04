@@ -131,6 +131,43 @@ let
         status = statusFromStatuses (map (field: field.result.status) fieldsWithValues);
       };
 
+  evalAppDynamic =
+    app:
+    let
+      appResult = lib.tryEval app;
+      metadataResult =
+        if appResult.success && lib.isAttrs appResult.value then
+          safeValue (
+            builtins.removeAttrs appResult.value [
+              "program"
+              "bin"
+            ]
+          )
+        else
+          {
+            success = false;
+            value = { };
+            status = "failing";
+          };
+      programResult =
+        if appResult.success && lib.isAttrs appResult.value then
+          lib.tryEval (appResult.value.program or appResult.value.bin or null)
+        else
+          {
+            success = false;
+            value = null;
+          };
+      programStatus =
+        if programResult.success && lib.isString programResult.value then "passing" else "failing";
+      status = if programStatus == "failing" then "failing" else metadataResult.status;
+    in
+    {
+      value = {
+        bin = if programStatus == "passing" then programResult.value else null;
+      };
+      inherit status;
+    };
+
   evalSchemaInventory =
     schemaKey: schemaDef:
     if resolved ? ${schemaKey} && schemaDef ? inventory then
@@ -158,17 +195,23 @@ let
               val = if rawVal != null then rawVal else (base.value or base.derivation or base.app or null);
               isDrv = (lib.tryEval (lib.isDerivation val)).value or false;
               dynamic =
-                if isDrv then
+                if schemaKey == "apps" then
+                  evalAppDynamic val
+                else if isDrv then
                   evalDrvDynamic val
                 else
                   {
                     value = { };
                     status = "passing";
                   };
-              status = statusFromStatuses [
-                itemResult.status
-                dynamic.status
-              ];
+              status =
+                if schemaKey == "apps" && dynamic.status == "failing" then
+                  "failing"
+                else
+                  statusFromStatuses [
+                    itemResult.status
+                    dynamic.status
+                  ];
             in
             {
               value = addStatus status (base // dynamic.value);
