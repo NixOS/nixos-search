@@ -28,8 +28,7 @@ pub fn get_flake_info<T: AsRef<str> + Display>(
     command.log_to = LogTo::Log;
     command.log_output_on_error = true;
 
-    command
-        .run()
+    super::run_capturing_stderr(&mut command)
         .with_context(|| format!("Failed to gather information about {}", flake_ref))
         .and_then(|o| {
             let deserialized: Result<Flake, _> =

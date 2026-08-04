@@ -67,5 +67,12 @@
       "aarch64-darwin"
     ],
     "type": "app"
+  },
+  {
+    "attribute_name": "partly-throwing-app",
+    "bin": "/nix/store/sqw9kyl8zrfnkklb3vp6gji9jw9qfgb5-hello-2.12.2/bin/hello",
+    "entry_type": "app",
+    "platforms": ["x86_64-linux", "aarch64-linux"],
+    "type": "app"
   }
 ]
