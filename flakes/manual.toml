@@ -432,6 +432,11 @@ repo = "llm-agents.nix"
 
 [[sources]]
 type = "github"
+owner = "outagedeck"
+repo = "cli"
+
+[[sources]]
+type = "github"
 owner = "PaddiM8"
 repo = "kalker"
 
