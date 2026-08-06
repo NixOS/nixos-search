@@ -95,7 +95,9 @@ packagesBody query from size sort selectedBuckets =
         , ( "flake_name", 0.5 )
         ]
         [ "package_description^3", "package_longDescription^1" ]
-        [ "package_repology_repos" ]
+        [ { field = "package_repology_repos", pivot = 20.0 }
+        , { field = "package_dep_count", pivot = 1000.0 }
+        ]
         (Just "package_attr_name")
 
 
@@ -375,10 +377,14 @@ shouldClauses primaryField positiveWords phraseFields =
         termClause :: prefixClause :: phraseClause
 
 
-popularityClauses : List String -> List (List ( String, Json.Encode.Value ))
-popularityClauses fields =
+type alias PopularitySignal =
+    { field : String, pivot : Float }
+
+
+popularityClauses : List PopularitySignal -> List (List ( String, Json.Encode.Value ))
+popularityClauses signals =
     List.map
-        (\field ->
+        (\{ field, pivot } ->
             [ ( "rank_feature"
               , Json.Encode.object
                     [ ( "field", Json.Encode.string field )
@@ -386,13 +392,13 @@ popularityClauses fields =
                     , ( "_name", Json.Encode.string ("popularity_" ++ field) )
                     , ( "saturation"
                       , Json.Encode.object
-                            [ ( "pivot", Json.Encode.float 20.0 ) ]
+                            [ ( "pivot", Json.Encode.float pivot ) ]
                       )
                     ]
               )
             ]
         )
-        fields
+        signals
 
 
 rescoreQuery : String -> ( String, Json.Encode.Value )
@@ -441,10 +447,10 @@ encodeRequestBody :
     -> List String
     -> List ( String, Float )
     -> List String
-    -> List String
+    -> List PopularitySignal
     -> Maybe String
     -> Json.Encode.Value
-encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets mainFields fields phraseFields popularityFields rescoreField =
+encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets mainFields fields phraseFields popularitySignals rescoreField =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -535,7 +541,7 @@ encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms 
                         , ( "should"
                           , Json.Encode.list Json.Encode.object
                                 (shouldClauses primaryField positiveWords phraseFields
-                                    ++ popularityClauses popularityFields
+                                    ++ popularityClauses popularitySignals
                                 )
                           )
                         ]
