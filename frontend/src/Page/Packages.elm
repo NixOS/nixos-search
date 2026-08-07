@@ -373,7 +373,7 @@ viewSuccess :
     -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
 viewSuccess nixosChannels channel showUsageDetails show hits =
-    ul []
+    ul [ class "search-results-list" ]
         (List.map
             (viewResultItem nixosChannels channel showUsageDetails show)
             hits
@@ -430,7 +430,7 @@ viewResultItem nixosChannels channel showUsageDetails show item =
                 [ text title ]
 
         shortPackageDetails =
-            ul []
+            ul [ class "package-short-details" ]
                 (li []
                     [ text "Name: "
                     , code [ class "package-name" ] [ text item.source.pname ]
@@ -609,7 +609,7 @@ viewResultItem nixosChannels channel showUsageDetails show item =
                     li [] [ text platform ]
 
         maintainersTeamsAndPlatforms =
-            div []
+            div [ class "package-maintainers-platforms" ]
                 [ div [ class "package-details-maintainers" ]
                     [ h4 [] [ text "Maintainers" ]
                     , if List.isEmpty item.source.maintainers then
@@ -655,7 +655,7 @@ viewResultItem nixosChannels channel showUsageDetails show item =
                     else
                         text p
             in
-            div []
+            div [ class "package-programs" ]
                 [ h4 [] [ text "Programs provided" ]
                 , if List.isEmpty sortedPrograms then
                     p [] [ text "This package provides no programs." ]
@@ -728,15 +728,15 @@ viewResultItem nixosChannels channel showUsageDetails show item =
 
         longerPackageDetails =
             optionals (Just item.source.attr_name == show)
-                [ div [ trapClick ]
-                    [ div []
+                [ div [ class "package-details", trapClick ]
+                    [ div [ class "package-long-description" ]
                         (item.source.longDescription
                             |> Maybe.andThen Utils.showHtml
                             |> Maybe.withDefault []
                         )
                     , case item.source.flakeUrl of
                         Just ( flakeUrl, _ ) ->
-                            div []
+                            div [ class "package-usage" ]
                                 [ fieldset
                                     [ class "radio-group-tabs usage-radios" ]
                                     [ legend [ class "usage-title" ]
@@ -782,7 +782,7 @@ viewResultItem nixosChannels channel showUsageDetails show item =
                                     , ( Search.ViaNixEnv, "nix-env", True )
                                     ]
                             in
-                            div []
+                            div [ class "package-usage" ]
                                 [ fieldset
                                     [ class "radio-group-tabs usage-radios" ]
                                     [ legend [ class "usage-title" ]
@@ -965,8 +965,8 @@ viewResultItem nixosChannels channel showUsageDetails show item =
         , classList [ ( "opened", isOpen ) ]
         , Search.elementId item.source.attr_name
         ]
-        ([ span [] flakeOrNixpkgs
-         , div [] [ text <| Maybe.withDefault "" item.source.description ]
+        ([ span [ class "search-result-title" ] flakeOrNixpkgs
+         , div [ class "package-description" ] [ text <| Maybe.withDefault "" item.source.description ]
          , shortPackageDetails
          , Search.showMoreButton toggle isOpen
          ]

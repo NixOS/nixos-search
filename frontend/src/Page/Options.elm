@@ -23,7 +23,10 @@ import Html
         ( Html
         , a
         , code
+        , dd
         , div
+        , dl
+        , dt
         , fieldset
         , input
         , label
@@ -293,7 +296,7 @@ viewSuccess :
     -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
 viewSuccess activeSource nixosChannels channel _ show hits =
-    ul []
+    ul [ class "search-results-list" ]
         (List.map
             (viewResultItem nixosChannels channel show activeSource)
             hits
@@ -336,16 +339,16 @@ viewResultItem nixosChannels channel show activeSource item =
                         item.source.docType == "service"
                 in
                 Just <|
-                    div [ Html.Attributes.map SearchMsg Search.trapClick ] <|
-                        [ div [] [ text "Name" ]
-                        , div [] [ viewOptionNamePath channel activeSource item.source.name nameSegments ]
+                    dl [ class "option-details", Html.Attributes.map SearchMsg Search.trapClick ] <|
+                        [ dt [] [ text "Name" ]
+                        , dd [] [ viewOptionNamePath channel activeSource item.source.name nameSegments ]
                         ]
                             ++ (item.source.description
                                     |> Maybe.andThen Utils.showHtml
                                     |> Maybe.map
                                         (\description ->
-                                            [ div [] [ text "Description" ]
-                                            , div [] description
+                                            [ dt [] [ text "Description" ]
+                                            , dd [] description
                                             ]
                                         )
                                     |> Maybe.withDefault []
@@ -353,8 +356,8 @@ viewResultItem nixosChannels channel show activeSource item =
                             ++ (item.source.type_
                                     |> Maybe.map
                                         (\t ->
-                                            [ div [] [ text "Type" ]
-                                            , div [] [ asPre t ]
+                                            [ dt [] [ text "Type" ]
+                                            , dd [] [ asPre t ]
                                             ]
                                         )
                                     |> Maybe.withDefault []
@@ -362,8 +365,8 @@ viewResultItem nixosChannels channel show activeSource item =
                             ++ (item.source.default
                                     |> Maybe.map
                                         (\default ->
-                                            [ div [] [ text "Default" ]
-                                            , div [] <| Maybe.withDefault [ Utils.copyable CopyToClipboard default (asPreCode default) ] (Utils.showHtml default)
+                                            [ dt [] [ text "Default" ]
+                                            , dd [] <| Maybe.withDefault [ Utils.copyable CopyToClipboard default (asPreCode default) ] (Utils.showHtml default)
                                             ]
                                         )
                                     |> Maybe.withDefault []
@@ -371,15 +374,15 @@ viewResultItem nixosChannels channel show activeSource item =
                             ++ (item.source.example
                                     |> Maybe.map
                                         (\example ->
-                                            [ div [] [ text "Example" ]
-                                            , div [] <| Maybe.withDefault [ Utils.copyable CopyToClipboard example (asHighlightPreCode example) ] (Utils.showHtml example)
+                                            [ dt [] [ text "Example" ]
+                                            , dd [] <| Maybe.withDefault [ Utils.copyable CopyToClipboard example (asHighlightPreCode example) ] (Utils.showHtml example)
                                             ]
                                         )
                                     |> Maybe.withDefault []
                                )
                             ++ (if isService then
-                                    [ div [] [ text "About" ]
-                                    , div []
+                                    [ dt [] [ text "About" ]
+                                    , dd []
                                         [ a
                                             [ href "https://nixos.org/manual/nixos/stable/#modular-services"
                                             , Html.Attributes.target "_blank"
@@ -397,20 +400,20 @@ viewResultItem nixosChannels channel show activeSource item =
                                             item.source.servicePackage
                                                 |> Maybe.map
                                                     (\pkg ->
-                                                        [ div [] [ text "Provided by package" ]
-                                                        , div [] [ pkgLink pkg ]
+                                                        [ dt [] [ text "Provided by package" ]
+                                                        , dd [] [ pkgLink pkg ]
                                                         ]
                                                     )
                                                 |> Maybe.withDefault []
 
                                         [ single ] ->
-                                            [ div [] [ text "Provided by package" ]
-                                            , div [] [ pkgLink single ]
+                                            [ dt [] [ text "Provided by package" ]
+                                            , dd [] [ pkgLink single ]
                                             ]
 
                                         many ->
-                                            [ div [] [ text "Provided by packages" ]
-                                            , div []
+                                            [ dt [] [ text "Provided by packages" ]
+                                            , dd []
                                                 (List.intersperse (text ", ") (List.map pkgLink many))
                                             ]
 
@@ -418,8 +421,8 @@ viewResultItem nixosChannels channel show activeSource item =
                                     []
                                )
                             ++ viewUsageSnippet item.source
-                            ++ [ div [] [ text "Declared in" ]
-                               , div [] <| findSource nixosChannels channel item.source
+                            ++ [ dt [] [ text "Declared in" ]
+                               , dd [] <| findSource nixosChannels channel item.source
                                ]
 
             else
@@ -439,7 +442,7 @@ viewResultItem nixosChannels channel show activeSource item =
     <|
         List.filterMap identity
             [ Just <|
-                ul [ class "search-result-button" ]
+                ul [ class "search-result-title option-title" ]
                     [ li []
                         [ a
                             [ onClick toggle
@@ -500,8 +503,8 @@ viewUsageSnippet source =
             indent ++ source.name ++ " = " ++ leafValue indent ++ ";\n"
 
         usage snippet =
-            [ div [] [ text "Usage" ]
-            , Utils.copyable CopyToClipboard snippet (asHighlightPreCode snippet)
+            [ dt [] [ text "Usage" ]
+            , dd [] [ Utils.copyable CopyToClipboard snippet (asHighlightPreCode snippet) ]
             ]
     in
     case source.docType of
