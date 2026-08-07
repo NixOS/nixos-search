@@ -51,18 +51,21 @@
         "id": "g016",
         "q": "services.openssh.enable",
         "category": "exact",
-        "relevant": ["opt:services.openssh.enable"]
+        "exhaustive": true,
+        "relevant": ["opt:services.openssh.enable", "opt:services.sshd.enable"]
     },
     {
         "id": "g017",
         "q": "services.grafana.enable",
         "category": "exact",
+        "exhaustive": true,
         "relevant": ["opt:services.grafana.enable"]
     },
     {
         "id": "g018",
         "q": "networking.firewall.enable",
         "category": "exact",
+        "exhaustive": true,
         "relevant": ["opt:networking.firewall.enable"]
     },
     {
@@ -75,12 +78,14 @@
         "id": "g020",
         "q": "services.syncthing.enable",
         "category": "exact",
+        "exhaustive": true,
         "relevant": ["opt:services.syncthing.enable"]
     },
     {
         "id": "g021",
         "q": "services.printing.enable",
         "category": "exact",
+        "exhaustive": true,
         "relevant": ["opt:services.printing.enable"]
     },
     {
@@ -93,18 +98,21 @@
         "id": "g023",
         "q": "networking.firewall.allowedTCPPorts",
         "category": "exact",
+        "exhaustive": true,
         "relevant": ["opt:networking.firewall.allowedTCPPorts"]
     },
     {
         "id": "g024",
         "q": "services.nextcloud.hostName",
         "category": "exact",
+        "exhaustive": true,
         "relevant": ["opt:services.nextcloud.hostName"]
     },
     {
         "id": "g025",
         "q": "networking.networkmanager.logLevel",
         "category": "exact",
+        "exhaustive": true,
         "relevant": ["opt:networking.networkmanager.logLevel"]
     },
     {

@@ -5,7 +5,7 @@
  * scores curated queries against our live ES instance.
  *
  * Usage:
- *   node benchmark/run.mjs [--packages <path>] [--options <path>] [--channel <branch>] [--schema <n>] [--k <n>]
+ *   node benchmark/run.mjs [--packages <path>] [--options <path>] [--channel <branch>] [--schema <n>] [--k <n>] [--persistence <f>]
  *
  */
 
@@ -45,12 +45,14 @@ const { values: args } = parseArgs({
         channel: { type: "string", default: "nixos-unstable" },
         schema: { type: "string" },
         k: { type: "string", default: "10" },
+        persistence: { type: "string", default: "0.8" },
     },
     strict: false,
 });
 
 // Settings
 const K = parseInt(args.k, 10);
+const P = parseFloat(args.persistence);
 const SCHEMA = args.schema ?? frontendSchema();
 const INDEX = `latest-${SCHEMA}-${args.channel}`;
 const ES_URL =
@@ -157,6 +159,42 @@ function recallAtK(ranked, relevant, k) {
     return denom > 0 ? hits / denom : 0;
 }
 
+// Rank-biased precision (Moffat & Zobel 2008), conditioned on the user stopping
+// inside the page we returned.
+//
+// The user model: a user reads rank 1, then moves on to the next rank with
+// probability `p`. So rank `i` is examined with weight `p^(i-1)`.
+//
+//   RBP = sum(p^(i-1) over relevant hits) / sum(p^(i-1) over returned hits)
+//
+// Textbook RBP divides by `1 / (1 - p)`, the weight of an unbounded result list.
+// Dividing by the weight of the hits actually returned conditions the same model
+// on the user stopping inside the page, since
+// `sum(p^(i-1), i=1..n) = (1 - p^n) / (1 - p)`.
+//
+// Properties:
+// - Junk anywhere on the page costs something, discounted by rank.
+// - A page holding fewer than `k` hits is scored on what it returned, so a short
+//   clean page reaches 1.000.
+// - `p` sets how far down the user reads: expected examination depth is
+//   `1 / (1 - p)` results.
+//
+// Requires `"exhaustive": true`, meaning `relevant` enumerates every acceptable
+// answer; otherwise a good-but-unlisted hit scores as noise. Returns `null` when
+// there are no hits, which drops the query from the mean.
+function conditionalRBP(ranked, relevant, p) {
+    if (ranked.length === 0) return null;
+    const rel = new Set(relevant);
+    let num = 0,
+        denom = 0;
+    for (let i = 0; i < ranked.length; i++) {
+        const weight = p ** i;
+        denom += weight;
+        if (rel.has(ranked[i])) num += weight;
+    }
+    return num / denom;
+}
+
 function nextBody(query, k) {
     return new Promise((resolve) => {
         const sub = app.ports.gotBodies.subscribe(function handler(bodies) {
@@ -181,9 +219,12 @@ async function scoreTrack(queries, bodyKey, field, prefix) {
             category: q.category,
             relevant: q.relevant,
             ranked,
+            matched: data.hits.total.value,
+            matchedExact: data.hits.total.relation === "eq",
             mrr: reciprocalRank(ranked, q.relevant),
             success: successAtK(ranked, q.relevant, K),
             recall: recallAtK(ranked, q.relevant, K),
+            rbp: q.exhaustive ? conditionalRBP(ranked, q.relevant, P) : null,
         });
     }
     return results;
@@ -224,10 +265,13 @@ const table = (header, rows) =>
 
 // One `## <label>` section: Overall + By-category tables for a single track.
 function section(label, results) {
+    // RBP only covers the closed-set queries that returned something.
+    const closed = results.filter((r) => r.rbp !== null);
     const overall = {
         success: mean(results.map((r) => r.success)),
         mrr: mean(results.map((r) => r.mrr)),
         recall: mean(results.map((r) => r.recall)),
+        rbp: closed.length ? mean(closed.map((r) => r.rbp)) : null,
     };
     const byCategory = {};
     for (const r of results) {
@@ -241,11 +285,16 @@ function section(label, results) {
         "### Overall",
         "",
         table(
-            ["metric", "value"],
+            ["metric", "value", "n"],
             [
-                ["Success@" + K, overall.success.toFixed(3)],
-                ["MRR", overall.mrr.toFixed(3)],
-                ["Recall@" + K, overall.recall.toFixed(3)],
+                ["Success@" + K, overall.success.toFixed(3), results.length],
+                ["MRR", overall.mrr.toFixed(3), results.length],
+                ["Recall@" + K, overall.recall.toFixed(3), results.length],
+                [
+                    `RBP (p=${P})`,
+                    overall.rbp === null ? "-" : overall.rbp.toFixed(3),
+                    closed.length,
+                ],
             ],
         ),
         "",
@@ -276,15 +325,33 @@ const perQuery = [
 const lines = [
     "# Relevance benchmark: frontend query vs deployed ES",
     "",
-    `> Index: \`${INDEX}\`. metrics: (Success@${K}, MRR, Recall@${K}).`,
+    `> Index: \`${INDEX}\`. metrics: (Success@${K}, MRR, Recall@${K}, RBP(p=${P})).`,
+    "",
+    `> \`RBP\` is rank-biased precision. It prices rank \`i\` at \`p^(i-1)\`. Junk near the`,
+    `> top therefore costs more than junk near the bottom. The denominator is the page`,
+    `> we returned, so a short page scores only on the hits it has. Pass`,
+    `> \`--persistence\` to change \`p\`. Only a query with \`"exhaustive": true\` gets a`,
+    "> score. A query with no hits drops out of the mean.",
     "",
     ...section("Packages", pkgResults),
     ...section("Options", optResults),
     "<details>",
     "<summary>Per-query results</summary>",
     "",
+    "> `matched` is the size of the match set, and a `+` means ES stopped counting.",
+    "",
     table(
-        ["id", "track", "q", "category", "success", "mrr", "top-3 ranked"],
+        [
+            "id",
+            "track",
+            "q",
+            "category",
+            "success",
+            "mrr",
+            "RBP",
+            "matched",
+            "top-3 ranked",
+        ],
         perQuery.map((r) => [
             r.id,
             r.track,
@@ -292,6 +359,8 @@ const lines = [
             r.category,
             r.success.toFixed(0),
             r.mrr.toFixed(3),
+            r.rbp === null ? "-" : r.rbp.toFixed(3),
+            r.matched + (r.matchedExact ? "" : "+"),
             r.ranked.slice(0, 3).join(", "),
         ]),
     ),
