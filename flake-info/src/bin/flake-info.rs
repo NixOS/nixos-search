@@ -5,7 +5,9 @@ use flake_info::data::{self, Export, Source};
 use flake_info::elastic::{self, ElasticsearchError, ExistsStrategy};
 use log::{info, warn};
 use sha2::Digest;
+use std::fs::OpenOptions;
 use std::io;
+use std::io::Write;
 use std::path::PathBuf;
 use structopt::{StructOpt, clap::ArgGroup};
 use thiserror::Error;
@@ -31,6 +33,13 @@ struct Args {
         default_value
     )]
     kind: data::import::Kind,
+
+    #[structopt(
+        long = "save-summary",
+        help = "Save markdown summary of failures to this file",
+        requires("elastic-schema-version")
+    )]
+    save_summary: Option<String>,
 
     #[structopt(flatten)]
     elastic: ElasticOpts,
@@ -203,6 +212,16 @@ async fn main() -> Result<()> {
 
     let args = Args::from_args();
 
+    let summary = match args.save_summary {
+        Some(filename) => Some(
+            OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(filename)?,
+        ),
+        None => None,
+    };
+
     // The producer subcommand only crawls Repology and writes JSON; it must be
     // handled before the --push/--json assertion, which does not apply to it.
     if let Command::RepologyCounts { output } = &args.command {
@@ -228,7 +247,13 @@ async fn main() -> Result<()> {
     let (exports, ident, partial_error) = run_command(args.command, args.kind, &args.extra).await?;
 
     if args.elastic.enable {
-        push_to_elastic(&args.elastic, exports, ident).await?;
+        if let Err(e) = push_to_elastic(&args.elastic, exports, ident).await {
+            match summary {
+                Some(mut f) => write!(f, "Failed to push to Elastic:\n\n```\n{}\n```", e)?,
+                None => (),
+            }
+            return Err(e);
+        }
     } else if args.elastic.json {
         println!("{}", serde_json::to_string(&exports()?)?);
     }
@@ -236,6 +261,10 @@ async fn main() -> Result<()> {
     // Surface partial failures (e.g. some group members failed to evaluate) as a
     // non-zero exit so CI does not report success while data is missing.
     if let Some(error) = partial_error {
+        match summary {
+            Some(mut f) => write!(f, "Partial failure:\n\n```\n{}\n```", error)?,
+            None => (),
+        }
         return Err(error.into());
     }
     Ok(())
