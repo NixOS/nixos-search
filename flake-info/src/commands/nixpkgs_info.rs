@@ -14,6 +14,36 @@ struct PackagesInfo {
     packages: HashMap<String, Package>,
 }
 
+fn fetch_channel_json<T: serde::de::DeserializeOwned>(
+    channel: &str,
+    filename: &str,
+    override_url: &Option<String>,
+) -> Result<T> {
+    let url = override_url
+        .clone()
+        .unwrap_or_else(|| format!("https://channels.nixos.org/nixos-{channel}/{filename}"));
+    log::info!("Fetching {filename} from {url}");
+
+    let fetch_bytes = async {
+        let res = reqwest::get(&url)
+            .await
+            .with_context(|| format!("Failed to download {url}"))?
+            .error_for_status()
+            .with_context(|| format!("HTTP error fetching {url}"))?;
+        res.bytes()
+            .await
+            .with_context(|| format!("Failed to read body from {url}"))
+    };
+
+    let bytes = if let Ok(handle) = tokio::runtime::Handle::try_current() {
+        tokio::task::block_in_place(|| handle.block_on(fetch_bytes))?
+    } else {
+        tokio::runtime::Runtime::new()?.block_on(fetch_bytes)?
+    };
+
+    serde_json::from_slice(&bytes).with_context(|| format!("Could not parse channel {filename}"))
+}
+
 pub fn get_nixpkgs_info(
     nixpkgs: &Source,
     attribute: &Option<String>,
@@ -28,24 +58,8 @@ pub fn get_nixpkgs_info(
         ),
     };
 
-    let url = packages_json_url.clone().unwrap_or_else(|| {
-        format!(
-            "https://channels.nixos.org/nixos-{}/packages.json.br",
-            nixpkgs.channel,
-        )
-    });
-    log::info!("Fetching packages from {}", url);
-
-    let response = reqwest::blocking::Client::new()
-        .get(&url)
-        .send()
-        .with_context(|| format!("Failed to download {}", url))?
-        .error_for_status()
-        .with_context(|| format!("HTTP error fetching {}", url))?;
-
-    let body = response.bytes()?;
     let info: PackagesInfo =
-        serde_json::from_slice(&body).with_context(|| "Could not parse channel packages.json")?;
+        fetch_channel_json(&nixpkgs.channel, "packages.json.br", packages_json_url)?;
 
     let attr_set: HashMap<String, Package> = match attribute {
         Some(prefix) => info
@@ -57,8 +71,7 @@ pub fn get_nixpkgs_info(
     };
 
     let mut programs = get_nixpkgs_programs(nixpkgs)?;
-    let mut package_services =
-        get_nixpkgs_package_services(&Source::Nixpkgs(nixpkgs.clone())).unwrap_or_default();
+    let mut package_services: HashMap<String, Vec<String>> = HashMap::new();
     // Skip the slow eval when only importing a single attribute.
     let dep_counts = if attribute.is_none() {
         super::get_nixpkgs_dep_counts(nixpkgs)?
@@ -124,21 +137,6 @@ fn resolve_repology_counts(file: &Option<PathBuf>) -> HashMap<String, u64> {
     }
 }
 
-pub fn get_nixpkgs_package_services(nixpkgs: &Source) -> Result<HashMap<String, Vec<String>>> {
-    let mut command = super::nix_eval_command(&["eval", "--json", "--no-write-lock-file"]);
-    super::add_flake_arg(&mut command, "nixpkgsFlake", &nixpkgs.to_flake_ref());
-    command.add_arg("nixos-package-services");
-
-    let cow = super::run_capturing_stderr(&mut command)
-        .with_context(|| "Failed to gather modular service mapping for packages")?;
-
-    let output = &*cow.stdout_string_lossy();
-    let de = &mut serde_json::Deserializer::from_str(output);
-    let map: HashMap<String, Vec<String>> = serde_path_to_error::deserialize(de)
-        .with_context(|| "Could not parse package-services map")?;
-    Ok(map)
-}
-
 pub fn get_nixpkgs_programs(nixpkgs: &Nixpkgs) -> Result<HashMap<String, HashSet<String>>> {
     let mut command = Command::with_args(
         "nix",
@@ -177,85 +175,47 @@ pub fn get_nixpkgs_programs(nixpkgs: &Nixpkgs) -> Result<HashMap<String, HashSet
     Ok(programs)
 }
 
-fn get_options_from_script(
+#[derive(Deserialize)]
+struct ChannelOption {
+    #[serde(default)]
+    declarations: Vec<String>,
+    description: Option<crate::data::import::DocString>,
+    #[serde(rename = "type")]
+    option_type: Option<String>,
+    #[serde(deserialize_with = "crate::data::import::optional_field", default)]
+    default: Option<crate::data::import::DocValue>,
+    #[serde(deserialize_with = "crate::data::import::optional_field", default)]
+    example: Option<crate::data::import::DocValue>,
+}
+
+pub fn get_nixpkgs_options(
     nixpkgs: &Source,
-    attribute: &str,
-    target_flake: Option<&str>,
-) -> Result<Vec<NixOption>> {
-    let mut command = super::nix_eval_command(&["eval", "--json", "--no-write-lock-file"]);
-    super::add_flake_arg(&mut command, "nixpkgsFlake", &nixpkgs.to_flake_ref());
-    if let Some(flake_ref) = target_flake {
-        super::add_flake_arg(&mut command, "targetFlake", flake_ref);
-    }
-    command.add_arg(attribute);
+    options_json_url: &Option<String>,
+) -> Result<Vec<NixpkgsEntry>> {
+    let channel = match nixpkgs {
+        Source::Nixpkgs(src) => &src.channel,
+        other => anyhow::bail!(
+            "option import requires nixpkgs, got {}",
+            other.to_flake_ref()
+        ),
+    };
 
-    let cow = super::run_capturing_stderr(&mut command)
-        .with_context(|| format!("Failed to gather information about {}", attribute))?;
+    let raw_map: HashMap<String, ChannelOption> =
+        fetch_channel_json(channel, "options.json.br", options_json_url)?;
 
-    let output = &*cow.stdout_string_lossy();
-    let de = &mut serde_json::Deserializer::from_str(output);
-    let attr_set: Vec<NixOption> = serde_path_to_error::deserialize(de)
-        .with_context(|| format!("Could not parse {}", attribute))?;
-
-    Ok(attr_set)
-}
-
-pub fn get_nixpkgs_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
-    let options = get_options_from_script(nixpkgs, "nixos-options", None)?;
-    Ok(options.into_iter().map(NixpkgsEntry::Option).collect())
-}
-
-pub fn get_nixpkgs_services(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
-    let options = get_options_from_script(nixpkgs, "nixos-services", None)?;
-    Ok(options.into_iter().map(NixpkgsEntry::Service).collect())
-}
-
-fn flake_ref_for(nixpkgs: &Source, base: &str, suffix_pattern: Option<&str>) -> String {
-    match nixpkgs {
-        Source::Nixpkgs(Nixpkgs { channel, .. }) if channel != "unstable" => {
-            let suffix = match suffix_pattern {
-                Some(pat) => pat.replace("{channel}", channel),
-                None => format!("release-{channel}"),
-            };
-            format!("{base}/{suffix}")
-        }
-        _ => base.to_string(),
-    }
-}
-
-/// Home-manager flake reference matching a given nixpkgs channel. Stable
-/// nixpkgs channels (`nixos-XX.YY`) get the corresponding `release-XX.YY`
-/// branch in `nix-community/home-manager`; `nixos-unstable` gets `master`.
-fn home_manager_flake_ref(nixpkgs: &Source) -> String {
-    flake_ref_for(nixpkgs, "github:nix-community/home-manager", None)
-}
-
-pub fn get_home_manager_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
-    let hm_flake_ref = home_manager_flake_ref(nixpkgs);
-    let options = get_options_from_script(nixpkgs, "home-manager-options", Some(&hm_flake_ref))?;
-    Ok(options
+    Ok(raw_map
         .into_iter()
-        .map(NixpkgsEntry::HomeManagerOption)
-        .collect())
-}
-
-/// Nix-darwin flake reference matching a given nixpkgs channel. Stable
-/// nixpkgs channels (`nixos-XX.YY`) get the corresponding `nix-darwin-XX.YY`
-/// branch in `nix-darwin/nix-darwin`; `nixos-unstable` gets `master`.
-fn darwin_flake_ref(nixpkgs: &Source) -> String {
-    flake_ref_for(
-        nixpkgs,
-        "github:nix-darwin/nix-darwin",
-        Some("nix-darwin-{channel}"),
-    )
-}
-
-pub fn get_darwin_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
-    let darwin_flake_ref = darwin_flake_ref(nixpkgs);
-    let options = get_options_from_script(nixpkgs, "darwin-options", Some(&darwin_flake_ref))?;
-    Ok(options
-        .into_iter()
-        .map(NixpkgsEntry::DarwinOption)
+        .map(|(name, item)| {
+            NixpkgsEntry::Option(NixOption {
+                declarations: item.declarations,
+                description: item.description,
+                name,
+                option_type: item.option_type,
+                default: item.default,
+                example: item.example,
+                flake: None,
+            })
+        })
         .collect())
 }
 

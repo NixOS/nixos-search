@@ -173,21 +173,7 @@ lazy_static! {
                 "option_type": {"type": "keyword"},
                 "option_default": {"type": "text"},
                 "option_example": {"type": "text"},
-                "option_source": {"type": "keyword"},
-                // Modular service fields
-                "service_package": {
-                    "type": "keyword",
-                    "fields": {
-                        "edge": {"type": "text", "analyzer": "edge"}
-                    },
-                },
-                "service_module": {"type": "keyword"},
-                "service_packages": {
-                    "type": "keyword",
-                    "fields": {
-                        "edge": {"type": "text", "analyzer": "edge"}
-                    },
-                },
+                "option_source": {"type": "keyword"}
             }
         },
         "settings": {
@@ -556,6 +542,7 @@ mod tests {
     };
 
     #[tokio::test]
+    #[ignore = "requires live local elasticsearch on localhost:9200"]
     async fn test_delete() -> Result<(), Box<dyn std::error::Error>> {
         let es = Elasticsearch::new("http://localhost:9200").unwrap();
         let config = &Config {
@@ -572,6 +559,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires live local elasticsearch on localhost:9200"]
     async fn test_init() -> Result<(), Box<dyn std::error::Error>> {
         let es = Elasticsearch::new("http://localhost:9200").unwrap();
         let config = &Config {
@@ -588,9 +576,11 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires live local elasticsearch on localhost:9200"]
     async fn test_push() -> Result<(), Box<dyn std::error::Error>> {
-        let sources: Vec<data::Source> =
-            data::Source::read_sources_file(Path::new("./examples/examples.in.json"))?;
+        let sources: Vec<data::Source> = data::Source::read_sources_file(Path::new(
+            "./assets/commands/test/_fixtures/examples.in.json",
+        ))?;
 
         let exports = sources
             .iter()
@@ -613,6 +603,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires live local elasticsearch on localhost:9200"]
     async fn test_alias_points_at() -> Result<(), Box<dyn std::error::Error>> {
         let es = Elasticsearch::new("http://localhost:9200").unwrap();
         let alias = "test_alias_points_at";
@@ -646,6 +637,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires live local elasticsearch on localhost:9200"]
     async fn test_abort_if_index_exists() -> Result<(), Box<dyn std::error::Error>> {
         let es = Elasticsearch::new("http://localhost:9200").unwrap();
         let config = &Config {

@@ -55,6 +55,7 @@ pub fn process_nixpkgs(
     kind: &Kind,
     attribute: &Option<String>,
     packages_json_url: &Option<String>,
+    options_json_url: &Option<String>,
     repology_counts_file: &Option<PathBuf>,
 ) -> Result<Vec<Export>, anyhow::Error> {
     let drvs = if matches!(kind, Kind::All | Kind::Package) {
@@ -64,34 +65,13 @@ pub fn process_nixpkgs(
     };
 
     let mut options = if matches!(kind, Kind::All | Kind::Option) {
-        commands::get_nixpkgs_options(nixpkgs)?
-    } else {
-        Vec::new()
-    };
-
-    let mut services = if matches!(kind, Kind::All | Kind::ModularService) {
-        commands::get_nixpkgs_services(nixpkgs)?
-    } else {
-        Vec::new()
-    };
-
-    let mut hm_options = if matches!(kind, Kind::All | Kind::HomeManagerOption) {
-        commands::get_home_manager_options(nixpkgs)?
-    } else {
-        Vec::new()
-    };
-
-    let mut darwin_options = if matches!(kind, Kind::All | Kind::DarwinOption) {
-        commands::get_darwin_options(nixpkgs)?
+        commands::get_nixpkgs_options(nixpkgs, options_json_url)?
     } else {
         Vec::new()
     };
 
     let mut all = drvs;
     all.append(&mut options);
-    all.append(&mut services);
-    all.append(&mut hm_options);
-    all.append(&mut darwin_options);
 
     let exports = all
         .into_iter()

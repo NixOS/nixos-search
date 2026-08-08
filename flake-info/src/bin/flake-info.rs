@@ -81,6 +81,14 @@ enum Command {
         packages_json_url: Option<String>,
 
         #[structopt(
+            long = "options-json-url",
+            help = "Override URL to fetch `options.json` (or `options.json.br`) from. \
+                    Defaults to https://channels.nixos.org/nixos-<channel>/options.json.br. \
+                    Useful for testing a fix against a custom-built file from a nixpkgs branch"
+        )]
+        options_json_url: Option<String>,
+
+        #[structopt(
             long = "repology-counts-file",
             help = "Read Repology repository counts (JSON object srcname->count) from this \
                     file instead of crawling repology.org. A missing/unreadable file drops \
@@ -204,7 +212,7 @@ struct ElasticOpts {
     no_alias: bool,
 }
 
-type LazyExports = Box<dyn FnOnce() -> Result<Vec<Export>, FlakeInfoError>>;
+type LazyExports = Box<dyn FnOnce() -> Result<Vec<Export>, FlakeInfoError> + Send>;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -332,6 +340,7 @@ async fn run_command(
             channel,
             attribute,
             packages_json_url,
+            options_json_url,
             repology_counts_file,
         } => {
             let nixpkgs = Source::nixpkgs(channel)
@@ -358,6 +367,7 @@ async fn run_command(
                         &kind,
                         &attribute,
                         &packages_json_url,
+                        &options_json_url,
                         &repology_counts_file,
                     )
                     .map_err(FlakeInfoError::Nixpkgs)
@@ -393,6 +403,7 @@ async fn run_command(
                         &attribute,
                         &None,
                         &None,
+                        &None,
                     )
                     .map_err(FlakeInfoError::Nixpkgs)
                 }),
@@ -417,7 +428,7 @@ async fn run_command(
                 .iter()
                 .map(|source| match source {
                     Source::Nixpkgs(nixpkgs) => {
-                        flake_info::process_nixpkgs(source, &kind, &None, &None, &None)
+                        flake_info::process_nixpkgs(source, &kind, &None, &None, &None, &None)
                             .with_context(|| {
                                 format!(
                                     "While processing nixpkgs archive {}",

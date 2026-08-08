@@ -1,5 +1,5 @@
-{ pkgs, flake-schemas }:
-pkgs.rustPlatform.buildRustPackage rec {
+{ pkgs, self }:
+pkgs.rustPlatform.buildRustPackage {
   name = "flake-info";
   src = ./.;
   cargoLock = {
@@ -23,11 +23,11 @@ pkgs.rustPlatform.buildRustPackage rec {
 
   checkInputs = with pkgs; [ pandoc ];
 
-  ROOTDIR = builtins.placeholder "out";
+  ROOTDIR = placeholder "out";
   LINK_MANPAGES_PANDOC_FILTER = import src/data/link-manpages.nix { inherit pkgs; };
-  # Baked in at build time so `nix eval -f assets/commands/flake_info.nix` can
-  # resolve the `flake-schemas` registry override to a locked ref.
-  FLAKE_SCHEMAS_REF = "github:DeterminateSystems/flake-schemas/${flake-schemas.rev}";
+  # Baked in at build time so `nix eval --expr` can reference the locked flake
+  # via `(builtins.getFlake SELF_FLAKE_REF).lib.evalFlake { ... }`.
+  SELF_FLAKE_REF = "path:${self}";
 
   checkFlags = [
     "--skip elastic::tests"

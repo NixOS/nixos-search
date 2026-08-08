@@ -28,62 +28,43 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     flake-schemas.url = "github:DeterminateSystems/flake-schemas";
+    nix-unit = {
+      url = "github:nix-community/nix-unit";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.treefmt-nix.follows = "treefmt-nix";
+    };
+    namaka = {
+      url = "github:nix-community/namaka";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    services-flake.url = "github:juspay/services-flake";
+    process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
   };
 
   outputs =
-    inputs@{ flake-parts, ... }:
+    inputs@{
+      flake-parts,
+      nix-unit,
+      namaka,
+      ...
+    }:
     flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [
+        inputs.nix-unit.modules.flake.default
+        inputs.process-compose-flake.flakeModule
+      ];
       systems = import inputs.systems;
 
       flake = {
         lib = {
           evalFlake =
             { targetFlake }:
-            import ./flake-info/assets/commands/flake_info.nix {
+            import ./flake-info/assets/commands/evalFlake.nix {
               inherit targetFlake;
-              nixpkgsFlake = inputs.nixpkgs;
-              flake-schemas = inputs.flake-schemas;
+              inherit (inputs) nixpkgs flake-schemas;
             };
         };
 
-        # Local testing VM configuration
-        nixosConfigurations.opensearch-vm = inputs.nixpkgs.lib.nixosSystem {
-          system = "x86_64-linux";
-          modules = [
-            (import "${inputs.nixpkgs}/nixos/modules/virtualisation/qemu-vm.nix")
-            (
-              { lib, pkgs, ... }:
-              {
-                system.stateVersion = "25.05";
-                services.getty.autologinUser = "root";
-                virtualisation = {
-                  diskImage = null; # makes VM ephemeral
-                  graphics = false;
-                  forwardPorts = [
-                    {
-                      guest.port = 9200;
-                      host.port = 9200;
-                    }
-                  ]; # expose :9200 from guest to host
-                  memorySize = 1024 * 8; # 8 GB
-                };
-                environment.systemPackages = with pkgs; [ opensearch-cli ];
-                networking.firewall.allowedTCPPorts = [ 9200 ];
-                services.opensearch = {
-                  enable = true;
-                  settings = {
-                    "network.host" = "0.0.0.0";
-                    "http.cors.enabled" = "true";
-                    "http.cors.allow-origin" = "http://localhost:3000";
-                    "http.cors.allow-credentials" = "true";
-                    "http.cors.allow-headers" =
-                      "X-Requested-With,X-Auth-Token,Content-Type,Content-Length,Authorization";
-                  };
-                };
-              }
-            )
-          ];
-        };
       };
 
       perSystem =
@@ -150,11 +131,20 @@
             };
         in
         rec {
+          _module.args.pkgs = import inputs.nixpkgs {
+            inherit system;
+            config.allowUnfree = true; # required for elasticsearch7
+          };
+
+          nix-unit.inputs = {
+            inherit (inputs) nixpkgs flake-parts nix-unit;
+          };
+
           packages = {
             default = packages.flake-info;
             flake-info = import ./flake-info {
               inherit pkgs;
-              inherit (inputs) flake-schemas;
+              inherit (inputs) self;
             };
             frontend = pkgs.callPackage ./frontend {
               inherit nixosChannels version;
@@ -163,10 +153,12 @@
             nixosChannelsJson = pkgs.writeText "nixosChannels.json" (lib.toJSON nixosChannels);
           };
 
-          checks = {
-            flake-info = import ./flake-info/assets/commands/test {
-              inherit pkgs;
-              inherit (inputs) flake-schemas;
+          checks = namaka.lib.load {
+            src = ./flake-info/assets/commands/test;
+            inputs = {
+              evalTarget = targetFlake: {
+                expr = (inputs.self.lib.evalFlake { inherit targetFlake; }).inventory;
+              };
             };
           };
 
@@ -179,9 +171,10 @@
                 packages.frontend
               ];
               extraPackages = with pkgs; [
-                opensearch-cli
                 rustfmt
                 rust-analyzer
+                inputs.nix-unit.packages.${system}.default
+                inputs.namaka.packages.${system}.default
               ];
               extraShellHook = ''
                 export RUST_SRC_PATH="${pkgs.rustPlatform.rustLibSrc}";
@@ -217,10 +210,11 @@
             };
           };
 
-          apps.opensearch-vm = {
-            type = "app";
-            program = "${inputs.self.nixosConfigurations.opensearch-vm.config.system.build.vm}/bin/run-nixos-vm";
-            meta.description = "Run OpenSearch on port 9200 in an ephemeral VM for local testing";
+          process-compose.services = {
+            imports = [
+              inputs.services-flake.processComposeModules.default
+            ];
+            services.elasticsearch."dev".enable = true; # use elasticsearch7 by default as of 2026-08-03, the same as prod (also see https://github.com/juspay/services-flake/issues/712)
           };
         };
     };
