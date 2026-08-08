@@ -913,7 +913,7 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
                     in
                     div [ class "search-results", class "loading-overlay" ]
                         [ aside [ class "search-sidebar" ] (searchBuckets ++ buckets)
-                        , div []
+                        , div [ class "search-results-main" ]
                             (viewResults nixosChannels model prev viewSuccess outMsg categoryName)
                         ]
 
@@ -938,7 +938,7 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
             else
                 div [ class "search-results" ]
                     [ aside [ class "search-sidebar" ] (searchBuckets ++ buckets)
-                    , div []
+                    , div [ class "search-results-main" ]
                         (viewResults nixosChannels model result viewSuccess outMsg categoryName)
                     ]
 
@@ -1065,7 +1065,7 @@ crossSearchHint categoryName query channel =
 
 closeButton : Html a
 closeButton =
-    span [] []
+    span [ class "bucket-count" ] []
 
 
 type BucketInputType
@@ -1107,12 +1107,12 @@ viewBucket inputType title buckets searchMsgFor selectedBucket sets =
                             label
                                 [ classList [ ( "selected", isSelected ) ]
                                 ]
-                                [ span [] [ text bucket.key ]
+                                [ span [ class "bucket-label" ] [ text bucket.key ]
                                 , if isSelected || bucket.doc_count <= 0 then
                                     closeButton
 
                                   else
-                                    span [] [ span [ class "badge" ] [ text <| String.fromInt bucket.doc_count ] ]
+                                    span [ class "bucket-count" ] [ span [ class "badge" ] [ text <| String.fromInt bucket.doc_count ] ]
                                 , input
                                     [ type_ inputTypeName
                                     , name title
@@ -1267,8 +1267,8 @@ viewResults nixosChannels model result viewSuccess outMsg categoryName =
                     model.from + model.size
                 )
     in
-    [ div []
-        [ h2 []
+    [ div [ class "search-results-header" ]
+        [ h2 [ class "search-results-count" ]
             (List.append
                 [ text "Showing results "
                 , text from
@@ -1360,7 +1360,7 @@ viewPager :
     -> Int
     -> Html (Msg a b)
 viewPager model total =
-    div []
+    div [ class "search-results-footer" ]
         [ ul [ class "pager" ]
             [ li []
                 [ viewButton

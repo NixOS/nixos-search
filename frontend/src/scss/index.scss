@@ -307,11 +307,6 @@ body {
   position: relative;
   min-height: 100vh;
   overflow-y: auto;
-
-  & > div:first-child {
-    position: relative;
-    min-height: 100vh;
-  }
 }
 
 .code-block,.sourceCode,.elmsh > code {
@@ -444,7 +439,10 @@ footer {
   }
 
 
-  .search-result-button {
+  // Title row of an option result: a single-item list holding the option
+  // name. Laid out as a flex row by `.search-result-title.option-title`
+  // below.
+  .option-title {
     list-style: none;
     margin: 0;
     padding: 0;
@@ -454,10 +452,8 @@ footer {
         text-decoration: underline;
       }
 
-      // Badge column keeps its fixed width; the name column takes the rest
-      // and lets long unbreakable identifiers wrap instead of pushing onto
-      // the next line beneath the badge. (Display:flex is set on the parent
-      // by the more-specific `:nth-child(1).search-result-button` rule.)
+      // The name column takes all the space the row has left and lets long
+      // unbreakable identifiers wrap inside it instead of overflowing.
       &:last-child {
         flex: 1 1 auto;
         min-width: 0;
@@ -514,33 +510,15 @@ footer {
           background: var(--hovered-item-background);
         }
 
-        & > span:first-child {
+        & > .bucket-label {
           text-overflow: ellipsis;
           overflow: hidden;
-        }
-
-        & > span:last-child {
-          text-align: right;
-          margin-left: 0.3em;
         }
 
         &.selected {
           background: var(--selected-item-background);
           color: var(--selected-item-color);
           position: relative;
-
-          & > span:last-child {
-            display: none;
-          }
-        }
-
-        & .close {
-          opacity: 1;
-          text-shadow: none;
-          color: inherit;
-          font-size: inherit;
-          padding-left: .5em;
-          padding-right: .5em;
         }
       }
     }
@@ -551,26 +529,18 @@ footer {
     display: flex;
     flex-direction: row;
 
-    // Results section
-    & > div {
+    // The results column and the empty-state block each take up whatever
+    // width the sidebar leaves.
+    & > .search-results-main,
+    & > .search-no-results {
       width: 100%;
+    }
 
-      // Search results header
-      & > :nth-child(1) {
-        // Text that displays number of results
-        & > h2:nth-child(2) {
-          font-size: 1.7em;
-          font-weight: normal;
-          line-height: 1.3em;
-
-          & > p {
-            font-size: 0.7em;
-          }
-        }
-      }
+    // Results section
+    & > .search-results-main {
 
       // Search results list
-      & > :nth-child(2) {
+      & > .search-results-list {
         list-style: none;
         margin: 2em 0 0 0;
 
@@ -585,7 +555,7 @@ footer {
           }
 
           // Attribute name or option name
-          & > :nth-child(1) {
+          & > .search-result-title {
             background: inherit;
             border: 0;
             padding: 0;
@@ -601,8 +571,8 @@ footer {
             // For options, the title row is a flex layout so a long option
             // name wraps inside its own column instead of dropping below the
             // category badge. Without this override the surrounding
-            // `:nth-child(1)` rule forces `display: block`.
-            &.search-result-button {
+            // `.search-result-title` rule forces `display: block`.
+            &.option-title {
               display: flex;
               align-items: baseline;
               gap: 0.5em;
@@ -613,14 +583,14 @@ footer {
             @include search-result-item;
 
             // Description
-            & > :nth-child(2) {
+            & > .package-description {
               font-size: 1.2em;
               margin-bottom: 0.5em;
               text-align: left;
             }
 
             // short details of a pacakge
-            & > :nth-child(3) {
+            & > .package-short-details {
               color: var(--search-result-short-details-color);
               list-style: none;
               text-align: left;
@@ -636,12 +606,12 @@ footer {
             }
 
             // longer details of a pacakge
-            & > :nth-child(5) {
+            & > .package-details {
               margin: 2em 0 1em 1em;
               text-align: left;
 
               // long description of a package
-              & > :nth-child(1) {
+              & > .package-long-description {
                 margin-top: 1em;
 
                 pre {
@@ -650,13 +620,7 @@ footer {
               }
 
               // how to install a package
-              & > :nth-child(2) {
-
-                h4 {
-                  font-size: 1.2em;
-                  line-height: 1em;
-                  float: left;
-                }
+              & > .package-usage {
 
                 fieldset.usage-radios {
                   @include radio-tabbed-group;
@@ -676,12 +640,12 @@ footer {
               }
 
               // put border around main program
-              & > :nth-child(3) code.main-program {
+              & > .package-programs code.main-program {
                 border: .1em solid;
               }
 
               // maintainers and platforms
-              & > :nth-child(4) {
+              & > .package-maintainers-platforms {
                 margin-top: 1em;
                 display: grid;
                 grid-template-columns: auto auto;
@@ -701,24 +665,28 @@ footer {
             margin: 0;
             padding: 0;
 
-            & > :nth-child(1) {
+            & > .search-result-title {
               padding: 0.5em 0;
             }
 
-            // short details of a pacakge
-            & > :nth-child(2) {
+            // term/value pairs of an option
+            & > .option-details {
               margin: 2em 0 1em 1em;
               display: grid;
               grid-template-columns: 100px 1fr;
               column-gap: 1em;
               row-gap: 0.5em;
 
-              & > div:nth-child(2n+1) {
+              dt {
                 font-weight: bold;
                 text-align: right;
               }
 
-              & > div:nth-child(2n) {
+              dd {
+                // Reset the user agent's inline-start margin; the grid gap
+                // does the spacing.
+                margin: 0;
+
                 pre {
                   background: transparent;
                   color: var(--text-color);
@@ -742,7 +710,7 @@ footer {
       }
 
       // Search results footer
-      & > :nth-child(3) {
+      & > .search-results-footer {
         margin-top: 1em;
 
         & > ul > li > a {
@@ -869,19 +837,12 @@ a:focus-visible {
 
 // Tab strip in the Options sidebar — one tab per option source. Active
 // tab inherits the `.selected` background/foreground from the sidebar's
-// generic styling; the rules below diverge from the bucket-style sidebar
-// in two ways:
-//
-// 1. The bucket layout uses `display: grid` + `:last-child { text-align:
-//    right }`, which right-aligns the lone label whenever a tab's count
-//    badge is missing (e.g. while a fresh query is loading). Flex with
-//    `margin-left: auto` on the badge keeps the label left-aligned
-//    regardless of whether a badge is present.
-// 2. The bucket pattern hides the *last child* of `.selected` because
-//    the count is duplicated above the result list — that rule hides
-//    both the badge (when present) and the lone label (when not),
-//    which means the active tab disappears entirely while loading.
-//    We re-show last-child for tabs.
+// generic styling, but not its layout: a tab carries a category badge
+// next to its label, so it is a flex row (baseline-aligned, with a gap)
+// instead of the bucket's two-column grid. `margin-left: auto` on the
+// count badge pushes it to the right edge, which keeps the label
+// left-aligned whether or not a count is present (it is missing while a
+// fresh query is loading).
 //
 // Nested inside `.search-page` to match the specificity of the rule
 // being overridden (which is also `.search-page`-prefixed via outer
@@ -923,13 +884,6 @@ a:focus-visible {
 
   & > .badge {
     margin-left: auto;
-  }
-
-  // Counter the bucket-pattern `&.selected > span:last-child {
-  // display: none }` rule — applies to both the badge (when present)
-  // and the lone label (when counts are still loading).
-  &.selected > span:last-child {
-    display: inline-block;
   }
 }
 
