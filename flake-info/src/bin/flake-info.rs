@@ -249,7 +249,11 @@ async fn main() -> Result<()> {
     if args.elastic.enable {
         if let Err(e) = push_to_elastic(&args.elastic, exports, ident).await {
             match summary {
-                Some(mut f) => write!(f, "Failed to push to Elastic:\n\n```\n{}\n```", e)?,
+                Some(mut f) => {
+                    write!(f, "Failed to push to Elastic:\n\n```\n{}\n```", e)?;
+                    f.flush().unwrap();
+                    ()
+                }
                 None => (),
             }
             return Err(e);
