@@ -96,6 +96,7 @@ packagesBody query from size sort selectedBuckets =
         ]
         [ "package_attr_name", "package_pname", "package_programs" ]
         [ "package_description^3", "package_longDescription^1" ]
+        Nothing
         [ { field = "package_repology_repos", pivot = 20.0 }
         , { field = "package_dep_count", pivot = 1000.0 }
         ]
@@ -145,6 +146,7 @@ optionsBody types query from size sort =
         ]
         [ "option_name", "service_package", "service_packages" ]
         [ "option_description^3" ]
+        (Just "option_name.attr_path_reverse")
         []
         Nothing
 
@@ -418,6 +420,38 @@ shouldClauses primaryField positiveWords phraseFields =
         termClause :: prefixClause :: phraseClause
 
 
+moduleEntryPoint : String -> List String -> List (List ( String, Json.Encode.Value ))
+moduleEntryPoint field positiveWords =
+    let
+        path : String
+        path =
+            String.join "." positiveWords
+    in
+    if String.isEmpty path then
+        []
+
+    else
+        [ leafTerm field (path ++ ".enable") 100.0 "module_entry_point"
+        , leafTerm field "enable" 10.0 "module_enable_leaf"
+        ]
+
+
+leafTerm : String -> String -> Float -> String -> List ( String, Json.Encode.Value )
+leafTerm field value boost name =
+    [ ( "term"
+      , Json.Encode.object
+            [ ( field
+              , Json.Encode.object
+                    [ ( "value", Json.Encode.string value )
+                    , ( "boost", Json.Encode.float boost )
+                    , ( "_name", Json.Encode.string name )
+                    ]
+              )
+            ]
+      )
+    ]
+
+
 type alias PopularitySignal =
     { field : String, pivot : Float }
 
@@ -489,10 +523,11 @@ encodeRequestBody :
     -> List ( String, Float )
     -> List String
     -> List String
+    -> Maybe String
     -> List PopularitySignal
     -> Maybe String
     -> Json.Encode.Value
-encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets mainFields fields fuzzyFieldNames phraseFields popularitySignals rescoreField =
+encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets mainFields fields fuzzyFieldNames phraseFields entryPointField popularitySignals rescoreField =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -532,6 +567,15 @@ encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms 
 
             else
                 toSortQuery sort sortField otherSortFields
+
+        entryPointClauses : List (List ( String, Json.Encode.Value ))
+        entryPointClauses =
+            case entryPointField of
+                Just field ->
+                    moduleEntryPoint field positiveWords
+
+                Nothing ->
+                    []
     in
     Json.Encode.object
         ([ ( "from"
@@ -583,6 +627,7 @@ encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms 
                         , ( "should"
                           , Json.Encode.list Json.Encode.object
                                 (shouldClauses primaryField positiveWords phraseFields
+                                    ++ entryPointClauses
                                     ++ popularityClauses popularitySignals
                                 )
                           )
