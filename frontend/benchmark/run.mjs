@@ -301,15 +301,31 @@ function section(label, results) {
         "### By category",
         "",
         table(
-            ["category", "n", "Success@" + K, "MRR"],
+            [
+                "category",
+                "n",
+                "Success@" + K,
+                "MRR",
+                "Recall@" + K,
+                `RBP (p=${P})`,
+            ],
             Object.entries(byCategory)
                 .sort(([a], [b]) => a.localeCompare(b))
-                .map(([cat, rs]) => [
-                    cat,
-                    String(rs.length),
-                    mean(rs.map((r) => r.success)).toFixed(3),
-                    mean(rs.map((r) => r.mrr)).toFixed(3),
-                ]),
+                .map(([cat, rs]) => {
+                    // Cluster gold sets move Recall and RBP, not Success/MRR, so a
+                    // category is unreadable without all four.
+                    const rbps = rs.filter((r) => r.rbp !== null);
+                    return [
+                        cat,
+                        String(rs.length),
+                        mean(rs.map((r) => r.success)).toFixed(3),
+                        mean(rs.map((r) => r.mrr)).toFixed(3),
+                        mean(rs.map((r) => r.recall)).toFixed(3),
+                        rbps.length
+                            ? `${mean(rbps.map((r) => r.rbp)).toFixed(3)} (n=${rbps.length})`
+                            : "-",
+                    ];
+                }),
         ),
         "",
     ];
