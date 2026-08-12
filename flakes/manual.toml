@@ -633,6 +633,11 @@ repo = "nixos-mailserver"
 
 [[sources]]
 type = "gitlab"
+owner = "veloren"
+repo = "veloren"
+
+[[sources]]
+type = "gitlab"
 owner = "yisraeldov"
 repo = "thinkorswim-flake"
 
