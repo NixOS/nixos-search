@@ -739,5 +739,19 @@
         "category": "exact",
         "exhaustive": true,
         "relevant": ["pkg:matrix-continuwuity"]
+    },
+    {
+        "id": "g152",
+        "q": "node",
+        "category": "exact",
+        "exhaustive": true,
+        "relevant": [
+            "pkg:nodejs",
+            "pkg:nodejs_latest",
+            "pkg:nodejs_26",
+            "pkg:nodejs_24",
+            "pkg:nodejs_22",
+            "pkg:nodejs_20"
+        ]
     }
 ]
