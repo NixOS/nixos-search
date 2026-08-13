@@ -4,6 +4,7 @@
         "q": "nginx",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:services.nginx.enable",
         "relevant": [
             "opt:services.nginx.enable",
             "opt:services.nginx.virtualHosts",
@@ -24,6 +25,7 @@
         "q": "grafana",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:services.grafana.enable",
         "relevant": [
             "opt:services.grafana.enable",
             "opt:services.grafana.settings",
@@ -40,6 +42,7 @@
         "q": "prometheus",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:services.prometheus.enable",
         "relevant": [
             "opt:services.prometheus.enable",
             "opt:services.prometheus.exporters",
@@ -57,6 +60,7 @@
         "q": "postgresql",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:services.postgresql.enable",
         "relevant": [
             "opt:services.postgresql.enable",
             "opt:services.postgresql.package",
@@ -76,6 +80,7 @@
         "q": "openssh",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:services.openssh.enable",
         "relevant": [
             "opt:services.openssh.enable",
             "opt:services.openssh.settings",
@@ -96,6 +101,7 @@
         "q": "caddy",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:services.caddy.enable",
         "relevant": [
             "opt:services.caddy.enable",
             "opt:services.caddy.virtualHosts",
@@ -113,6 +119,7 @@
         "q": "gitea",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:services.gitea.enable",
         "relevant": [
             "opt:services.gitea.enable",
             "opt:services.gitea.settings",
@@ -125,6 +132,7 @@
         "q": "jellyfin",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:services.jellyfin.enable",
         "relevant": [
             "opt:services.jellyfin.enable",
             "opt:services.jellyfin.openFirewall",
@@ -139,6 +147,7 @@
         "q": "services.openssh.enable",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:services.openssh.enable",
         "relevant": ["opt:services.openssh.enable", "opt:services.sshd.enable"]
     },
     {
@@ -207,6 +216,7 @@
         "q": "docker",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:virtualisation.docker.enable",
         "relevant": [
             "opt:virtualisation.docker.enable",
             "opt:virtualisation.docker.rootless.enable",
@@ -226,6 +236,7 @@
         "q": "firewall",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:networking.firewall.enable",
         "relevant": [
             "opt:networking.firewall.enable",
             "opt:networking.firewall.allowedTCPPorts",
@@ -246,6 +257,7 @@
         "q": "printing",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:services.printing.enable",
         "relevant": [
             "opt:services.printing.enable",
             "opt:services.printing.drivers",
@@ -263,6 +275,7 @@
         "q": "bluetooth",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:hardware.bluetooth.enable",
         "relevant": [
             "opt:hardware.bluetooth.enable",
             "opt:hardware.bluetooth.powerOnBoot",
@@ -276,6 +289,7 @@
         "q": "systemd-boot",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:boot.loader.systemd-boot.enable",
         "relevant": [
             "opt:boot.loader.systemd-boot.enable",
             "opt:boot.loader.systemd-boot.configurationLimit",
@@ -293,6 +307,7 @@
         "q": "git",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:programs.git.enable",
         "relevant": [
             "opt:programs.git.enable",
             "opt:programs.git.config",
@@ -308,6 +323,7 @@
         "q": "redis",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:services.redis.servers",
         "relevant": [
             "opt:services.redis.servers",
             "opt:services.redis.servers.<name>.enable",
@@ -322,6 +338,7 @@
         "q": "restic",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:services.restic.backups",
         "relevant": [
             "opt:services.restic.backups",
             "opt:services.restic.backups.<name>.paths",
@@ -339,6 +356,7 @@
         "q": "syncthing",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:services.syncthing.enable",
         "relevant": [
             "opt:services.syncthing.enable",
             "opt:services.syncthing.settings",
@@ -360,6 +378,7 @@
         "q": "tailscale",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:services.tailscale.enable",
         "relevant": [
             "opt:services.tailscale.enable",
             "opt:services.tailscale.port",
@@ -375,6 +394,7 @@
         "q": "samba",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:services.samba.enable",
         "relevant": [
             "opt:services.samba.enable",
             "opt:services.samba.settings",
@@ -388,6 +408,7 @@
         "q": "nextcloud",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:services.nextcloud.enable",
         "relevant": [
             "opt:services.nextcloud.enable",
             "opt:services.nextcloud.hostName",
@@ -407,6 +428,7 @@
         "q": "mysql",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:services.mysql.enable",
         "relevant": [
             "opt:services.mysql.enable",
             "opt:services.mysql.package",
@@ -421,6 +443,7 @@
         "q": "xserver",
         "category": "exact",
         "exhaustive": true,
+        "best": "opt:services.xserver.enable",
         "relevant": [
             "opt:services.xserver.enable",
             "opt:services.xserver.videoDrivers",
@@ -671,6 +694,7 @@
         "q": "services.nginx",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:services.nginx.enable",
         "relevant": [
             "opt:services.nginx.enable",
             "opt:services.nginx.virtualHosts",
@@ -691,6 +715,7 @@
         "q": "virtualisation.docker",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:virtualisation.docker.enable",
         "relevant": [
             "opt:virtualisation.docker.enable",
             "opt:virtualisation.docker.rootless.enable",
@@ -710,6 +735,7 @@
         "q": "services.openssh",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:services.openssh.enable",
         "relevant": [
             "opt:services.openssh.enable",
             "opt:services.openssh.settings",
@@ -730,6 +756,7 @@
         "q": "services.postgresql",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:services.postgresql.enable",
         "relevant": [
             "opt:services.postgresql.enable",
             "opt:services.postgresql.package",
@@ -749,6 +776,7 @@
         "q": "services.grafana",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:services.grafana.enable",
         "relevant": [
             "opt:services.grafana.enable",
             "opt:services.grafana.settings",
@@ -765,6 +793,7 @@
         "q": "services.prometheus",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:services.prometheus.enable",
         "relevant": [
             "opt:services.prometheus.enable",
             "opt:services.prometheus.exporters",
@@ -782,6 +811,7 @@
         "q": "networking.firewall",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:networking.firewall.enable",
         "relevant": [
             "opt:networking.firewall.enable",
             "opt:networking.firewall.allowedTCPPorts",
@@ -802,6 +832,7 @@
         "q": "networking.wireguard",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:networking.wireguard.enable",
         "relevant": [
             "opt:networking.wireguard.enable",
             "opt:networking.wireguard.interfaces",
@@ -816,6 +847,7 @@
         "q": "services.redis",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:services.redis.servers",
         "relevant": [
             "opt:services.redis.servers",
             "opt:services.redis.servers.<name>.enable",
@@ -830,6 +862,7 @@
         "q": "services.caddy",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:services.caddy.enable",
         "relevant": [
             "opt:services.caddy.enable",
             "opt:services.caddy.virtualHosts",
@@ -847,6 +880,7 @@
         "q": "boot.loader.systemd-boot",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:boot.loader.systemd-boot.enable",
         "relevant": [
             "opt:boot.loader.systemd-boot.enable",
             "opt:boot.loader.systemd-boot.configurationLimit",
@@ -864,6 +898,7 @@
         "q": "programs.hyprland",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:programs.hyprland.enable",
         "relevant": [
             "opt:programs.hyprland.enable",
             "opt:programs.hyprland.xwayland.enable",
@@ -876,6 +911,7 @@
         "q": "services.jellyfin",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:services.jellyfin.enable",
         "relevant": [
             "opt:services.jellyfin.enable",
             "opt:services.jellyfin.openFirewall",
@@ -890,6 +926,7 @@
         "q": "services.syncthing",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:services.syncthing.enable",
         "relevant": [
             "opt:services.syncthing.enable",
             "opt:services.syncthing.settings",
@@ -911,6 +948,7 @@
         "q": "hardware.bluetooth",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:hardware.bluetooth.enable",
         "relevant": [
             "opt:hardware.bluetooth.enable",
             "opt:hardware.bluetooth.powerOnBoot",
@@ -924,6 +962,7 @@
         "q": "services.samba",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:services.samba.enable",
         "relevant": [
             "opt:services.samba.enable",
             "opt:services.samba.settings",
@@ -937,6 +976,7 @@
         "q": "services.tailscale",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:services.tailscale.enable",
         "relevant": [
             "opt:services.tailscale.enable",
             "opt:services.tailscale.port",
@@ -952,6 +992,7 @@
         "q": "services.restic",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:services.restic.backups",
         "relevant": [
             "opt:services.restic.backups",
             "opt:services.restic.backups.<name>.paths",
@@ -999,6 +1040,7 @@
         "q": "services.mysql",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:services.mysql.enable",
         "relevant": [
             "opt:services.mysql.enable",
             "opt:services.mysql.package",
@@ -1013,6 +1055,7 @@
         "q": "services.fail2ban",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:services.fail2ban.enable",
         "relevant": [
             "opt:services.fail2ban.enable",
             "opt:services.fail2ban.jails",
@@ -1027,6 +1070,7 @@
         "q": "services.xserver",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:services.xserver.enable",
         "relevant": [
             "opt:services.xserver.enable",
             "opt:services.xserver.videoDrivers",
@@ -1041,6 +1085,7 @@
         "q": "hardware.graphics",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:hardware.graphics.enable",
         "relevant": [
             "opt:hardware.graphics.enable",
             "opt:hardware.graphics.enable32Bit",
@@ -1052,6 +1097,7 @@
         "q": "boot.initrd",
         "category": "dotted",
         "exhaustive": true,
+        "best": "opt:boot.initrd.enable",
         "relevant": [
             "opt:boot.initrd.enable",
             "opt:boot.initrd.kernelModules",
@@ -1209,6 +1255,7 @@
         "q": "nginx config",
         "category": "scoped",
         "exhaustive": true,
+        "best": "opt:services.nginx.config",
         "relevant": [
             "opt:services.nginx.config",
             "opt:services.nginx.httpConfig",
@@ -1225,6 +1272,7 @@
         "q": "nginx virtual hosts",
         "category": "scoped",
         "exhaustive": true,
+        "best": "opt:services.nginx.virtualHosts",
         "relevant": [
             "opt:services.nginx.virtualHosts",
             "opt:services.nginx.virtualHosts.<name>.locations.<name>.proxyPass",
@@ -1254,6 +1302,7 @@
         "q": "nginx user",
         "category": "scoped",
         "exhaustive": true,
+        "best": "opt:services.nginx.user",
         "relevant": ["opt:services.nginx.user", "opt:services.nginx.group"]
     },
     {
@@ -1274,6 +1323,7 @@
         "q": "openssh port",
         "category": "scoped",
         "exhaustive": true,
+        "best": "opt:services.openssh.ports",
         "relevant": [
             "opt:services.openssh.ports",
             "opt:services.openssh.openFirewall"
@@ -1284,6 +1334,7 @@
         "q": "openssh settings",
         "category": "scoped",
         "exhaustive": true,
+        "best": "opt:services.openssh.settings",
         "relevant": [
             "opt:services.openssh.settings",
             "opt:services.openssh.settings.PasswordAuthentication",
@@ -1328,6 +1379,7 @@
         "q": "postgresql authentication",
         "category": "scoped",
         "exhaustive": true,
+        "best": "opt:services.postgresql.authentication",
         "relevant": [
             "opt:services.postgresql.authentication",
             "opt:services.postgresql.identMap",
@@ -1339,6 +1391,7 @@
         "q": "postgresql ensure databases",
         "category": "scoped",
         "exhaustive": true,
+        "best": "opt:services.postgresql.ensureDatabases",
         "relevant": [
             "opt:services.postgresql.ensureDatabases",
             "opt:services.postgresql.ensureUsers"
@@ -1356,6 +1409,7 @@
         "q": "git config",
         "category": "scoped",
         "exhaustive": true,
+        "best": "opt:programs.git.config",
         "relevant": ["opt:programs.git.config", "opt:programs.git.settings"]
     },
     {
@@ -1363,6 +1417,7 @@
         "q": "docker rootless",
         "category": "scoped",
         "exhaustive": true,
+        "best": "opt:virtualisation.docker.rootless.enable",
         "relevant": [
             "opt:virtualisation.docker.rootless.enable",
             "opt:virtualisation.docker.rootless.setSocketVariable",
@@ -1390,6 +1445,7 @@
         "q": "firewall allowed tcp ports",
         "category": "scoped",
         "exhaustive": true,
+        "best": "opt:networking.firewall.allowedTCPPorts",
         "relevant": [
             "opt:networking.firewall.allowedTCPPorts",
             "opt:networking.firewall.allowedTCPPortRanges"
@@ -1421,6 +1477,7 @@
         "q": "restic backups",
         "category": "scoped",
         "exhaustive": true,
+        "best": "opt:services.restic.backups",
         "relevant": [
             "opt:services.restic.backups",
             "opt:services.restic.backups.<name>.paths",
@@ -1438,6 +1495,7 @@
         "q": "prometheus exporters",
         "category": "scoped",
         "exhaustive": true,
+        "best": "opt:services.prometheus.exporters",
         "relevant": [
             "opt:services.prometheus.exporters",
             "opt:services.prometheus.exporters.node.enable"
@@ -1448,6 +1506,7 @@
         "q": "redis servers",
         "category": "scoped",
         "exhaustive": true,
+        "best": "opt:services.redis.servers",
         "relevant": [
             "opt:services.redis.servers",
             "opt:services.redis.servers.<name>.enable",
@@ -1462,6 +1521,7 @@
         "q": "grafana settings",
         "category": "scoped",
         "exhaustive": true,
+        "best": "opt:services.grafana.settings",
         "relevant": [
             "opt:services.grafana.settings",
             "opt:services.grafana.settings.server.http_port",
@@ -1488,6 +1548,7 @@
         "q": "syncthing data dir",
         "category": "scoped",
         "exhaustive": true,
+        "best": "opt:services.syncthing.dataDir",
         "relevant": [
             "opt:services.syncthing.dataDir",
             "opt:services.syncthing.configDir"
@@ -1540,6 +1601,7 @@
         "q": "nginx recommended proxy settings",
         "category": "scoped",
         "exhaustive": true,
+        "best": "opt:services.nginx.recommendedProxySettings",
         "relevant": [
             "opt:services.nginx.recommendedProxySettings",
             "opt:services.nginx.recommendedTlsSettings"
@@ -1550,6 +1612,7 @@
         "q": "transmission download dir",
         "category": "scoped",
         "exhaustive": true,
+        "best": "opt:services.transmission.settings.download-dir",
         "relevant": [
             "opt:services.transmission.settings.download-dir",
             "opt:services.transmission.home"

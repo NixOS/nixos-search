@@ -10,6 +10,7 @@
         "q": "htop",
         "category": "exact",
         "exhaustive": true,
+        "best": "pkg:htop",
         "relevant": ["pkg:htop", "pkg:htop-vim"]
     },
     {
@@ -47,6 +48,7 @@
         "id": "g008",
         "q": "nginx",
         "category": "exact",
+        "best": "pkg:nginx",
         "relevant": ["pkg:nginx", "pkg:nginxMainline", "pkg:nginxStable"]
     },
     {
@@ -66,6 +68,7 @@
         "q": "postgresql",
         "category": "exact",
         "exhaustive": true,
+        "best": "pkg:postgresql",
         "relevant": [
             "pkg:postgresql",
             "pkg:postgresql_14",
@@ -113,6 +116,7 @@
         "q": "postgres",
         "category": "prefix",
         "exhaustive": true,
+        "best": "pkg:postgresql",
         "relevant": [
             "pkg:postgresql",
             "pkg:postgresql_14",
@@ -164,6 +168,7 @@
         "id": "g035",
         "q": "ngin",
         "category": "prefix",
+        "best": "pkg:nginx",
         "relevant": [
             "pkg:nginx",
             "pkg:nginxMainline",
@@ -175,6 +180,7 @@
         "id": "g036",
         "q": "mariad",
         "category": "prefix",
+        "best": "pkg:mariadb",
         "relevant": [
             "pkg:mariadb",
             "pkg:mariadb_1011",
@@ -266,12 +272,14 @@
         "id": "g050",
         "q": "elastic",
         "category": "prefix",
+        "best": "pkg:elasticsearch",
         "relevant": ["pkg:elasticsearch", "pkg:elasticsearch7"]
     },
     {
         "id": "g051",
         "q": "ngnix",
         "category": "typo",
+        "best": "pkg:nginx",
         "relevant": ["pkg:nginx", "pkg:nginxStable", "pkg:nginxMainline"]
     },
     {
@@ -279,6 +287,7 @@
         "q": "postgrsql",
         "category": "typo",
         "exhaustive": true,
+        "best": "pkg:postgresql",
         "relevant": [
             "pkg:postgresql",
             "pkg:postgresql_14",
@@ -313,6 +322,7 @@
         "q": "firefx",
         "category": "typo",
         "exhaustive": true,
+        "best": "pkg:firefox",
         "relevant": [
             "pkg:firefox",
             "pkg:firefox-unwrapped",
@@ -337,6 +347,7 @@
         "q": "samaba",
         "category": "typo",
         "exhaustive": true,
+        "best": "pkg:samba",
         "relevant": [
             "pkg:samba",
             "pkg:samba4",
@@ -356,6 +367,7 @@
         "q": "openssg",
         "category": "typo",
         "exhaustive": true,
+        "best": "pkg:openssh",
         "relevant": [
             "pkg:openssh",
             "pkg:opensshWithKerberos",
@@ -374,6 +386,7 @@
         "id": "g064",
         "q": "terrafrom",
         "category": "typo",
+        "best": "pkg:terraform",
         "relevant": ["pkg:terraform", "pkg:terraform_1"]
     },
     {
@@ -381,6 +394,7 @@
         "q": "chromiun",
         "category": "typo",
         "exhaustive": true,
+        "best": "pkg:chromium",
         "relevant": ["pkg:chromium", "pkg:ungoogled-chromium"]
     },
     {
@@ -388,6 +402,7 @@
         "q": "thunderbrid",
         "category": "typo",
         "exhaustive": true,
+        "best": "pkg:thunderbird",
         "relevant": [
             "pkg:thunderbird",
             "pkg:thunderbird-bin",
@@ -407,6 +422,7 @@
         "q": "dcoker",
         "category": "typo",
         "exhaustive": true,
+        "best": "pkg:docker",
         "relevant": [
             "pkg:docker",
             "pkg:docker_25",
@@ -431,6 +447,7 @@
         "q": "vaultwardn",
         "category": "typo",
         "exhaustive": true,
+        "best": "pkg:vaultwarden",
         "relevant": [
             "pkg:vaultwarden",
             "pkg:vaultwarden-mysql",
@@ -478,12 +495,14 @@
         "id": "g101",
         "q": "docker container",
         "category": "multiterm",
+        "best": "pkg:docker",
         "relevant": ["pkg:docker", "pkg:docker_25", "pkg:docker_29"]
     },
     {
         "id": "g102",
         "q": "ssh daemon",
         "category": "multiterm",
+        "best": "pkg:openssh",
         "relevant": [
             "pkg:openssh",
             "pkg:opensshWithKerberos",
@@ -745,13 +764,19 @@
         "q": "node",
         "category": "exact",
         "exhaustive": true,
+        "best": "pkg:nodejs",
         "relevant": [
             "pkg:nodejs",
             "pkg:nodejs_latest",
             "pkg:nodejs_26",
             "pkg:nodejs_24",
             "pkg:nodejs_22",
-            "pkg:nodejs_20"
+            "pkg:nodejs_20",
+            "pkg:nodejs-slim",
+            "pkg:nodejs-slim_latest",
+            "pkg:nodejs-slim_26",
+            "pkg:nodejs-slim_24",
+            "pkg:nodejs-slim_22"
         ]
     },
     {

@@ -7,6 +7,19 @@
  * Usage:
  *   node benchmark/run.mjs [--packages <path>] [--options <path>] [--channel <branch>] [--schema <n>] [--k <n>] [--persistence <f>]
  *
+ * Each curated query is an object:
+ *
+ *   id          stable handle, also the sort key of the per-query table
+ *   q           the search term, as a user would type it
+ *   category    grouping for the by-category table, e.g. `typo` or `intent`
+ *   relevant    ids we accept as answers, `pkg:`/`opt:` prefixed
+ *   exhaustive  optional; `relevant` enumerates *every* acceptable answer, so
+ *               anything else on the page counts as noise. Required for RBP.
+ *   best        optional; the single answer a user typing `q` is most likely
+ *               after, which must be one of `relevant`. Required for BestRR
+ *               unless `relevant` holds exactly one id. Leave it off where the
+ *               gold set has no obvious winner - `text editor` has no business
+ *               claiming `emacs` beats `vim`.
  */
 
 import { execSync } from "node:child_process";
@@ -146,6 +159,62 @@ function reciprocalRank(ranked, relevant) {
     return 0;
 }
 
+// The one answer a user typing this query is most likely after, or `null` where
+// we decline to rank the gold set. A single-entry `relevant` needs no
+// annotation: with nothing to compare against, it is the best answer by
+// definition. Beyond that it takes an explicit `"best"`, so ordering claims are
+// only ever made where a curator wrote one down.
+function bestAnswer(q) {
+    if (q.best !== undefined) {
+        if (!q.relevant.includes(q.best)) {
+            throw new Error(`${q.id}: "best" ${q.best} is not in "relevant"`);
+        }
+        return q.best;
+    }
+    return q.relevant.length === 1 ? q.relevant[0] : null;
+}
+
+// Reciprocal rank of the best answer, rather than of the first relevant hit.
+//
+// MRR asks "did we surface something usable", which a cluster gold set answers
+// trivially: on `node`, every `nodejs*` variant is relevant, so MRR reads 1.000
+// whether `nodejs` or `nodejs-slim_26` came first. BestRR asks the ordinal
+// question instead - "did the answer they wanted come first" - and separates
+// those two pages 1.000 to 0.167.
+//
+// It collapses to MRR on a single-answer query, so it only speaks up on the
+// cluster queries it was added for. Returns `null` when the query makes no
+// ordinal claim, which drops it from the mean.
+function bestReciprocalRank(ranked, best) {
+    if (best === null) return null;
+    const i = ranked.indexOf(best);
+    return i === -1 ? 0 : 1 / (i + 1);
+}
+
+// Graded nDCG (Jarvelin & Kekalainen 2002) over two grades: the best answer
+// scores 2, any other relevant hit 1.
+//
+// Where BestRR prices one position, this prices the whole page against its ideal
+// ordering, so demoting a variant below the canonical package pays off even when
+// the canonical package was already first. A query with no best answer keeps a
+// flat grade of 1 across its gold set, which is ordinary binary nDCG - it still
+// scores, it just states no preference within the set.
+function ndcgAtK(ranked, q, k) {
+    const best = bestAnswer(q);
+    const grade = (id) => (id === best ? 2 : q.relevant.includes(id) ? 1 : 0);
+    const gain = (g, i) => g / Math.log2(i + 2);
+
+    const dcg = ranked
+        .slice(0, k)
+        .reduce((a, id, i) => a + gain(grade(id), i), 0);
+    const ideal = q.relevant
+        .map(grade)
+        .sort((a, b) => b - a)
+        .slice(0, k);
+    const idcg = ideal.reduce((a, g, i) => a + gain(g, i), 0);
+    return idcg > 0 ? dcg / idcg : 0;
+}
+
 function successAtK(ranked, relevant, k) {
     const rel = new Set(relevant);
     return ranked.slice(0, k).some((id) => rel.has(id)) ? 1 : 0;
@@ -225,6 +294,8 @@ async function scoreTrack(queries, bodyKey, field, prefix) {
             success: successAtK(ranked, q.relevant, K),
             recall: recallAtK(ranked, q.relevant, K),
             rbp: q.exhaustive ? conditionalRBP(ranked, q.relevant, P) : null,
+            bestrr: bestReciprocalRank(ranked, bestAnswer(q)),
+            ndcg: ndcgAtK(ranked, q, K),
         });
     }
     return results;
@@ -265,13 +336,17 @@ const table = (header, rows) =>
 
 // One `## <label>` section: Overall + By-category tables for a single track.
 function section(label, results) {
-    // RBP only covers the closed-set queries that returned something.
+    // RBP only covers the closed-set queries that returned something, BestRR
+    // only the ones that name a best answer.
     const closed = results.filter((r) => r.rbp !== null);
+    const ordinal = results.filter((r) => r.bestrr !== null);
     const overall = {
         success: mean(results.map((r) => r.success)),
         mrr: mean(results.map((r) => r.mrr)),
         recall: mean(results.map((r) => r.recall)),
         rbp: closed.length ? mean(closed.map((r) => r.rbp)) : null,
+        bestrr: ordinal.length ? mean(ordinal.map((r) => r.bestrr)) : null,
+        ndcg: mean(results.map((r) => r.ndcg)),
     };
     const byCategory = {};
     for (const r of results) {
@@ -295,6 +370,12 @@ function section(label, results) {
                     overall.rbp === null ? "-" : overall.rbp.toFixed(3),
                     closed.length,
                 ],
+                [
+                    "BestRR",
+                    overall.bestrr === null ? "-" : overall.bestrr.toFixed(3),
+                    ordinal.length,
+                ],
+                ["nDCG@" + K, overall.ndcg.toFixed(3), results.length],
             ],
         ),
         "",
@@ -308,13 +389,16 @@ function section(label, results) {
                 "MRR",
                 "Recall@" + K,
                 `RBP (p=${P})`,
+                "BestRR",
+                "nDCG@" + K,
             ],
             Object.entries(byCategory)
                 .sort(([a], [b]) => a.localeCompare(b))
                 .map(([cat, rs]) => {
-                    // Cluster gold sets move Recall and RBP, not Success/MRR, so a
-                    // category is unreadable without all four.
+                    // Cluster gold sets move Recall, RBP and BestRR, not
+                    // Success/MRR, so a category is unreadable without them all.
                     const rbps = rs.filter((r) => r.rbp !== null);
+                    const ords = rs.filter((r) => r.bestrr !== null);
                     return [
                         cat,
                         String(rs.length),
@@ -324,6 +408,10 @@ function section(label, results) {
                         rbps.length
                             ? `${mean(rbps.map((r) => r.rbp)).toFixed(3)} (n=${rbps.length})`
                             : "-",
+                        ords.length
+                            ? `${mean(ords.map((r) => r.bestrr)).toFixed(3)} (n=${ords.length})`
+                            : "-",
+                        mean(rs.map((r) => r.ndcg)).toFixed(3),
                     ];
                 }),
         ),
@@ -341,13 +429,20 @@ const perQuery = [
 const lines = [
     "# Relevance benchmark: frontend query vs deployed ES",
     "",
-    `> Index: \`${INDEX}\`. metrics: (Success@${K}, MRR, Recall@${K}, RBP(p=${P})).`,
+    `> Index: \`${INDEX}\`. metrics: (Success@${K}, MRR, Recall@${K}, RBP(p=${P}), BestRR, nDCG@${K}).`,
     "",
     `> \`RBP\` is rank-biased precision. It prices rank \`i\` at \`p^(i-1)\`. Junk near the`,
     `> top therefore costs more than junk near the bottom. The denominator is the page`,
     `> we returned, so a short page scores only on the hits it has. Pass`,
     `> \`--persistence\` to change \`p\`. Only a query with \`"exhaustive": true\` gets a`,
     "> score. A query with no hits drops out of the mean.",
+    "",
+    "> `BestRR` and `nDCG` grade the gold set instead of treating it as a flat",
+    "> set: the best answer counts double. `BestRR` is the reciprocal rank of that",
+    "> one answer, so it reads how well we order results a user considers",
+    "> comparably relevant, which `MRR` cannot see. It scores a query whose",
+    '> `relevant` holds one entry or which names a `"best"`, and drops the rest',
+    "> from the mean.",
     "",
     ...section("Packages", pkgResults),
     ...section("Options", optResults),
@@ -365,6 +460,8 @@ const lines = [
             "success",
             "mrr",
             "RBP",
+            "BestRR",
+            "nDCG",
             "matched",
             "top-3 ranked",
         ],
@@ -376,6 +473,8 @@ const lines = [
             r.success.toFixed(0),
             r.mrr.toFixed(3),
             r.rbp === null ? "-" : r.rbp.toFixed(3),
+            r.bestrr === null ? "-" : r.bestrr.toFixed(3),
+            r.ndcg.toFixed(3),
             r.matched + (r.matchedExact ? "" : "+"),
             r.ranked.slice(0, 3).join(", "),
         ]),
