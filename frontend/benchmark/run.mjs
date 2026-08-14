@@ -12,14 +12,15 @@
  *   id          stable handle, also the sort key of the per-query table
  *   q           the search term, as a user would type it
  *   category    grouping for the by-category table, e.g. `typo` or `intent`
- *   relevant    ids we accept as answers, `pkg:`/`opt:` prefixed
+ *   relevant    tiers of ids we accept as answers, `pkg:`/`opt:` prefixed. Each
+ *               tier is a list of ids tied at that rank: order *between* tiers
+ *               is a claim, order *within* one is not. `[[a, b, c]]` states no
+ *               preference, `[[a], [b], [c]]` is a strict order, and
+ *               `[[a], [b, c]]` is a best answer followed by a tie. Only tier a
+ *               gold set where the ordering is real - `text editor` has no
+ *               business claiming `emacs` beats `vim`.
  *   exhaustive  optional; `relevant` enumerates *every* acceptable answer, so
  *               anything else on the page counts as noise. Required for RBP.
- *   best        optional; the single answer a user typing `q` is most likely
- *               after, which must be one of `relevant`. Required for BestRR
- *               unless `relevant` holds exactly one id. Leave it off where the
- *               gold set has no obvious winner - `text editor` has no business
- *               claiming `emacs` beats `vim`.
  */
 
 import { execSync } from "node:child_process";
@@ -151,6 +152,40 @@ function rankHits(hits, field, prefix, k) {
     return out;
 }
 
+// The gold set as ranked tiers, validated. A tier is a non-empty list of ids
+// tied at that rank, and an id belongs to exactly one of them.
+function tiers(q) {
+    if (!Array.isArray(q.relevant) || q.relevant.length === 0) {
+        throw new Error(`${q.id}: "relevant" must be a non-empty list of tiers`);
+    }
+    const seen = new Set();
+    for (const tier of q.relevant) {
+        if (!Array.isArray(tier) || tier.length === 0) {
+            throw new Error(
+                `${q.id}: every tier of "relevant" must be a non-empty list of ids, got ${JSON.stringify(tier)}`,
+            );
+        }
+        for (const id of tier) {
+            if (typeof id !== "string") {
+                throw new Error(
+                    `${q.id}: tier entry ${JSON.stringify(id)} is not a string`,
+                );
+            }
+            if (seen.has(id)) {
+                throw new Error(`${q.id}: ${id} appears in more than one tier`);
+            }
+            seen.add(id);
+        }
+    }
+    return q.relevant;
+}
+
+// The gold set flattened back to a plain set of acceptable answers, which is
+// what the membership metrics ask for.
+function flatRelevant(q) {
+    return tiers(q).flat();
+}
+
 function reciprocalRank(ranked, relevant) {
     const rel = new Set(relevant);
     for (let i = 0; i < ranked.length; i++) {
@@ -160,18 +195,13 @@ function reciprocalRank(ranked, relevant) {
 }
 
 // The one answer a user typing this query is most likely after, or `null` where
-// we decline to rank the gold set. A single-entry `relevant` needs no
-// annotation: with nothing to compare against, it is the best answer by
-// definition. Beyond that it takes an explicit `"best"`, so ordering claims are
-// only ever made where a curator wrote one down.
+// the gold set declines to name one. The top tier holds it whenever that tier
+// holds a single id - including the single-answer case, where with nothing to
+// compare against it is the best answer by definition. A tie at the top states
+// no preference, so there is no ordinal claim to score.
 function bestAnswer(q) {
-    if (q.best !== undefined) {
-        if (!q.relevant.includes(q.best)) {
-            throw new Error(`${q.id}: "best" ${q.best} is not in "relevant"`);
-        }
-        return q.best;
-    }
-    return q.relevant.length === 1 ? q.relevant[0] : null;
+    const top = tiers(q)[0];
+    return top.length === 1 ? top[0] : null;
 }
 
 // Reciprocal rank of the best answer, rather than of the first relevant hit.
@@ -191,27 +221,29 @@ function bestReciprocalRank(ranked, best) {
     return i === -1 ? 0 : 1 / (i + 1);
 }
 
-// Graded nDCG (Jarvelin & Kekalainen 2002) over two grades: the best answer
-// scores 2, any other relevant hit 1.
+// Graded nDCG (Jarvelin & Kekalainen 2002) over the gold set's tiers: a hit in
+// tier `i` of `T` grades `T - i`, and anything off the gold set grades 0.
 //
 // Where BestRR prices one position, this prices the whole page against its ideal
 // ordering, so demoting a variant below the canonical package pays off even when
-// the canonical package was already first. A query with no best answer keeps a
-// flat grade of 1 across its gold set, which is ordinary binary nDCG - it still
+// the canonical package was already first. A single-tier query keeps a flat
+// grade of 1 across its gold set, which is ordinary binary nDCG - it still
 // scores, it just states no preference within the set.
 function ndcgAtK(ranked, q, k) {
-    const best = bestAnswer(q);
-    const grade = (id) => (id === best ? 2 : q.relevant.includes(id) ? 1 : 0);
+    const gold = tiers(q);
+    const grades = new Map(
+        gold.flatMap((tier, i) => tier.map((id) => [id, gold.length - i])),
+    );
     const gain = (g, i) => g / Math.log2(i + 2);
 
     const dcg = ranked
         .slice(0, k)
-        .reduce((a, id, i) => a + gain(grade(id), i), 0);
-    const ideal = q.relevant
-        .map(grade)
-        .sort((a, b) => b - a)
-        .slice(0, k);
-    const idcg = ideal.reduce((a, g, i) => a + gain(g, i), 0);
+        .reduce((a, id, i) => a + gain(grades.get(id) ?? 0, i), 0);
+    // Tiers are already in descending grade order, so this is the ideal page.
+    const idcg = gold
+        .flatMap((tier, i) => tier.map(() => gold.length - i))
+        .slice(0, k)
+        .reduce((a, g, i) => a + gain(g, i), 0);
     return idcg > 0 ? dcg / idcg : 0;
 }
 
@@ -282,6 +314,7 @@ async function scoreTrack(queries, bodyKey, field, prefix) {
         const bodies = await nextBody(q.q, K);
         const data = await esSearch(bodies[bodyKey]);
         const ranked = rankHits(data.hits.hits, field, prefix, K);
+        const relevant = flatRelevant(q);
         results.push({
             id: q.id,
             q: q.q,
@@ -290,10 +323,10 @@ async function scoreTrack(queries, bodyKey, field, prefix) {
             ranked,
             matched: data.hits.total.value,
             matchedExact: data.hits.total.relation === "eq",
-            mrr: reciprocalRank(ranked, q.relevant),
-            success: successAtK(ranked, q.relevant, K),
-            recall: recallAtK(ranked, q.relevant, K),
-            rbp: q.exhaustive ? conditionalRBP(ranked, q.relevant, P) : null,
+            mrr: reciprocalRank(ranked, relevant),
+            success: successAtK(ranked, relevant, K),
+            recall: recallAtK(ranked, relevant, K),
+            rbp: q.exhaustive ? conditionalRBP(ranked, relevant, P) : null,
             bestrr: bestReciprocalRank(ranked, bestAnswer(q)),
             ndcg: ndcgAtK(ranked, q, K),
         });
@@ -437,12 +470,13 @@ const lines = [
     `> \`--persistence\` to change \`p\`. Only a query with \`"exhaustive": true\` gets a`,
     "> score. A query with no hits drops out of the mean.",
     "",
-    "> `BestRR` and `nDCG` grade the gold set instead of treating it as a flat",
-    "> set: the best answer counts double. `BestRR` is the reciprocal rank of that",
-    "> one answer, so it reads how well we order results a user considers",
-    "> comparably relevant, which `MRR` cannot see. It scores a query whose",
-    '> `relevant` holds one entry or which names a `"best"`, and drops the rest',
-    "> from the mean.",
+    "> `BestRR` and `nDCG` read `relevant` as ranked tiers rather than as a flat",
+    "> set. A tier holds ids tied at that rank, so order between tiers is a claim",
+    "> and order within one is not, and a hit in tier `i` of `T` grades `T - i`.",
+    "> `BestRR` is the reciprocal rank of the best answer - the top tier's single",
+    "> id - so it reads how well we order results a user considers comparably",
+    "> relevant, which `MRR` cannot see. A query whose top tier is a tie makes no",
+    "> such claim and drops out of that mean.",
     "",
     ...section("Packages", pkgResults),
     ...section("Options", optResults),
