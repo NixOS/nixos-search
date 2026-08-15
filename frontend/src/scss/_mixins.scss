@@ -5,7 +5,16 @@
   padding: 0;
 
   input[type="radio"] {
-    display: none;
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+  }
+
+  label:has(:focus-visible) {
+    outline: 2px solid var(--dark-blue);
+    outline-offset: -2px;
   }
 }
 

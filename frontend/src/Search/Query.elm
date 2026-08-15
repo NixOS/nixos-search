@@ -94,7 +94,9 @@ packagesBody query from size sort selectedBuckets =
         , ( "package_longDescription", 1.0 )
         , ( "flake_name", 0.5 )
         ]
+        [ "package_attr_name", "package_pname", "package_programs" ]
         [ "package_description^3", "package_longDescription^1" ]
+        Nothing
         [ { field = "package_repology_repos", pivot = 20.0 }
         , { field = "package_dep_count", pivot = 1000.0 }
         ]
@@ -142,7 +144,9 @@ optionsBody types query from size sort =
         , ( "service_package", 3.0 )
         , ( "service_packages", 3.0 )
         ]
+        [ "option_name", "service_package", "service_packages" ]
         [ "option_description^3" ]
+        (Just "option_name.attr_path_reverse")
         []
         Nothing
 
@@ -264,12 +268,20 @@ filterByType types =
             ]
 
 
+{-| Scales the field weights of the fuzzy clause down to a fallback.
+-}
+fuzzyFallbackWeight : Float
+fuzzyFallbackWeight =
+    0.05
+
+
 searchFields :
     List String
     -> List String
     -> List ( String, Float )
+    -> List String
     -> List (List ( String, Json.Encode.Value ))
-searchFields positiveWords mainFields fields =
+searchFields positiveWords mainFields fields fuzzyFieldNames =
     let
         allFields : List String
         allFields =
@@ -301,8 +313,39 @@ searchFields positiveWords mainFields fields =
                     ]
               )
             ]
+
+        fuzzyFields : List String
+        fuzzyFields =
+            fields
+                |> List.filter (\( field, _ ) -> List.member field fuzzyFieldNames)
+                |> List.map
+                    (\( field, score ) ->
+                        field ++ "^" ++ String.fromFloat (score * fuzzyFallbackWeight)
+                    )
+
+        fuzzyMatch : List (List ( String, Json.Encode.Value ))
+        fuzzyMatch =
+            if List.isEmpty fuzzyFields then
+                []
+
+            else
+                [ [ ( "multi_match"
+                    , Json.Encode.object
+                        [ ( "type", Json.Encode.string "best_fields" )
+                        , ( "query", Json.Encode.string (String.join " " positiveWords) )
+                        , ( "fuzziness", Json.Encode.string "1" )
+                        , ( "prefix_length", Json.Encode.int 1 )
+                        , ( "operator", Json.Encode.string "and" )
+                        , ( "_name", Json.Encode.string <| "fuzzy_" ++ String.join "_" positiveWords )
+                        , ( "fields", Json.Encode.list Json.Encode.string fuzzyFields )
+                        ]
+                    )
+                  ]
+                ]
     in
-    multiMatch :: List.concatMap (\mf -> List.map (toWildcardQuery mf) queryWordsWildCard) mainFields
+    multiMatch
+        :: fuzzyMatch
+        ++ List.concatMap (\mf -> List.map (toWildcardQuery mf) queryWordsWildCard) mainFields
 
 
 shouldClauses :
@@ -377,6 +420,38 @@ shouldClauses primaryField positiveWords phraseFields =
         termClause :: prefixClause :: phraseClause
 
 
+moduleEntryPoint : String -> List String -> List (List ( String, Json.Encode.Value ))
+moduleEntryPoint field positiveWords =
+    let
+        path : String
+        path =
+            String.join "." positiveWords
+    in
+    if String.isEmpty path then
+        []
+
+    else
+        [ leafTerm field (path ++ ".enable") 100.0 "module_entry_point"
+        , leafTerm field "enable" 10.0 "module_enable_leaf"
+        ]
+
+
+leafTerm : String -> String -> Float -> String -> List ( String, Json.Encode.Value )
+leafTerm field value boost name =
+    [ ( "term"
+      , Json.Encode.object
+            [ ( field
+              , Json.Encode.object
+                    [ ( "value", Json.Encode.string value )
+                    , ( "boost", Json.Encode.float boost )
+                    , ( "_name", Json.Encode.string name )
+                    ]
+              )
+            ]
+      )
+    ]
+
+
 type alias PopularitySignal =
     { field : String, pivot : Float }
 
@@ -447,10 +522,12 @@ encodeRequestBody :
     -> List String
     -> List ( String, Float )
     -> List String
+    -> List String
+    -> Maybe String
     -> List PopularitySignal
     -> Maybe String
     -> Json.Encode.Value
-encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets mainFields fields phraseFields popularitySignals rescoreField =
+encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms filterByBuckets mainFields fields fuzzyFieldNames phraseFields entryPointField popularitySignals rescoreField =
     let
         -- you can not request more then 10000 results otherwise it will return 404
         size =
@@ -490,6 +567,15 @@ encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms 
 
             else
                 toSortQuery sort sortField otherSortFields
+
+        entryPointClauses : List (List ( String, Json.Encode.Value ))
+        entryPointClauses =
+            case entryPointField of
+                Just field ->
+                    moduleEntryPoint field positiveWords
+
+                Nothing ->
+                    []
     in
     Json.Encode.object
         ([ ( "from"
@@ -531,7 +617,7 @@ encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms 
                                         [ ( "tie_breaker", Json.Encode.float 0.7 )
                                         , ( "queries"
                                           , Json.Encode.list Json.Encode.object
-                                                (searchFields positiveWords mainFields fields)
+                                                (searchFields positiveWords mainFields fields fuzzyFieldNames)
                                           )
                                         ]
                                     )
@@ -541,6 +627,7 @@ encodeRequestBody query from sizeRaw sort types sortField otherSortFields terms 
                         , ( "should"
                           , Json.Encode.list Json.Encode.object
                                 (shouldClauses primaryField positiveWords phraseFields
+                                    ++ entryPointClauses
                                     ++ popularityClauses popularitySignals
                                 )
                           )
