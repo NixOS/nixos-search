@@ -753,5 +753,29 @@
             "pkg:nodejs_22",
             "pkg:nodejs_20"
         ]
+    },
+    {
+        "id": "g153",
+        "q": "Dicomizer",
+        "category": "exact",
+        "relevant": ["pkg:weasis"]
+    },
+    {
+        "id": "g154",
+        "q": "LibreVNA-GUI",
+        "category": "exact",
+        "relevant": ["pkg:librevna"]
+    },
+    {
+        "id": "g155",
+        "q": "nfcDemoApp",
+        "category": "exact",
+        "relevant": ["pkg:libnfc-nci"]
+    },
+    {
+        "id": "g156",
+        "q": "yodaStruct",
+        "category": "exact",
+        "relevant": ["pkg:d-seams"]
     }
 ]
