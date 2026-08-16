@@ -36,8 +36,7 @@ struct Args {
 
     #[structopt(
         long = "save-summary",
-        help = "Save markdown summary of failures to this file",
-        requires("elastic-schema-version")
+        help = "Save markdown summary of failures to this file"
     )]
     save_summary: Option<String>,
 
@@ -608,4 +607,35 @@ async fn push_to_elastic(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `--save-summary` writes a markdown file and never touches elasticsearch, so it
+    /// must not require `--elastic-schema-version`. This is the invocation shape used
+    /// by the `Check Flake Groups` workflow.
+    #[test]
+    fn save_summary_without_schema_version() {
+        let args = Args::from_iter_safe([
+            "flake-info",
+            "--json",
+            "--save-summary",
+            "s.md",
+            "group",
+            "f.toml",
+            "name",
+            "--report",
+            "--with-gc",
+        ]);
+        assert!(args.is_ok(), "{:?}", args.err());
+    }
+
+    /// `--push` does read `elastic_schema_version`, so it keeps demanding one.
+    #[test]
+    fn push_requires_schema_version() {
+        let args = Args::from_iter_safe(["flake-info", "--push", "group", "f.toml", "name"]);
+        assert!(args.is_err());
+    }
 }
