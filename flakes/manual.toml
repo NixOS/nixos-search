@@ -462,6 +462,21 @@ repo = "srsran.nix"
 
 [[sources]]
 type = "github"
+owner = "rat-nix"
+repo = "open5gs.nix"
+
+[[sources]]
+type = "github"
+owner = "rat-nix"
+repo = "ueransim.nix"
+
+[[sources]]
+type = "github"
+owner = "rat-nix"
+repo = "free5gc.nix"
+
+[[sources]]
+type = "github"
 owner = "ryantm"
 repo = "agenix"
 
