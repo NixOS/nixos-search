@@ -216,11 +216,6 @@ repo = "eza"
 
 [[sources]]
 type = "github"
-owner = "felbinger"
-repo = "srsran.nix"
-
-[[sources]]
-type = "github"
 owner = "fort-nix"
 repo = "nix-bitcoin"
 
@@ -459,6 +454,26 @@ repo = "pyproject.nix"
 type = "github"
 owner = "pyproject-nix"
 repo = "uv2nix"
+
+[[sources]]
+type = "github"
+owner = "rat-nix"
+repo = "srsran.nix"
+
+[[sources]]
+type = "github"
+owner = "rat-nix"
+repo = "open5gs.nix"
+
+[[sources]]
+type = "github"
+owner = "rat-nix"
+repo = "ueransim.nix"
+
+[[sources]]
+type = "github"
+owner = "rat-nix"
+repo = "free5gc.nix"
 
 [[sources]]
 type = "github"
