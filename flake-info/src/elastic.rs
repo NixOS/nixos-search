@@ -98,7 +98,14 @@ lazy_static! {
                     "type": "keyword"
                 },
                 "package_programs": {
-                    "type": "keyword"
+                    "type": "keyword",
+                    "normalizer": "lowercase",
+                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
+                },
+                "package_mainProgram": {
+                    "type": "keyword",
+                    "normalizer": "lowercase",
+                    "fields": {"edge": {"type": "text", "analyzer": "edge"}},
                 },
                 "package_description": {
                     "type": "text",
