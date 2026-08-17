@@ -360,38 +360,54 @@ shouldClauses primaryField positiveWords phraseFields =
 
     else
         let
-            joined : String
-            joined =
-                String.concat positiveWords
-
-            termClause : List ( String, Json.Encode.Value )
-            termClause =
-                [ ( "term"
-                  , Json.Encode.object
-                        [ ( primaryField
-                          , Json.Encode.object
-                                [ ( "value", Json.Encode.string joined )
-                                , ( "boost", Json.Encode.float 100.0 )
-                                ]
-                          )
-                        ]
-                  )
+            -- `primaryField` is a keyword, so a multi-word query only reaches an
+            -- attribute name once the words are glued back together. Package names
+            -- separate words with `-` or `_` as often as they concatenate, and no
+            -- analysed field splits those apart, so try all three spellings.
+            joinedVariants : List String
+            joinedVariants =
+                [ String.concat positiveWords
+                , String.join "-" positiveWords
+                , String.join "_" positiveWords
                 ]
+                    |> List.Extra.unique
 
-            prefixClause : List ( String, Json.Encode.Value )
-            prefixClause =
-                [ ( "prefix"
-                  , Json.Encode.object
-                        [ ( primaryField
-                          , Json.Encode.object
-                                [ ( "value", Json.Encode.string joined )
-                                , ( "boost", Json.Encode.float 20.0 )
-                                , ( "case_insensitive", Json.Encode.bool True )
-                                ]
-                          )
-                        ]
-                  )
-                ]
+            termClauses : List (List ( String, Json.Encode.Value ))
+            termClauses =
+                joinedVariants
+                    |> List.map
+                        (\joined ->
+                            [ ( "term"
+                              , Json.Encode.object
+                                    [ ( primaryField
+                                      , Json.Encode.object
+                                            [ ( "value", Json.Encode.string joined )
+                                            , ( "boost", Json.Encode.float 100.0 )
+                                            ]
+                                      )
+                                    ]
+                              )
+                            ]
+                        )
+
+            prefixClauses : List (List ( String, Json.Encode.Value ))
+            prefixClauses =
+                joinedVariants
+                    |> List.map
+                        (\joined ->
+                            [ ( "prefix"
+                              , Json.Encode.object
+                                    [ ( primaryField
+                                      , Json.Encode.object
+                                            [ ( "value", Json.Encode.string joined )
+                                            , ( "boost", Json.Encode.float 20.0 )
+                                            , ( "case_insensitive", Json.Encode.bool True )
+                                            ]
+                                      )
+                                    ]
+                              )
+                            ]
+                        )
 
             phraseClause : List (List ( String, Json.Encode.Value ))
             phraseClause =
@@ -418,7 +434,7 @@ shouldClauses primaryField positiveWords phraseFields =
                 else
                     []
         in
-        termClause :: prefixClause :: phraseClause
+        termClauses ++ prefixClauses ++ phraseClause
 
 
 moduleEntryPoint : String -> List String -> List (List ( String, Json.Encode.Value ))
