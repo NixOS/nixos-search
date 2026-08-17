@@ -226,6 +226,11 @@ repo = "nix-bitcoin"
 
 [[sources]]
 type = "github"
+owner = "fzakaria"
+repo = "nixpkgs-multiverse"
+
+[[sources]]
+type = "github"
 owner = "gmodena"
 repo = "nix-flatpak"
 
