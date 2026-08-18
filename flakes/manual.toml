@@ -357,6 +357,11 @@ repo = "fenix"
 [[sources]]
 type = "github"
 owner = "nix-community"
+repo = "lanzaboote"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
 repo = "nixvim"
 
 [[sources]]
