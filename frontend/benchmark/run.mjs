@@ -369,7 +369,7 @@ const table = (header, rows) =>
 
 // Metric labels paired with the footnote GitHub renders at the bottom of the
 // report. Every table names a metric through `metric()`, so each definition is
-// written once and every table citing it links there.
+// written once and the term links there where the report first uses it.
 const METRICS = {
     success: {
         label: `Success@${K}`,
@@ -424,8 +424,16 @@ const METRICS = {
 // A footnote definition has to be one line; wrap the source, not the output.
 const oneLine = (s) => s.trim().replace(/\s+/g, " ");
 
-// A metric named in a table, carrying its footnote marker.
-const metric = (key) => `${METRICS[key].label}[^${key}]`;
+// A metric named in a table. Only the first mention carries the footnote
+// marker - all seven land in the first `Overall` table - because the reference
+// is there to introduce the term, and repeating it on every table leaves the
+// reader looking past markers to reach the numbers.
+const cited = new Set();
+const metric = (key) => {
+    const first = !cited.has(key);
+    cited.add(key);
+    return METRICS[key].label + (first ? `[^${key}]` : "");
+};
 
 const FOOTNOTES = Object.entries(METRICS).map(
     ([key, { note }]) => `[^${key}]: ${oneLine(note)}`,
