@@ -7,6 +7,20 @@
  * Usage:
  *   node benchmark/run.mjs [--packages <path>] [--options <path>] [--channel <branch>] [--schema <n>] [--k <n>] [--persistence <f>]
  *
+ * Each curated query is an object:
+ *
+ *   id          stable handle, also the sort key of the per-query table
+ *   q           the search term, as a user would type it
+ *   category    grouping for the by-category table, e.g. `typo` or `intent`
+ *   relevant    tiers of ids we accept as answers, `pkg:`/`opt:` prefixed. Each
+ *               tier is a list of ids tied at that rank: order *between* tiers
+ *               is a claim, order *within* one is not. `[[a, b, c]]` states no
+ *               preference, `[[a], [b], [c]]` is a strict order, and
+ *               `[[a], [b, c]]` is a best answer followed by a tie. Only tier a
+ *               gold set where the ordering is real - `text editor` has no
+ *               business claiming `emacs` beats `vim`.
+ *   exhaustive  optional; `relevant` enumerates *every* acceptable answer, so
+ *               anything else on the page counts as noise. Required for RBP.
  */
 
 import { execSync } from "node:child_process";
@@ -138,12 +152,99 @@ function rankHits(hits, field, prefix, k) {
     return out;
 }
 
+// The gold set as ranked tiers, validated. A tier is a non-empty list of ids
+// tied at that rank, and an id belongs to exactly one of them.
+function tiers(q) {
+    if (!Array.isArray(q.relevant) || q.relevant.length === 0) {
+        throw new Error(`${q.id}: "relevant" must be a non-empty list of tiers`);
+    }
+    const seen = new Set();
+    for (const tier of q.relevant) {
+        if (!Array.isArray(tier) || tier.length === 0) {
+            throw new Error(
+                `${q.id}: every tier of "relevant" must be a non-empty list of ids, got ${JSON.stringify(tier)}`,
+            );
+        }
+        for (const id of tier) {
+            if (typeof id !== "string") {
+                throw new Error(
+                    `${q.id}: tier entry ${JSON.stringify(id)} is not a string`,
+                );
+            }
+            if (seen.has(id)) {
+                throw new Error(`${q.id}: ${id} appears in more than one tier`);
+            }
+            seen.add(id);
+        }
+    }
+    return q.relevant;
+}
+
+// The gold set flattened back to a plain set of acceptable answers, which is
+// what the membership metrics ask for.
+function flatRelevant(q) {
+    return tiers(q).flat();
+}
+
 function reciprocalRank(ranked, relevant) {
     const rel = new Set(relevant);
     for (let i = 0; i < ranked.length; i++) {
         if (rel.has(ranked[i])) return 1 / (i + 1);
     }
     return 0;
+}
+
+// The one answer a user typing this query is most likely after, or `null` where
+// the gold set declines to name one. The top tier holds it whenever that tier
+// holds a single id - including the single-answer case, where with nothing to
+// compare against it is the best answer by definition. A tie at the top states
+// no preference, so there is no ordinal claim to score.
+function bestAnswer(q) {
+    const top = tiers(q)[0];
+    return top.length === 1 ? top[0] : null;
+}
+
+// Reciprocal rank of the best answer, rather than of the first relevant hit.
+//
+// MRR asks "did we surface something usable", which a cluster gold set answers
+// trivially: on `node`, every `nodejs*` variant is relevant, so MRR reads 1.000
+// whether `nodejs` or `nodejs-slim_26` came first. BestRR asks the ordinal
+// question instead - "did the answer they wanted come first" - and separates
+// those two pages 1.000 to 0.167.
+//
+// It collapses to MRR on a single-answer query, so it only speaks up on the
+// cluster queries it was added for. Returns `null` when the query makes no
+// ordinal claim, which drops it from the mean.
+function bestReciprocalRank(ranked, best) {
+    if (best === null) return null;
+    const i = ranked.indexOf(best);
+    return i === -1 ? 0 : 1 / (i + 1);
+}
+
+// Graded nDCG (Jarvelin & Kekalainen 2002) over the gold set's tiers: a hit in
+// tier `i` of `T` grades `T - i`, and anything off the gold set grades 0.
+//
+// Where BestRR prices one position, this prices the whole page against its ideal
+// ordering, so demoting a variant below the canonical package pays off even when
+// the canonical package was already first. A single-tier query keeps a flat
+// grade of 1 across its gold set, which is ordinary binary nDCG - it still
+// scores, it just states no preference within the set.
+function ndcgAtK(ranked, q, k) {
+    const gold = tiers(q);
+    const grades = new Map(
+        gold.flatMap((tier, i) => tier.map((id) => [id, gold.length - i])),
+    );
+    const gain = (g, i) => g / Math.log2(i + 2);
+
+    const dcg = ranked
+        .slice(0, k)
+        .reduce((a, id, i) => a + gain(grades.get(id) ?? 0, i), 0);
+    // Tiers are already in descending grade order, so this is the ideal page.
+    const idcg = gold
+        .flatMap((tier, i) => tier.map(() => gold.length - i))
+        .slice(0, k)
+        .reduce((a, g, i) => a + gain(g, i), 0);
+    return idcg > 0 ? dcg / idcg : 0;
 }
 
 function successAtK(ranked, relevant, k) {
@@ -213,6 +314,7 @@ async function scoreTrack(queries, bodyKey, field, prefix) {
         const bodies = await nextBody(q.q, K);
         const data = await esSearch(bodies[bodyKey]);
         const ranked = rankHits(data.hits.hits, field, prefix, K);
+        const relevant = flatRelevant(q);
         results.push({
             id: q.id,
             q: q.q,
@@ -221,10 +323,12 @@ async function scoreTrack(queries, bodyKey, field, prefix) {
             ranked,
             matched: data.hits.total.value,
             matchedExact: data.hits.total.relation === "eq",
-            mrr: reciprocalRank(ranked, q.relevant),
-            success: successAtK(ranked, q.relevant, K),
-            recall: recallAtK(ranked, q.relevant, K),
-            rbp: q.exhaustive ? conditionalRBP(ranked, q.relevant, P) : null,
+            mrr: reciprocalRank(ranked, relevant),
+            success: successAtK(ranked, relevant, K),
+            recall: recallAtK(ranked, relevant, K),
+            rbp: q.exhaustive ? conditionalRBP(ranked, relevant, P) : null,
+            bestrr: bestReciprocalRank(ranked, bestAnswer(q)),
+            ndcg: ndcgAtK(ranked, q, K),
         });
     }
     return results;
@@ -263,15 +367,91 @@ const table = (header, rows) =>
         ...rows.map((r) => `| ${r.join(" | ")} |`),
     ].join("\n");
 
+// Metric labels paired with the footnote GitHub renders at the bottom of the
+// report. Every table names a metric through `metric()`, so each definition is
+// written once and the term links there where the report first uses it.
+const METRICS = {
+    success: {
+        label: `Success@${K}`,
+        note: `Did the page hold an acceptable answer at all - 1 or 0 per
+            query.`,
+    },
+    mrr: {
+        label: "MRR",
+        note: `Mean reciprocal rank of the first acceptable answer: 1.000 if it
+            led, 0.500 second, 0.333 third, 0 if none made the page.`,
+    },
+    recall: {
+        label: `Recall@${K}`,
+        note: `What share of the acceptable answers the page held, over the most
+            it could have held at k.`,
+    },
+    rbp: {
+        label: `RBP (p=${P})`,
+        note: `Rank-biased precision (Moffat & Zobel 2008): how much of the page
+            a user is expected to find useful, pricing rank \`i\` at \`p^(i-1)\`
+            so junk near the top costs more than junk near the bottom. \`p\` is
+            the chance they read one more result; the denominator is the page we
+            returned, so a short clean page still reaches 1.000.`,
+    },
+    bestrr: {
+        label: "BestRR",
+        note: `Reciprocal rank of the one answer the query most wants: 1.000 if
+            it led, 0.500 second, 0 if it never appeared. Where MRR is satisfied
+            by any acceptable answer, this reads the ordering within that set -
+            on \`node\` MRR is 1.000 whether \`nodejs\` or \`nodejs-slim_26\`
+            led, and BestRR separates those pages 1.000 to 0.167. The gold set
+            is a list of tiers of ids tied at a rank; the best answer is a top
+            tier holding one id.`,
+    },
+    ndcg: {
+        label: `nDCG@${K}`,
+        note: `Normalized discounted cumulative gain (Jarvelin & Kekalainen
+            2002): the whole page priced against its ideal ordering, 1.000 when
+            nothing could have been ranked better. A hit in tier \`i\` of \`T\`
+            grades \`T - i\`, so a one-tier gold set is ordinary binary nDCG.`,
+    },
+    n: {
+        label: "n",
+        note: `How many queries the figure covers; the rest make no claim the
+            metric can read and drop out of its mean. RBP covers queries marked
+            \`"exhaustive": true\`, meaning the gold set lists every acceptable
+            answer so anything else is noise, that returned at least one hit.
+            BestRR covers queries whose gold set names a single best answer.`,
+    },
+};
+
+// A footnote definition has to be one line; wrap the source, not the output.
+const oneLine = (s) => s.trim().replace(/\s+/g, " ");
+
+// A metric named in a table. Only the first mention carries the footnote
+// marker - all seven land in the first `Overall` table - because the reference
+// is there to introduce the term, and repeating it on every table leaves the
+// reader looking past markers to reach the numbers.
+const cited = new Set();
+const metric = (key) => {
+    const first = !cited.has(key);
+    cited.add(key);
+    return METRICS[key].label + (first ? `[^${key}]` : "");
+};
+
+const FOOTNOTES = Object.entries(METRICS).map(
+    ([key, { note }]) => `[^${key}]: ${oneLine(note)}`,
+);
+
 // One `## <label>` section: Overall + By-category tables for a single track.
 function section(label, results) {
-    // RBP only covers the closed-set queries that returned something.
+    // RBP only covers the closed-set queries that returned something, BestRR
+    // only the ones that name a best answer.
     const closed = results.filter((r) => r.rbp !== null);
+    const ordinal = results.filter((r) => r.bestrr !== null);
     const overall = {
         success: mean(results.map((r) => r.success)),
         mrr: mean(results.map((r) => r.mrr)),
         recall: mean(results.map((r) => r.recall)),
         rbp: closed.length ? mean(closed.map((r) => r.rbp)) : null,
+        bestrr: ordinal.length ? mean(ordinal.map((r) => r.bestrr)) : null,
+        ndcg: mean(results.map((r) => r.ndcg)),
     };
     const byCategory = {};
     for (const r of results) {
@@ -280,21 +460,27 @@ function section(label, results) {
     return [
         `## ${label}`,
         "",
-        `> ${results.length} queries, k=${K}.`,
+        `> ${results.length} queries.`,
         "",
         "### Overall",
         "",
         table(
-            ["metric", "value", "n"],
+            ["metric", "value", metric("n")],
             [
-                ["Success@" + K, overall.success.toFixed(3), results.length],
-                ["MRR", overall.mrr.toFixed(3), results.length],
-                ["Recall@" + K, overall.recall.toFixed(3), results.length],
+                [metric("success"), overall.success.toFixed(3), results.length],
+                [metric("mrr"), overall.mrr.toFixed(3), results.length],
+                [metric("recall"), overall.recall.toFixed(3), results.length],
                 [
-                    `RBP (p=${P})`,
+                    metric("rbp"),
                     overall.rbp === null ? "-" : overall.rbp.toFixed(3),
                     closed.length,
                 ],
+                [
+                    metric("bestrr"),
+                    overall.bestrr === null ? "-" : overall.bestrr.toFixed(3),
+                    ordinal.length,
+                ],
+                [metric("ndcg"), overall.ndcg.toFixed(3), results.length],
             ],
         ),
         "",
@@ -303,18 +489,21 @@ function section(label, results) {
         table(
             [
                 "category",
-                "n",
-                "Success@" + K,
-                "MRR",
-                "Recall@" + K,
-                `RBP (p=${P})`,
+                metric("n"),
+                metric("success"),
+                metric("mrr"),
+                metric("recall"),
+                metric("rbp"),
+                metric("bestrr"),
+                metric("ndcg"),
             ],
             Object.entries(byCategory)
                 .sort(([a], [b]) => a.localeCompare(b))
                 .map(([cat, rs]) => {
-                    // Cluster gold sets move Recall and RBP, not Success/MRR, so a
-                    // category is unreadable without all four.
+                    // Cluster gold sets move Recall, RBP and BestRR, not
+                    // Success/MRR, so a category is unreadable without them all.
                     const rbps = rs.filter((r) => r.rbp !== null);
+                    const ords = rs.filter((r) => r.bestrr !== null);
                     return [
                         cat,
                         String(rs.length),
@@ -324,6 +513,10 @@ function section(label, results) {
                         rbps.length
                             ? `${mean(rbps.map((r) => r.rbp)).toFixed(3)} (n=${rbps.length})`
                             : "-",
+                        ords.length
+                            ? `${mean(ords.map((r) => r.bestrr)).toFixed(3)} (n=${ords.length})`
+                            : "-",
+                        mean(rs.map((r) => r.ndcg)).toFixed(3),
                     ];
                 }),
         ),
@@ -341,13 +534,7 @@ const perQuery = [
 const lines = [
     "# Relevance benchmark: frontend query vs deployed ES",
     "",
-    `> Index: \`${INDEX}\`. metrics: (Success@${K}, MRR, Recall@${K}, RBP(p=${P})).`,
-    "",
-    `> \`RBP\` is rank-biased precision. It prices rank \`i\` at \`p^(i-1)\`. Junk near the`,
-    `> top therefore costs more than junk near the bottom. The denominator is the page`,
-    `> we returned, so a short page scores only on the hits it has. Pass`,
-    `> \`--persistence\` to change \`p\`. Only a query with \`"exhaustive": true\` gets a`,
-    "> score. A query with no hits drops out of the mean.",
+    `> Index: \`${INDEX}\`, k=${K}. Metric definitions are in the footnotes.`,
     "",
     ...section("Packages", pkgResults),
     ...section("Options", optResults),
@@ -365,6 +552,8 @@ const lines = [
             "success",
             "mrr",
             "RBP",
+            "BestRR",
+            "nDCG",
             "matched",
             "top-3 ranked",
         ],
@@ -376,12 +565,16 @@ const lines = [
             r.success.toFixed(0),
             r.mrr.toFixed(3),
             r.rbp === null ? "-" : r.rbp.toFixed(3),
+            r.bestrr === null ? "-" : r.bestrr.toFixed(3),
+            r.ndcg.toFixed(3),
             r.matched + (r.matchedExact ? "" : "+"),
             r.ranked.slice(0, 3).join(", "),
         ]),
     ),
     "",
     "</details>",
+    "",
+    ...FOOTNOTES,
 ];
 
 console.log(lines.join("\n"));
