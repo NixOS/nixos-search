@@ -5,7 +5,11 @@
  * scores curated queries against our live ES instance.
  *
  * Usage:
- *   node benchmark/run.mjs [--packages <path>] [--options <path>] [--channel <branch>] [--schema <n>] [--k <n>] [--persistence <f>]
+ *   node benchmark/run.mjs [--packages <path>] [--options <path>] [--channel <branch>] [--schema <n>] [--index <name>] [--k <n>] [--persistence <f>]
+ *
+ * `--index` names a concrete index instead of the `latest-<schema>-<channel>`
+ * alias, which pins an A/B to one nixpkgs evaluation once the alias has moved
+ * on to a newer one.
  *
  * Each curated query is an object:
  *
@@ -58,6 +62,7 @@ const { values: args } = parseArgs({
         },
         channel: { type: "string", default: "nixos-unstable" },
         schema: { type: "string" },
+        index: { type: "string" },
         k: { type: "string", default: "10" },
         persistence: { type: "string", default: "0.8" },
     },
@@ -68,7 +73,7 @@ const { values: args } = parseArgs({
 const K = parseInt(args.k, 10);
 const P = parseFloat(args.persistence);
 const SCHEMA = args.schema ?? frontendSchema();
-const INDEX = `latest-${SCHEMA}-${args.channel}`;
+const INDEX = args.index ?? `latest-${SCHEMA}-${args.channel}`;
 const ES_URL =
     process.env.ELASTICSEARCH_URL || "https://search.nixos.org/backend";
 const ES_USER = process.env.ELASTICSEARCH_USERNAME || "aWVSALXpZv";
