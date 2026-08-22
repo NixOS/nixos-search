@@ -154,11 +154,12 @@ optionsBody types query from size sort =
 
 -- THE RANKING
 --
--- Neither of the two rankings below was chosen by hand. Both are the champion of
--- an evolutionary search over the clause structure, the fields and the boosts,
--- scored against `benchmark/run.mjs` on a held-out 30% of the curated queries.
--- Read them as found artefacts rather than as argued designs: the notes say what
--- the result does, not what anyone intended it to do.
+-- Almost nothing in the two rankings below was chosen by hand. Both are the
+-- champion of an evolutionary search over the clause structure, the fields and
+-- the boosts, scored against `benchmark/run.mjs` on a held-out 30% of the
+-- curated queries. Read them as found artefacts rather than as argued designs:
+-- the notes say what the result does, not what anyone intended it to do. The one
+-- exception is `fuzzyDescription` in `optionsRanking`, which is marked as such.
 --
 -- Every number here is a ranking decision, so changing one should come with a
 -- benchmark delta.
@@ -366,10 +367,12 @@ packagesRanking words =
 
 {-| How an option query is ranked.
 
-An option matches on its name alone. The `must` is one `dis_max` over two
-readings of that name - the dash-glued query as a prefix of `attr_path_reverse`,
-and each word as `*word*` against the edge-ngrams - so a description no longer
-decides whether a document matches at all, only where it ranks.
+An option matches on its name, or failing that on a misspelling of its
+description. The `must` is one `dis_max` over two readings of the name - the
+dash-glued query as a prefix of `attr_path_reverse`, and each word as `*word*`
+against the edge-ngrams - plus `fuzzyDescription` behind them at a boost three
+orders of magnitude smaller, which is what a query nothing else matched falls
+back to.
 
 The three `constant_score` clauses discard the score of what they wrap and return
 their own boost, which makes the large inner numbers - `option_name^630`,
@@ -472,6 +475,25 @@ optionsRanking words =
                     (lastWord words)
                 )
 
+        -- The one clause here that no search found. It sits at a boost small
+        -- enough that it cannot outrank any name match, so it only decides the
+        -- order of a page the name clauses left empty - which for a misspelled
+        -- query is every page. `ngnix` reaches `services.nginx.enable` through
+        -- the word `Nginx` in its description, because no subfield of
+        -- `option_name` ever yields that word as a token to be spelled wrong.
+        fuzzyDescription : List Clause
+        fuzzyDescription =
+            multiMatchClauses
+                { kind = "best_fields"
+                , between =
+                    [ ( "fuzziness", Json.Encode.string "1" )
+                    , ( "prefix_length", Json.Encode.int 1 )
+                    ]
+                , fields = [ "option_description^1" ]
+                , boost = Just 0.0001
+                }
+                (whole words)
+
         lastWordCrossFields : List Clause
         lastWordCrossFields =
             constantScore 0.0975
@@ -493,7 +515,7 @@ optionsRanking words =
         [ disMax
             { tieBreaker = Just 0.509
             , boost = Just 8.33
-            , queries = reversePathPrefix ++ nameSubstrings
+            , queries = reversePathPrefix ++ nameSubstrings ++ fuzzyDescription
             }
         ]
     , should =
@@ -536,6 +558,13 @@ whenTyped words derived =
 
     else
         []
+
+
+{-| The words joined by spaces, however many there are.
+-}
+whole : List String -> List String
+whole words =
+    [ String.join " " words ]
 
 
 {-| The words joined by spaces, but only where there is more than one. A phrase
