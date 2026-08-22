@@ -448,9 +448,7 @@ optionsRanking words =
                     { kind = "phrase_prefix"
                     , between = [ ( "operator", Json.Encode.string "or" ) ]
                     , fields =
-                        [ "service_packages.edge^373"
-                        , "option_name.edge^11.6"
-                        , "service_packages.edge^0.839"
+                        [ "option_name.edge^11.6"
                         , "option_name.attr_path_reverse^682"
                         ]
                     , boost = Just 5.45
@@ -465,8 +463,7 @@ optionsRanking words =
                     { kind = "phrase"
                     , between = []
                     , fields =
-                        [ "service_packages.edge^206"
-                        , "option_description^11.6"
+                        [ "option_description^11.6"
                         , "option_description.*^0.65"
                         , "option_name^630"
                         ]
@@ -501,8 +498,7 @@ optionsRanking words =
                     { kind = "cross_fields"
                     , between = []
                     , fields =
-                        [ "service_packages.edge^384"
-                        , "option_name.edge^11.6"
+                        [ "option_name.edge^11.6"
                         , "option_description.*^0.542"
                         , "option_name.attr_path_reverse^746"
                         ]
