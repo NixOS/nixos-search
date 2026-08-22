@@ -181,6 +181,13 @@ lazy_static! {
                 "option_default": {"type": "text"},
                 "option_example": {"type": "text"},
                 "option_source": {"type": "keyword"},
+                // The package the option's module configures, and how many
+                // distribution repositories carry it. `option_popularity` is
+                // the one signal an option document has for how sought-after
+                // it is; `option_package` is what makes it auditable, since a
+                // `rank_feature` cannot be sorted, aggregated or scripted.
+                "option_package": {"type": "keyword"},
+                "option_popularity": {"type": "rank_feature"},
                 // Modular service fields
                 "service_package": {
                     "type": "keyword",

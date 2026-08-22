@@ -93,6 +93,10 @@ pub fn process_nixpkgs(
     all.append(&mut hm_options);
     all.append(&mut darwin_options);
 
+    // Packages and options are only in scope together here, which is the one
+    // place the popularity of the former can be carried over to the latter.
+    data::popularity::assign(&mut all);
+
     let exports = all
         .into_iter()
         .map(Export::nixpkgs)

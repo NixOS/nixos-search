@@ -2,6 +2,7 @@ mod export;
 mod flake;
 pub mod import;
 mod pandoc;
+pub mod popularity;
 mod prettyprint;
 mod source;
 mod utility;

@@ -246,6 +246,10 @@ pub enum Derivation {
         option_example: Option<DocValue>,
 
         option_flake: Option<ModulePath>,
+
+        option_package: Option<String>,
+
+        option_popularity: Option<u64>,
     },
     #[serde(rename = "service")]
     Service {
@@ -256,6 +260,8 @@ pub enum Derivation {
         option_default: Option<DocValue>,
         option_example: Option<DocValue>,
         option_flake: Option<ModulePath>,
+        option_package: Option<String>,
+        option_popularity: Option<u64>,
         service_package: Option<String>,
         service_module: Option<String>,
         service_packages: Vec<String>,
@@ -269,6 +275,8 @@ pub enum Derivation {
         option_default: Option<DocValue>,
         option_example: Option<DocValue>,
         option_flake: Option<ModulePath>,
+        option_package: Option<String>,
+        option_popularity: Option<u64>,
     },
     #[serde(rename = "darwin-option")]
     DarwinOption {
@@ -279,6 +287,8 @@ pub enum Derivation {
         option_default: Option<DocValue>,
         option_example: Option<DocValue>,
         option_flake: Option<ModulePath>,
+        option_package: Option<String>,
+        option_popularity: Option<u64>,
     },
 }
 
@@ -497,6 +507,8 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     default,
                     example,
                     flake,
+                    package,
+                    popularity,
                     service_package,
                     service_module,
                     service_packages,
@@ -509,6 +521,8 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     option_example: example,
                     option_flake: flake,
                     option_type,
+                    option_package: package,
+                    option_popularity: popularity,
                     service_package,
                     service_module,
                     service_packages,
@@ -522,6 +536,8 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                 default,
                 example,
                 flake,
+                package,
+                popularity,
                 ..
             }) => Derivation::HomeManagerOption {
                 option_source: declarations.get(0).map(Clone::clone),
@@ -531,6 +547,8 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                 option_example: example,
                 option_flake: flake,
                 option_type,
+                option_package: package,
+                option_popularity: popularity,
             },
             import::NixpkgsEntry::DarwinOption(NixOption {
                 declarations,
@@ -540,6 +558,8 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                 default,
                 example,
                 flake,
+                package,
+                popularity,
                 ..
             }) => Derivation::DarwinOption {
                 option_source: declarations.get(0).map(Clone::clone),
@@ -549,6 +569,8 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                 option_example: example,
                 option_flake: flake,
                 option_type,
+                option_package: package,
+                option_popularity: popularity,
             },
         })
     }
@@ -566,6 +588,8 @@ impl TryFrom<import::NixOption> for Derivation {
             default,
             example,
             flake,
+            package,
+            popularity,
             ..
         }: import::NixOption,
     ) -> Result<Self, Self::Error> {
@@ -577,6 +601,8 @@ impl TryFrom<import::NixOption> for Derivation {
             option_example: example,
             option_flake: flake,
             option_type,
+            option_package: package,
+            option_popularity: popularity,
         })
     }
 }

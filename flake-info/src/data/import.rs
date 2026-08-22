@@ -72,6 +72,14 @@ pub struct NixOption {
     /// If defined in a flake, contains defining flake and optionally a module
     pub flake: Option<ModulePath>,
 
+    /// The package this option's module configures, and how many distribution
+    /// repositories carry it. Both are derived by [`crate::data::popularity`]
+    /// after the fact rather than read out of the nix output.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub package: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub popularity: Option<u64>,
+
     /// For modular service options: the canonical package attrname providing this service
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub service_package: Option<String>,
@@ -155,6 +163,17 @@ impl Serialize for DocString {
                     md.to_owned()
                 })),
             DocString::Literal(literal) => serializer.serialize_str(&render_literal(literal)),
+        }
+    }
+}
+
+impl DocValue {
+    /// The value as it is written to the index, so that anything reading it
+    /// back sees what a user of the search sees.
+    pub fn as_text(&self) -> String {
+        match self {
+            DocValue::Literal(literal) => render_literal(literal),
+            DocValue::Value(v) => print_value(v),
         }
     }
 }
