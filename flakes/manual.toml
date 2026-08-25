@@ -597,6 +597,11 @@ repo = "kconfq"
 
 [[sources]]
 type = "github"
+owner = "tomodachi94"
+repo = "dotfiles"
+
+[[sources]]
+type = "github"
 owner = "TraceMachina"
 repo = "nativelink"
 
