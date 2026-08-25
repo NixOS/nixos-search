@@ -22,6 +22,10 @@ url = "git+https://codeberg.org/raboof/nix-dkimdo"
 
 [[sources]]
 type = "git"
+url = "git+https://codeberg.org/raboof/nix-pyobd"
+
+[[sources]]
+type = "git"
 url = "git+https://codeberg.org/raboof/mock-oauth2-server?ref=nix"
 
 [[sources]]
