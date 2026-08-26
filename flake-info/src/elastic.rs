@@ -157,12 +157,30 @@ lazy_static! {
                 "package_modular_services": {
                     "type": "keyword"
                 },
+                // Rendered, never queried: the entry's own fields are searched
+                // through the flattened sets below.
+                "package_desktop_entries": {"type": "object", "enabled": false},
+                // File names of the images, which are `icon` documents of their
+                // own. Rendered, never queried.
+                "package_desktop_icons": {"type": "object", "enabled": false},
+                "package_categories_set": {"type": "keyword"},
+                "package_mime_types_set": {"type": "keyword"},
                 "package_dep_count": {
                     "type": "rank_feature"
                 },
                 "package_repology_repos": {
                     "type": "rank_feature"
                 },
+                // Icon fields
+                "icon_file": {"type": "keyword"},
+                // A base64 image, read once per frontend build and written out
+                // as a static file. Indexing it would be pure cost.
+                "icon_data": {"type": "text", "index": false},
+                // Localization fields
+                "localization_locale": {"type": "keyword"},
+                // Arbitrary strings as keys, read once per frontend build and
+                // written out as a static file. Never queried.
+                "localization_strings": {"type": "object", "enabled": false},
                 // Options fields
                 "option_name": {
                     "type": "keyword",

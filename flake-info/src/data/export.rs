@@ -10,7 +10,7 @@
 /// version.nix `import` version in the root of the repo,
 /// so a fresh index will be created.
 use std::{
-    collections::HashSet,
+    collections::{BTreeMap, HashMap, HashSet},
     convert::{TryFrom, TryInto},
     path::PathBuf,
 };
@@ -24,6 +24,11 @@ use super::{
 };
 
 type Flake = super::Flake;
+
+/// Already flat and simple enough to store as-is, unlike the license and
+/// maintainer shapes this module redefines. Its translations are the one part
+/// that does not go into the index with it; see [Derivation::Localization].
+type DesktopEntry = import::DesktopEntry;
 
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -218,6 +223,19 @@ pub enum Derivation {
         package_homepage: Vec<String>,
         package_position: Option<String>,
         package_modular_services: Vec<String>,
+        /// The package's desktop entries, for rendering. Kept nested rather than
+        /// flattened: an entry's `type` would otherwise collide with the tag
+        /// this enum is discriminated by.
+        package_desktop_entries: Vec<DesktopEntry>,
+        /// File names for the entries' icons, keyed by the name an entry's
+        /// `icon` refers to. Held once per package because a package's entries
+        /// commonly share one icon. The images themselves are [Derivation::Icon]
+        /// documents, which the frontend build turns into static files.
+        package_desktop_icons: HashMap<String, String>,
+        /// Flattened out of the entries so they can be aggregated on, following
+        /// `package_license_set` and `package_maintainers_set`.
+        package_categories_set: Vec<String>,
+        package_mime_types_set: Vec<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         package_dep_count: Option<u64>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -279,6 +297,30 @@ pub enum Derivation {
         option_default: Option<DocValue>,
         option_example: Option<DocValue>,
         option_flake: Option<ModulePath>,
+    },
+    /// A desktop entry icon, kept apart from the packages that point at it so
+    /// that images travel to the browser as cacheable files rather than inside
+    /// every search response. The frontend build writes one static file per
+    /// document; `package_desktop_icons` maps an entry's icon name to
+    /// [Derivation::Icon::icon_file].
+    #[serde(rename = "icon")]
+    Icon {
+        icon_file: String,
+        icon_data: String,
+    },
+    /// Every desktop entry translation into one locale, kept apart from the
+    /// packages for the same reason icons are: all 146 locales inside every
+    /// search response would cost more than the images did. The frontend build
+    /// writes one static file per document, which a visitor who picks that
+    /// language fetches once and then has for the whole corpus.
+    #[serde(rename = "localization")]
+    Localization {
+        localization_locale: String,
+        /// Keyed by the string translated rather than by the package that
+        /// carried it, so that one English string is translated once however
+        /// many packages use it, and a file written by an earlier deploy still
+        /// translates every string it knows after an import adds packages.
+        localization_strings: BTreeMap<String, String>,
     },
 }
 
@@ -348,6 +390,11 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                     package_homepage: Vec::new(),
                     package_position: None,
                     package_modular_services: Vec::new(),
+                    // Flakes carry no desktop entries; only nixpkgs indexes them.
+                    package_desktop_entries: Vec::new(),
+                    package_desktop_icons: HashMap::new(),
+                    package_categories_set: Vec::new(),
+                    package_mime_types_set: Vec::new(),
                     package_dep_count: None,
                     package_repology_repos: None,
                 }
@@ -442,6 +489,23 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     .flat_map(|m| m.shortName.to_owned())
                     .collect();
 
+                let desktop_entries = package.desktop_entries;
+
+                // A package's entries repeat the same categories often enough
+                // that aggregating on the raw lists would double-count it.
+                let flatten_entries = |pick: fn(&DesktopEntry) -> &Vec<String>| {
+                    let mut values: Vec<String> = desktop_entries
+                        .iter()
+                        .flat_map(|entry| pick(entry).iter().cloned())
+                        .collect::<HashSet<String>>()
+                        .into_iter()
+                        .collect();
+                    values.sort();
+                    values
+                };
+                let package_categories_set = flatten_entries(|entry| &entry.categories);
+                let package_mime_types_set = flatten_entries(|entry| &entry.mime_types);
+
                 let long_description = package
                     .meta
                     .long_description
@@ -483,6 +547,10 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                         .map_or(Default::default(), OneOrMany::into_list),
                     package_position: position,
                     package_modular_services: modular_services,
+                    package_desktop_entries: desktop_entries,
+                    package_desktop_icons: package.icons,
+                    package_categories_set,
+                    package_mime_types_set,
                     package_dep_count: dep_count,
                     package_repology_repos: repology_repos,
                 }
@@ -549,6 +617,14 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                 option_example: example,
                 option_flake: flake,
                 option_type,
+            },
+            import::NixpkgsEntry::Icon { file, data } => Derivation::Icon {
+                icon_file: file,
+                icon_data: data,
+            },
+            import::NixpkgsEntry::Localization { locale, strings } => Derivation::Localization {
+                localization_locale: locale,
+                localization_strings: strings,
             },
         })
     }
