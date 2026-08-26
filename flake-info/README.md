@@ -35,6 +35,10 @@ OPTIONS:
     -k, --kind <kind>
             Kind of data to extract (packages|options|apps|all) [default: all]
 
+        --user-agent <user-agent>
+            Override the User-Agent sent to repology.org, the GitHub API and channels.nixos.org. Defaults to `nixos-
+            search (https://github.com/NixOS/nixos-search)` [env: FI_USER_AGENT=]
+
 
 ARGS:
     <extra>...    Extra arguments that are passed to nix as it

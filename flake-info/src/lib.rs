@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 
 pub mod commands;
 pub mod data;
+pub mod user_agent;
 
 #[cfg(feature = "elastic")]
 pub mod elastic;
@@ -56,9 +57,16 @@ pub fn process_nixpkgs(
     attribute: &Option<String>,
     packages_json_url: &Option<String>,
     repology_counts_file: &Option<PathBuf>,
+    user_agent: &Option<String>,
 ) -> Result<Vec<Export>, anyhow::Error> {
     let drvs = if matches!(kind, Kind::All | Kind::Package) {
-        commands::get_nixpkgs_info(nixpkgs, attribute, packages_json_url, repology_counts_file)?
+        commands::get_nixpkgs_info(
+            nixpkgs,
+            attribute,
+            packages_json_url,
+            repology_counts_file,
+            user_agent,
+        )?
     } else {
         Vec::new()
     };

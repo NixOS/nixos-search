@@ -40,6 +40,15 @@ struct Args {
     )]
     save_summary: Option<String>,
 
+    #[structopt(
+        long = "user-agent",
+        env = "FI_USER_AGENT",
+        help = "Override the User-Agent sent to repology.org, the GitHub API and \
+                channels.nixos.org. Defaults to \
+                `nixos-search (https://github.com/NixOS/nixos-search)`"
+    )]
+    user_agent: Option<String>,
+
     #[structopt(flatten)]
     elastic: ElasticOpts,
 
@@ -210,6 +219,7 @@ async fn main() -> Result<()> {
     env_logger::init();
 
     let args = Args::from_args();
+    let user_agent = args.user_agent.clone();
 
     let summary = match args.save_summary {
         Some(filename) => Some(
@@ -227,9 +237,11 @@ async fn main() -> Result<()> {
         // `get_repology_repo_counts` uses `reqwest::blocking`, whose internal
         // runtime must not be dropped on the `#[tokio::main]` block_on thread.
         // Run it on a blocking-permitted thread instead.
-        let counts = tokio::task::spawn_blocking(flake_info::commands::get_repology_repo_counts)
-            .await
-            .context("Repology counts task panicked")??;
+        let counts = tokio::task::spawn_blocking(move || {
+            flake_info::commands::get_repology_repo_counts(user_agent.as_deref())
+        })
+        .await
+        .context("Repology counts task panicked")??;
         let json = serde_json::to_string(&counts)?;
         match output {
             Some(path) => std::fs::write(path, json)?,
@@ -243,7 +255,13 @@ async fn main() -> Result<()> {
         "at least one of --push or --json must be specified"
     );
 
-    let (exports, ident, partial_error) = run_command(args.command, args.kind, &args.extra).await?;
+    let (exports, ident, partial_error) = run_command(
+        args.command,
+        args.kind,
+        &args.extra,
+        args.user_agent.as_deref(),
+    )
+    .await?;
 
     if args.elastic.enable {
         if let Err(e) = push_to_elastic(&args.elastic, exports, ident).await {
@@ -292,6 +310,7 @@ async fn run_command(
     command: Command,
     kind: Kind,
     extra: &[String],
+    user_agent: Option<&str>,
 ) -> Result<
     (
         LazyExports,
@@ -337,7 +356,7 @@ async fn run_command(
             packages_json_url,
             repology_counts_file,
         } => {
-            let nixpkgs = Source::nixpkgs(channel)
+            let nixpkgs = Source::nixpkgs(channel, user_agent)
                 .await
                 .map_err(FlakeInfoError::Nixpkgs)?;
             let ident = (
@@ -354,6 +373,8 @@ async fn run_command(
                 kind
             };
 
+            let user_agent = user_agent.map(str::to_owned);
+
             Ok((
                 Box::new(move || {
                     flake_info::process_nixpkgs(
@@ -362,6 +383,7 @@ async fn run_command(
                         &attribute,
                         &packages_json_url,
                         &repology_counts_file,
+                        &user_agent,
                     )
                     .map_err(FlakeInfoError::Nixpkgs)
                 }),
@@ -388,6 +410,8 @@ async fn run_command(
                 kind
             };
 
+            let user_agent = user_agent.map(str::to_owned);
+
             Ok((
                 Box::new(move || {
                     flake_info::process_nixpkgs(
@@ -396,6 +420,7 @@ async fn run_command(
                         &attribute,
                         &None,
                         &None,
+                        &user_agent,
                     )
                     .map_err(FlakeInfoError::Nixpkgs)
                 }),
@@ -415,12 +440,13 @@ async fn run_command(
                 tokio::fs::remove_file("report.txt").await?;
             }
 
+            let user_agent = user_agent.map(str::to_owned);
             let sources = Source::read_sources_file(&targets)?;
             let (exports_and_hashes, errors) = sources
                 .iter()
                 .map(|source| match source {
                     Source::Nixpkgs(nixpkgs) => {
-                        flake_info::process_nixpkgs(source, &kind, &None, &None, &None)
+                        flake_info::process_nixpkgs(source, &kind, &None, &None, &None, &user_agent)
                             .with_context(|| {
                                 format!(
                                     "While processing nixpkgs archive {}",
@@ -637,5 +663,21 @@ mod tests {
     fn push_requires_schema_version() {
         let args = Args::from_iter_safe(["flake-info", "--push", "group", "f.toml", "name"]);
         assert!(args.is_err());
+    }
+
+    /// The user-agent override is declared on the top level, so it parses ahead of
+    /// any subcommand. The absent case is deliberately not asserted: `FI_USER_AGENT`
+    /// may be set in the environment running the tests.
+    #[test]
+    fn user_agent_override_is_parsed() {
+        let args = Args::from_iter_safe([
+            "flake-info",
+            "--json",
+            "--user-agent",
+            "custom/1.0",
+            "repology-counts",
+        ])
+        .expect("parses");
+        assert_eq!(args.user_agent.as_deref(), Some("custom/1.0"));
     }
 }
