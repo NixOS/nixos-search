@@ -2,7 +2,7 @@
 /// gathered from the various nix tools. Because the nix tools
 /// are very flexible, we need some utilities such as OneOrMany
 /// to support different notations found in the wild.
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::marker::PhantomData;
 use std::{path::PathBuf, str::FromStr};
@@ -187,6 +187,81 @@ pub struct Package {
     pub system: String,
     #[serde(default)]
     pub meta: Meta,
+    /// Only present for packages that declare a desktop entry. Absent for the
+    /// vast majority, and absent entirely from index versions before 52.
+    #[serde(rename = "desktopEntries", default)]
+    pub desktop_entries: Vec<DesktopEntry>,
+    /// Icons for the entries above, keyed by the name an entry's `icon` refers
+    /// to, as the file name this index serves the image under. Not produced at
+    /// eval time, where the package has not been built and its icon files
+    /// therefore do not exist yet; supplied by merging the output of
+    /// `flake-info/scripts/desktop-entries-index.py`, which writes the images
+    /// out as files of its own and names them in its index.
+    ///
+    /// A name rather than an image, so that the image travels as its own
+    /// document rather than in every package that names it.
+    #[serde(default)]
+    pub icons: HashMap<String, String>,
+}
+
+/// A freedesktop.org desktop entry, as indexed by
+/// `pkgs/top-level/packages-info.nix`.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct DesktopEntry {
+    /// `Application`, `Link` or `Directory`. Named `entry_type` because `type`
+    /// is both a Rust keyword and the tag Elasticsearch documents are
+    /// discriminated by.
+    #[serde(rename = "type")]
+    pub entry_type: Option<String>,
+    #[serde(rename = "desktopName")]
+    pub desktop_name: Option<String>,
+    /// What the application is, where the name does not say -- `Web Browser`
+    /// for Firefox.
+    #[serde(rename = "genericName")]
+    pub generic_name: Option<String>,
+    /// The entry's own description of itself, which is often more concrete than
+    /// the package's `meta.description`.
+    pub comment: Option<String>,
+    /// An icon theme name, or occasionally an absolute path. Not an image; see
+    /// [Package::icons].
+    pub icon: Option<String>,
+    /// Terms the application should be found by beyond its name. Carried for a
+    /// follow-up that weights them into the query; nothing searches them yet.
+    #[serde(default)]
+    pub keywords: Vec<String>,
+    #[serde(rename = "mimeTypes", default)]
+    pub mime_types: Vec<String>,
+    #[serde(default)]
+    pub categories: Vec<String>,
+    /// `NoDisplay=true` marks an entry that exists only to claim MIME types or
+    /// scheme handlers and must be kept out of application menus. Its MIME types
+    /// and categories still count towards search, but it is not listed as an
+    /// application of its own.
+    #[serde(rename = "noDisplay", default)]
+    pub no_display: bool,
+    /// The entry's translations, keyed by the locale of the desktop file key
+    /// that carried them (`Name[de]` gives `de`). Never reaches the index: it is
+    /// pooled across packages into [NixpkgsEntry::Localization] instead, so that
+    /// a search response carries one language rather than all of them.
+    #[serde(default, skip_serializing)]
+    pub localized: HashMap<String, LocalizedEntry>,
+}
+
+/// One locale's translations of a [DesktopEntry]. Every field is optional: a
+/// desktop file commonly translates its `Comment` and nothing else.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct LocalizedEntry {
+    #[serde(rename = "desktopName")]
+    pub desktop_name: Option<String>,
+    #[serde(rename = "genericName")]
+    pub generic_name: Option<String>,
+    pub comment: Option<String>,
+    #[serde(default)]
+    pub keywords: Vec<String>,
+    /// `Icon` is a localizable key, and a handful of entries do translate it.
+    /// Held to keep this struct the shape of what nixpkgs emits; the frontend
+    /// resolves images by the entry's unlocalized icon name, so nothing reads it.
+    pub icon: Option<String>,
 }
 
 /// The nixpkgs output lists attribute names as keys of a map.
@@ -205,6 +280,23 @@ pub enum NixpkgsEntry {
     Service(NixOption),
     HomeManagerOption(NixOption),
     DarwinOption(NixOption),
+    /// One desktop entry image, named after its own contents, shared by every
+    /// package that points at it.
+    Icon {
+        file: String,
+        /// The image itself, base64 encoded because an Elasticsearch document is
+        /// JSON and cannot hold bytes. `file` says what format it is in.
+        data: String,
+    },
+    /// Every desktop entry translation into one locale, keyed by the string it
+    /// translates. The frontend build writes one static file per locale, which a
+    /// visitor who asks for that language fetches once.
+    Localization {
+        locale: String,
+        /// Ordered, so that an import that changed nothing writes a file that
+        /// is byte-identical to the last one and stays cached.
+        strings: BTreeMap<String, String>,
+    },
 }
 
 /// Most information about packages in nixpkgs is contained in the meta key
