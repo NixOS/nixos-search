@@ -46,6 +46,15 @@ jobs:
           # run publish fresh data. The `v1` prefix allows format bumps.
           key: repology-counts-v1-${{ steps.date.outputs.date }}
 
+      - name: Upload Repology counts as artifact
+        if: github.repository_owner == 'NixOS'
+        uses: actions/upload-artifact@v7
+        with:
+          name: repology-counts
+          path: repology-counts.json
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Create issue if failed
         if: failure() && github.repository_owner == 'NixOS'
         env:
