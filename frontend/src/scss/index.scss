@@ -522,6 +522,26 @@ footer {
         }
       }
     }
+
+    // The language a desktop entry is shown in. A plain native select rather
+    // than the list of toggles the facets above it use, since one of many
+    // languages is chosen and the list is long.
+    fieldset.search-language {
+      .language-select {
+        width: 100%;
+        padding: 0.5em;
+        border-radius: 4px;
+        border: 1px solid var(--line-color);
+        background-color: var(--background-color);
+        color: var(--text-color);
+      }
+
+      .search-language-hint {
+        margin: 0.5em 0 0 0;
+        font-size: 0.85em;
+        color: var(--search-sidebar-link-color);
+      }
+    }
   }
 
 
@@ -658,6 +678,46 @@ footer {
                   }
                 }
               }
+
+              // the desktop entries a package installs
+              .desktop-entries {
+                list-style: none;
+                padding: 0;
+
+                & > li {
+                  margin-bottom: 0.5em;
+                }
+
+                .desktop-entry-name {
+                  display: flex;
+                  align-items: center;
+                  gap: 0.5em;
+                  font-weight: bold;
+                }
+
+                .desktop-entry-icon {
+                  height: 2em;
+                  width: 2em;
+                }
+
+                // What the entry says about itself, then its categories and
+                // MIME types, aligned under the entry's name rather than under
+                // its icon.
+                .desktop-entry-detail {
+                  color: var(--search-result-short-details-color);
+                  margin-left: 2.5em;
+                }
+              }
+            }
+
+            // The package's own icon, next to its attribute name. Sized to the
+            // title's line so a result with one does not stand taller than a
+            // result without.
+            .package-icon {
+              height: 1.2em;
+              width: 1.2em;
+              margin-right: 0.4em;
+              vertical-align: text-bottom;
             }
           }
 
