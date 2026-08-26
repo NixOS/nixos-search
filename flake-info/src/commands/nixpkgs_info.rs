@@ -19,6 +19,7 @@ pub fn get_nixpkgs_info(
     attribute: &Option<String>,
     packages_json_url: &Option<String>,
     repology_counts_file: &Option<PathBuf>,
+    user_agent: &Option<String>,
 ) -> Result<Vec<NixpkgsEntry>> {
     let nixpkgs = match nixpkgs {
         Source::Nixpkgs(nixpkgs) => nixpkgs,
@@ -36,7 +37,9 @@ pub fn get_nixpkgs_info(
     });
     log::info!("Fetching packages from {}", url);
 
-    let response = reqwest::blocking::Client::new()
+    let response = reqwest::blocking::Client::builder()
+        .user_agent(crate::user_agent::resolve(user_agent.as_deref()))
+        .build()?
         .get(&url)
         .send()
         .with_context(|| format!("Failed to download {}", url))?
@@ -68,7 +71,7 @@ pub fn get_nixpkgs_info(
     let repology_counts = if attribute.is_some() {
         HashMap::new()
     } else {
-        resolve_repology_counts(repology_counts_file)
+        resolve_repology_counts(repology_counts_file, user_agent.as_deref())
     };
 
     Ok(attr_set
@@ -97,7 +100,10 @@ pub fn get_nixpkgs_info(
 /// Repology counts for a full import: from a pre-fetched file when provided
 /// (missing/unreadable -> warn + empty, per the daily-cache design), otherwise
 /// a live best-effort crawl (local/dev/manual and archive/group paths).
-fn resolve_repology_counts(file: &Option<PathBuf>) -> HashMap<String, u64> {
+fn resolve_repology_counts(
+    file: &Option<PathBuf>,
+    user_agent: Option<&str>,
+) -> HashMap<String, u64> {
     match file {
         Some(path) => match super::load_repology_repo_counts(path) {
             Ok(counts) => {
@@ -117,7 +123,7 @@ fn resolve_repology_counts(file: &Option<PathBuf>) -> HashMap<String, u64> {
                 HashMap::new()
             }
         },
-        None => super::get_repology_repo_counts().unwrap_or_else(|err| {
+        None => super::get_repology_repo_counts(user_agent).unwrap_or_else(|err| {
             log::warn!("Skipping Repology repository counts: {:#}", err);
             HashMap::new()
         }),
