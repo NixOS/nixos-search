@@ -8,6 +8,7 @@ module Page.Flakes exposing
     )
 
 import Browser.Navigation
+import Dict
 import Html
     exposing
         ( Html
@@ -54,12 +55,13 @@ type Model
 init :
     Search.Options
     -> Bool
+    -> Maybe String
     -> Route.SearchArgs
     -> String
     -> List NixOSChannel
     -> Maybe Model
     -> ( Model, Cmd Msg )
-init options preferStatic searchArgs defaultNixOSChannel nixosChannels model =
+init options preferStatic storedLanguage searchArgs defaultNixOSChannel nixosChannels model =
     let
         --  init with respective module or with packages by default
         searchType : SearchType
@@ -69,7 +71,7 @@ init options preferStatic searchArgs defaultNixOSChannel nixosChannels model =
     case searchType of
         OptionSearch ->
             Tuple.mapBoth OptionModel (Cmd.map OptionsMsg) <|
-                Page.Options.init options preferStatic searchArgs defaultNixOSChannel nixosChannels False <|
+                Page.Options.init options preferStatic storedLanguage searchArgs defaultNixOSChannel nixosChannels False <|
                     case model of
                         Just (OptionModel model_) ->
                             Just model_
@@ -79,7 +81,7 @@ init options preferStatic searchArgs defaultNixOSChannel nixosChannels model =
 
         PackageSearch ->
             Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg) <|
-                Page.Packages.init options preferStatic searchArgs defaultNixOSChannel nixosChannels False <|
+                Page.Packages.init options preferStatic storedLanguage searchArgs defaultNixOSChannel nixosChannels False <|
                     case model of
                         Just (PackagesModel model_) ->
                             Just model_
@@ -190,7 +192,9 @@ view nixosChannels model =
             Html.map OptionsMsg <| mkBody "3rd-party flake options" model_ (Page.Options.viewSuccess model_.activeOptionSource) Page.Options.viewBuckets Page.Options.SearchMsg
 
         PackagesModel model_ ->
-            Html.map PackagesMsg <| mkBody "3rd-party flake packages" model_ Page.Packages.viewSuccess Page.Packages.viewBuckets Page.Packages.SearchMsg
+            -- Flake packages carry no desktop entries, so nothing here is
+            -- translated and no language dropdown is offered.
+            Html.map PackagesMsg <| mkBody "3rd-party flake packages" model_ (Page.Packages.viewSuccess model_.saveData Dict.empty) (Page.Packages.viewBuckets Nothing []) Page.Packages.SearchMsg
 
 
 
