@@ -118,19 +118,20 @@ type alias AggregationsAll =
 init :
     Search.Options
     -> Bool
+    -> Maybe String
     -> Route.SearchArgs
     -> String
     -> List NixOSChannel
     -> Bool
     -> Maybe Model
     -> ( Model, Cmd Msg )
-init options preferStatic searchArgs defaultNixOSChannel nixosChannels includeChannelInUrl model =
+init options preferStatic storedLanguage searchArgs defaultNixOSChannel nixosChannels includeChannelInUrl model =
     let
         searchArgsForOptions =
             { searchArgs | type_ = Just Route.OptionSearch }
 
         ( newModel, newCmd ) =
-            Search.init options preferStatic searchArgsForOptions defaultNixOSChannel nixosChannels model
+            Search.init options preferStatic storedLanguage searchArgsForOptions defaultNixOSChannel nixosChannels model
 
         finalModel =
             if includeChannelInUrl then
@@ -711,6 +712,7 @@ viewOptionNamePath channel activeSource optionName segments =
                 , sort = Nothing
                 , type_ = Nothing
                 , activeOptionSource = activeSource
+                , lang = Nothing
                 }
 
         renderSegment idx ( segText, query ) =

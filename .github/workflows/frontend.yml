@@ -45,6 +45,28 @@ jobs:
           export ELASTICSEARCH_MAPPING_SCHEMA_VERSION
           npm --prefix frontend run build:autocomplete
 
+      - name: Build icon assets
+        shell: sh
+        env:
+          ICONS_OUT_DIR: ../dist/icons
+        run: |
+          NIXOS_CHANNELS=$(cat $(nix build --no-link --print-out-paths .#nixosChannelsJson))
+          export NIXOS_CHANNELS
+          ELASTICSEARCH_MAPPING_SCHEMA_VERSION=$(nix eval --raw --impure --expr '(import ./version.nix).frontend')
+          export ELASTICSEARCH_MAPPING_SCHEMA_VERSION
+          npm --prefix frontend run build:icons
+
+      - name: Build locale assets
+        shell: sh
+        env:
+          LOCALES_OUT_DIR: ../dist/locales
+        run: |
+          NIXOS_CHANNELS=$(cat $(nix build --no-link --print-out-paths .#nixosChannelsJson))
+          export NIXOS_CHANNELS
+          ELASTICSEARCH_MAPPING_SCHEMA_VERSION=$(nix eval --raw --impure --expr '(import ./version.nix).frontend')
+          export ELASTICSEARCH_MAPPING_SCHEMA_VERSION
+          npm --prefix frontend run build:locales
+
       - name: Deploy to Netlify
         uses: nwtgck/actions-netlify@v4.0
         if: github.repository_owner == 'NixOS'
