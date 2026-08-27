@@ -631,6 +631,11 @@ repo = "fingerpaint"
 
 [[sources]]
 type = "github"
+owner = "Wyze3306"
+repo = "BedrockOnLinux"
+
+[[sources]]
+type = "github"
 owner = "YaLTeR"
 repo = "niri"
 
