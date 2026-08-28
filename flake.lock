@@ -38,11 +38,11 @@
     "nixos-infra": {
       "flake": false,
       "locked": {
-        "lastModified": 1787145129,
-        "narHash": "sha256-SlAW/tLumbej/zUi/HlmYgPnVFqWdceobL0HXJnUke4=",
+        "lastModified": 1787467221,
+        "narHash": "sha256-hn3FpGRfvmEW5uAqYkybpIqNwioBwfqvWcAtR0rQPac=",
         "owner": "NixOS",
         "repo": "infra",
-        "rev": "facf006c17fabdf96ac00acafec625133fd5876f",
+        "rev": "1dc230dd0e5a44a9fe25346bf9af2b6eaf58ac53",
         "type": "github"
       },
       "original": {
