@@ -159,6 +159,28 @@
             frontend = pkgs.callPackage ./frontend {
               inherit nixosChannels version;
             };
+            # Reads desktop entries and icons out of the binary cache, to feed the
+            # importer's `--desktop-entries-file` and `--icon-dir`.
+            desktop-entries-index =
+              let
+                python = pkgs.python3.withPackages (
+                  ps: with ps; [
+                    requests
+                    zstandard
+                    brotli
+                  ]
+                );
+              in
+              pkgs.writeShellApplication {
+                name = "desktop-entries-index";
+                runtimeInputs = [
+                  python
+                  pkgs.nix
+                  pkgs.imagemagick
+                  pkgs.librsvg
+                ];
+                text = ''exec python3 ${./flake-info/scripts/desktop-entries-index.py} "$@"'';
+              };
             nixosChannels = nixosChannelsFile;
             nixosChannelsJson = pkgs.writeText "nixosChannels.json" (lib.toJSON nixosChannels);
           };
