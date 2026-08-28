@@ -137,6 +137,8 @@ $ nix run .#desktop-entries-index -- keepassxc vlc krita --icon-dir icons
 
 Results only cover revisions Hydra has already built and pushed, so every package is reported with a `status` saying which of the ways of finding nothing applies.
 
+In CI, `.github/workflows/update-desktop-entries.yml` runs the scan daily against `nixos-unstable` and caches its output, which `.github/workflows/import-to-elasticsearch.yml` then restores for every channel it imports. Only that one channel is scanned: entries merge by attribute path, so a stable channel gets a slightly stale entry rather than a wrong one.
+
 ### group
 
 to perform a bulk import grouping multiple inputs under the same name/index use the group command.

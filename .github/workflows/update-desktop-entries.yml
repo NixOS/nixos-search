@@ -1,0 +1,82 @@
+name: "Daily desktop entries refresh"
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Daily, offset from the 2-hourly imports and from the Repology refresh.
+    # Only `nixos-unstable` is scanned: entries merge by attribute path, so a
+    # stable channel gets a slightly stale entry rather than a wrong one.
+    - cron: "0 1 * * *"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  update-desktop-entries:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checking out the repository
+        uses: actions/checkout@v7.0.1
+
+      - name: Setup
+        uses: ./.github/actions/common-setup
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+
+      - name: Compute cache date
+        id: date
+        if: github.repository_owner == 'NixOS'
+        shell: sh
+        run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+
+      - name: Scan desktop entries
+        if: github.repository_owner == 'NixOS'
+        shell: sh
+        run: |
+          NIXPKGS="$(nix flake prefetch --json github:NixOS/nixpkgs/nixos-unstable | jq -r .storePath)"
+          export NIXPKGS
+          nix run --accept-flake-config .#desktop-entries-index -- \
+            --output desktop-entries.json --icon-dir icons \
+            --icon-extensions png,svg --icon-pixel-size 64 --icon-colors 256 \
+            --icon-svg-max-bytes 16384
+
+      - name: Save desktop entries to cache
+        if: github.repository_owner == 'NixOS'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            desktop-entries.json
+            icons
+          # Actions cache keys are immutable, so a rotating date lets each daily
+          # run publish fresh data. The `v1` prefix allows format bumps.
+          key: desktop-entries-v1-${{ steps.date.outputs.date }}
+
+      - name: Upload desktop entries as artifact
+        if: github.repository_owner == 'NixOS'
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-entries
+          path: |
+            desktop-entries.json
+            icons
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Create issue if failed
+        if: failure() && github.repository_owner == 'NixOS'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        shell: sh
+        run: |
+          TITLE="Failing daily desktop entries refresh"
+
+          if [ "$(gh issue list --state open --search "in:title $TITLE" -L 1 --json id --jq length)" -eq 0 ]; then
+            gh issue create \
+              --title "$TITLE" \
+              --label "prio:blocker" \
+              --body "This issue was triggered by ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
