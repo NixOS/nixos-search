@@ -212,7 +212,18 @@ struct ElasticOpts {
     no_alias: bool,
 }
 
-type LazyExports = Box<dyn FnOnce() -> Result<Vec<Export>, FlakeInfoError>>;
+type LazyExports = Box<dyn FnOnce() -> Result<Vec<Export>, FlakeInfoError> + Send>;
+
+/// Collecting exports shells out and fetches over HTTP through
+/// `reqwest::blocking`, which builds a runtime of its own. Dropping such a
+/// runtime on the `#[tokio::main]` thread panics with "Cannot drop a runtime in
+/// a context where blocking is not allowed", so the thunk runs on a thread where
+/// blocking is permitted instead.
+async fn collect_exports(exports: LazyExports) -> Result<Vec<Export>> {
+    Ok(tokio::task::spawn_blocking(exports)
+        .await
+        .context("Collecting exports panicked")??)
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -276,7 +287,10 @@ async fn main() -> Result<()> {
             return Err(e);
         }
     } else if args.elastic.json {
-        println!("{}", serde_json::to_string(&exports()?)?);
+        println!(
+            "{}",
+            serde_json::to_string(&collect_exports(exports).await?)?
+        );
     }
 
     // Surface partial failures (e.g. some group members failed to evaluate) as a
@@ -601,7 +615,7 @@ async fn push_to_elastic(
     // guard it anyway.
     let created_index = !matches!(elastic.elastic_exists, ExistsStrategy::Ignore);
 
-    let successes = exports()?;
+    let successes = collect_exports(exports).await?;
 
     info!("Pushing to elastic");
     if let Err(e) = es.push_exports(&config, &successes).await {
