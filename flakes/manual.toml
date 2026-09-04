@@ -74,6 +74,11 @@ repo = "swiftformat-nix"
 
 [[sources]]
 type = "github"
+owner = "Algorithmiq"
+repo = "monoprop"
+
+[[sources]]
+type = "github"
 owner = "anpandey"
 repo = "numen-nix"
 
