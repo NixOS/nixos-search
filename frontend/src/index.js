@@ -39,8 +39,23 @@ const app = Elm.Main.init({
         theme: initialTheme,
         isPrideMonth: new Date().getMonth() === 5,
         saveData: Boolean(saveData),
+        // A language the visitor picked here before, and nothing else: what
+        // their browser prefers is not what they asked this site for.
+        language: localStorage.getItem("language"),
     },
 });
+
+if (app.ports && app.ports.setLanguage) {
+    app.ports.setLanguage.subscribe((value) => {
+        try {
+            if (value) {
+                localStorage.setItem("language", value);
+            } else {
+                localStorage.removeItem("language");
+            }
+        } catch (_) {}
+    });
+}
 
 if (app.ports && app.ports.setTheme) {
     app.ports.setTheme.subscribe((value) => {
