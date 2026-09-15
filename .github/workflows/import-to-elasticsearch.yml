@@ -76,13 +76,27 @@ jobs:
           restore-keys: |
             repology-counts-v1-
 
+      - name: Restore desktop entries from cache
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            desktop-entries.json
+            icons
+          # Falls back to the newest available daily cache; a total miss (e.g. a
+          # branch outside the default-branch cache scope) leaves the files
+          # absent, and the importer warns and indexes only the desktop entries
+          # evaluation saw, with no icons.
+          key: desktop-entries-v1-${{ steps.date.outputs.date }}
+          restore-keys: |
+            desktop-entries-v1-
+
       - name: Import ${{ matrix.channel }} channel
         if: github.repository_owner == 'NixOS'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: sh
         run: |
-          nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(nix eval --raw --file ./version.nix import) --save-summary $GITHUB_STEP_SUMMARY nixpkgs ${{ matrix.channel }} --repology-counts-file repology-counts.json
+          nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(nix eval --raw --file ./version.nix import) --save-summary $GITHUB_STEP_SUMMARY nixpkgs ${{ matrix.channel }} --repology-counts-file repology-counts.json --desktop-entries-file desktop-entries.json --icon-dir icons
 
       - name: Warmup ${{ matrix.channel }} channel
         if: github.repository_owner == 'NixOS'
