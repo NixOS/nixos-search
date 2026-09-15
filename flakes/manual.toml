@@ -119,6 +119,11 @@ repo = "nyx"
 
 [[sources]]
 type = "github"
+owner = "ChrisDKN"
+repo = "Amethyst-Mod-Manager"
+
+[[sources]]
+type = "github"
 owner = "DeterminateSystems"
 repo = "bonk"
 
