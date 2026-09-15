@@ -2,6 +2,12 @@ name: "Frontend: Build & Deploy to Netlify"
 
 on:
   workflow_dispatch:
+
+  # The icon and locale assets are written from the index at deploy time, so a
+  # deploy is what picks up whatever the imports have added since the last one.
+  schedule:
+    - cron: "0 5 * * *"
+
   pull_request:
     paths:
       - "flake.nix"
@@ -45,6 +51,28 @@ jobs:
           export ELASTICSEARCH_MAPPING_SCHEMA_VERSION
           npm --prefix frontend run build:autocomplete
 
+      - name: Build icon assets
+        shell: sh
+        env:
+          ICONS_OUT_DIR: ../dist/icons
+        run: |
+          NIXOS_CHANNELS=$(cat $(nix build --no-link --print-out-paths .#nixosChannelsJson))
+          export NIXOS_CHANNELS
+          ELASTICSEARCH_MAPPING_SCHEMA_VERSION=$(nix eval --raw --impure --expr '(import ./version.nix).frontend')
+          export ELASTICSEARCH_MAPPING_SCHEMA_VERSION
+          npm --prefix frontend run build:icons
+
+      - name: Build locale assets
+        shell: sh
+        env:
+          LOCALES_OUT_DIR: ../dist/locales
+        run: |
+          NIXOS_CHANNELS=$(cat $(nix build --no-link --print-out-paths .#nixosChannelsJson))
+          export NIXOS_CHANNELS
+          ELASTICSEARCH_MAPPING_SCHEMA_VERSION=$(nix eval --raw --impure --expr '(import ./version.nix).frontend')
+          export ELASTICSEARCH_MAPPING_SCHEMA_VERSION
+          npm --prefix frontend run build:locales
+
       - name: Deploy to Netlify
         uses: nwtgck/actions-netlify@v4.0
         if: github.repository_owner == 'NixOS'
@@ -53,7 +81,7 @@ jobs:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         with:
           production-branch: "main"
-          production-deploy: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+          production-deploy: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
           publish-dir: "./dist"
           github-token: ${{ secrets.GITHUB_TOKEN }}
           deploy-message: "Deploy from GitHub Actions"
