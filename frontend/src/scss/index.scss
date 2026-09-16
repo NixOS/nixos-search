@@ -708,6 +708,76 @@ footer {
                   margin-left: 2.5em;
                 }
               }
+
+              // The screenshot row, between the buttons that move it.
+              .screenshots-row {
+                display: flex;
+                align-items: center;
+                gap: 0.5em;
+              }
+
+              // A button that moves the row by most of its width. It is small
+              // and quiet: the screenshots are the subject, not the buttons.
+              .screenshots-scroll {
+                flex: 0 0 auto;
+                display: flex;
+                align-items: center;
+                padding: 0.25em;
+                border: 1px solid var(--line-color);
+                border-radius: 4px;
+                background: none;
+                color: var(--search-result-short-details-color);
+                cursor: pointer;
+
+                &:hover,
+                &:focus-visible {
+                  border-color: var(--link-color);
+                  color: var(--link-color);
+                }
+
+                &.back {
+                  transform: rotate(180deg);
+                }
+              }
+
+              // The package's screenshots, side by side in a row that scrolls
+              // rather than a grid that grows: a package that has screenshots
+              // has 2.7 of them on average, and up to 22.
+              .screenshots {
+                list-style: none;
+                padding: 0;
+                display: flex;
+                gap: 0.75em;
+                overflow-x: auto;
+                margin: 0;
+
+                // The buttons move the row a step at a time, thus the step is
+                // shown as movement to a reader who accepts motion.
+                @media (prefers-reduced-motion: no-preference) {
+                  scroll-behavior: smooth;
+                }
+
+                & > li {
+                  flex: 0 0 auto;
+                  max-width: 14em;
+                }
+
+                // The thumbnail is 224 pixels wide, thus it is never shown
+                // wider than its column: enlarging it only blurs it.
+                .screenshot-image {
+                  display: block;
+                  max-width: 100%;
+                  height: auto;
+                  border: 1px solid var(--line-color);
+                  border-radius: 4px;
+                }
+
+                .screenshot-caption {
+                  color: var(--search-result-short-details-color);
+                  font-size: 0.85em;
+                  margin-top: 0.25em;
+                }
+              }
             }
 
             // The package's own icon, next to its attribute name. Sized to the
