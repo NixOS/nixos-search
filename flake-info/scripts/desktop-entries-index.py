@@ -1,44 +1,53 @@
 #!/usr/bin/env nix-shell
 #!nix-shell -i python3 -p "python3.withPackages(ps: with ps; [ requests zstandard brotli ])"
 #!nix-shell -p nix imagemagick librsvg
-"""Index desktop entries by reading them out of the binary cache.
+"""Index desktop entries and AppStream metadata by reading the binary cache.
 
-Get desktop entries and icons for Hydra-cached packages.
+Get desktop entries, icons and screenshots for Hydra-cached packages.
 This complements `packages.json`, which only has info from `makeDesktopItem`.
 
-It works in two phases:
+It works in three phases:
 
   A. For each store path, fetch `<hash>.ls` -- a small compressed JSON listing
-     of the NAR's file tree -- and look for `share/applications/*.desktop`.
+     of the NAR's file tree -- and look for `share/applications/*.desktop` and
+     the AppStream metadata in `share/metainfo` and `share/appdata`.
      Cheap: a few KB per package, no NAR download.
-  B. Fetch the NAR of these `*.desktop` files and extract them. Write their icons
+  B. Fetch the NAR of these files and extract them. Write their icons
      to `--icon-dir`, with content hashes for name for deduplication. By not
      using a derivation for this, space may be saved by not having to keep all
      package NARs in-store.
+  C. AppStream names its screenshots as URLs on the upstream project's own
+     hosting, not as files in the NAR. Download each one once and write it to
+     `--screenshot-dir`, named by content like the icons. A screenshot can be
+     written twice: a thumbnail for a result list, and a larger copy for a
+     visitor who opens it.
 
 Every package is reported with a `status`, because the ways of finding nothing
 are not equivalent and must not be conflated:
 
-  `indexed`     entries were read.
+  `indexed`     entries or components were read.
   `no-entries`  built, and it genuinely ships none.
   `not-built`   no `.ls` in the cache. Results exist only for revisions Hydra
                 has already built and pushed, so on a fresh revision this is the
                 common case; check the summary before treating a run as
                 complete.
-  `unresolved`  desktop files exist but could not be read, e.g. a symlink whose
+  `unresolved`  files exist but could not be read, e.g. a symlink whose
                 target is not in the cache.
 
 Merging with `packages.json`:
 
     This index reads what a package ships, including the entries nixpkgs takes
     verbatim from upstream and evaluation therefore cannot see, so it wins
-    wherever it found any:
+    wherever it found any. AppStream metadata is only ever read here: nixpkgs
+    ships it verbatim from upstream and never constructs it.
 
         indexed = json.load(open("desktop-entries.json"))["packages"]
         merged = json.load(open("packages.json"))["packages"]
         for attr, package in merged.items():
-            entries = indexed.get(attr, {}).get("desktopEntries")
+            found = indexed.get(attr, {})
+            entries = found.get("desktopEntries")
             package["desktopEntries"] = entries or package.get("desktopEntries", [])
+            package["screenshots"] = found.get("screenshots", [])
 
 Usage:
 
@@ -48,11 +57,14 @@ Usage:
     # index just selected attributes
     ./desktop-entries-index.py keepassxc vlc krita
 
-    # trimmed the way a consumer serving icons to browsers wants them: only
-    # formats a browser draws, rasters at one size, vectors kept below 16 KB
+    # trimmed the way a consumer serving images to browsers wants them: only
+    # formats a browser draws, rasters at one size, vectors kept below 16 KB,
+    # and screenshots as thumbnails small enough for a result list
     ./desktop-entries-index.py --icon-dir icons --icon-extensions png,svg \\
         --icon-pixel-size 64 --icon-colors 256 --icon-svg-max-bytes 16384 \\
-        --output desktop-entries.json
+        --screenshot-dir screenshots --screenshot-pixel-size 224 \\
+        --screenshot-quality 82 --screenshot-large-pixel-size 752 \\
+        --screenshot-large-quality 80 --output desktop-entries.json
 """
 
 import argparse
@@ -70,8 +82,10 @@ import subprocess
 import sys
 import tempfile
 import threading
+import urllib.parse
 from collections.abc import Callable, Hashable, Iterator, Sequence
-from typing import Any, NotRequired, TypedDict
+from typing import Any, NotRequired, TypedDict, cast
+from xml.etree import ElementTree
 
 import requests
 
@@ -83,6 +97,18 @@ DEFAULT_STORE_DIR = "/nix/store"
 
 APPLICATIONS_DIR = "share/applications"
 
+# Where a package ships its AppStream metadata. `share/metainfo` is the current
+# location; `share/appdata` is the pre-1.0 one, which packages that have not
+# moved their file still use. Both hold `<component>` documents, under either
+# the `.metainfo.xml` or the older `.appdata.xml` spelling.
+METAINFO_DIRS = ("share/metainfo", "share/appdata")
+
+# What is read out of each directory phase A looks in.
+SCANNED_DIRS: dict[str, str] = {
+    APPLICATIONS_DIR: ".desktop",
+    **dict.fromkeys(METAINFO_DIRS, ".xml"),
+}
+
 # Where an icon named by a desktop entry may be found, per the icon theme spec.
 ICON_DIRS = ("share/icons", "share/pixmaps")
 
@@ -93,7 +119,7 @@ DEFAULT_ICON_EXTENSIONS = (".png", ".svg", ".xpm")
 
 # Hex digits of an image's digest naming its file: 128 bits, far past collision
 # risk at this scale, and short enough to read.
-ICON_NAME_LENGTH = 32
+IMAGE_NAME_LENGTH = 32
 
 # Nothing is re-rendered unless asked for, since what an icon should be is the
 # consumer's business. It does pay where wanted: over the largest icon each of 71
@@ -106,6 +132,61 @@ DEFAULT_ICON_COLORS = 0
 # icon. Over 60 upstream scalable icons, gzipped: keeping every one costs 136 KB,
 # a 16384 ceiling 96 KB while keeping 87% scalable, rasterizing the lot 73 KB.
 DEFAULT_ICON_SVG_MAX_BYTES = 0
+
+# Screenshots are mirrored as they ship unless a size is asked for. A width of
+# 224 matches what Flathub serves as its smallest thumbnail. Across the 2835
+# screenshots of `nixos-unstable`, one averages 5 KB at that width, against the
+# 278 KB of the source image upstream serves.
+DEFAULT_SCREENSHOT_PIXEL_SIZE = 0
+
+# The WebP quality to re-render a screenshot at, or 0 to mirror the source
+# image. At 224 pixels wide, 82 costs half of what the same image costs as a
+# PNG quantized to 256 colors, at a size where neither shows its artifacts.
+DEFAULT_SCREENSHOT_QUALITY = 0
+
+# The width of a second, larger copy of each screenshot, or 0 for no such copy.
+# A thumbnail shows which application a result is, but it is too small to read
+# an interface in, thus a consumer that lets a visitor open a screenshot needs a
+# larger image than its result list shows. 752 is what Flathub serves as its
+# large thumbnail. One averages 29 KB at that width, thus all 2835 screenshots
+# of `nixos-unstable` together are 82 MB.
+DEFAULT_SCREENSHOT_LARGE_PIXEL_SIZE = 0
+
+# The WebP quality of that larger copy. Lower than the thumbnail's, because an
+# image this size holds its detail over a coarser quantization than a thumbnail,
+# whose few pixels each carry more of the picture.
+DEFAULT_SCREENSHOT_LARGE_QUALITY = 0
+
+# How many screenshots to keep per package, best first, or 0 for every one. A
+# package that has screenshots has 2.66 of them on average, thus keeping all of
+# them costs less than three times what keeping only the first one costs.
+DEFAULT_SCREENSHOTS_PER_PACKAGE = 0
+
+# A screenshot is fetched from whatever host the upstream project put it on, so
+# neither the response size nor the time it takes is bounded by anything this
+# script controls.
+SCREENSHOT_TIMEOUT = 30
+
+DEFAULT_SCREENSHOT_MAX_BYTES = 16 * 1024 * 1024
+
+# What a screenshot may be mirrored as without re-rendering. AppStream allows
+# any raster format; these are the ones every browser draws.
+SCREENSHOT_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp")
+
+# What a screenshot may be read from, which is wider: a format no browser draws
+# is still worth fetching when it is about to be re-rendered to WebP.
+SCREENSHOT_READ_EXTENSIONS = (*SCREENSHOT_EXTENSIONS, ".gif", ".avif")
+
+CONTENT_TYPE_EXTENSIONS = {
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/webp": ".webp",
+    "image/gif": ".gif",
+    "image/avif": ".avif",
+}
+
+# The attribute AppStream localizes its captions with.
+XML_LANG = "{http://www.w3.org/XML/1998/namespace}lang"
 
 # Translated keys, e.g. `Name[de]`, under this schema's names. Of the spec's
 # `lang_COUNTRY.ENCODING@MODIFIER` locale syntax only `lang` is required.
@@ -122,7 +203,15 @@ LOCALIZED_KEY = re.compile(rf"^({'|'.join(LOCALIZED_FIELDS)})\[([^\]]+)\]$")
 # Parsed entries are cached under this name plus the icon settings, since those
 # change the images stored alongside them. Bump the number when the entry shape
 # changes, so an older run's cache cannot serve entries missing the new fields.
-ENTRY_CACHE = "entries-2"
+ENTRY_CACHE = "entries-3"
+
+# Mirrored screenshots are cached under this name plus the settings they were
+# rendered with. Bump the number when the record shape changes, as for entries.
+SCREENSHOT_CACHE = "screenshots-3"
+
+# How much of a screenshot to read at a time, so that an image over
+# `--screenshot-max-bytes` is abandoned rather than held whole.
+CHUNK_SIZE = 64 * 1024
 
 # `nix nar cat` is still behind the experimental gate.
 NIX = ["nix", "--extra-experimental-features", "nix-command"]
@@ -170,12 +259,53 @@ class DesktopEntry(TypedDict):
     iconFile: NotRequired[str | None]
 
 
+class Screenshot(TypedDict):
+    """One image out of an AppStream component's `<screenshots>`.
+
+    `url` is where upstream hosts it, kept as the provenance of an image this
+    index redistributes. `file` names the thumbnail written to
+    `--screenshot-dir`, and is None when no directory was given or the image
+    could not be read. `largeFile` names the larger copy beside it, and is None
+    where `--screenshot-large-pixel-size` asked for none.
+    """
+
+    url: str
+    caption: str | None
+    localized: dict[str, str]
+    file: NotRequired[str | None]
+    largeFile: NotRequired[str | None]
+
+
+# What phase C wrote for one screenshot URL: the thumbnail, then the larger copy
+# where one was asked for.
+type ScreenshotFiles = tuple[str, str | None]
+
+
+class Component(TypedDict):
+    """The indexable fields of one AppStream `<component>`.
+
+    Only the fields no other source has. A component's name, summary and
+    categories repeat what its `<launchable>` desktop entry already carries,
+    which this index reads directly; its screenshots are carried nowhere else.
+    """
+
+    id: str | None
+    screenshots: list[Screenshot]
+
+
+# What one file in a NAR parsed to. Which of the two it is follows from the
+# path, so the two are cached side by side under the path that produced them.
+type Parsed = DesktopEntry | Component
+
+
 class Package(TypedDict):
     """One attribute path's result: see the module docstring for `status`."""
 
     status: str
     desktopEntries: list[dict[str, Any]]
     icons: dict[str, str]
+    componentIds: list[str]
+    screenshots: list[Screenshot]
 
 
 def log(*args: object) -> None:
@@ -270,6 +400,119 @@ def parse_desktop_file(text: str) -> DesktopEntry | None:
         "noDisplay": section.get("NoDisplay", "") == "true",
         "localized": localized,
     }
+
+
+def parse_metainfo(text: str) -> Component | None:
+    """What one AppStream file says, or None if it says nothing indexable.
+
+    Only an upstream `<component>` document is read. A `<components>` catalog is
+    a distribution's own index over many packages, which a package has no
+    business shipping, and the remaining AppStream root elements describe no
+    application.
+
+    Only the fields nothing else carries are taken; see [Component].
+    """
+    try:
+        root = ElementTree.fromstring(text)
+    except ElementTree.ParseError:
+        return None
+    if root.tag != "component":
+        return None
+
+    found = root.findall("./screenshots/screenshot")
+    screenshots: list[Screenshot] = []
+    # `type="default"` marks the screenshot that stands for the application, so
+    # it leads; the rest keep the order upstream wrote them in.
+    for _, element in sorted(
+        enumerate(found), key=lambda pair: (pair[1].get("type") != "default", pair[0])
+    ):
+        images = element.findall("image")
+        # A source image is the one upstream uploaded. Upstream files commonly
+        # give no type at all, in which case the first image is that one.
+        source = next(
+            (image for image in images if image.get("type") == "source"),
+            images[0] if images else None,
+        )
+        if source is None:
+            continue
+        url = (source.text or "").strip()
+        if urllib.parse.urlparse(url).scheme not in ("http", "https"):
+            continue
+
+        caption: str | None = None
+        localized: dict[str, str] = {}
+        for node in element.findall("caption"):
+            value = "".join(node.itertext()).strip()
+            if not value:
+                continue
+            locale = node.get(XML_LANG)
+            if locale is None:
+                caption = value
+            else:
+                localized[locale] = value
+        screenshots.append({"url": url, "caption": caption, "localized": localized})
+
+    identifier = (root.findtext("id") or "").strip()
+    # Pre-1.0 components are identified by their desktop file, suffix and all.
+    # Dropping it gives the name every other catalog knows the component by,
+    # which is what makes the id worth indexing: it joins a nixpkgs package to
+    # the same application in Flathub or GNOME Software.
+    identifier = identifier.removesuffix(".desktop")
+    if not identifier and not screenshots:
+        return None
+    return {"id": identifier or None, "screenshots": screenshots}
+
+
+def screenshot_suffix(url: str, content_type: str | None) -> str | None:
+    """The file extension to read a downloaded screenshot as, or None.
+
+    `magick` picks its reader by extension, so a URL that names no format falls
+    back to what the server said it served.
+    """
+    suffix = posixpath.splitext(urllib.parse.urlparse(url).path)[1].lower()
+    if suffix in SCREENSHOT_READ_EXTENSIONS:
+        return suffix
+    media_type = (content_type or "").split(";")[0].strip().lower()
+    return CONTENT_TYPE_EXTENSIONS.get(media_type)
+
+
+def render_screenshot(
+    data: bytes, suffix: str, pixel_size: int, quality: int
+) -> tuple[bytes, str] | None:
+    """-> `(bytes, extension)` for one screenshot, or None if it cannot be read.
+
+    An image is mirrored as it ships unless re-rendering was asked for, which is
+    what keeps a mirror of the whole corpus to a size an index can hold: across
+    the screenshots of `nixos-unstable`, a 224 pixel wide thumbnail averages
+    5 KB against the 278 KB of the source image it was made from.
+    """
+    if not pixel_size and not quality:
+        return (data, suffix) if suffix in SCREENSHOT_EXTENSIONS else None
+
+    with tempfile.TemporaryDirectory() as workdir:
+        source = pathlib.Path(workdir) / f"screenshot{suffix}"
+        # WebP, because a screenshot is a photograph of an interface: it holds
+        # more colors than a palette format keeps small, and every browser
+        # released since 2020 draws it.
+        target = pathlib.Path(workdir) / "screenshot.webp"
+        source.write_bytes(data)
+
+        # `[0]` takes the first frame: an animated screenshot would otherwise
+        # write one file per frame and none under the name asked for.
+        command = ["magick", f"{source}[0]", "-strip"]
+        if pixel_size:
+            # Width alone, because a screenshot is not square and its aspect
+            # ratio is what makes it recognizable at thumbnail size. `>` keeps
+            # an image that is already narrower at its own width, since
+            # upscaling one costs bytes and shows no more of the interface.
+            command += ["-resize", f"{pixel_size}x>"]
+        if quality:
+            command += ["-quality", str(quality)]
+        command.append(str(target))
+
+        if subprocess.run(command, capture_output=True).returncode != 0 or not target.exists():
+            return None
+        return (target.read_bytes(), ".webp")
 
 
 def walk_listing(node: Node, prefix: str = "") -> Iterator[tuple[str, Node]]:
@@ -428,6 +671,12 @@ class Scanner:
         icon_pixel_size: int = DEFAULT_ICON_PIXEL_SIZE,
         icon_colors: int = DEFAULT_ICON_COLORS,
         icon_svg_max_bytes: int = DEFAULT_ICON_SVG_MAX_BYTES,
+        screenshot_dir: str | pathlib.Path | None = None,
+        screenshot_pixel_size: int = DEFAULT_SCREENSHOT_PIXEL_SIZE,
+        screenshot_quality: int = DEFAULT_SCREENSHOT_QUALITY,
+        screenshot_large_pixel_size: int = DEFAULT_SCREENSHOT_LARGE_PIXEL_SIZE,
+        screenshot_large_quality: int = DEFAULT_SCREENSHOT_LARGE_QUALITY,
+        screenshot_max_bytes: int = DEFAULT_SCREENSHOT_MAX_BYTES,
         cache_url: str = DEFAULT_CACHE_URL,
         store_dir: str = DEFAULT_STORE_DIR,
     ) -> None:
@@ -439,6 +688,12 @@ class Scanner:
         self.icon_pixel_size = icon_pixel_size
         self.icon_colors = icon_colors
         self.icon_svg_max_bytes = icon_svg_max_bytes
+        self.screenshot_dir = pathlib.Path(screenshot_dir) if screenshot_dir else None
+        self.screenshot_pixel_size = screenshot_pixel_size
+        self.screenshot_quality = screenshot_quality
+        self.screenshot_large_pixel_size = screenshot_large_pixel_size
+        self.screenshot_large_quality = screenshot_large_quality
+        self.screenshot_max_bytes = screenshot_max_bytes
         # The listing cache is settings-independent; the entry cache is not.
         self.entry_cache = self.cache_dir / "-".join(
             [
@@ -450,10 +705,24 @@ class Scanner:
                 *sorted(extension.lstrip(".") for extension in self.icon_extensions),
             ]
         )
+        # Screenshots are keyed by their own URL, not by the package that names
+        # them, so that one image serves every package that points at it.
+        self.screenshot_cache = self.cache_dir / "-".join(
+            [
+                SCREENSHOT_CACHE,
+                str(screenshot_pixel_size),
+                str(screenshot_quality),
+                str(screenshot_large_pixel_size),
+                str(screenshot_large_quality),
+            ]
+        )
         (self.cache_dir / "ls").mkdir(parents=True, exist_ok=True)
         self.entry_cache.mkdir(parents=True, exist_ok=True)
         if self.icon_dir is not None:
             self.icon_dir.mkdir(parents=True, exist_ok=True)
+        if self.screenshot_dir is not None:
+            self.screenshot_dir.mkdir(parents=True, exist_ok=True)
+            self.screenshot_cache.mkdir(parents=True, exist_ok=True)
         self.local = threading.local()
 
     @property
@@ -493,19 +762,27 @@ class Scanner:
         cached.write_bytes(body)
         return json.loads(body)
 
-    def desktop_files(self, store_path: str) -> list[str] | None:
-        """-> [`.desktop` name], or None if the path is not in the cache."""
+    def indexed_files(self, store_path: str) -> list[str] | None:
+        """-> [path within the output], or None if the path is not in the cache."""
         listing = self.listing(store_hash(store_path, self.store_dir))
         if listing is None:
             return None
-        node = listing.get("root", {})
-        for component in APPLICATIONS_DIR.split("/"):
+        found: list[str] = []
+        for directory, suffix in SCANNED_DIRS.items():
+            node = listing.get("root", {})
+            for component in directory.split("/"):
+                if node.get("type") != "directory":
+                    node = {}
+                    break
+                node = node.get("entries", {}).get(component, {})
             if node.get("type") != "directory":
-                return []
-            node = node.get("entries", {}).get(component, {})
-        if node.get("type") != "directory":
-            return []
-        return sorted(name for name in node.get("entries", {}) if name.endswith(".desktop"))
+                continue
+            found += [
+                f"{directory}/{name}"
+                for name in sorted(node.get("entries", {}))
+                if name.endswith(suffix)
+            ]
+        return found
 
     def resolve(self, path: str) -> tuple[str, str] | None:
         """-> `(hash, inner path)` of the regular file behind a path, or None.
@@ -572,6 +849,26 @@ class Scanner:
         ]
         return sorted(matches, key=icon_rank)
 
+    def store_image(self, image: bytes, extension: str, directory: pathlib.Path) -> str:
+        """Write one image under a name taken from its own contents, and name it.
+
+        One image is then one file however many packages ship it, and a name
+        changes only when the image does.
+        """
+        name = hashlib.sha256(image).hexdigest()[:IMAGE_NAME_LENGTH] + extension
+        target = directory / name
+        if not target.exists():
+            # Several workers reach the same image at once, and a consumer reads
+            # the file: swap it in whole or not at all.
+            handle, partial = tempfile.mkstemp(dir=directory)
+            with os.fdopen(handle, "wb") as file:
+                file.write(image)
+            staged = pathlib.Path(partial)
+            # `mkstemp` opens private; these are files to be served.
+            staged.chmod(0o644)
+            staged.replace(target)
+        return name
+
     # -- phase B ----------------------------------------------------------
 
     def read_icon(
@@ -583,10 +880,6 @@ class Scanner:
         covers wrapper packages, which symlink the entry and its icon out of the
         same wrapped output; an icon genuinely elsewhere would cost a second NAR
         download, and is left to the consumer's theme fallback.
-
-        The image goes to `--icon-dir` as a file named after its own contents,
-        so one image is one file however many packages ship it, and a name
-        changes only when the image does.
         """
         if not icon or self.icon_dir is None:
             return None
@@ -604,44 +897,31 @@ class Scanner:
             )
             if rendered is not None:
                 image, extension = rendered
-                name = hashlib.sha256(image).hexdigest()[:ICON_NAME_LENGTH] + extension
-                target = self.icon_dir / name
-                if not target.exists():
-                    # Several workers reach the same image at once, and a
-                    # consumer reads the file: swap it in whole or not at all.
-                    handle, partial = tempfile.mkstemp(dir=self.icon_dir)
-                    with os.fdopen(handle, "wb") as file:
-                        file.write(image)
-                    staged = pathlib.Path(partial)
-                    # `mkstemp` opens private; these are files to be served.
-                    staged.chmod(0o644)
-                    staged.replace(target)
-                return name
+                return self.store_image(image, extension, self.icon_dir)
         return None
 
-    def cached(self, known: dict[str, DesktopEntry | None], inner: str) -> bool:
-        """Whether a cached entry can be served as it stands.
+    def cached(self, known: dict[str, Parsed | None], inner: str) -> bool:
+        """Whether a cached file can be served as it stands.
 
         `--icon-dir` is an output rather than part of the cache, so a run
         pointed at a fresh directory has to read its images again; otherwise the
-        index would name files that are not there.
+        index would name files that are not there. Screenshots are not read
+        here, so an AppStream file is always served from the cache.
         """
         if inner not in known:
             return False
-        entry = known[inner]
-        if entry is None or self.icon_dir is None:
+        parsed = known[inner]
+        if parsed is None or self.icon_dir is None or not inner.endswith(".desktop"):
             return True
-        icon_file = entry.get("iconFile")
+        icon_file = cast(DesktopEntry, parsed).get("iconFile")
         if not icon_file:
             return True
         return (self.icon_dir / icon_file).exists()
 
-    def fetch_entries(self, path_hash: str, inner_paths: list[str]) -> dict[str, DesktopEntry]:
-        """-> {inner path: parsed entry} for one NAR, icons written out."""
+    def fetch_entries(self, path_hash: str, inner_paths: list[str]) -> dict[str, Parsed]:
+        """-> {inner path: what it says} for one NAR, icons written out."""
         cached = self.entry_cache / f"{path_hash}.json"
-        known: dict[str, DesktopEntry | None] = (
-            json.loads(cached.read_text()) if cached.exists() else {}
-        )
+        known: dict[str, Parsed | None] = json.loads(cached.read_text()) if cached.exists() else {}
         wanted = [inner for inner in inner_paths if not self.cached(known, inner)]
         if not wanted:
             return {
@@ -669,13 +949,95 @@ class Scanner:
 
             for inner in wanted:
                 data = member(inner)
-                entry = parse_desktop_file(data.decode("utf-8", "replace")) if data else None
-                if entry is not None:
-                    entry["iconFile"] = self.read_icon(path_hash, entry["icon"], member)
-                known[inner] = entry
+                text = data.decode("utf-8", "replace") if data else None
+                parsed: Parsed | None = None
+                if text is not None and inner.endswith(".desktop"):
+                    entry = parse_desktop_file(text)
+                    if entry is not None:
+                        entry["iconFile"] = self.read_icon(path_hash, entry["icon"], member)
+                    parsed = entry
+                elif text is not None:
+                    parsed = parse_metainfo(text)
+                known[inner] = parsed
 
         cached.write_text(json.dumps(known))
         return {inner: entry for inner in inner_paths if (entry := known.get(inner)) is not None}
+
+    # -- phase C ----------------------------------------------------------
+
+    def fetch_screenshot(self, url: str) -> ScreenshotFiles | None:
+        """-> the files written for one screenshot URL, or None.
+
+        AppStream points at the upstream project's own hosting, which an index
+        cannot refer its readers to: the image has to be mirrored. The result is
+        cached by URL, so a rerun over a corpus whose images have not moved
+        costs no downloads at all.
+        """
+        if self.screenshot_dir is None:
+            return None
+        digest = hashlib.sha256(url.encode()).hexdigest()[:IMAGE_NAME_LENGTH]
+        record = self.screenshot_cache / f"{digest}.json"
+        if record.exists():
+            files = json.loads(record.read_text())
+            # `--screenshot-dir` is an output, not part of the cache; a run
+            # pointed at a fresh directory has to fetch the image again.
+            if files is None:
+                return None
+            name, large = files
+            if all((self.screenshot_dir / kept).exists() for kept in files if kept):
+                return name, large
+        written = self.download_screenshot(url)
+        record.write_text(json.dumps(written))
+        return written
+
+    def download_screenshot(self, url: str) -> ScreenshotFiles | None:
+        """Fetch, re-render and store one screenshot; -> its files, or None.
+
+        One download serves both copies: the thumbnail a result list shows, and
+        the larger one a visitor who opens it gets.
+        """
+        if self.screenshot_dir is None:
+            return None
+        try:
+            response = self.session.get(url, timeout=SCREENSHOT_TIMEOUT, stream=True)
+            response.raise_for_status()
+            data = b""
+            for chunk in response.iter_content(CHUNK_SIZE):
+                data += chunk
+                if len(data) > self.screenshot_max_bytes:
+                    log(f"warning: screenshot over --screenshot-max-bytes: {url}")
+                    return None
+        except requests.RequestException as error:
+            log(f"warning: could not fetch screenshot {url}: {error}")
+            return None
+
+        suffix = screenshot_suffix(url, response.headers.get("content-type"))
+        if suffix is None:
+            return None
+        rendered = render_screenshot(
+            data, suffix, self.screenshot_pixel_size, self.screenshot_quality
+        )
+        if rendered is None:
+            log(f"warning: could not read screenshot {url}")
+            return None
+        image, extension = rendered
+        name = self.store_image(image, extension, self.screenshot_dir)
+
+        large: str | None = None
+        if self.screenshot_large_pixel_size or self.screenshot_large_quality:
+            enlarged = render_screenshot(
+                data,
+                suffix,
+                self.screenshot_large_pixel_size,
+                self.screenshot_large_quality,
+            )
+            if enlarged is not None:
+                # A source narrower than both widths is kept twice at its own
+                # width, once per quality, since neither render may enlarge it.
+                # Such an image is small, thus the second copy costs little.
+                enlarged_image, enlarged_extension = enlarged
+                large = self.store_image(enlarged_image, enlarged_extension, self.screenshot_dir)
+        return name, large
 
 
 def run_pool[Item: Hashable, Result](
@@ -694,7 +1056,7 @@ def run_pool[Item: Hashable, Result](
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Index desktop entries by reading them out of the binary cache.",
+        description="Index desktop entries and AppStream data from the binary cache.",
         epilog="Results only cover revisions Hydra has already built; see the module docstring.",
     )
     parser.add_argument("attrs", nargs="*", help="only index these attribute paths (default: all)")
@@ -745,9 +1107,53 @@ def main() -> None:
         default=DEFAULT_ICON_SVG_MAX_BYTES,
         help="rasterize vector icons larger than this, or 0 to keep every one",
     )
+    parser.add_argument(
+        "--screenshot-dir",
+        help="mirror AppStream screenshots here, as files named after their own "
+        "contents, which the index then refers to by name; omit to index no images",
+    )
+    parser.add_argument(
+        "--screenshot-pixel-size",
+        type=int,
+        default=DEFAULT_SCREENSHOT_PIXEL_SIZE,
+        help="re-render screenshots to this many pixels wide, or 0 to mirror them as they are",
+    )
+    parser.add_argument(
+        "--screenshot-quality",
+        type=int,
+        default=DEFAULT_SCREENSHOT_QUALITY,
+        help="re-render screenshots as WebP at this quality, or 0 to mirror them as they are",
+    )
+    parser.add_argument(
+        "--screenshot-large-pixel-size",
+        type=int,
+        default=DEFAULT_SCREENSHOT_LARGE_PIXEL_SIZE,
+        help="also keep a copy of each screenshot this many pixels wide, or 0 to keep none",
+    )
+    parser.add_argument(
+        "--screenshot-large-quality",
+        type=int,
+        default=DEFAULT_SCREENSHOT_LARGE_QUALITY,
+        help="render that larger copy as WebP at this quality",
+    )
+    parser.add_argument(
+        "--screenshots-per-package",
+        type=int,
+        default=DEFAULT_SCREENSHOTS_PER_PACKAGE,
+        help="keep at most this many screenshots per package, or 0 to keep every one",
+    )
+    parser.add_argument(
+        "--screenshot-max-bytes",
+        type=int,
+        default=DEFAULT_SCREENSHOT_MAX_BYTES,
+        help="skip screenshots larger than this",
+    )
     parser.add_argument("--jobs", type=int, default=32, help="concurrent requests in phase A")
     parser.add_argument(
         "--nar-jobs", type=int, default=4, help="concurrent NAR downloads in phase B"
+    )
+    parser.add_argument(
+        "--screenshot-jobs", type=int, default=16, help="concurrent downloads in phase C"
     )
     args = parser.parse_args()
 
@@ -779,19 +1185,21 @@ def main() -> None:
         args.icon_pixel_size,
         args.icon_colors,
         args.icon_svg_max_bytes,
+        args.screenshot_dir,
+        args.screenshot_pixel_size,
+        args.screenshot_quality,
+        args.screenshot_large_pixel_size,
+        args.screenshot_large_quality,
+        args.screenshot_max_bytes,
         args.cache_url,
         args.store_dir,
     )
 
     log("phase A: listing NAR contents ...")
-    flagged = run_pool(args.jobs, scanner.desktop_files, store_paths, "listed")
+    flagged = run_pool(args.jobs, scanner.indexed_files, store_paths, "listed")
 
-    log("phase A: resolving symlinked entries ...")
-    targets = [
-        f"{path}/{APPLICATIONS_DIR}/{name}"
-        for path, names in flagged.items()
-        for name in names or []
-    ]
+    log("phase A: resolving symlinked files ...")
+    targets = [f"{path}/{inner}" for path, inners in flagged.items() for inner in inners or []]
     resolved = run_pool(args.jobs, scanner.resolve, targets, "resolved")
 
     by_nar: dict[str, set[str]] = {}
@@ -800,7 +1208,7 @@ def main() -> None:
         if location is not None:
             by_nar.setdefault(location[0], set()).add(location[1])
 
-    log(f"phase B: fetching {len(by_nar)} NARs holding desktop entries ...")
+    log(f"phase B: fetching {len(by_nar)} NARs holding indexable files ...")
     contents = run_pool(
         args.nar_jobs,
         lambda path_hash: scanner.fetch_entries(path_hash, sorted(by_nar[path_hash])),
@@ -814,23 +1222,39 @@ def main() -> None:
         # Which file in `--icon-dir` serves each icon name, held per package
         # because its entries commonly share one icon.
         icons: dict[str, str] = {}
+        component_ids: list[str] = []
+        screenshots: list[Screenshot] = []
         for path in paths:
-            for name in flagged[path] or []:
-                location = resolved[f"{path}/{APPLICATIONS_DIR}/{name}"]
+            for inner in flagged[path] or []:
+                location = resolved[f"{path}/{inner}"]
                 if location is None:
                     continue
                 found = contents.get(location[0], {}).get(location[1])
                 if found is None:
                     continue
-                icon_file = found.get("iconFile")
-                icon = found["icon"]
-                if icon_file is not None and icon is not None:
-                    icons[icon] = icon_file
-                # A copy, because several attributes can share one NAR entry.
-                entry = dict(found)
-                entry.pop("iconFile", None)
-                entries.append(entry)
-        if entries:
+                if inner.endswith(".desktop"):
+                    entry = cast(DesktopEntry, found)
+                    icon_file = entry.get("iconFile")
+                    icon = entry["icon"]
+                    if icon_file is not None and icon is not None:
+                        icons[icon] = icon_file
+                    # A copy, because several attributes can share one NAR entry.
+                    copied = dict(entry)
+                    copied.pop("iconFile", None)
+                    entries.append(copied)
+                    continue
+                component = cast(Component, found)
+                identifier = component["id"]
+                if identifier is not None and identifier not in component_ids:
+                    component_ids.append(identifier)
+                for shot in component["screenshots"]:
+                    # A package that ships both AppStream directories describes
+                    # the same images twice.
+                    if all(shot["url"] != kept["url"] for kept in screenshots):
+                        screenshots.append(shot)
+        if args.screenshots_per_package:
+            screenshots = screenshots[: args.screenshots_per_package]
+        if entries or component_ids or screenshots:
             status = "indexed"
         elif any(flagged[path] is None for path in paths):
             # At least one output is not in the cache
@@ -839,9 +1263,34 @@ def main() -> None:
             status = "unresolved"
         else:
             status = "no-entries"
-        packages[attr] = {"status": status, "desktopEntries": entries, "icons": icons}
+        packages[attr] = {
+            "status": status,
+            "desktopEntries": entries,
+            "icons": icons,
+            "componentIds": component_ids,
+            "screenshots": screenshots,
+        }
+
+    if args.screenshot_dir:
+        urls = sorted(
+            {shot["url"] for package in packages.values() for shot in package["screenshots"]}
+        )
+        log(f"phase C: mirroring {len(urls)} screenshots ...")
+        mirrored = run_pool(args.screenshot_jobs, scanner.fetch_screenshot, urls, "mirrored")
+        for package in packages.values():
+            kept: list[Screenshot] = []
+            for shot in package["screenshots"]:
+                files = mirrored.get(shot["url"])
+                if files is None:
+                    # An image that cannot be mirrored is dropped: the index
+                    # only names screenshots it can serve.
+                    continue
+                shot["file"], shot["largeFile"] = files
+                kept.append(shot)
+            package["screenshots"] = kept
 
     all_entries = [entry for package in packages.values() for entry in package["desktopEntries"]]
+    all_shots = [shot for package in packages.values() for shot in package["screenshots"]]
     summary: dict[str, int] = {
         status: sum(1 for package in packages.values() if package["status"] == status)
         for status in ("indexed", "no-entries", "not-built", "unresolved")
@@ -851,9 +1300,14 @@ def main() -> None:
     summary["icons"] = len(
         {file for package in packages.values() for file in package["icons"].values()}
     )
+    summary["components"] = len(
+        {identifier for package in packages.values() for identifier in package["componentIds"]}
+    )
+    summary["screenshots"] = len(all_shots)
+    summary["screenshot-images"] = len({file for shot in all_shots if (file := shot.get("file"))})
     log(f"summary: {summary}")
 
-    document = json.dumps({"version": "2", "summary": summary, "packages": packages}, indent=2)
+    document = json.dumps({"version": "3", "summary": summary, "packages": packages}, indent=2)
     if args.output == "-":
         print(document)
     else:

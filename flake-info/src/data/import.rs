@@ -202,6 +202,42 @@ pub struct Package {
     /// document rather than in every package that names it.
     #[serde(default)]
     pub icons: HashMap<String, String>,
+    /// The AppStream components the package ships, by their own identifiers.
+    /// These name the application the way every other catalog names it, which
+    /// is what lets a reader line a nixpkgs package up with the same
+    /// application in Flathub or GNOME Software.
+    #[serde(rename = "componentIds", default)]
+    pub component_ids: Vec<String>,
+    /// Screenshots the package's AppStream data points at, already mirrored.
+    /// Supplied the same way as [Package::icons], and absent for the same
+    /// reason at eval time.
+    #[serde(default)]
+    pub screenshots: Vec<Screenshot>,
+}
+
+/// One AppStream screenshot, mirrored out of the upstream project's own hosting
+/// by `flake-info/scripts/desktop-entries-index.py`.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct Screenshot {
+    /// Where upstream serves the image, kept as the provenance of an image this
+    /// index redistributes.
+    pub url: String,
+    /// What the screenshot shows, in the component's own language.
+    pub caption: Option<String>,
+    /// The caption's translations, keyed by locale. Never reaches the index:
+    /// like [DesktopEntry::localized], it is pooled into
+    /// [NixpkgsEntry::Localization].
+    #[serde(default, skip_serializing)]
+    pub localized: HashMap<String, String>,
+    /// The file name this index serves the thumbnail under, or None where the
+    /// image could not be mirrored.
+    pub file: Option<String>,
+    /// The file name of the larger copy of the same image, which a reader who
+    /// opens a screenshot is shown. None where the scanner mirrored no such
+    /// copy. The upstream image itself stays at [Screenshot::url]: it is ten
+    /// times the size of this copy, and an index cannot hold it.
+    #[serde(rename = "largeFile", default)]
+    pub large_file: Option<String>,
 }
 
 /// A freedesktop.org desktop entry, as indexed by
@@ -286,6 +322,13 @@ pub enum NixpkgsEntry {
         file: String,
         /// The image itself, base64 encoded because an Elasticsearch document is
         /// JSON and cannot hold bytes. `file` says what format it is in.
+        data: String,
+    },
+    /// One mirrored AppStream screenshot, carried apart from the packages that
+    /// name it for the same reason as [NixpkgsEntry::Icon].
+    Screenshot {
+        file: String,
+        /// The image itself, base64 encoded. `file` says what format it is in.
         data: String,
     },
     /// Every desktop entry translation into one locale, keyed by the string it

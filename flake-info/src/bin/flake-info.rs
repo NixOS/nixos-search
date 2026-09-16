@@ -123,6 +123,15 @@ enum Command {
                     package itself supplies."
         )]
         icon_theme_dir: Option<PathBuf>,
+
+        #[structopt(
+            long = "screenshot-dir",
+            help = "Read the AppStream screenshots from this directory: the \
+                    `--screenshot-dir` the scanner above mirrored them to, which \
+                    its index names rather than carries. Omit to index the \
+                    packages without screenshots."
+        )]
+        screenshot_dir: Option<PathBuf>,
     },
 
     #[structopt(about = "Import nixpkgs channel from archive or local git path")]
@@ -400,6 +409,7 @@ async fn run_command(
             desktop_entries_file,
             icon_dir,
             icon_theme_dir,
+            screenshot_dir,
         } => {
             let nixpkgs = Source::nixpkgs(channel, user_agent)
                 .await
@@ -432,6 +442,7 @@ async fn run_command(
                         &desktop_entries_file,
                         &icon_dir,
                         &icon_theme_dir,
+                        &screenshot_dir,
                     )
                     .map_err(FlakeInfoError::Nixpkgs)
                 }),
@@ -472,6 +483,7 @@ async fn run_command(
                         &None,
                         &None,
                         &None,
+                        &None,
                     )
                     .map_err(FlakeInfoError::Nixpkgs)
                 }),
@@ -503,6 +515,7 @@ async fn run_command(
                         &None,
                         &None,
                         &user_agent,
+                        &None,
                         &None,
                         &None,
                         &None,

@@ -30,6 +30,10 @@ type Flake = super::Flake;
 /// that does not go into the index with it; see [Derivation::Localization].
 type DesktopEntry = import::DesktopEntry;
 
+/// An AppStream screenshot, as a package carries it into the index. Its caption
+/// translations stay behind for the same reason a desktop entry's do.
+type Screenshot = import::Screenshot;
+
 #[allow(non_snake_case)]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct License {
@@ -236,6 +240,14 @@ pub enum Derivation {
         /// `package_license_set` and `package_maintainers_set`.
         package_categories_set: Vec<String>,
         package_mime_types_set: Vec<String>,
+        /// The identifiers of the package's AppStream components, which name
+        /// the same application in every other catalog.
+        package_component_ids: Vec<String>,
+        /// The package's mirrored screenshots, for rendering. Kept nested for
+        /// the same reason the entries are. The images themselves are
+        /// [Derivation::Screenshot] documents, which the frontend build turns
+        /// into static files.
+        package_screenshots: Vec<Screenshot>,
         #[serde(skip_serializing_if = "Option::is_none")]
         package_dep_count: Option<u64>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -307,6 +319,14 @@ pub enum Derivation {
     Icon {
         icon_file: String,
         icon_data: String,
+    },
+    /// A mirrored AppStream screenshot, kept apart from the packages that point
+    /// at it for the same reason an icon is. `package_screenshots` names the
+    /// file each one is served under.
+    #[serde(rename = "screenshot")]
+    Screenshot {
+        screenshot_file: String,
+        screenshot_data: String,
     },
     /// Every desktop entry translation into one locale, kept apart from the
     /// packages for the same reason icons are: all 146 locales inside every
@@ -395,6 +415,8 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                     package_desktop_icons: HashMap::new(),
                     package_categories_set: Vec::new(),
                     package_mime_types_set: Vec::new(),
+                    package_component_ids: Vec::new(),
+                    package_screenshots: Vec::new(),
                     package_dep_count: None,
                     package_repology_repos: None,
                 }
@@ -551,6 +573,8 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     package_desktop_icons: package.icons,
                     package_categories_set,
                     package_mime_types_set,
+                    package_component_ids: package.component_ids,
+                    package_screenshots: package.screenshots,
                     package_dep_count: dep_count,
                     package_repology_repos: repology_repos,
                 }
@@ -621,6 +645,10 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
             import::NixpkgsEntry::Icon { file, data } => Derivation::Icon {
                 icon_file: file,
                 icon_data: data,
+            },
+            import::NixpkgsEntry::Screenshot { file, data } => Derivation::Screenshot {
+                screenshot_file: file,
+                screenshot_data: data,
             },
             import::NixpkgsEntry::Localization { locale, strings } => Derivation::Localization {
                 localization_locale: locale,
