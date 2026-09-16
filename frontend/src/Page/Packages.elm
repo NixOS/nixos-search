@@ -11,6 +11,7 @@ module Page.Packages exposing
     , ResultPackageLicense
     , ResultPackageMaintainer
     , ResultPackageTeam
+    , Screenshot
     , decodeResultAggregations
     , decodeResultItemSource
     , init
@@ -22,12 +23,14 @@ module Page.Packages exposing
     , viewSuccess
     )
 
+import Browser.Dom
 import Browser.Navigation
 import Dict exposing (Dict)
 import Html
     exposing
         ( Html
         , a
+        , button
         , code
         , div
         , em
@@ -76,6 +79,9 @@ import Search
         , viewBucket
         )
 import Search.Query
+import Svg exposing (path, svg)
+import Svg.Attributes as SA
+import Task
 import Utils
 
 
@@ -115,6 +121,9 @@ type alias ResultItemSource =
     -- The file under `/icons` holding each entry's image, keyed by the name the
     -- entry's `icon` refers to.
     , desktopIcons : Dict String String
+
+    -- The screenshots the package's AppStream metainfo points at.
+    , screenshots : List Screenshot
     }
 
 
@@ -136,6 +145,24 @@ type alias DesktopEntry =
     , mimeTypes : List String
     , categories : List String
     , noDisplay : Bool
+    }
+
+
+{-| One of the screenshots a package's AppStream metainfo names. `file` holds
+the thumbnail shown in a result, and `largeFile` the copy a reader who opens it
+gets; both name files under `/screenshots`, which the frontend build writes out
+of the index. `url` is the image on the project's own hosting, at the size
+upstream serves it, which is too large for an index to hold.
+
+`caption` is shown in the language chosen on the page, in the same way a desktop
+entry's strings are.
+
+-}
+type alias Screenshot =
+    { url : String
+    , caption : Maybe String
+    , file : Maybe String
+    , largeFile : Maybe String
     }
 
 
@@ -294,6 +321,8 @@ init options preferStatic storedLanguage searchArgs defaultNixOSChannel nixosCha
 type Msg
     = SearchMsg (Search.Msg ResultItemSource ResultAggregations)
     | CopyToClipboard String
+    | ScrollScreenshots String Float
+    | NoOp
 
 
 update :
@@ -318,6 +347,24 @@ update navKey msg model nixosChannels =
 
         CopyToClipboard text_ ->
             ( model, Ports.copyToClipboard text_ )
+
+        ScrollScreenshots rowId direction ->
+            ( model
+            , Browser.Dom.getViewportOf rowId
+                |> Task.andThen
+                    (\{ viewport } ->
+                        -- A step of less than the full width keeps the
+                        -- screenshot at the edge in view, thus the reader
+                        -- keeps the place in the row.
+                        Browser.Dom.setViewportOf rowId
+                            (viewport.x + direction * viewport.width * 0.8)
+                            0
+                    )
+                |> Task.attempt (\_ -> NoOp)
+            )
+
+        NoOp ->
+            ( model, Cmd.none )
 
 
 
@@ -438,6 +485,29 @@ viewSuccess saveData localization nixosChannels channel showUsageDetails show hi
             (viewResultItem saveData localization nixosChannels channel showUsageDetails show)
             hits
         )
+
+
+{-| The arrow on a button that moves a screenshot row. It points forward; the
+button that moves the row back turns it around.
+-}
+chevronSvg : Html msg
+chevronSvg =
+    svg
+        [ SA.width "16"
+        , SA.height "16"
+        , SA.viewBox "0 0 16 16"
+        , SA.fill "none"
+        , attribute "aria-hidden" "true"
+        ]
+        [ path
+            [ SA.d "M6 3L11 8L6 13"
+            , SA.stroke "currentColor"
+            , SA.strokeWidth "2"
+            , SA.strokeLinecap "round"
+            , SA.strokeLinejoin "round"
+            ]
+            []
+        ]
 
 
 {-| Render an install command or configuration snippet together with a
@@ -575,6 +645,94 @@ viewResultItem saveData localization nixosChannels channel showUsageDetails show
                     [ h4 [] [ text "Desktop Entries" ]
                     , ul [ class "desktop-entries" ]
                         (List.map viewDesktopEntry displayedEntries)
+                    ]
+
+        -- Screenshots are served as static files by the same build that writes
+        -- the icons, thus one the last deploy did not write is simply not
+        -- there. A screenshot with no thumbnail is left out: there is nothing
+        -- to show for it.
+        mirroredScreenshots =
+            if saveData then
+                []
+
+            else
+                List.filterMap
+                    (\shot -> Maybe.map (Tuple.pair shot) shot.file)
+                    item.source.screenshots
+
+        viewScreenshot ( shot, file ) =
+            let
+                caption =
+                    Maybe.map localized shot.caption
+
+                -- Opening a thumbnail gives the larger copy this index holds,
+                -- and the image on the project's own hosting where it holds
+                -- none.
+                opened =
+                    shot.largeFile
+                        |> Maybe.map (\large -> "/screenshots/" ++ large)
+                        |> Maybe.withDefault shot.url
+            in
+            li []
+                (a
+                    [ href opened
+                    , target "_blank"
+                    , title (Maybe.withDefault "Open the larger copy" caption)
+                    ]
+                    [ img
+                        [ class "screenshot-image"
+                        , src ("/screenshots/" ++ file)
+                        , alt (Maybe.withDefault "" caption)
+                        , attribute "loading" "lazy"
+                        ]
+                        []
+                    ]
+                    :: optionals (caption /= Nothing)
+                        [ div [ class "screenshot-caption" ]
+                            [ text (Maybe.withDefault "" caption) ]
+                        ]
+                )
+
+        -- The row scrolls, thus it gets a button at each end. A pointer can
+        -- also drag the row and the tab key moves along it, but neither says
+        -- so on the first look. One screenshot never scrolls, thus it keeps
+        -- the row alone.
+        scrollButton rowId direction buttonLabel =
+            button
+                [ type_ "button"
+                , classList
+                    [ ( "screenshots-scroll", True )
+                    , ( "back", direction < 0 )
+                    ]
+                , title buttonLabel
+                , attribute "aria-label" buttonLabel
+                , attribute "aria-controls" rowId
+                , onClick (ScrollScreenshots rowId direction)
+                ]
+                [ chevronSvg ]
+
+        screenshots =
+            if List.isEmpty mirroredScreenshots then
+                text ""
+
+            else
+                let
+                    rowId =
+                        "screenshots-" ++ item.id
+
+                    scrollable =
+                        List.length mirroredScreenshots > 1
+                in
+                div []
+                    [ h4 [] [ text "Screenshots" ]
+                    , div [ class "screenshots-row" ]
+                        (optionals scrollable
+                            [ scrollButton rowId -1.0 "Show the previous screenshots" ]
+                            ++ ul [ class "screenshots", id rowId ]
+                                (List.map viewScreenshot mirroredScreenshots)
+                            :: optionals scrollable
+                                [ scrollButton rowId 1.0 "Show the next screenshots" ]
+                        )
                     ]
 
         shortPackageDetails =
@@ -1039,6 +1197,7 @@ viewResultItem saveData localization nixosChannels channel showUsageDetails show
                                 ]
                     , programs
                     , desktopEntries
+                    , screenshots
                     , maintainersTeamsAndPlatforms
                     , optionsLink
                     , if List.isEmpty item.source.modularServices then
@@ -1439,6 +1598,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "package_modular_services" (Json.Decode.list Json.Decode.string) []
         |> Json.Decode.Pipeline.optional "package_desktop_entries" (Json.Decode.list decodeDesktopEntry) []
         |> Json.Decode.Pipeline.optional "package_desktop_icons" (Json.Decode.dict Json.Decode.string) Dict.empty
+        |> Json.Decode.Pipeline.optional "package_screenshots" (Json.Decode.list decodeScreenshot) []
 
 
 decodeDesktopEntry : Json.Decode.Decoder DesktopEntry
@@ -1452,6 +1612,15 @@ decodeDesktopEntry =
         |> Json.Decode.Pipeline.optional "mimeTypes" (Json.Decode.list Json.Decode.string) []
         |> Json.Decode.Pipeline.optional "categories" (Json.Decode.list Json.Decode.string) []
         |> Json.Decode.Pipeline.optional "noDisplay" Json.Decode.bool False
+
+
+decodeScreenshot : Json.Decode.Decoder Screenshot
+decodeScreenshot =
+    Json.Decode.succeed Screenshot
+        |> Json.Decode.Pipeline.required "url" Json.Decode.string
+        |> Json.Decode.Pipeline.optional "caption" (Json.Decode.nullable Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "file" (Json.Decode.nullable Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "largeFile" (Json.Decode.nullable Json.Decode.string) Nothing
 
 
 type alias ResolvedFlake =

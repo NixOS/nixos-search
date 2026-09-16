@@ -62,6 +62,17 @@ jobs:
           export ELASTICSEARCH_MAPPING_SCHEMA_VERSION
           npm --prefix frontend run build:icons
 
+      - name: Build screenshot assets
+        shell: sh
+        env:
+          SCREENSHOTS_OUT_DIR: ../dist/screenshots
+        run: |
+          NIXOS_CHANNELS=$(cat $(nix build --no-link --print-out-paths .#nixosChannelsJson))
+          export NIXOS_CHANNELS
+          ELASTICSEARCH_MAPPING_SCHEMA_VERSION=$(nix eval --raw --impure --expr '(import ./version.nix).frontend')
+          export ELASTICSEARCH_MAPPING_SCHEMA_VERSION
+          npm --prefix frontend run build:screenshots
+
       - name: Build locale assets
         shell: sh
         env:

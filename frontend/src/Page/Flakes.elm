@@ -141,6 +141,12 @@ update navKey msg model nixosChannels =
                 Page.Packages.CopyToClipboard text_ ->
                     ( PackagesModel model_, Ports.copyToClipboard text_ )
 
+                -- The other messages of the package page do not know which
+                -- route they are on, thus the page itself answers them.
+                other ->
+                    Page.Packages.update navKey other model_ nixosChannels
+                        |> Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg)
+
         _ ->
             ( model, Cmd.none )
 
