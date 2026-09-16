@@ -7,7 +7,7 @@ use std::path::{Component, Path, PathBuf};
 
 use crate::Source;
 use crate::data::Nixpkgs;
-use crate::data::import::{DesktopEntry, NixOption, NixpkgsEntry, Package};
+use crate::data::import::{DesktopEntry, NixOption, NixpkgsEntry, Package, Screenshot};
 
 /// Wrapper for the channel `packages.json` format.
 #[derive(Deserialize)]
@@ -34,13 +34,21 @@ struct DesktopIndexPackage {
     /// `--icon-dir` -- for them to be found.
     #[serde(default)]
     icons: HashMap<String, String>,
+    /// The identifiers of the AppStream components the package ships.
+    #[serde(rename = "componentIds", default)]
+    component_ids: Vec<String>,
+    /// The screenshots the package's AppStream data points at. Each names the
+    /// files in the scanner's `--screenshot-dir` that carry it, which has to be
+    /// passed here too for the images to be found.
+    #[serde(default)]
+    screenshots: Vec<Screenshot>,
 }
 
-/// The file the scanner wrote for one icon, if `file` is a name it could have
+/// The file the scanner wrote for one image, if `file` is a name it could have
 /// written. A name arrives in a file this importer was pointed at and is then
 /// used as a path, so it is checked to be a bare file name rather than trusted
 /// to stay inside the directory.
-fn icon_source(dir: &Path, file: &str) -> Option<PathBuf> {
+fn image_source(dir: &Path, file: &str) -> Option<PathBuf> {
     let mut components = Path::new(file).components();
     match (components.next(), components.next()) {
         (Some(Component::Normal(name)), None) => Some(dir.join(name)),
@@ -57,6 +65,11 @@ const ICON_THEME_DIRS: [&str; 4] = ["scalable/apps", "128x128/apps", "64x64/apps
 /// Every browser renders both, which the other formats a `.desktop` file may
 /// name -- XPM above all -- do not.
 const ICON_EXTENSIONS: [&str; 2] = ["svg", "png"];
+
+/// The formats a mirrored screenshot may be served in. Wider than the icons',
+/// because a screenshot is a photograph of a window rather than a symbol: the
+/// lossy formats are the right ones for it, and vector art never is.
+const SCREENSHOT_EXTENSIONS: [&str; 4] = ["png", "jpg", "jpeg", "webp"];
 
 /// Fills in icons for entries that arrived without one, from a freedesktop icon
 /// theme directory such as `${papirus-icon-theme}/share/icons/Papirus`.
@@ -116,12 +129,13 @@ impl IconTheme {
     }
 }
 
-/// Interns icon images under content-addressed file names, so that a package
+/// Interns images under content-addressed file names, so that a package
 /// document carries a name an `<img>` can point at rather than the image
 /// itself. Each distinct image is emitted once, as its own document, from
 /// which the frontend build writes a static file.
-#[derive(Default)]
-struct IconStore {
+struct ImageStore {
+    /// The formats this store may serve, as file extensions.
+    extensions: &'static [&'static str],
     files: HashMap<String, String>,
     /// What each source file was interned as, so that one file is read and
     /// hashed once however many packages point at it -- an icon theme supplies
@@ -130,15 +144,23 @@ struct IconStore {
     seen: HashMap<PathBuf, Option<String>>,
 }
 
-impl IconStore {
+impl ImageStore {
+    fn new(extensions: &'static [&'static str]) -> Self {
+        Self {
+            extensions,
+            files: HashMap::new(),
+            seen: HashMap::new(),
+        }
+    }
+
     /// Turns a package's `icon name -> source file` map into `icon name ->
     /// served file name`, keeping the image behind.
     ///
-    /// An image in a format that is not in `ICON_EXTENSIONS` is dropped rather
-    /// than served under a name no browser can read. XPM is the case in
-    /// practice: a valid freedesktop icon format that no browser renders, and
-    /// one the scanner will hand over unless told otherwise. A dropped icon
-    /// leaves a card looking exactly like one whose package ships none.
+    /// An image in a format this store does not serve is dropped rather than
+    /// served under a name no browser can read. XPM is the case in practice: a
+    /// valid freedesktop icon format that no browser renders, and one the
+    /// scanner will hand over unless told otherwise. A dropped icon leaves a
+    /// card looking exactly like one whose package ships none.
     fn intern(&mut self, sources: HashMap<String, PathBuf>) -> HashMap<String, String> {
         sources
             .into_iter()
@@ -150,7 +172,7 @@ impl IconStore {
         if let Some(cached) = self.seen.get(&source) {
             return cached.clone();
         }
-        let read = Self::read(&source);
+        let read = self.read(&source);
         let file = read.as_ref().map(|(file, _)| file.clone());
         if let Some((file, data)) = read {
             self.files.entry(file).or_insert(data);
@@ -166,15 +188,15 @@ impl IconStore {
     /// ever changes with its contents is also a name a browser can cache
     /// forever. 128 bits is far past any collision risk at this scale and
     /// keeps the name short enough to read.
-    fn read(source: &Path) -> Option<(String, String)> {
+    fn read(&self, source: &Path) -> Option<(String, String)> {
         let extension = source.extension()?.to_str()?;
-        if !ICON_EXTENSIONS.contains(&extension) {
+        if !self.extensions.contains(&extension) {
             return None;
         }
         let bytes = match std::fs::read(source) {
             Ok(bytes) => bytes,
             Err(error) => {
-                log::warn!("Could not read icon {}: {}", source.display(), error);
+                log::warn!("Could not read image {}: {}", source.display(), error);
                 return None;
             }
         };
@@ -222,6 +244,24 @@ impl LocalizationStore {
             }
         }
     }
+
+    /// The same for AppStream captions, which are one string each rather than a
+    /// set of fields, and which share the locale files the entries write.
+    fn collect_captions(&mut self, screenshots: &[Screenshot]) {
+        for screenshot in screenshots {
+            let Some(caption) = &screenshot.caption else {
+                continue;
+            };
+            for (locale, translation) in &screenshot.localized {
+                if caption != translation {
+                    self.locales
+                        .entry(locale.clone())
+                        .or_default()
+                        .insert(caption.clone(), translation.clone());
+                }
+            }
+        }
+    }
 }
 
 pub fn get_nixpkgs_info(
@@ -233,6 +273,7 @@ pub fn get_nixpkgs_info(
     desktop_entries_file: &Option<PathBuf>,
     icon_dir: &Option<PathBuf>,
     icon_theme_dir: &Option<PathBuf>,
+    screenshot_dir: &Option<PathBuf>,
 ) -> Result<Vec<NixpkgsEntry>> {
     let nixpkgs = match nixpkgs {
         Source::Nixpkgs(nixpkgs) => nixpkgs,
@@ -287,7 +328,8 @@ pub fn get_nixpkgs_info(
     };
     let mut desktop_index = resolve_desktop_entries(desktop_entries_file);
     let mut icon_theme = icon_theme_dir.clone().map(IconTheme::new);
-    let mut icon_store = IconStore::default();
+    let mut icon_store = ImageStore::new(&ICON_EXTENSIONS);
+    let mut screenshot_store = ImageStore::new(&SCREENSHOT_EXTENSIONS);
     let mut localization = LocalizationStore::default();
 
     let mut entries: Vec<NixpkgsEntry> = attr_set
@@ -308,15 +350,37 @@ pub fn get_nixpkgs_info(
                     icon_sources = indexed
                         .icons
                         .into_iter()
-                        .filter_map(|(name, file)| Some((name, icon_source(dir, &file)?)))
+                        .filter_map(|(name, file)| Some((name, image_source(dir, &file)?)))
                         .collect();
                 }
+                package.component_ids = indexed.component_ids;
+                package.screenshots = indexed.screenshots;
             }
             if let Some(theme) = icon_theme.as_mut() {
                 theme.fill(&package.desktop_entries, &mut icon_sources);
             }
             package.icons = icon_store.intern(icon_sources);
+            // A screenshot now names the file that carries the image, rather
+            // than the file the scanner wrote. One that cannot be read is
+            // dropped: the index only names images it also carries.
+            match screenshot_dir {
+                Some(dir) => {
+                    for screenshot in &mut package.screenshots {
+                        let mut intern = |file: Option<&str>| {
+                            file.and_then(|file| image_source(dir, file))
+                                .and_then(|source| screenshot_store.file_for(source))
+                        };
+                        screenshot.file = intern(screenshot.file.as_deref());
+                        screenshot.large_file = intern(screenshot.large_file.as_deref());
+                    }
+                }
+                None => package.screenshots.clear(),
+            }
+            package
+                .screenshots
+                .retain(|screenshot| screenshot.file.is_some());
             localization.collect(&package.desktop_entries);
+            localization.collect_captions(&package.screenshots);
             let programs = programs
                 .remove(&attribute)
                 .unwrap_or_default()
@@ -344,6 +408,13 @@ pub fn get_nixpkgs_info(
             .files
             .into_iter()
             .map(|(file, data)| NixpkgsEntry::Icon { file, data }),
+    );
+
+    entries.extend(
+        screenshot_store
+            .files
+            .into_iter()
+            .map(|(file, data)| NixpkgsEntry::Screenshot { file, data }),
     );
 
     // One document per locale, likewise: a search response carries the entries
@@ -431,13 +502,23 @@ fn load_desktop_entries(path: &PathBuf) -> Result<HashMap<String, DesktopIndexPa
 fn merge_desktop_index(index: DesktopIndex) -> HashMap<String, DesktopIndexPackage> {
     let mut packages: HashMap<String, DesktopIndexPackage> = HashMap::new();
     for (attribute, package) in index.packages {
-        // One index covers every system, so several of its keys can normalise to
-        // the same attribute. Keep whichever of them found entries.
+        // One index covers every system, so several of its keys can normalise
+        // to the same attribute. Keep whichever of them found each signal: a
+        // package can ship its desktop entry on one system and its AppStream
+        // data on another.
         let merged = packages
             .entry(strip_system(&attribute).to_owned())
             .or_default();
         if merged.desktop_entries.is_empty() {
-            *merged = package;
+            merged.desktop_entries = package.desktop_entries;
+            // The icons name the entries' icons, so they travel with them.
+            merged.icons = package.icons;
+        }
+        if merged.component_ids.is_empty() {
+            merged.component_ids = package.component_ids;
+        }
+        if merged.screenshots.is_empty() {
+            merged.screenshots = package.screenshots;
         }
     }
     packages
@@ -733,7 +814,7 @@ mod tests {
         // built for a system that ships no desktop entry for it.
         let json = r#"
         {
-            "version": "2",
+            "version": "3",
             "packages": {
                 "abaddon.x86_64-linux": {
                     "status": "indexed",
@@ -741,9 +822,16 @@ mod tests {
                     "icons": { "abaddon": "0123456789abcdef0123456789abcdef.png" }
                 },
                 "abaddon.aarch64-darwin": {
-                    "status": "no-entries",
+                    "status": "indexed",
                     "desktopEntries": [],
-                    "icons": {}
+                    "icons": {},
+                    "componentIds": ["com.github.abaddon"],
+                    "screenshots": [{
+                        "url": "https://example.invalid/one.png",
+                        "caption": null,
+                        "localized": {},
+                        "file": "fedcba9876543210fedcba9876543210.png"
+                    }]
                 },
                 "python3Packages.foo": {
                     "status": "no-entries",
@@ -762,6 +850,10 @@ mod tests {
             merged["abaddon"].icons["abaddon"],
             "0123456789abcdef0123456789abcdef.png"
         );
+        // A package can ship its AppStream data on another system than its
+        // desktop entry, thus each signal is kept from wherever it was found.
+        assert_eq!(merged["abaddon"].component_ids, ["com.github.abaddon"]);
+        assert_eq!(merged["abaddon"].screenshots.len(), 1);
         // A dot is only a system separator when what follows it is a system.
         assert!(merged.contains_key("python3Packages.foo"));
     }
@@ -807,7 +899,7 @@ mod tests {
         let png = write("one.png", b"\0\0\0");
         let same = write("another.png", b"\0\0\0");
         let svg = write("one.svg", b"<svg/>");
-        let mut store = IconStore::default();
+        let mut store = ImageStore::new(&ICON_EXTENSIONS);
 
         let one = store.intern(HashMap::from([("a".to_string(), png.clone())]));
         let two = store.intern(HashMap::from([
@@ -856,16 +948,16 @@ mod tests {
     }
 
     #[test]
-    fn test_icon_source() {
+    fn test_image_source() {
         let dir = Path::new("/icons");
         assert_eq!(
-            icon_source(dir, "abc.png"),
+            image_source(dir, "abc.png"),
             Some(PathBuf::from("/icons/abc.png"))
         );
         // The scanner writes bare file names, so anything that would read from
         // somewhere other than the directory it was pointed at is not one.
         for escape in ["../abc.png", "a/b.png", "/etc/passwd", "", "."] {
-            assert_eq!(icon_source(dir, escape), None, "{escape}");
+            assert_eq!(image_source(dir, escape), None, "{escape}");
         }
     }
 

@@ -41,7 +41,10 @@ jobs:
           nix run --accept-flake-config .#desktop-entries-index -- \
             --output desktop-entries.json --icon-dir icons \
             --icon-extensions png,svg --icon-pixel-size 64 --icon-colors 256 \
-            --icon-svg-max-bytes 16384
+            --icon-svg-max-bytes 16384 \
+            --screenshot-dir screenshots --screenshot-pixel-size 224 \
+            --screenshot-quality 82 --screenshot-large-pixel-size 752 \
+            --screenshot-large-quality 80
 
       - name: Save desktop entries to cache
         if: github.repository_owner == 'NixOS'
@@ -50,6 +53,7 @@ jobs:
           path: |
             desktop-entries.json
             icons
+            screenshots
           # Actions cache keys are immutable, so a rotating date lets each daily
           # run publish fresh data. The `v1` prefix allows format bumps.
           key: desktop-entries-v1-${{ steps.date.outputs.date }}
@@ -62,6 +66,7 @@ jobs:
           path: |
             desktop-entries.json
             icons
+            screenshots
           if-no-files-found: error
           retention-days: 7
 

@@ -165,6 +165,8 @@ lazy_static! {
                 "package_desktop_icons": {"type": "object", "enabled": false},
                 "package_categories_set": {"type": "keyword"},
                 "package_mime_types_set": {"type": "keyword"},
+                "package_component_ids": {"type": "keyword"},
+                "package_screenshots": {"type": "object", "enabled": false},
                 "package_dep_count": {
                     "type": "rank_feature"
                 },
@@ -176,6 +178,9 @@ lazy_static! {
                 // A base64 image, read once per frontend build and written out
                 // as a static file. Indexing it would be pure cost.
                 "icon_data": {"type": "text", "index": false},
+                // Screenshot fields, which an icon's are the pattern for
+                "screenshot_file": {"type": "keyword"},
+                "screenshot_data": {"type": "text", "index": false},
                 // Localization fields
                 "localization_locale": {"type": "keyword"},
                 // Arbitrary strings as keys, read once per frontend build and
