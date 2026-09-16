@@ -15,7 +15,12 @@
  *
  *   id          stable handle, also the sort key of the per-query table
  *   q           the search term, as a user would type it
- *   category    grouping for the by-category table, e.g. `typo` or `intent`
+ *   category    the one axis this query is here to exercise, e.g. `typo` or
+ *               `attrpath`. Also the unit the aggregate is weighted in, so
+ *               every category needs an entry in `WEIGHTS` and vice versa.
+ *               Where a query fits more than one, the rarer axis wins: an
+ *               uppercase name is `cased` before it is `exact`, and a bare last
+ *               segment is `leaf` before it is `cased`.
  *   relevant    tiers of ids we accept as answers, `pkg:`/`opt:` prefixed. Each
  *               tier is a list of ids tied at that rank: order *between* tiers
  *               is a claim, order *within* one is not. `[[a, b, c]]` states no
@@ -342,6 +347,87 @@ async function scoreTrack(queries, bodyKey, field, prefix) {
 const pkgQueries = JSON.parse(readFileSync(args.packages, "utf8"));
 const optQueries = JSON.parse(readFileSync(args.options, "utf8"));
 
+// What share of the aggregate each category is worth.
+//
+// Curated queries are not a sample of anything - they were written down, not
+// observed - so an unweighted mean reports how we do on the mix we happened to
+// invent. `corpus/observed-queries.json` holds real queries mined from shared
+// `search.nixos.org/...?query=` links, and `corpus/mine.mjs` prints the shape
+// distribution the numbers below cite. Re-run it when these are up for review.
+//
+// The corpus has a bias the weights have to respect: a shared link is a link
+// that *worked*, so it can price the plain/dotted/cased/versioned mix but is
+// blind to typos and to failed natural-language queries. Where it can see, the
+// weight follows the observation; where it cannot, the weight is judgement and
+// says so.
+//
+// Weighting at the category level rather than per query is what lets the query
+// sets grow: adding a query sharpens its category's estimate without shifting
+// the mix. Each table sums to 1.
+const WEIGHTS = {
+    // Observed (n=808): plain 84.5%, dotted 6.2%, cased 4.8%, multiterm 2.4%,
+    // versioned 2.1%.
+    packages: {
+        exact: 0.4, // share of the plain block
+        prefix: 0.22, // judgement: every typed search passes through prefix
+        // states and the typeahead queries them, but the corpus only ever sees
+        // the query that got shared
+        typo: 0.1, // judgement: the corpus cannot see these at all
+        intent: 0.08, // judgement: a natural-language query that failed is the
+        // least likely to be shared and the one we most want to fix
+        attrpath: 0.06, // observed 6.2%
+        cased: 0.05, // observed 4.8%
+        multiterm: 0.05, // observed 2.4%, upweighted alongside `intent`
+        versioned: 0.04, // observed 2.1%
+    },
+    // Observed (n=436): plain 45.4%, dotted 41.1% (depth 1: 109, depth 2: 58,
+    // depth 3+: 18), cased 8.0%, multiterm 5.5%. 20.6% carry an uppercase
+    // letter somewhere, most of them inside a path.
+    options: {
+        exact: 0.24, // share of the plain block
+        scoped: 0.22, // a module plus the setting inside it - the same shape as
+        // the depth-1 end of the dotted block, which is most of it
+        dotted: 0.16, // literal paths, the depth-2+ end of that block
+        prefix: 0.1, // judgement, as above
+        leaf: 0.06, // observed: bare leaf names, e.g. `systemPackages`
+        cased: 0.06, // observed: uppercase inside a path
+        typo: 0.06, // judgement
+        multiterm: 0.05, // observed 5.5%
+        intent: 0.05, // judgement
+    },
+};
+
+// A category with no weight would silently drop out of the aggregate and a
+// weight with no category would silently renormalize the rest, so both are
+// errors, and both are worth hearing about before a scoring run rather than
+// after it.
+function checkWeights(track, queries, weights) {
+    const present = new Set(queries.map((q) => q.category));
+    for (const category of [...present].sort()) {
+        if (!(category in weights)) {
+            throw new Error(
+                `${track}: category "${category}" has no weight in WEIGHTS.${track}`,
+            );
+        }
+    }
+    for (const category of Object.keys(weights)) {
+        if (!present.has(category)) {
+            throw new Error(
+                `${track}: WEIGHTS.${track}.${category} has no queries`,
+            );
+        }
+    }
+    const total = Object.values(weights).reduce((a, b) => a + b, 0);
+    if (Math.abs(total - 1) > 1e-6) {
+        throw new Error(
+            `${track}: WEIGHTS.${track} sums to ${total.toFixed(4)}, not 1`,
+        );
+    }
+}
+
+checkWeights("packages", pkgQueries, WEIGHTS.packages);
+checkWeights("options", optQueries, WEIGHTS.options);
+
 console.error(
     `[benchmark] scoring ${pkgQueries.length} package queries against ${INDEX}`,
 );
@@ -363,6 +449,24 @@ const optResults = await scoreTrack(
 
 function mean(arr) {
     return arr.reduce((a, b) => a + b, 0) / arr.length;
+}
+
+// Each category contributes `WEIGHTS[track][category]` to the aggregate, split
+// evenly across its members. Renormalizing by the weight actually present lets
+// the metrics that drop queries (RBP, BestRR) reuse this unchanged: a category
+// that contributes nothing to a metric simply leaves its weight out.
+function weightedMean(rows, weights, pick) {
+    const byCategory = {};
+    for (const r of rows) {
+        (byCategory[r.category] ??= []).push(pick(r));
+    }
+    let weighted = 0,
+        present = 0;
+    for (const [category, values] of Object.entries(byCategory)) {
+        weighted += weights[category] * mean(values);
+        present += weights[category];
+    }
+    return present > 0 ? weighted / present : null;
 }
 
 const table = (header, rows) =>
@@ -416,6 +520,16 @@ const METRICS = {
             nothing could have been ranked better. A hit in tier \`i\` of \`T\`
             grades \`T - i\`, so a one-tier gold set is ordinary binary nDCG.`,
     },
+    weight: {
+        label: "weight",
+        note: `What share of the \`Overall\` figures the category is worth,
+            split evenly across its queries. Set from the shape of the real
+            queries in \`corpus/observed-queries.json\` where that corpus can
+            see them, and by stated judgement where it cannot - it is mined from
+            shared links, so it is blind to the searches that failed. Weighting
+            per category rather than per query means adding a query sharpens its
+            category without moving the mix.`,
+    },
     n: {
         label: "n",
         note: `How many queries the figure covers; the rest make no claim the
@@ -430,9 +544,10 @@ const METRICS = {
 const oneLine = (s) => s.trim().replace(/\s+/g, " ");
 
 // A metric named in a table. Only the first mention carries the footnote
-// marker - all seven land in the first `Overall` table - because the reference
-// is there to introduce the term, and repeating it on every table leaves the
-// reader looking past markers to reach the numbers.
+// marker - the seven metrics land in the first `Overall` table and `weight` in
+// the first `By category` one - because the reference is there to introduce the
+// term, and repeating it on every table leaves the reader looking past markers
+// to reach the numbers.
 const cited = new Set();
 const metric = (key) => {
     const first = !cited.has(key);
@@ -445,18 +560,19 @@ const FOOTNOTES = Object.entries(METRICS).map(
 );
 
 // One `## <label>` section: Overall + By-category tables for a single track.
-function section(label, results) {
+function section(label, results, weights) {
     // RBP only covers the closed-set queries that returned something, BestRR
     // only the ones that name a best answer.
     const closed = results.filter((r) => r.rbp !== null);
     const ordinal = results.filter((r) => r.bestrr !== null);
+    const agg = (rows, pick) => weightedMean(rows, weights, pick);
     const overall = {
-        success: mean(results.map((r) => r.success)),
-        mrr: mean(results.map((r) => r.mrr)),
-        recall: mean(results.map((r) => r.recall)),
-        rbp: closed.length ? mean(closed.map((r) => r.rbp)) : null,
-        bestrr: ordinal.length ? mean(ordinal.map((r) => r.bestrr)) : null,
-        ndcg: mean(results.map((r) => r.ndcg)),
+        success: agg(results, (r) => r.success),
+        mrr: agg(results, (r) => r.mrr),
+        recall: agg(results, (r) => r.recall),
+        rbp: agg(closed, (r) => r.rbp),
+        bestrr: agg(ordinal, (r) => r.bestrr),
+        ndcg: agg(results, (r) => r.ndcg),
     };
     const byCategory = {};
     for (const r of results) {
@@ -465,9 +581,13 @@ function section(label, results) {
     return [
         `## ${label}`,
         "",
-        `> ${results.length} queries.`,
+        `> ${results.length} queries in ${Object.keys(byCategory).length} categories.`,
         "",
         "### Overall",
+        "",
+        `> Weighted by category, so the figures track the query mix real users
+         type rather than the mix we happened to curate. The weights and where
+         they come from are in \`WEIGHTS\` in \`run.mjs\`.`.replace(/\s+/g, " "),
         "",
         table(
             ["metric", "value", metric("n")],
@@ -491,9 +611,13 @@ function section(label, results) {
         "",
         "### By category",
         "",
+        `> Unweighted - a category's mean is what it is. The \`weight\` column is
+         the share it contributed to \`Overall\` above.`.replace(/\s+/g, " "),
+        "",
         table(
             [
                 "category",
+                metric("weight"),
                 metric("n"),
                 metric("success"),
                 metric("mrr"),
@@ -511,6 +635,7 @@ function section(label, results) {
                     const ords = rs.filter((r) => r.bestrr !== null);
                     return [
                         cat,
+                        weights[cat].toFixed(2),
                         String(rs.length),
                         mean(rs.map((r) => r.success)).toFixed(3),
                         mean(rs.map((r) => r.mrr)).toFixed(3),
@@ -541,8 +666,8 @@ const lines = [
     "",
     `> Index: \`${INDEX}\`, k=${K}. Metric definitions are in the footnotes.`,
     "",
-    ...section("Packages", pkgResults),
-    ...section("Options", optResults),
+    ...section("Packages", pkgResults, WEIGHTS.packages),
+    ...section("Options", optResults, WEIGHTS.options),
     "<details>",
     "<summary>Per-query results</summary>",
     "",
