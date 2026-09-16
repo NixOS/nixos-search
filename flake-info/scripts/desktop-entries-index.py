@@ -1,5 +1,6 @@
 #!/usr/bin/env nix-shell
-#!nix-shell -i python3 -p "python3.withPackages(ps: with ps; [ requests zstandard brotli ])" -p nix imagemagick librsvg
+#!nix-shell -i python3 -p "python3.withPackages(ps: with ps; [ requests zstandard brotli ])"
+#!nix-shell -p nix imagemagick librsvg
 """Index desktop entries by reading them out of the binary cache.
 
 Get desktop entries and icons for Hydra-cached packages.
@@ -69,6 +70,8 @@ import subprocess
 import sys
 import tempfile
 import threading
+from collections.abc import Callable, Hashable, Iterator, Sequence
+from typing import Any, NotRequired, TypedDict
 
 import requests
 
@@ -138,22 +141,59 @@ DEFAULT_CACHE_DIR = (
 DEFAULT_EVAL_SYSTEMS = "x86_64-linux"
 
 
-def log(*args):
+# One node of a `.ls` file tree: `entries` holds the children of a directory,
+# `target` the destination of a symlink.
+type Node = dict[str, Any]
+
+# A whole `.ls` listing, whose `root` is the NAR's top-level node.
+type Listing = dict[str, Any]
+
+
+class DesktopEntry(TypedDict):
+    """The indexable fields of one `.desktop` file.
+
+    Mirrors the schema `pkgs/top-level/desktop-entries.nix` emits. `iconFile`
+    names the image written to `--icon-dir`; it is held per entry while
+    scanning and lifted to the package before output.
+    """
+
+    type: str | None
+    desktopName: str | None
+    genericName: str | None
+    comment: str | None
+    icon: str | None
+    keywords: list[str]
+    mimeTypes: list[str]
+    categories: list[str]
+    noDisplay: bool
+    localized: dict[str, dict[str, str | list[str]]]
+    iconFile: NotRequired[str | None]
+
+
+class Package(TypedDict):
+    """One attribute path's result: see the module docstring for `status`."""
+
+    status: str
+    desktopEntries: list[dict[str, Any]]
+    icons: dict[str, str]
+
+
+def log(*args: object) -> None:
     print(*args, file=sys.stderr, flush=True)
 
 
-def store_dir_prefix(store_dir):
+def store_dir_prefix(store_dir: str) -> str:
     """The store directory as paths under it spell it, i.e. with a trailing slash."""
     return store_dir.rstrip("/") + "/"
 
 
-def store_hash(store_path, store_dir):
+def store_hash(store_path: str, store_dir: str) -> str:
     """<store dir>/<hash>-name[/...] -> <hash>"""
     rest = store_path[len(store_dir_prefix(store_dir)) :]
     return rest.split("/", 1)[0].split("-", 1)[0]
 
 
-def decompress(data, compression):
+def decompress(data: bytes, compression: str) -> bytes:
     """Decompress a cache object according to its advertized compression."""
     if compression in ("none", "identity", ""):
         return data
@@ -173,25 +213,30 @@ def decompress(data, compression):
     raise ValueError(f"unsupported compression: {compression}")
 
 
-def split_semicolons(value):
+def split_semicolons(value: str) -> list[str]:
     return [item for item in value.split(";") if item != ""]
 
 
-def parse_desktop_file(text):
+class CaseSensitiveParser(configparser.ConfigParser):
+    """A parser that keeps key case, as the desktop entry spec requires."""
+
+    def optionxform(self, optionstr: str) -> str:
+        return optionstr
+
+
+def parse_desktop_file(text: str) -> DesktopEntry | None:
     """Extract the indexable fields of a `.desktop` file's main section.
 
     Mirrors the schema `pkgs/top-level/desktop-entries.nix` emits. `strict=False`
     tolerates the duplicate keys and repeated sections that occur in the wild.
     Every locale the file carries is kept; trimming them is the consumer's call.
     """
-    parser = configparser.ConfigParser(
+    parser = CaseSensitiveParser(
         strict=False,
         interpolation=None,
         delimiters=("=",),
         comment_prefixes=("#",),
     )
-    # Keys are case-sensitive in the desktop entry spec.
-    parser.optionxform = str
     try:
         parser.read_string(text)
     except configparser.Error:
@@ -200,13 +245,13 @@ def parse_desktop_file(text):
         return None
     section = parser["Desktop Entry"]
 
-    localized = {}
+    localized: dict[str, dict[str, str | list[str]]] = {}
     for key in section:
         match = LOCALIZED_KEY.match(key)
         if match is None:
             continue
         field = LOCALIZED_FIELDS[match.group(1)]
-        value = section.get(key)
+        value = section[key]
         # A localized `Icon` names a different icon rather than translating one,
         # so only the unlocalized name is resolved to an image.
         localized.setdefault(match.group(2), {})[field] = (
@@ -227,7 +272,7 @@ def parse_desktop_file(text):
     }
 
 
-def walk_listing(node, prefix=""):
+def walk_listing(node: Node, prefix: str = "") -> Iterator[tuple[str, Node]]:
     """Yield `(inner path, node)` for everything below a `.ls` tree node."""
     if node.get("type") != "directory":
         return
@@ -237,7 +282,7 @@ def walk_listing(node, prefix=""):
         yield from walk_listing(child, path)
 
 
-def icon_rank(path):
+def icon_rank(path: str) -> tuple[bool, bool, int]:
     """Sort key over the files that could supply one icon name, best first.
 
     A vector wins because it stays one, and among rasters the largest downscales
@@ -248,7 +293,9 @@ def icon_rank(path):
     return ("symbolic" in path, not path.endswith(".svg"), -int(size.group(1)) if size else 0)
 
 
-def render_icon(data, suffix, pixel_size, colors, svg_max_bytes):
+def render_icon(
+    data: bytes, suffix: str, pixel_size: int, colors: int, svg_max_bytes: int
+) -> tuple[bytes, str] | None:
     """-> `(bytes, extension)` for one icon file, or None if it cannot be read.
 
     An icon is passed through as it ships unless re-rendering was asked for, and
@@ -291,7 +338,7 @@ def render_icon(data, suffix, pixel_size, colors, svg_max_bytes):
         return (target.read_bytes(), ".png")
 
 
-def find_nixpkgs():
+def find_nixpkgs() -> str:
     """A nixpkgs checkout, from `$NIXPKGS` or `NIX_PATH`.
 
     Resolved to a real path rather than left as `<nixpkgs>`: only
@@ -320,8 +367,11 @@ def find_nixpkgs():
 
 
 def read_outpaths(
-    path=None, nixpkgs=None, store_dir=DEFAULT_STORE_DIR, systems=DEFAULT_EVAL_SYSTEMS
-):
+    path: str | None = None,
+    nixpkgs: str | None = None,
+    store_dir: str = DEFAULT_STORE_DIR,
+    systems: str = DEFAULT_EVAL_SYSTEMS,
+) -> dict[str, list[str]]:
     """attrpath -> [store path], as produced by `ci/eval/outpaths.nix`.
 
     That file documents itself as being called exactly this way.
@@ -338,7 +388,7 @@ def read_outpaths(
                 "--no-name",
                 "--out-path",
                 "-f",
-                os.path.join(nixpkgs, "ci/eval/outpaths.nix"),
+                str(pathlib.Path(nixpkgs) / "ci/eval/outpaths.nix"),
                 "--arg",
                 "systems",
                 json.dumps([system.strip() for system in systems.split(",") if system.strip()]),
@@ -348,12 +398,12 @@ def read_outpaths(
             text=True,
         ).stdout
 
-    result = {}
+    result: dict[str, list[str]] = {}
     for line in text.splitlines():
         fields = line.split()
         if len(fields) < 2:
             continue
-        paths = []
+        paths: list[str] = []
         for chunk in " ".join(fields[1:]).replace(";", " ").split():
             # Outputs are printed as `outname=/nix/store/...`, the default one
             # unprefixed. Scan every one: entries land in secondary outputs too.
@@ -372,15 +422,15 @@ def read_outpaths(
 class Scanner:
     def __init__(
         self,
-        cache_dir,
-        icon_dir=None,
-        icon_extensions=DEFAULT_ICON_EXTENSIONS,
-        icon_pixel_size=DEFAULT_ICON_PIXEL_SIZE,
-        icon_colors=DEFAULT_ICON_COLORS,
-        icon_svg_max_bytes=DEFAULT_ICON_SVG_MAX_BYTES,
-        cache_url=DEFAULT_CACHE_URL,
-        store_dir=DEFAULT_STORE_DIR,
-    ):
+        cache_dir: str | pathlib.Path,
+        icon_dir: str | pathlib.Path | None = None,
+        icon_extensions: Sequence[str] = DEFAULT_ICON_EXTENSIONS,
+        icon_pixel_size: int = DEFAULT_ICON_PIXEL_SIZE,
+        icon_colors: int = DEFAULT_ICON_COLORS,
+        icon_svg_max_bytes: int = DEFAULT_ICON_SVG_MAX_BYTES,
+        cache_url: str = DEFAULT_CACHE_URL,
+        store_dir: str = DEFAULT_STORE_DIR,
+    ) -> None:
         self.cache_url = cache_url.rstrip("/")
         self.store_dir = store_dir_prefix(store_dir)
         self.cache_dir = pathlib.Path(cache_dir)
@@ -407,13 +457,13 @@ class Scanner:
         self.local = threading.local()
 
     @property
-    def session(self):
+    def session(self) -> requests.Session:
         # requests.Session is not thread-safe; give each worker its own.
         if not hasattr(self.local, "session"):
             self.local.session = requests.Session()
         return self.local.session
 
-    def get(self, name, timeout=120):
+    def get(self, name: str, timeout: int = 120) -> requests.Response | None:
         """Fetch a cache object, or None on 404."""
         response = self.session.get(f"{self.cache_url}/{name}", timeout=timeout)
         if response.status_code == 404:
@@ -423,7 +473,7 @@ class Scanner:
 
     # -- phase A ----------------------------------------------------------
 
-    def listing(self, path_hash):
+    def listing(self, path_hash: str) -> Listing | None:
         """The NAR's file tree, or None if the path has not been built and pushed."""
         cached = self.cache_dir / "ls" / f"{path_hash}.json"
         if cached.exists():
@@ -443,7 +493,7 @@ class Scanner:
         cached.write_bytes(body)
         return json.loads(body)
 
-    def desktop_files(self, store_path):
+    def desktop_files(self, store_path: str) -> list[str] | None:
         """-> [`.desktop` name], or None if the path is not in the cache."""
         listing = self.listing(store_hash(store_path, self.store_dir))
         if listing is None:
@@ -457,7 +507,7 @@ class Scanner:
             return []
         return sorted(name for name in node.get("entries", {}) if name.endswith(".desktop"))
 
-    def resolve(self, path):
+    def resolve(self, path: str) -> tuple[str, str] | None:
         """-> `(hash, inner path)` of the regular file behind a path, or None.
 
         Wrapper packages -- `symlinkJoin`, `buildEnv`, the various wrapping
@@ -498,7 +548,7 @@ class Scanner:
             path = posixpath.join(posixpath.normpath(target), *components[index:])
         return None
 
-    def icon_paths(self, path_hash, icon):
+    def icon_paths(self, path_hash: str, icon: str) -> list[str]:
         """Files in one NAR that could supply the icon named `icon`, best first.
 
         An entry's `Icon` is usually a bare theme name, meaningful only once
@@ -524,7 +574,9 @@ class Scanner:
 
     # -- phase B ----------------------------------------------------------
 
-    def read_icon(self, path_hash, icon, member):
+    def read_icon(
+        self, path_hash: str, icon: str | None, member: Callable[[str], bytes | None]
+    ) -> str | None:
         """-> the name of the file written for an entry's icon, or None.
 
         Only icons in the same NAR as the desktop file are read. That still
@@ -560,13 +612,14 @@ class Scanner:
                     handle, partial = tempfile.mkstemp(dir=self.icon_dir)
                     with os.fdopen(handle, "wb") as file:
                         file.write(image)
+                    staged = pathlib.Path(partial)
                     # `mkstemp` opens private; these are files to be served.
-                    os.chmod(partial, 0o644)
-                    os.replace(partial, target)
+                    staged.chmod(0o644)
+                    staged.replace(target)
                 return name
         return None
 
-    def cached(self, known, inner):
+    def cached(self, known: dict[str, DesktopEntry | None], inner: str) -> bool:
         """Whether a cached entry can be served as it stands.
 
         `--icon-dir` is an output rather than part of the cache, so a run
@@ -576,17 +629,24 @@ class Scanner:
         if inner not in known:
             return False
         entry = known[inner]
-        if entry is None or self.icon_dir is None or not entry.get("iconFile"):
+        if entry is None or self.icon_dir is None:
             return True
-        return (self.icon_dir / entry["iconFile"]).exists()
+        icon_file = entry.get("iconFile")
+        if not icon_file:
+            return True
+        return (self.icon_dir / icon_file).exists()
 
-    def fetch_entries(self, path_hash, inner_paths):
+    def fetch_entries(self, path_hash: str, inner_paths: list[str]) -> dict[str, DesktopEntry]:
         """-> {inner path: parsed entry} for one NAR, icons written out."""
         cached = self.entry_cache / f"{path_hash}.json"
-        known = json.loads(cached.read_text()) if cached.exists() else {}
+        known: dict[str, DesktopEntry | None] = (
+            json.loads(cached.read_text()) if cached.exists() else {}
+        )
         wanted = [inner for inner in inner_paths if not self.cached(known, inner)]
         if not wanted:
-            return {inner: known[inner] for inner in inner_paths if known[inner] is not None}
+            return {
+                inner: entry for inner in inner_paths if (entry := known.get(inner)) is not None
+            }
 
         narinfo = self.get(f"{path_hash}.narinfo")
         if narinfo is None:
@@ -601,9 +661,9 @@ class Scanner:
             nar_path = pathlib.Path(workdir) / "package.nar"
             nar_path.write_bytes(decompress(nar.content, fields.get("Compression", "xz")))
 
-            def member(inner):
+            def member(inner: str) -> bytes | None:
                 extracted = subprocess.run(
-                    NIX + ["nar", "cat", str(nar_path), inner], capture_output=True
+                    [*NIX, "nar", "cat", str(nar_path), inner], capture_output=True
                 )
                 return extracted.stdout if extracted.returncode == 0 else None
 
@@ -615,12 +675,14 @@ class Scanner:
                 known[inner] = entry
 
         cached.write_text(json.dumps(known))
-        return {inner: known[inner] for inner in inner_paths if known[inner] is not None}
+        return {inner: entry for inner in inner_paths if (entry := known.get(inner)) is not None}
 
 
-def run_pool(jobs, function, items, label):
+def run_pool[Item: Hashable, Result](
+    jobs: int, function: Callable[[Item], Result], items: Sequence[Item], label: str
+) -> dict[Item, Result]:
     """Map `function` over `items` concurrently, reporting progress."""
-    results = {}
+    results: dict[Item, Result] = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
         futures = {pool.submit(function, item): item for item in items}
         for done, future in enumerate(concurrent.futures.as_completed(futures), start=1):
@@ -630,7 +692,7 @@ def run_pool(jobs, function, items, label):
     return results
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Index desktop entries by reading them out of the binary cache.",
         epilog="Results only cover revisions Hydra has already built; see the module docstring.",
@@ -732,10 +794,11 @@ def main():
     ]
     resolved = run_pool(args.jobs, scanner.resolve, targets, "resolved")
 
-    by_nar = {}
+    by_nar: dict[str, set[str]] = {}
     for target in targets:
-        if resolved[target] is not None:
-            by_nar.setdefault(resolved[target][0], set()).add(resolved[target][1])
+        location = resolved[target]
+        if location is not None:
+            by_nar.setdefault(location[0], set()).add(location[1])
 
     log(f"phase B: fetching {len(by_nar)} NARs holding desktop entries ...")
     contents = run_pool(
@@ -745,23 +808,28 @@ def main():
         "fetched",
     )
 
-    packages = {}
+    packages: dict[str, Package] = {}
     for attr, paths in outpaths.items():
-        entries = []
+        entries: list[dict[str, Any]] = []
         # Which file in `--icon-dir` serves each icon name, held per package
         # because its entries commonly share one icon.
-        icons = {}
+        icons: dict[str, str] = {}
         for path in paths:
             for name in flagged[path] or []:
                 location = resolved[f"{path}/{APPLICATIONS_DIR}/{name}"]
-                if location is not None:
-                    entry = contents.get(location[0], {}).get(location[1])
-                    if entry is not None:
-                        entry = dict(entry)
-                        icon_file = entry.pop("iconFile", None)
-                        if icon_file is not None:
-                            icons[entry["icon"]] = icon_file
-                        entries.append(entry)
+                if location is None:
+                    continue
+                found = contents.get(location[0], {}).get(location[1])
+                if found is None:
+                    continue
+                icon_file = found.get("iconFile")
+                icon = found["icon"]
+                if icon_file is not None and icon is not None:
+                    icons[icon] = icon_file
+                # A copy, because several attributes can share one NAR entry.
+                entry = dict(found)
+                entry.pop("iconFile", None)
+                entries.append(entry)
         if entries:
             status = "indexed"
         elif any(flagged[path] is None for path in paths):
@@ -774,7 +842,7 @@ def main():
         packages[attr] = {"status": status, "desktopEntries": entries, "icons": icons}
 
     all_entries = [entry for package in packages.values() for entry in package["desktopEntries"]]
-    summary = {
+    summary: dict[str, int] = {
         status: sum(1 for package in packages.values() if package["status"] == status)
         for status in ("indexed", "no-entries", "not-built", "unresolved")
     }
