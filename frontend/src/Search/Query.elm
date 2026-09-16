@@ -39,6 +39,8 @@ packagesBody query from size sort selectedBuckets =
             , { field = "package_maintainers_set", size = 20, include = Nothing }
             , { field = "package_teams_set", size = 20, include = Nothing }
             , { field = "package_platforms", size = 20, include = Just platforms }
+            , { field = "package_categories_set", size = 20, include = Nothing }
+            , { field = "package_mime_types_set", size = 20, include = Nothing }
             ]
 
         selectionFor : String -> List String
