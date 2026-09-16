@@ -21,7 +21,12 @@ stdenvNoCC.mkDerivation (finalAttrs: {
 
   postConfigure = elmPackages.fetchElmDeps {
     elmPackages = import ./elm-srcs.nix;
-    elmVersion = elmPackages.elm.version;
+    # The compiler that does the build is the one `package-lock.json` holds, not
+    # the one `nixpkgs` has. `ELM_HOME` keeps a directory for each compiler
+    # version, thus the packages must go in the directory of the npm compiler.
+    elmVersion = lib.head (
+      lib.splitString "-" (lib.importJSON ./package-lock.json).packages."node_modules/elm".version
+    );
     registryDat = ./registry.dat;
   };
 
