@@ -8,7 +8,7 @@ use reqwest::StatusCode;
 use reqwest::header::{HeaderMap, RETRY_AFTER};
 use serde::Deserialize;
 
-const API_BASE: &str = "https://repology.org/api/v1/projects/";
+const API_BASE: &str = "https://repology.amdmi3.ru/api/v1/projects/";
 const REPOLOGY_REPO: &str = "nix_unstable";
 const REQUEST_DELAY: Duration = Duration::from_secs(1);
 
