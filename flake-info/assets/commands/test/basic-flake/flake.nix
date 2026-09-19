@@ -50,13 +50,13 @@
               some = "attrset";
             };
           }
-          // pkgs.lib.optionalAttrs pkgs.stdenv.isDarwin {
+          // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
             # Darwin-only package
             darwin-specific = pkgs.writeShellScriptBin "darwin-test" ''
               echo "Darwin only"
             '';
           }
-          // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
+          // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
             # Linux-only package
             linux-specific = pkgs.writeShellScriptBin "linux-test" ''
               echo "Linux only"
@@ -92,7 +92,7 @@
           partly-throwing-app = {
             type = "app";
             program =
-              if pkgs.stdenv.isDarwin then
+              if pkgs.stdenv.hostPlatform.isDarwin then
                 throw "this app is unsupported on darwin"
               else
                 pkgs.hello.outPath + "/bin/hello";

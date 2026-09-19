@@ -16,7 +16,7 @@ pkgs.rustPlatform.buildRustPackage rec {
       openssl.dev
       makeWrapper
     ]
-    ++ lib.optional pkgs.stdenv.isDarwin [
+    ++ lib.optional pkgs.stdenv.hostPlatform.isDarwin [
       libiconv
       apple-sdk
     ];
