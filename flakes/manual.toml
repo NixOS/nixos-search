@@ -455,6 +455,11 @@ repo = "llm-agents.nix"
 
 [[sources]]
 type = "github"
+owner = "ominit"
+repo = "helium-browser-flake"
+
+[[sources]]
+type = "github"
 owner = "outagedeck"
 repo = "cli"
 
