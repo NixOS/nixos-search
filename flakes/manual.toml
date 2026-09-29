@@ -244,6 +244,11 @@ repo = "nixpkgs-multiverse"
 
 [[sources]]
 type = "github"
+owner = "Geekiac"
+repo = "nix-interactive"
+
+[[sources]]
+type = "github"
 owner = "gmodena"
 repo = "nix-flatpak"
 
