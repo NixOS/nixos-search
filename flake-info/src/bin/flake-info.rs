@@ -95,6 +95,43 @@ enum Command {
                     the signal."
         )]
         repology_counts_file: Option<PathBuf>,
+
+        #[structopt(
+            long = "desktop-entries-file",
+            help = "Read desktop entries (the JSON written by \
+                    `flake-info/scripts/desktop-entries-index.py`) from this file. \
+                    Run that script with `--icon-extensions png,svg`: it also scans \
+                    for XPM by default, which no browser renders and this importer \
+                    therefore drops. A missing/unreadable file drops the signal."
+        )]
+        desktop_entries_file: Option<PathBuf>,
+
+        #[structopt(
+            long = "icon-dir",
+            help = "Read the desktop entry images from this directory: the \
+                    `--icon-dir` the scanner above wrote them to, which its index \
+                    names rather than carries. Omit to index only the icons \
+                    `--icon-theme-dir` supplies."
+        )]
+        icon_dir: Option<PathBuf>,
+
+        #[structopt(
+            long = "icon-theme-dir",
+            help = "Look icons up by name in this freedesktop icon theme directory (for \
+                    example `<papirus-icon-theme>/share/icons/Papirus`), for desktop \
+                    entries that arrived without one. Omit to index only the icons a \
+                    package itself supplies."
+        )]
+        icon_theme_dir: Option<PathBuf>,
+
+        #[structopt(
+            long = "screenshot-dir",
+            help = "Read the AppStream screenshots from this directory: the \
+                    `--screenshot-dir` the scanner above mirrored them to, which \
+                    its index names rather than carries. Omit to index the \
+                    packages without screenshots."
+        )]
+        screenshot_dir: Option<PathBuf>,
     },
 
     #[structopt(about = "Import nixpkgs channel from archive or local git path")]
@@ -369,6 +406,10 @@ async fn run_command(
             attribute,
             packages_json_url,
             repology_counts_file,
+            desktop_entries_file,
+            icon_dir,
+            icon_theme_dir,
+            screenshot_dir,
         } => {
             let nixpkgs = Source::nixpkgs(channel, user_agent)
                 .await
@@ -398,6 +439,10 @@ async fn run_command(
                         &packages_json_url,
                         &repology_counts_file,
                         &user_agent,
+                        &desktop_entries_file,
+                        &icon_dir,
+                        &icon_theme_dir,
+                        &screenshot_dir,
                     )
                     .map_err(FlakeInfoError::Nixpkgs)
                 }),
@@ -435,6 +480,10 @@ async fn run_command(
                         &None,
                         &None,
                         &user_agent,
+                        &None,
+                        &None,
+                        &None,
+                        &None,
                     )
                     .map_err(FlakeInfoError::Nixpkgs)
                 }),
@@ -459,16 +508,22 @@ async fn run_command(
             let (exports_and_hashes, errors) = sources
                 .iter()
                 .map(|source| match source {
-                    Source::Nixpkgs(nixpkgs) => {
-                        flake_info::process_nixpkgs(source, &kind, &None, &None, &None, &user_agent)
-                            .with_context(|| {
-                                format!(
-                                    "While processing nixpkgs archive {}",
-                                    source.to_flake_ref()
-                                )
-                            })
-                            .map(|result| (result, nixpkgs.git_ref.to_owned()))
-                    }
+                    Source::Nixpkgs(nixpkgs) => flake_info::process_nixpkgs(
+                        source,
+                        &kind,
+                        &None,
+                        &None,
+                        &None,
+                        &user_agent,
+                        &None,
+                        &None,
+                        &None,
+                        &None,
+                    )
+                    .with_context(|| {
+                        format!("While processing nixpkgs archive {}", source.to_flake_ref())
+                    })
+                    .map(|result| (result, nixpkgs.git_ref.to_owned())),
                     _ => flake_info::process_flake(source, &kind, temp_store, &extra, with_gc)
                         .with_context(|| {
                             format!("While processing flake {}", source.to_flake_ref())
