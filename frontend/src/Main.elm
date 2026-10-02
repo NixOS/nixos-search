@@ -668,13 +668,16 @@ viewThemeToggle resolvedTheme =
             else
                 ( themeDarkIconPath, "Switch to the dark theme" )
     in
-    viewButton
-        [ class "theme-toggle"
-        , title label
-        , attribute "aria-label" label
-        , onClick ToggleTheme
+    -- The wrapper sets the position in the navbar. The dark theme sets
+    -- `margin: 0` on all `.btn` elements.
+    div [ class "theme-toggle" ]
+        [ viewButton
+            [ title label
+            , attribute "aria-label" label
+            , onClick ToggleTheme
+            ]
+            [ span [ class "theme-icon" ] [ getThemeSvgIcon iconPath ] ]
         ]
-        [ span [ class "theme-icon" ] [ getThemeSvgIcon iconPath ] ]
 
 
 viewPage : Model -> Html Msg
