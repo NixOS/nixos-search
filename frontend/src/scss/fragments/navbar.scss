@@ -1,4 +1,3 @@
-@use "../mixins" as *;
 
 .navbar {
   margin-bottom: 20px;
@@ -87,15 +86,9 @@
     }
 
     & + .theme-toggle {
-      /* theme selection */
-      @include radio-segmented-group;
       display: flex;
       margin: unset;
       margin-left: auto;
-
-      .theme-radio {
-        display: flex;
-      }
     }
   }
 }
