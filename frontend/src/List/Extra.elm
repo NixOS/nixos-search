@@ -1,4 +1,4 @@
-module List.Extra exposing (find, unique)
+module List.Extra exposing (find, init, last, unique)
 
 import Set
 
@@ -15,6 +15,16 @@ find p list =
 
             else
                 find p t
+
+
+last : List a -> Maybe a
+last =
+    List.reverse >> List.head
+
+
+init : List a -> Maybe (List a)
+init =
+    List.reverse >> List.tail >> Maybe.map List.reverse
 
 
 unique : List comparable -> List comparable
