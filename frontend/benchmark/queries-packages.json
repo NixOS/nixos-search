@@ -1,68 +1,105 @@
 [
     {
         "id": "g001",
-        "q": "ripgrep",
-        "category": "exact",
-        "relevant": [["pkg:ripgrep"]]
-    },
-    {
-        "id": "g002",
-        "q": "htop",
-        "category": "exact",
-        "exhaustive": true,
-        "relevant": [["pkg:htop"], ["pkg:htop-vim"]]
-    },
-    {
-        "id": "g003",
-        "q": "jq",
-        "category": "exact",
-        "relevant": [["pkg:jq"]]
-    },
-    {
-        "id": "g004",
-        "q": "tmux",
-        "category": "exact",
-        "relevant": [["pkg:tmux"]]
-    },
-    {
-        "id": "g005",
-        "q": "neovim",
-        "category": "exact",
-        "relevant": [["pkg:neovim"]]
-    },
-    {
-        "id": "g006",
-        "q": "fzf",
-        "category": "exact",
-        "relevant": [["pkg:fzf"]]
-    },
-    {
-        "id": "g007",
         "q": "bat",
         "category": "exact",
         "exhaustive": true,
         "relevant": [["pkg:bat"]]
     },
     {
-        "id": "g008",
-        "q": "nginx",
+        "id": "g002",
+        "q": "caddy",
         "category": "exact",
-        "relevant": [["pkg:nginx"], ["pkg:nginxMainline", "pkg:nginxStable"]]
+        "exhaustive": true,
+        "relevant": [["pkg:caddy"]]
     },
     {
-        "id": "g009",
+        "id": "g003",
+        "q": "continuwuity",
+        "category": "exact",
+        "exhaustive": true,
+        "relevant": [["pkg:matrix-continuwuity"]]
+    },
+    {
+        "id": "g004",
+        "q": "fzf",
+        "category": "exact",
+        "relevant": [["pkg:fzf"]]
+    },
+    {
+        "id": "g005",
+        "q": "gitea",
+        "category": "exact",
+        "relevant": [["pkg:gitea"]]
+    },
+    {
+        "id": "g006",
         "q": "grafana",
         "category": "exact",
         "relevant": [["pkg:grafana"]]
     },
     {
-        "id": "g010",
-        "q": "prometheus",
+        "id": "g007",
+        "q": "htop",
         "category": "exact",
-        "relevant": [["pkg:prometheus"]]
+        "exhaustive": true,
+        "relevant": [["pkg:htop"], ["pkg:htop-vim"]]
+    },
+    {
+        "id": "g008",
+        "q": "jellyfin",
+        "category": "exact",
+        "relevant": [["pkg:jellyfin"]]
+    },
+    {
+        "id": "g009",
+        "q": "jq",
+        "category": "exact",
+        "relevant": [["pkg:jq"]]
+    },
+    {
+        "id": "g010",
+        "q": "neovim",
+        "category": "exact",
+        "relevant": [["pkg:neovim"]]
     },
     {
         "id": "g011",
+        "q": "nginx",
+        "category": "exact",
+        "relevant": [["pkg:nginx"], ["pkg:nginxMainline", "pkg:nginxStable"]]
+    },
+    {
+        "id": "g012",
+        "q": "node",
+        "category": "exact",
+        "exhaustive": true,
+        "relevant": [
+            ["pkg:nodejs"],
+            [
+                "pkg:nodejs_latest",
+                "pkg:nodejs_26",
+                "pkg:nodejs_24",
+                "pkg:nodejs_22",
+                "pkg:nodejs_20"
+            ],
+            [
+                "pkg:nodejs-slim",
+                "pkg:nodejs-slim_latest",
+                "pkg:nodejs-slim_26",
+                "pkg:nodejs-slim_24",
+                "pkg:nodejs-slim_22"
+            ]
+        ]
+    },
+    {
+        "id": "g013",
+        "q": "openssh",
+        "category": "exact",
+        "relevant": [["pkg:openssh"]]
+    },
+    {
+        "id": "g014",
         "q": "postgresql",
         "category": "exact",
         "exhaustive": true,
@@ -86,32 +123,119 @@
         ]
     },
     {
-        "id": "g012",
-        "q": "openssh",
+        "id": "g015",
+        "q": "prometheus",
         "category": "exact",
-        "relevant": [["pkg:openssh"]]
+        "relevant": [["pkg:prometheus"]]
     },
     {
-        "id": "g013",
-        "q": "caddy",
+        "id": "g016",
+        "q": "ripgrep",
         "category": "exact",
-        "exhaustive": true,
+        "relevant": [["pkg:ripgrep"]]
+    },
+    {
+        "id": "g017",
+        "q": "tmux",
+        "category": "exact",
+        "relevant": [["pkg:tmux"]]
+    },
+    {
+        "id": "g100",
+        "q": "borgb",
+        "category": "prefix",
+        "relevant": [["pkg:borgbackup"]]
+    },
+    {
+        "id": "g101",
+        "q": "cadd",
+        "category": "prefix",
         "relevant": [["pkg:caddy"]]
     },
     {
-        "id": "g014",
-        "q": "gitea",
-        "category": "exact",
-        "relevant": [["pkg:gitea"]]
+        "id": "g102",
+        "q": "chrom",
+        "category": "prefix",
+        "relevant": [["pkg:chromium"]]
     },
     {
-        "id": "g015",
-        "q": "jellyfin",
-        "category": "exact",
+        "id": "g103",
+        "q": "dnsma",
+        "category": "prefix",
+        "relevant": [["pkg:dnsmasq"]]
+    },
+    {
+        "id": "g104",
+        "q": "elastic",
+        "category": "prefix",
+        "relevant": [["pkg:elasticsearch"], ["pkg:elasticsearch7"]]
+    },
+    {
+        "id": "g105",
+        "q": "fail2",
+        "category": "prefix",
+        "exhaustive": true,
+        "relevant": [["pkg:fail2ban"]]
+    },
+    {
+        "id": "g106",
+        "q": "graf",
+        "category": "prefix",
+        "relevant": [["pkg:grafana"]]
+    },
+    {
+        "id": "g107",
+        "q": "jelly",
+        "category": "prefix",
         "relevant": [["pkg:jellyfin"]]
     },
     {
-        "id": "g026",
+        "id": "g108",
+        "q": "mariad",
+        "category": "prefix",
+        "relevant": [
+            ["pkg:mariadb"],
+            [
+                "pkg:mariadb_1011",
+                "pkg:mariadb_106",
+                "pkg:mariadb_114",
+                "pkg:mariadb_118"
+            ]
+        ]
+    },
+    {
+        "id": "g109",
+        "q": "mosqui",
+        "category": "prefix",
+        "relevant": [["pkg:mosquitto"]]
+    },
+    {
+        "id": "g110",
+        "q": "neovi",
+        "category": "prefix",
+        "relevant": [["pkg:neovim"]]
+    },
+    {
+        "id": "g111",
+        "q": "nextcl",
+        "category": "prefix",
+        "relevant": [
+            ["pkg:nextcloud34"],
+            ["pkg:nextcloud33"],
+            ["pkg:nextcloud32"]
+        ]
+    },
+    {
+        "id": "g112",
+        "q": "ngin",
+        "category": "prefix",
+        "relevant": [
+            ["pkg:nginx"],
+            ["pkg:nginxMainline", "pkg:nginxStable", "pkg:nginxShibboleth"]
+        ]
+    },
+    {
+        "id": "g113",
         "q": "postgres",
         "category": "prefix",
         "exhaustive": true,
@@ -135,75 +259,133 @@
         ]
     },
     {
-        "id": "g027",
-        "q": "graf",
-        "category": "prefix",
-        "relevant": [["pkg:grafana"]]
-    },
-    {
-        "id": "g028",
+        "id": "g114",
         "q": "prom",
         "category": "prefix",
         "relevant": [["pkg:prometheus"]]
     },
     {
-        "id": "g029",
+        "id": "g115",
         "q": "ripgr",
         "category": "prefix",
         "relevant": [["pkg:ripgrep"]]
     },
     {
-        "id": "g030",
-        "q": "jelly",
-        "category": "prefix",
-        "relevant": [["pkg:jellyfin"]]
-    },
-    {
-        "id": "g031",
+        "id": "g116",
         "q": "syncth",
         "category": "prefix",
         "relevant": [["pkg:syncthing"]]
     },
     {
-        "id": "g035",
-        "q": "ngin",
-        "category": "prefix",
-        "relevant": [
-            ["pkg:nginx"],
-            ["pkg:nginxMainline", "pkg:nginxStable", "pkg:nginxShibboleth"]
-        ]
-    },
-    {
-        "id": "g036",
-        "q": "mariad",
-        "category": "prefix",
-        "relevant": [
-            ["pkg:mariadb"],
-            [
-                "pkg:mariadb_1011",
-                "pkg:mariadb_106",
-                "pkg:mariadb_114",
-                "pkg:mariadb_118"
-            ]
-        ]
-    },
-    {
-        "id": "g037",
-        "q": "fail2",
-        "category": "prefix",
-        "exhaustive": true,
-        "relevant": [["pkg:fail2ban"]]
-    },
-    {
-        "id": "g038",
+        "id": "g117",
         "q": "tailsc",
         "category": "prefix",
         "relevant": [["pkg:tailscale"]]
     },
     {
-        "id": "g039",
-        "q": "nextcl",
+        "id": "g118",
+        "q": "thunder",
         "category": "prefix",
+        "relevant": [["pkg:thunderbird"]]
+    },
+    {
+        "id": "g119",
+        "q": "traef",
+        "category": "prefix",
+        "relevant": [["pkg:traefik"]]
+    },
+    {
+        "id": "g120",
+        "q": "transm",
+        "category": "prefix",
+        "relevant": [["pkg:transmission_4"]]
+    },
+    {
+        "id": "g121",
+        "q": "unbou",
+        "category": "prefix",
+        "relevant": [["pkg:unbound"]]
+    },
+    {
+        "id": "g150",
+        "q": "cady",
+        "category": "typo",
+        "exhaustive": true,
+        "relevant": [["pkg:caddy"]]
+    },
+    {
+        "id": "g151",
+        "q": "chromiun",
+        "category": "typo",
+        "exhaustive": true,
+        "relevant": [["pkg:chromium"], ["pkg:ungoogled-chromium"]]
+    },
+    {
+        "id": "g152",
+        "q": "dcoker",
+        "category": "typo",
+        "exhaustive": true,
+        "relevant": [
+            ["pkg:docker"],
+            ["pkg:docker_25", "pkg:docker_29", "pkg:docker-client"]
+        ]
+    },
+    {
+        "id": "g153",
+        "q": "fial2ban",
+        "category": "typo",
+        "exhaustive": true,
+        "relevant": [["pkg:fail2ban"]]
+    },
+    {
+        "id": "g154",
+        "q": "firefx",
+        "category": "typo",
+        "exhaustive": true,
+        "relevant": [
+            ["pkg:firefox"],
+            [
+                "pkg:firefox-unwrapped",
+                "pkg:firefox-esr-140-unwrapped",
+                "pkg:firefox-esr-153-unwrapped"
+            ]
+        ]
+    },
+    {
+        "id": "g155",
+        "q": "gitae",
+        "category": "typo",
+        "relevant": [["pkg:gitea"]]
+    },
+    {
+        "id": "g156",
+        "q": "grafan",
+        "category": "typo",
+        "relevant": [["pkg:grafana"]]
+    },
+    {
+        "id": "g157",
+        "q": "jellifin",
+        "category": "typo",
+        "relevant": [["pkg:jellyfin"]]
+    },
+    {
+        "id": "g158",
+        "q": "kubctl",
+        "category": "typo",
+        "relevant": [["pkg:kubectl"]]
+    },
+    {
+        "id": "g159",
+        "q": "mosquito",
+        "category": "typo",
+        "exhaustive": true,
+        "relevant": [["pkg:mosquitto"]]
+    },
+    {
+        "id": "g160",
+        "q": "nextcoud",
+        "category": "typo",
         "relevant": [
             ["pkg:nextcloud34"],
             ["pkg:nextcloud33"],
@@ -211,79 +393,28 @@
         ]
     },
     {
-        "id": "g040",
-        "q": "traef",
-        "category": "prefix",
-        "relevant": [["pkg:traefik"]]
-    },
-    {
-        "id": "g041",
-        "q": "cadd",
-        "category": "prefix",
-        "relevant": [["pkg:caddy"]]
-    },
-    {
-        "id": "g042",
-        "q": "transm",
-        "category": "prefix",
-        "relevant": [["pkg:transmission_4"]]
-    },
-    {
-        "id": "g043",
-        "q": "unbou",
-        "category": "prefix",
-        "relevant": [["pkg:unbound"]]
-    },
-    {
-        "id": "g044",
-        "q": "dnsma",
-        "category": "prefix",
-        "relevant": [["pkg:dnsmasq"]]
-    },
-    {
-        "id": "g045",
-        "q": "neovi",
-        "category": "prefix",
-        "relevant": [["pkg:neovim"]]
-    },
-    {
-        "id": "g046",
-        "q": "thunder",
-        "category": "prefix",
-        "relevant": [["pkg:thunderbird"]]
-    },
-    {
-        "id": "g047",
-        "q": "chrom",
-        "category": "prefix",
-        "relevant": [["pkg:chromium"]]
-    },
-    {
-        "id": "g048",
-        "q": "borgb",
-        "category": "prefix",
-        "relevant": [["pkg:borgbackup"]]
-    },
-    {
-        "id": "g049",
-        "q": "mosqui",
-        "category": "prefix",
-        "relevant": [["pkg:mosquitto"]]
-    },
-    {
-        "id": "g050",
-        "q": "elastic",
-        "category": "prefix",
-        "relevant": [["pkg:elasticsearch"], ["pkg:elasticsearch7"]]
-    },
-    {
-        "id": "g051",
+        "id": "g161",
         "q": "ngnix",
         "category": "typo",
         "relevant": [["pkg:nginx"], ["pkg:nginxStable", "pkg:nginxMainline"]]
     },
     {
-        "id": "g052",
+        "id": "g162",
+        "q": "openssg",
+        "category": "typo",
+        "exhaustive": true,
+        "relevant": [
+            ["pkg:openssh"],
+            [
+                "pkg:opensshWithKerberos",
+                "pkg:openssh_gssapi",
+                "pkg:openssh_hpn",
+                "pkg:openssh_hpnWithKerberos"
+            ]
+        ]
+    },
+    {
+        "id": "g163",
         "q": "postgrsql",
         "category": "typo",
         "exhaustive": true,
@@ -307,45 +438,26 @@
         ]
     },
     {
-        "id": "g053",
+        "id": "g164",
         "q": "promethues",
         "category": "typo",
         "relevant": [["pkg:prometheus"]]
     },
     {
-        "id": "g054",
-        "q": "grafan",
-        "category": "typo",
-        "relevant": [["pkg:grafana"]]
-    },
-    {
-        "id": "g055",
-        "q": "firefx",
+        "id": "g165",
+        "q": "redsi",
         "category": "typo",
         "exhaustive": true,
-        "relevant": [
-            ["pkg:firefox"],
-            [
-                "pkg:firefox-unwrapped",
-                "pkg:firefox-esr-140-unwrapped",
-                "pkg:firefox-esr-153-unwrapped"
-            ]
-        ]
+        "relevant": [["pkg:redis"]]
     },
     {
-        "id": "g056",
+        "id": "g166",
         "q": "ripgrap",
         "category": "typo",
         "relevant": [["pkg:ripgrep"]]
     },
     {
-        "id": "g057",
-        "q": "jellifin",
-        "category": "typo",
-        "relevant": [["pkg:jellyfin"]]
-    },
-    {
-        "id": "g060",
+        "id": "g167",
         "q": "samaba",
         "category": "typo",
         "exhaustive": true,
@@ -355,48 +467,27 @@
         ]
     },
     {
-        "id": "g061",
-        "q": "redsi",
+        "id": "g168",
+        "q": "syncthign",
         "category": "typo",
         "exhaustive": true,
-        "relevant": [["pkg:redis"]]
+        "relevant": [["pkg:syncthing"]]
     },
     {
-        "id": "g062",
-        "q": "openssg",
+        "id": "g169",
+        "q": "tailscle",
         "category": "typo",
         "exhaustive": true,
-        "relevant": [
-            ["pkg:openssh"],
-            [
-                "pkg:opensshWithKerberos",
-                "pkg:openssh_gssapi",
-                "pkg:openssh_hpn",
-                "pkg:openssh_hpnWithKerberos"
-            ]
-        ]
+        "relevant": [["pkg:tailscale"]]
     },
     {
-        "id": "g063",
-        "q": "kubctl",
-        "category": "typo",
-        "relevant": [["pkg:kubectl"]]
-    },
-    {
-        "id": "g064",
+        "id": "g170",
         "q": "terrafrom",
         "category": "typo",
         "relevant": [["pkg:terraform"], ["pkg:terraform_1"]]
     },
     {
-        "id": "g065",
-        "q": "chromiun",
-        "category": "typo",
-        "exhaustive": true,
-        "relevant": [["pkg:chromium"], ["pkg:ungoogled-chromium"]]
-    },
-    {
-        "id": "g066",
+        "id": "g171",
         "q": "thunderbrid",
         "category": "typo",
         "exhaustive": true,
@@ -417,33 +508,7 @@
         ]
     },
     {
-        "id": "g067",
-        "q": "dcoker",
-        "category": "typo",
-        "exhaustive": true,
-        "relevant": [
-            ["pkg:docker"],
-            ["pkg:docker_25", "pkg:docker_29", "pkg:docker-client"]
-        ]
-    },
-    {
-        "id": "g068",
-        "q": "nextcoud",
-        "category": "typo",
-        "relevant": [
-            ["pkg:nextcloud34"],
-            ["pkg:nextcloud33"],
-            ["pkg:nextcloud32"]
-        ]
-    },
-    {
-        "id": "g069",
-        "q": "gitae",
-        "category": "typo",
-        "relevant": [["pkg:gitea"]]
-    },
-    {
-        "id": "g070",
+        "id": "g172",
         "q": "vaultwardn",
         "category": "typo",
         "exhaustive": true,
@@ -458,48 +523,79 @@
         ]
     },
     {
-        "id": "g071",
-        "q": "tailscle",
-        "category": "typo",
-        "exhaustive": true,
-        "relevant": [["pkg:tailscale"]]
+        "id": "g200",
+        "q": "container runtime",
+        "category": "multiterm",
+        "relevant": [
+            ["pkg:docker", "pkg:docker_25", "pkg:docker_29", "pkg:podman"]
+        ]
     },
     {
-        "id": "g072",
-        "q": "fial2ban",
-        "category": "typo",
-        "exhaustive": true,
-        "relevant": [["pkg:fail2ban"]]
+        "id": "g201",
+        "q": "docker compose",
+        "category": "multiterm",
+        "relevant": [["pkg:docker-compose"]]
     },
     {
-        "id": "g073",
-        "q": "mosquito",
-        "category": "typo",
-        "exhaustive": true,
-        "relevant": [["pkg:mosquitto"]]
-    },
-    {
-        "id": "g074",
-        "q": "syncthign",
-        "category": "typo",
-        "exhaustive": true,
-        "relevant": [["pkg:syncthing"]]
-    },
-    {
-        "id": "g075",
-        "q": "cady",
-        "category": "typo",
-        "exhaustive": true,
-        "relevant": [["pkg:caddy"]]
-    },
-    {
-        "id": "g101",
+        "id": "g202",
         "q": "docker container",
         "category": "multiterm",
         "relevant": [["pkg:docker"], ["pkg:docker_25", "pkg:docker_29"]]
     },
     {
-        "id": "g102",
+        "id": "g203",
+        "q": "home assistant",
+        "category": "multiterm",
+        "relevant": [["pkg:home-assistant"]]
+    },
+    {
+        "id": "g204",
+        "q": "matrix synapse",
+        "category": "multiterm",
+        "relevant": [["pkg:matrix-synapse"]]
+    },
+    {
+        "id": "g205",
+        "q": "mesh vpn",
+        "category": "multiterm",
+        "relevant": [["pkg:tailscale"]]
+    },
+    {
+        "id": "g206",
+        "q": "next cloud",
+        "category": "multiterm",
+        "relevant": [
+            ["pkg:nextcloud34"],
+            ["pkg:nextcloud33"],
+            ["pkg:nextcloud32"]
+        ]
+    },
+    {
+        "id": "g207",
+        "q": "object storage",
+        "category": "multiterm",
+        "relevant": [["pkg:minio"]]
+    },
+    {
+        "id": "g208",
+        "q": "paperless ngx",
+        "category": "multiterm",
+        "relevant": [["pkg:paperless-ngx"]]
+    },
+    {
+        "id": "g209",
+        "q": "password manager",
+        "category": "multiterm",
+        "relevant": [["pkg:vaultwarden"]]
+    },
+    {
+        "id": "g210",
+        "q": "secret management",
+        "category": "multiterm",
+        "relevant": [["pkg:vault"]]
+    },
+    {
+        "id": "g211",
         "q": "ssh daemon",
         "category": "multiterm",
         "relevant": [
@@ -513,150 +609,91 @@
         ]
     },
     {
-        "id": "g103",
-        "q": "home assistant",
-        "category": "multiterm",
-        "relevant": [["pkg:home-assistant"]]
-    },
-    {
-        "id": "g104",
-        "q": "matrix synapse",
-        "category": "multiterm",
-        "relevant": [["pkg:matrix-synapse"]]
-    },
-    {
-        "id": "g105",
-        "q": "docker compose",
-        "category": "multiterm",
-        "relevant": [["pkg:docker-compose"]]
-    },
-    {
-        "id": "g106",
+        "id": "g212",
         "q": "vault warden",
         "category": "multiterm",
         "relevant": [["pkg:vaultwarden"]]
     },
     {
-        "id": "g107",
-        "q": "next cloud",
-        "category": "multiterm",
-        "relevant": [
-            ["pkg:nextcloud34"],
-            ["pkg:nextcloud33"],
-            ["pkg:nextcloud32"]
-        ]
-    },
-    {
-        "id": "g108",
-        "q": "paperless ngx",
-        "category": "multiterm",
-        "relevant": [["pkg:paperless-ngx"]]
-    },
-    {
-        "id": "g118",
-        "q": "object storage",
-        "category": "multiterm",
-        "relevant": [["pkg:minio"]]
-    },
-    {
-        "id": "g119",
-        "q": "secret management",
-        "category": "multiterm",
-        "relevant": [["pkg:vault"]]
-    },
-    {
-        "id": "g122",
-        "q": "container runtime",
-        "category": "multiterm",
-        "relevant": [
-            ["pkg:docker", "pkg:docker_25", "pkg:docker_29", "pkg:podman"]
-        ]
-    },
-    {
-        "id": "g123",
-        "q": "mesh vpn",
-        "category": "multiterm",
-        "relevant": [["pkg:tailscale"]]
-    },
-    {
-        "id": "g124",
-        "q": "password manager",
-        "category": "multiterm",
-        "relevant": [["pkg:vaultwarden"]]
-    },
-    {
-        "id": "g126",
-        "q": "web server",
-        "category": "intent",
-        "relevant": [
-            [
-                "pkg:nginx",
-                "pkg:nginxMainline",
-                "pkg:nginxStable",
-                "pkg:nginxShibboleth",
-                "pkg:caddy"
-            ]
-        ]
-    },
-    {
-        "id": "g127",
-        "q": "reverse proxy",
-        "category": "intent",
-        "relevant": [
-            [
-                "pkg:nginx",
-                "pkg:nginxMainline",
-                "pkg:nginxStable",
-                "pkg:nginxShibboleth",
-                "pkg:caddy",
-                "pkg:traefik"
-            ]
-        ]
-    },
-    {
-        "id": "g128",
-        "q": "version control system",
-        "category": "intent",
-        "relevant": [["pkg:git", "pkg:gitFull", "pkg:gitMinimal", "pkg:gitSVN"]]
-    },
-    {
-        "id": "g129",
-        "q": "interactive process viewer",
-        "category": "intent",
-        "relevant": [["pkg:htop", "pkg:btop", "pkg:xfce4-taskmanager"]]
-    },
-    {
-        "id": "g130",
-        "q": "virtual private network",
-        "category": "intent",
-        "relevant": [["pkg:tailscale"]]
-    },
-    {
-        "id": "g131",
-        "q": "self hosted password manager",
-        "category": "intent",
-        "relevant": [["pkg:vaultwarden"]]
-    },
-    {
-        "id": "g132",
-        "q": "media streaming server",
-        "category": "intent",
-        "relevant": [["pkg:jellyfin"]]
-    },
-    {
-        "id": "g133",
+        "id": "g250",
         "q": "backup tool",
         "category": "intent",
         "relevant": [["pkg:restic", "pkg:borgbackup"]]
     },
     {
-        "id": "g134",
+        "id": "g251",
+        "q": "bittorrent client",
+        "category": "intent",
+        "relevant": [["pkg:transmission_4"]]
+    },
+    {
+        "id": "g252",
+        "q": "caching dns resolver",
+        "category": "intent",
+        "relevant": [["pkg:unbound", "pkg:dnsmasq"]]
+    },
+    {
+        "id": "g253",
+        "q": "desktop email client",
+        "category": "intent",
+        "relevant": [["pkg:thunderbird"]]
+    },
+    {
+        "id": "g254",
+        "q": "document management",
+        "category": "intent",
+        "relevant": [["pkg:paperless-ngx"]]
+    },
+    {
+        "id": "g255",
         "q": "file synchronization",
         "category": "intent",
         "relevant": [["pkg:syncthing", "pkg:maestral"]]
     },
     {
-        "id": "g135",
+        "id": "g256",
+        "q": "graphical web browser",
+        "category": "intent",
+        "relevant": [["pkg:firefox", "pkg:chromium"]]
+    },
+    {
+        "id": "g257",
+        "q": "in memory key value store",
+        "category": "intent",
+        "relevant": [["pkg:redis"]]
+    },
+    {
+        "id": "g258",
+        "q": "interactive process viewer",
+        "category": "intent",
+        "relevant": [["pkg:htop", "pkg:btop", "pkg:xfce4-taskmanager"]]
+    },
+    {
+        "id": "g259",
+        "q": "media streaming server",
+        "category": "intent",
+        "relevant": [["pkg:jellyfin"]]
+    },
+    {
+        "id": "g260",
+        "q": "metrics monitoring stack",
+        "category": "intent",
+        "relevant": [["pkg:prometheus", "pkg:grafana"]]
+    },
+    {
+        "id": "g261",
+        "q": "printing support",
+        "category": "intent",
+        "relevant": [["pkg:cups"]]
+    },
+    {
+        "id": "g262",
+        "q": "raster image editor",
+        "category": "intent",
+        "relevant": [["pkg:gimp", "pkg:gimp2", "pkg:gimp2-with-plugins"]]
+    },
+    {
+        "id": "g263",
         "q": "relational database server",
         "category": "intent",
         "relevant": [
@@ -677,141 +714,374 @@
         ]
     },
     {
-        "id": "g136",
-        "q": "in memory key value store",
+        "id": "g264",
+        "q": "reverse proxy",
         "category": "intent",
-        "relevant": [["pkg:redis"]]
+        "relevant": [
+            [
+                "pkg:nginx",
+                "pkg:nginxMainline",
+                "pkg:nginxStable",
+                "pkg:nginxShibboleth",
+                "pkg:caddy",
+                "pkg:traefik"
+            ]
+        ]
     },
     {
-        "id": "g137",
-        "q": "secret storage",
-        "category": "intent",
-        "relevant": [["pkg:vault"]]
-    },
-    {
-        "id": "g138",
+        "id": "g265",
         "q": "s3 compatible object storage",
         "category": "intent",
         "relevant": [["pkg:minio"]]
     },
     {
-        "id": "g139",
-        "q": "metrics monitoring stack",
+        "id": "g266",
+        "q": "secret storage",
         "category": "intent",
-        "relevant": [["pkg:prometheus", "pkg:grafana"]]
+        "relevant": [["pkg:vault"]]
     },
     {
-        "id": "g140",
-        "q": "document management",
+        "id": "g267",
+        "q": "self hosted password manager",
         "category": "intent",
-        "relevant": [["pkg:paperless-ngx"]]
+        "relevant": [["pkg:vaultwarden"]]
     },
     {
-        "id": "g141",
-        "q": "printing support",
-        "category": "intent",
-        "relevant": [["pkg:cups"]]
-    },
-    {
-        "id": "g143",
-        "q": "caching dns resolver",
-        "category": "intent",
-        "relevant": [["pkg:unbound", "pkg:dnsmasq"]]
-    },
-    {
-        "id": "g144",
-        "q": "text editor",
-        "category": "intent",
-        "relevant": [["pkg:emacs", "pkg:emacs30", "pkg:neovim", "pkg:vim"]]
-    },
-    {
-        "id": "g145",
-        "q": "graphical web browser",
-        "category": "intent",
-        "relevant": [["pkg:firefox", "pkg:chromium"]]
-    },
-    {
-        "id": "g146",
-        "q": "desktop email client",
-        "category": "intent",
-        "relevant": [["pkg:thunderbird"]]
-    },
-    {
-        "id": "g147",
-        "q": "video player",
-        "category": "intent",
-        "relevant": [["pkg:vlc", "pkg:mpv"]]
-    },
-    {
-        "id": "g148",
-        "q": "raster image editor",
-        "category": "intent",
-        "relevant": [["pkg:gimp", "pkg:gimp2", "pkg:gimp2-with-plugins"]]
-    },
-    {
-        "id": "g149",
-        "q": "bittorrent client",
-        "category": "intent",
-        "relevant": [["pkg:transmission_4"]]
-    },
-    {
-        "id": "g150",
+        "id": "g268",
         "q": "terminal multiplexer",
         "category": "intent",
         "relevant": [["pkg:tmux"]]
     },
     {
-        "id": "g151",
-        "q": "continuwuity",
-        "category": "exact",
-        "exhaustive": true,
-        "relevant": [["pkg:matrix-continuwuity"]]
+        "id": "g269",
+        "q": "text editor",
+        "category": "intent",
+        "relevant": [["pkg:emacs", "pkg:emacs30", "pkg:neovim", "pkg:vim"]]
     },
     {
-        "id": "g152",
-        "q": "node",
-        "category": "exact",
-        "exhaustive": true,
+        "id": "g270",
+        "q": "version control system",
+        "category": "intent",
+        "relevant": [["pkg:git", "pkg:gitFull", "pkg:gitMinimal", "pkg:gitSVN"]]
+    },
+    {
+        "id": "g271",
+        "q": "video player",
+        "category": "intent",
+        "relevant": [["pkg:vlc", "pkg:mpv"]]
+    },
+    {
+        "id": "g272",
+        "q": "virtual private network",
+        "category": "intent",
+        "relevant": [["pkg:tailscale"]]
+    },
+    {
+        "id": "g273",
+        "q": "web server",
+        "category": "intent",
         "relevant": [
-            ["pkg:nodejs"],
             [
-                "pkg:nodejs_latest",
-                "pkg:nodejs_26",
-                "pkg:nodejs_24",
-                "pkg:nodejs_22",
-                "pkg:nodejs_20"
-            ],
-            [
-                "pkg:nodejs-slim",
-                "pkg:nodejs-slim_latest",
-                "pkg:nodejs-slim_26",
-                "pkg:nodejs-slim_24",
-                "pkg:nodejs-slim_22"
+                "pkg:nginx",
+                "pkg:nginxMainline",
+                "pkg:nginxStable",
+                "pkg:nginxShibboleth",
+                "pkg:caddy"
             ]
         ]
     },
     {
-        "id": "g153",
+        "id": "g300",
+        "q": "apacheKafka",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [
+            ["pkg:apacheKafka"],
+            [
+                "pkg:apacheKafka_4_1",
+                "pkg:apacheKafka_4_2",
+                "pkg:apacheKafka_4_3"
+            ]
+        ]
+    },
+    {
+        "id": "g301",
         "q": "Dicomizer",
-        "category": "exact",
+        "category": "cased",
         "relevant": [["pkg:weasis"]]
     },
     {
-        "id": "g154",
+        "id": "g302",
+        "q": "EveBox",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["pkg:evebox"]]
+    },
+    {
+        "id": "g303",
+        "q": "GNUnet",
+        "category": "cased",
+        "relevant": [
+            ["pkg:gnunet"],
+            ["pkg:gnunet-gtk", "pkg:gnunet-messenger-cli"]
+        ]
+    },
+    {
+        "id": "g304",
+        "q": "GoToSocial",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["pkg:gotosocial"]]
+    },
+    {
+        "id": "g305",
+        "q": "Librecast",
+        "category": "cased",
+        "relevant": [["pkg:librecast"]]
+    },
+    {
+        "id": "g306",
         "q": "LibreVNA-GUI",
-        "category": "exact",
+        "category": "cased",
         "relevant": [["pkg:librevna"]]
     },
     {
-        "id": "g155",
+        "id": "g307",
+        "q": "MusicFree",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["pkg:musicfree-desktop"]]
+    },
+    {
+        "id": "g308",
         "q": "nfcDemoApp",
-        "category": "exact",
+        "category": "cased",
         "relevant": [["pkg:libnfc-nci"]]
     },
     {
-        "id": "g156",
+        "id": "g309",
+        "q": "Quickwit",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["pkg:quickwit"]]
+    },
+    {
+        "id": "g310",
+        "q": "xpraWithNvenc",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["pkg:xpraWithNvenc"]]
+    },
+    {
+        "id": "g311",
+        "q": "xxHash",
+        "category": "cased",
+        "relevant": [["pkg:xxhash"]]
+    },
+    {
+        "id": "g312",
         "q": "yodaStruct",
-        "category": "exact",
+        "category": "cased",
         "relevant": [["pkg:d-seams"]]
+    },
+    {
+        "id": "g350",
+        "q": "jetbrains.rust-rover",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:jetbrains.rust-rover"]]
+    },
+    {
+        "id": "g351",
+        "q": "libsForQt5.qtstyleplugin-kvantum",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:libsForQt5.qtstyleplugin-kvantum"]]
+    },
+    {
+        "id": "g352",
+        "q": "linuxPackages_latest.nvidia_x11",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:linuxPackages_latest.nvidia_x11"]]
+    },
+    {
+        "id": "g353",
+        "q": "llvmPackages_22.clang-tools",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:llvmPackages_22.clang-tools"]]
+    },
+    {
+        "id": "g354",
+        "q": "passExtensions.pass-otp",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:passExtensions.pass-otp"]]
+    },
+    {
+        "id": "g355",
+        "q": "python313Packages.absl-py",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:python313Packages.absl-py"]]
+    },
+    {
+        "id": "g356",
+        "q": "python313Packages.pyqt6",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:python313Packages.pyqt6"]]
+    },
+    {
+        "id": "g357",
+        "q": "python313Packages.torchWithCuda",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:python313Packages.torchWithCuda"]]
+    },
+    {
+        "id": "g358",
+        "q": "python3Packages.absl-py",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:python313Packages.absl-py"]]
+    },
+    {
+        "id": "g359",
+        "q": "qt6.qtmultimedia",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:qt6.qtmultimedia"]]
+    },
+    {
+        "id": "g360",
+        "q": "qt6.qtscxml",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:qt6.qtscxml"]]
+    },
+    {
+        "id": "g361",
+        "q": "vimPlugins.nvim-lspconfig",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:vimPlugins.nvim-lspconfig"]]
+    },
+    {
+        "id": "g362",
+        "q": "vimPlugins.nvim-treesitter",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:vimPlugins.nvim-treesitter"]]
+    },
+    {
+        "id": "g363",
+        "q": "vimPlugins.rustaceanvim",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:vimPlugins.rustaceanvim"]]
+    },
+    {
+        "id": "g400",
+        "q": "docker_29",
+        "category": "versioned",
+        "exhaustive": true,
+        "relevant": [["pkg:docker_29"], ["pkg:docker_25"]]
+    },
+    {
+        "id": "g401",
+        "q": "elixir_1_17",
+        "category": "versioned",
+        "exhaustive": true,
+        "relevant": [
+            [
+                "pkg:beam27Packages.elixir_1_17",
+                "pkg:beamMinimal27Packages.elixir_1_17"
+            ]
+        ]
+    },
+    {
+        "id": "g402",
+        "q": "elixir_1_18",
+        "category": "versioned",
+        "exhaustive": true,
+        "relevant": [
+            [
+                "pkg:beam27Packages.elixir_1_18",
+                "pkg:beam28Packages.elixir_1_18",
+                "pkg:beam29Packages.elixir_1_18",
+                "pkg:beamMinimal27Packages.elixir_1_18",
+                "pkg:beamMinimal28Packages.elixir_1_18",
+                "pkg:beamMinimal29Packages.elixir_1_18"
+            ]
+        ]
+    },
+    {
+        "id": "g403",
+        "q": "fcitx5",
+        "category": "versioned",
+        "relevant": [["pkg:fcitx5"]]
+    },
+    {
+        "id": "g404",
+        "q": "go_1_25",
+        "category": "versioned",
+        "exhaustive": true,
+        "relevant": [["pkg:go_1_25"], ["pkg:go_1_26", "pkg:go_1_27"]]
+    },
+    {
+        "id": "g405",
+        "q": "gtk4",
+        "category": "versioned",
+        "relevant": [["pkg:gtk4"]]
+    },
+    {
+        "id": "g406",
+        "q": "libsoup_3",
+        "category": "versioned",
+        "exhaustive": true,
+        "relevant": [["pkg:libsoup_3"]]
+    },
+    {
+        "id": "g407",
+        "q": "lua5_1",
+        "category": "versioned",
+        "exhaustive": true,
+        "relevant": [
+            ["pkg:lua5_1"],
+            ["pkg:lua5_2", "pkg:lua5_3", "pkg:lua5_4", "pkg:lua5_5"]
+        ]
+    },
+    {
+        "id": "g408",
+        "q": "lua5_3_compat",
+        "category": "versioned",
+        "exhaustive": true,
+        "relevant": [
+            ["pkg:lua5_3_compat"],
+            ["pkg:lua5_2_compat", "pkg:lua5_4_compat", "pkg:lua5_5_compat"]
+        ]
+    },
+    {
+        "id": "g409",
+        "q": "nodejs_24",
+        "category": "versioned",
+        "exhaustive": true,
+        "relevant": [["pkg:nodejs_24"], ["pkg:nodejs_22", "pkg:nodejs_26"]]
+    },
+    {
+        "id": "g410",
+        "q": "python313",
+        "category": "versioned",
+        "exhaustive": true,
+        "relevant": [["pkg:python313"], ["pkg:python313FreeThreading"]]
+    },
+    {
+        "id": "g411",
+        "q": "python314",
+        "category": "versioned",
+        "exhaustive": true,
+        "relevant": [["pkg:python314"], ["pkg:python314FreeThreading"]]
     }
 ]
