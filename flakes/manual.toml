@@ -214,6 +214,11 @@ repo = "nix-atlas"
 
 [[sources]]
 type = "github"
+owner = "dimanovikov"
+repo = "datadiff"
+
+[[sources]]
+type = "github"
 owner = "divnix"
 repo = "nosys"
 
