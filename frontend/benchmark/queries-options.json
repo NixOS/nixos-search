@@ -1,73 +1,6 @@
 [
     {
-        "id": "g002",
-        "q": "caddy",
-        "category": "exact",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.caddy.enable"],
-            [
-                "opt:services.caddy.virtualHosts",
-                "opt:services.caddy.user",
-                "opt:services.caddy.group",
-                "opt:services.caddy.package",
-                "opt:services.caddy.email",
-                "opt:services.caddy.globalConfig",
-                "opt:services.caddy.configFile",
-                "opt:services.caddy.dataDir"
-            ]
-        ]
-    },
-    {
-        "id": "g005",
-        "q": "gitea",
-        "category": "exact",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.gitea.enable"],
-            [
-                "opt:services.gitea.settings",
-                "opt:services.gitea.database.type",
-                "opt:services.gitea.stateDir"
-            ]
-        ]
-    },
-    {
-        "id": "g006",
-        "q": "grafana",
-        "category": "exact",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.grafana.enable"],
-            [
-                "opt:services.grafana.settings",
-                "opt:services.grafana.settings.server.http_port",
-                "opt:services.grafana.settings.server.http_addr",
-                "opt:services.grafana.settings.server.domain",
-                "opt:services.grafana.provision.enable",
-                "opt:services.grafana.declarativePlugins",
-                "opt:services.grafana.package"
-            ]
-        ]
-    },
-    {
         "id": "g008",
-        "q": "jellyfin",
-        "category": "exact",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.jellyfin.enable"],
-            [
-                "opt:services.jellyfin.openFirewall",
-                "opt:services.jellyfin.dataDir",
-                "opt:services.jellyfin.cacheDir",
-                "opt:services.jellyfin.user",
-                "opt:services.jellyfin.group"
-            ]
-        ]
-    },
-    {
-        "id": "g011",
         "q": "nginx",
         "category": "exact",
         "exhaustive": true,
@@ -89,7 +22,65 @@
         ]
     },
     {
-        "id": "g013",
+        "id": "g009",
+        "q": "grafana",
+        "category": "exact",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.grafana.enable"],
+            [
+                "opt:services.grafana.settings",
+                "opt:services.grafana.settings.server.http_port",
+                "opt:services.grafana.settings.server.http_addr",
+                "opt:services.grafana.settings.server.domain",
+                "opt:services.grafana.provision.enable",
+                "opt:services.grafana.declarativePlugins",
+                "opt:services.grafana.package"
+            ]
+        ]
+    },
+    {
+        "id": "g010",
+        "q": "prometheus",
+        "category": "exact",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.prometheus.enable"],
+            [
+                "opt:services.prometheus.exporters",
+                "opt:services.prometheus.port",
+                "opt:services.prometheus.listenAddress",
+                "opt:services.prometheus.stateDir",
+                "opt:services.prometheus.scrapeConfigs",
+                "opt:services.prometheus.globalConfig",
+                "opt:services.prometheus.alertmanager.enable",
+                "opt:services.prometheus.exporters.node.enable"
+            ]
+        ]
+    },
+    {
+        "id": "g011",
+        "q": "postgresql",
+        "category": "exact",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.postgresql.enable"],
+            [
+                "opt:services.postgresql.package",
+                "opt:services.postgresql.dataDir",
+                "opt:services.postgresql.settings",
+                "opt:services.postgresql.ensureDatabases",
+                "opt:services.postgresql.ensureUsers",
+                "opt:services.postgresql.authentication",
+                "opt:services.postgresql.enableTCPIP",
+                "opt:services.postgresql.identMap",
+                "opt:services.postgresql.initialScript",
+                "opt:services.postgresql.extensions"
+            ]
+        ]
+    },
+    {
+        "id": "g012",
         "q": "openssh",
         "category": "exact",
         "exhaustive": true,
@@ -111,62 +102,127 @@
         ]
     },
     {
-        "id": "g014",
-        "q": "postgresql",
+        "id": "g013",
+        "q": "caddy",
         "category": "exact",
         "exhaustive": true,
         "relevant": [
-            ["opt:services.postgresql.enable"],
+            ["opt:services.caddy.enable"],
             [
-                "opt:services.postgresql.package",
-                "opt:services.postgresql.dataDir",
-                "opt:services.postgresql.settings",
-                "opt:services.postgresql.ensureDatabases",
-                "opt:services.postgresql.ensureUsers",
-                "opt:services.postgresql.authentication",
-                "opt:services.postgresql.enableTCPIP",
-                "opt:services.postgresql.identMap",
-                "opt:services.postgresql.initialScript",
-                "opt:services.postgresql.extensions"
+                "opt:services.caddy.virtualHosts",
+                "opt:services.caddy.user",
+                "opt:services.caddy.group",
+                "opt:services.caddy.package",
+                "opt:services.caddy.email",
+                "opt:services.caddy.globalConfig",
+                "opt:services.caddy.configFile",
+                "opt:services.caddy.dataDir"
+            ]
+        ]
+    },
+    {
+        "id": "g014",
+        "q": "gitea",
+        "category": "exact",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.gitea.enable"],
+            [
+                "opt:services.gitea.settings",
+                "opt:services.gitea.database.type",
+                "opt:services.gitea.stateDir"
             ]
         ]
     },
     {
         "id": "g015",
-        "q": "prometheus",
+        "q": "jellyfin",
         "category": "exact",
         "exhaustive": true,
         "relevant": [
-            ["opt:services.prometheus.enable"],
+            ["opt:services.jellyfin.enable"],
             [
-                "opt:services.prometheus.exporters",
-                "opt:services.prometheus.port",
-                "opt:services.prometheus.listenAddress",
-                "opt:services.prometheus.stateDir",
-                "opt:services.prometheus.scrapeConfigs",
-                "opt:services.prometheus.globalConfig",
-                "opt:services.prometheus.alertmanager.enable",
-                "opt:services.prometheus.exporters.node.enable"
+                "opt:services.jellyfin.openFirewall",
+                "opt:services.jellyfin.dataDir",
+                "opt:services.jellyfin.cacheDir",
+                "opt:services.jellyfin.user",
+                "opt:services.jellyfin.group"
             ]
         ]
+    },
+    {
+        "id": "g016",
+        "q": "services.openssh.enable",
+        "category": "exact",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.openssh.enable"],
+            ["opt:services.sshd.enable"]
+        ]
+    },
+    {
+        "id": "g017",
+        "q": "services.grafana.enable",
+        "category": "exact",
+        "exhaustive": true,
+        "relevant": [["opt:services.grafana.enable"]]
     },
     {
         "id": "g018",
-        "q": "bluetooth",
+        "q": "networking.firewall.enable",
         "category": "exact",
         "exhaustive": true,
-        "relevant": [
-            ["opt:hardware.bluetooth.enable"],
-            [
-                "opt:hardware.bluetooth.powerOnBoot",
-                "opt:hardware.bluetooth.settings",
-                "opt:hardware.bluetooth.package",
-                "opt:services.blueman.enable"
-            ]
-        ]
+        "relevant": [["opt:networking.firewall.enable"]]
     },
     {
         "id": "g019",
+        "q": "services.redis.servers",
+        "category": "exact",
+        "relevant": [["opt:services.redis.servers"]]
+    },
+    {
+        "id": "g020",
+        "q": "services.syncthing.enable",
+        "category": "exact",
+        "exhaustive": true,
+        "relevant": [["opt:services.syncthing.enable"]]
+    },
+    {
+        "id": "g021",
+        "q": "services.printing.enable",
+        "category": "exact",
+        "exhaustive": true,
+        "relevant": [["opt:services.printing.enable"]]
+    },
+    {
+        "id": "g022",
+        "q": "services.nginx.virtualHosts",
+        "category": "cased",
+        "relevant": [["opt:services.nginx.virtualHosts"]]
+    },
+    {
+        "id": "g023",
+        "q": "networking.firewall.allowedTCPPorts",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["opt:networking.firewall.allowedTCPPorts"]]
+    },
+    {
+        "id": "g024",
+        "q": "services.nextcloud.hostName",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["opt:services.nextcloud.hostName"]]
+    },
+    {
+        "id": "g025",
+        "q": "networking.networkmanager.logLevel",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["opt:networking.networkmanager.logLevel"]]
+    },
+    {
+        "id": "g150",
         "q": "docker",
         "category": "exact",
         "exhaustive": true,
@@ -187,7 +243,7 @@
         ]
     },
     {
-        "id": "g020",
+        "id": "g151",
         "q": "firewall",
         "category": "exact",
         "exhaustive": true,
@@ -209,68 +265,7 @@
         ]
     },
     {
-        "id": "g021",
-        "q": "git",
-        "category": "exact",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:programs.git.enable"],
-            [
-                "opt:programs.git.config",
-                "opt:programs.git.settings",
-                "opt:programs.git.package",
-                "opt:programs.git.lfs.enable",
-                "opt:programs.git.prompt.enable",
-                "opt:programs.git.ignores"
-            ]
-        ]
-    },
-    {
-        "id": "g022",
-        "q": "mysql",
-        "category": "exact",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.mysql.enable"],
-            [
-                "opt:services.mysql.package",
-                "opt:services.mysql.settings",
-                "opt:services.mysql.dataDir",
-                "opt:services.mysql.ensureDatabases",
-                "opt:services.mysql.ensureUsers"
-            ]
-        ]
-    },
-    {
-        "id": "g023",
-        "q": "networking.firewall.enable",
-        "category": "exact",
-        "exhaustive": true,
-        "relevant": [["opt:networking.firewall.enable"]]
-    },
-    {
-        "id": "g024",
-        "q": "nextcloud",
-        "category": "exact",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.nextcloud.enable"],
-            [
-                "opt:services.nextcloud.hostName",
-                "opt:services.nextcloud.package",
-                "opt:services.nextcloud.https",
-                "opt:services.nextcloud.maxUploadSize",
-                "opt:services.nextcloud.extraApps",
-                "opt:services.nextcloud.secretFile",
-                "opt:services.nextcloud.settings",
-                "opt:services.nextcloud.datadir",
-                "opt:services.nextcloud.phpOptions",
-                "opt:services.nextcloud.config.adminpassFile"
-            ]
-        ]
-    },
-    {
-        "id": "g025",
+        "id": "g152",
         "q": "printing",
         "category": "exact",
         "exhaustive": true,
@@ -289,7 +284,58 @@
         ]
     },
     {
-        "id": "g026",
+        "id": "g153",
+        "q": "bluetooth",
+        "category": "exact",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:hardware.bluetooth.enable"],
+            [
+                "opt:hardware.bluetooth.powerOnBoot",
+                "opt:hardware.bluetooth.settings",
+                "opt:hardware.bluetooth.package",
+                "opt:services.blueman.enable"
+            ]
+        ]
+    },
+    {
+        "id": "g154",
+        "q": "systemd-boot",
+        "category": "exact",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:boot.loader.systemd-boot.enable"],
+            [
+                "opt:boot.loader.systemd-boot.configurationLimit",
+                "opt:boot.loader.systemd-boot.consoleMode",
+                "opt:boot.loader.systemd-boot.editor",
+                "opt:boot.loader.systemd-boot.extraEntries",
+                "opt:boot.loader.systemd-boot.extraFiles",
+                "opt:boot.loader.systemd-boot.memtest86.enable",
+                "opt:boot.loader.systemd-boot.netbootxyz.enable",
+                "opt:boot.loader.efi.canTouchEfiVariables"
+            ]
+        ]
+    },
+    {
+        "id": "g155",
+        "q": "git",
+        "category": "exact",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:programs.git.enable"],
+            [
+                "opt:programs.git.config",
+                "opt:programs.git.settings",
+                "opt:programs.git.package",
+                "opt:programs.git.lfs.enable",
+                "opt:programs.git.prompt.enable",
+                "opt:programs.git.ignores"
+            ]
+        ]
+    },
+    {
+        "id": "g156",
         "q": "redis",
         "category": "exact",
         "exhaustive": true,
@@ -305,7 +351,7 @@
         ]
     },
     {
-        "id": "g027",
+        "id": "g157",
         "q": "restic",
         "category": "exact",
         "exhaustive": true,
@@ -324,59 +370,7 @@
         ]
     },
     {
-        "id": "g028",
-        "q": "samba",
-        "category": "exact",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.samba.enable"],
-            [
-                "opt:services.samba.settings",
-                "opt:services.samba.openFirewall",
-                "opt:services.samba.package",
-                "opt:services.samba.usershares.enable"
-            ]
-        ]
-    },
-    {
-        "id": "g029",
-        "q": "services.grafana.enable",
-        "category": "exact",
-        "exhaustive": true,
-        "relevant": [["opt:services.grafana.enable"]]
-    },
-    {
-        "id": "g030",
-        "q": "services.openssh.enable",
-        "category": "exact",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.openssh.enable"],
-            ["opt:services.sshd.enable"]
-        ]
-    },
-    {
-        "id": "g031",
-        "q": "services.printing.enable",
-        "category": "exact",
-        "exhaustive": true,
-        "relevant": [["opt:services.printing.enable"]]
-    },
-    {
-        "id": "g032",
-        "q": "services.redis.servers",
-        "category": "exact",
-        "relevant": [["opt:services.redis.servers"]]
-    },
-    {
-        "id": "g033",
-        "q": "services.syncthing.enable",
-        "category": "exact",
-        "exhaustive": true,
-        "relevant": [["opt:services.syncthing.enable"]]
-    },
-    {
-        "id": "g034",
+        "id": "g158",
         "q": "syncthing",
         "category": "exact",
         "exhaustive": true,
@@ -399,26 +393,7 @@
         ]
     },
     {
-        "id": "g035",
-        "q": "systemd-boot",
-        "category": "exact",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:boot.loader.systemd-boot.enable"],
-            [
-                "opt:boot.loader.systemd-boot.configurationLimit",
-                "opt:boot.loader.systemd-boot.consoleMode",
-                "opt:boot.loader.systemd-boot.editor",
-                "opt:boot.loader.systemd-boot.extraEntries",
-                "opt:boot.loader.systemd-boot.extraFiles",
-                "opt:boot.loader.systemd-boot.memtest86.enable",
-                "opt:boot.loader.systemd-boot.netbootxyz.enable",
-                "opt:boot.loader.efi.canTouchEfiVariables"
-            ]
-        ]
-    },
-    {
-        "id": "g036",
+        "id": "g159",
         "q": "tailscale",
         "category": "exact",
         "exhaustive": true,
@@ -435,7 +410,59 @@
         ]
     },
     {
-        "id": "g037",
+        "id": "g160",
+        "q": "samba",
+        "category": "exact",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.samba.enable"],
+            [
+                "opt:services.samba.settings",
+                "opt:services.samba.openFirewall",
+                "opt:services.samba.package",
+                "opt:services.samba.usershares.enable"
+            ]
+        ]
+    },
+    {
+        "id": "g161",
+        "q": "nextcloud",
+        "category": "exact",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.nextcloud.enable"],
+            [
+                "opt:services.nextcloud.hostName",
+                "opt:services.nextcloud.package",
+                "opt:services.nextcloud.https",
+                "opt:services.nextcloud.maxUploadSize",
+                "opt:services.nextcloud.extraApps",
+                "opt:services.nextcloud.secretFile",
+                "opt:services.nextcloud.settings",
+                "opt:services.nextcloud.datadir",
+                "opt:services.nextcloud.phpOptions",
+                "opt:services.nextcloud.config.adminpassFile"
+            ]
+        ]
+    },
+    {
+        "id": "g162",
+        "q": "mysql",
+        "category": "exact",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.mysql.enable"],
+            [
+                "opt:services.mysql.package",
+                "opt:services.mysql.settings",
+                "opt:services.mysql.dataDir",
+                "opt:services.mysql.ensureDatabases",
+                "opt:services.mysql.ensureUsers"
+            ]
+        ]
+    },
+    {
+        "id": "g163",
         "q": "xserver",
         "category": "exact",
         "exhaustive": true,
@@ -451,229 +478,797 @@
         ]
     },
     {
-        "id": "g101",
-        "q": "cadd",
-        "category": "prefix",
-        "relevant": [["opt:services.caddy.enable"]]
+        "id": "g164",
+        "q": "boot.loader.efi.canTouchEfiVariables",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["opt:boot.loader.efi.canTouchEfiVariables"]]
     },
     {
-        "id": "g103",
-        "q": "dnsma",
-        "category": "prefix",
-        "relevant": [["opt:services.dnsmasq.enable"]]
+        "id": "g165",
+        "q": "canTouchEfiVariables",
+        "category": "leaf",
+        "exhaustive": true,
+        "relevant": [["opt:boot.loader.efi.canTouchEfiVariables"]]
     },
     {
-        "id": "g104",
-        "q": "elastic",
-        "category": "prefix",
-        "relevant": [["opt:services.elasticsearch.enable"]]
-    },
-    {
-        "id": "g105",
-        "q": "fail2",
-        "category": "prefix",
-        "relevant": [["opt:services.fail2ban.enable"]]
-    },
-    {
-        "id": "g106",
-        "q": "graf",
-        "category": "prefix",
-        "relevant": [["opt:services.grafana.enable"]]
-    },
-    {
-        "id": "g107",
-        "q": "jelly",
-        "category": "prefix",
-        "relevant": [["opt:services.jellyfin.enable"]]
-    },
-    {
-        "id": "g109",
-        "q": "mosqui",
-        "category": "prefix",
-        "relevant": [["opt:services.mosquitto.enable"]]
-    },
-    {
-        "id": "g111",
-        "q": "nextcl",
-        "category": "prefix",
-        "relevant": [["opt:services.nextcloud.enable"]]
-    },
-    {
-        "id": "g112",
-        "q": "ngin",
-        "category": "prefix",
-        "relevant": [["opt:services.nginx.enable"]]
-    },
-    {
-        "id": "g113",
+        "id": "g026",
         "q": "postgres",
         "category": "prefix",
         "relevant": [["opt:services.postgresql.enable"]]
     },
     {
-        "id": "g114",
+        "id": "g027",
+        "q": "graf",
+        "category": "prefix",
+        "relevant": [["opt:services.grafana.enable"]]
+    },
+    {
+        "id": "g028",
         "q": "prom",
         "category": "prefix",
         "relevant": [["opt:services.prometheus.enable"]]
     },
     {
-        "id": "g116",
+        "id": "g030",
+        "q": "jelly",
+        "category": "prefix",
+        "relevant": [["opt:services.jellyfin.enable"]]
+    },
+    {
+        "id": "g031",
         "q": "syncth",
         "category": "prefix",
         "relevant": [["opt:services.syncthing.enable"]]
     },
     {
-        "id": "g117",
-        "q": "tailsc",
-        "category": "prefix",
-        "relevant": [["opt:services.tailscale.enable"]]
-    },
-    {
-        "id": "g119",
-        "q": "traef",
-        "category": "prefix",
-        "relevant": [["opt:services.traefik.enable"]]
-    },
-    {
-        "id": "g120",
-        "q": "transm",
-        "category": "prefix",
-        "relevant": [["opt:services.transmission.enable"]]
-    },
-    {
-        "id": "g121",
-        "q": "unbou",
-        "category": "prefix",
-        "relevant": [["opt:services.unbound.enable"]]
-    },
-    {
-        "id": "g122",
-        "q": "hypr",
-        "category": "prefix",
-        "relevant": [["opt:programs.hyprland.enable"]]
-    },
-    {
-        "id": "g123",
-        "q": "nftab",
-        "category": "prefix",
-        "relevant": [["opt:networking.nftables.enable"]]
-    },
-    {
-        "id": "g124",
+        "id": "g032",
         "q": "wireg",
         "category": "prefix",
         "relevant": [["opt:networking.wireguard.enable"]]
     },
     {
-        "id": "g150",
-        "q": "cady",
-        "category": "typo",
-        "relevant": [["opt:services.caddy.enable"]]
+        "id": "g033",
+        "q": "nftab",
+        "category": "prefix",
+        "relevant": [["opt:networking.nftables.enable"]]
     },
     {
-        "id": "g152",
-        "q": "dcoker",
-        "category": "typo",
-        "relevant": [["opt:virtualisation.docker.enable"]]
+        "id": "g034",
+        "q": "hypr",
+        "category": "prefix",
+        "relevant": [["opt:programs.hyprland.enable"]]
     },
     {
-        "id": "g153",
-        "q": "fial2ban",
-        "category": "typo",
+        "id": "g035",
+        "q": "ngin",
+        "category": "prefix",
+        "relevant": [["opt:services.nginx.enable"]]
+    },
+    {
+        "id": "g037",
+        "q": "fail2",
+        "category": "prefix",
         "relevant": [["opt:services.fail2ban.enable"]]
     },
     {
-        "id": "g155",
-        "q": "gitae",
-        "category": "typo",
-        "relevant": [["opt:services.gitea.enable"]]
+        "id": "g038",
+        "q": "tailsc",
+        "category": "prefix",
+        "relevant": [["opt:services.tailscale.enable"]]
     },
     {
-        "id": "g156",
-        "q": "grafan",
-        "category": "typo",
-        "relevant": [["opt:services.grafana.enable"]]
-    },
-    {
-        "id": "g157",
-        "q": "jellifin",
-        "category": "typo",
-        "relevant": [["opt:services.jellyfin.enable"]]
-    },
-    {
-        "id": "g159",
-        "q": "mosquito",
-        "category": "typo",
-        "relevant": [["opt:services.mosquitto.enable"]]
-    },
-    {
-        "id": "g160",
-        "q": "nextcoud",
-        "category": "typo",
+        "id": "g039",
+        "q": "nextcl",
+        "category": "prefix",
         "relevant": [["opt:services.nextcloud.enable"]]
     },
     {
-        "id": "g161",
+        "id": "g040",
+        "q": "traef",
+        "category": "prefix",
+        "relevant": [["opt:services.traefik.enable"]]
+    },
+    {
+        "id": "g041",
+        "q": "cadd",
+        "category": "prefix",
+        "relevant": [["opt:services.caddy.enable"]]
+    },
+    {
+        "id": "g042",
+        "q": "transm",
+        "category": "prefix",
+        "relevant": [["opt:services.transmission.enable"]]
+    },
+    {
+        "id": "g043",
+        "q": "unbou",
+        "category": "prefix",
+        "relevant": [["opt:services.unbound.enable"]]
+    },
+    {
+        "id": "g044",
+        "q": "dnsma",
+        "category": "prefix",
+        "relevant": [["opt:services.dnsmasq.enable"]]
+    },
+    {
+        "id": "g049",
+        "q": "mosqui",
+        "category": "prefix",
+        "relevant": [["opt:services.mosquitto.enable"]]
+    },
+    {
+        "id": "g050",
+        "q": "elastic",
+        "category": "prefix",
+        "relevant": [["opt:services.elasticsearch.enable"]]
+    },
+    {
+        "id": "g051",
         "q": "ngnix",
         "category": "typo",
         "relevant": [["opt:services.nginx.enable"]]
     },
     {
-        "id": "g162",
-        "q": "openssg",
-        "category": "typo",
-        "relevant": [["opt:services.openssh.enable"]]
-    },
-    {
-        "id": "g163",
+        "id": "g052",
         "q": "postgrsql",
         "category": "typo",
         "relevant": [["opt:services.postgresql.enable"]]
     },
     {
-        "id": "g164",
+        "id": "g053",
         "q": "promethues",
         "category": "typo",
         "relevant": [["opt:services.prometheus.enable"]]
     },
     {
-        "id": "g167",
-        "q": "samaba",
+        "id": "g054",
+        "q": "grafan",
         "category": "typo",
-        "relevant": [["opt:services.samba.enable"]]
+        "relevant": [["opt:services.grafana.enable"]]
     },
     {
-        "id": "g168",
-        "q": "syncthign",
+        "id": "g057",
+        "q": "jellifin",
         "category": "typo",
-        "relevant": [["opt:services.syncthing.enable"]]
+        "relevant": [["opt:services.jellyfin.enable"]]
     },
     {
-        "id": "g169",
-        "q": "tailscle",
-        "category": "typo",
-        "relevant": [["opt:services.tailscale.enable"]]
-    },
-    {
-        "id": "g172",
-        "q": "vaultwardn",
-        "category": "typo",
-        "relevant": [["opt:services.vaultwarden.enable"]]
-    },
-    {
-        "id": "g173",
+        "id": "g058",
         "q": "sytemd-boot",
         "category": "typo",
         "relevant": [["opt:boot.loader.systemd-boot.enable"]]
     },
     {
-        "id": "g174",
+        "id": "g059",
         "q": "wireguad",
         "category": "typo",
         "relevant": [["opt:networking.wireguard.enable"]]
     },
     {
-        "id": "g200",
+        "id": "g060",
+        "q": "samaba",
+        "category": "typo",
+        "relevant": [["opt:services.samba.enable"]]
+    },
+    {
+        "id": "g062",
+        "q": "openssg",
+        "category": "typo",
+        "relevant": [["opt:services.openssh.enable"]]
+    },
+    {
+        "id": "g067",
+        "q": "dcoker",
+        "category": "typo",
+        "relevant": [["opt:virtualisation.docker.enable"]]
+    },
+    {
+        "id": "g068",
+        "q": "nextcoud",
+        "category": "typo",
+        "relevant": [["opt:services.nextcloud.enable"]]
+    },
+    {
+        "id": "g069",
+        "q": "gitae",
+        "category": "typo",
+        "relevant": [["opt:services.gitea.enable"]]
+    },
+    {
+        "id": "g070",
+        "q": "vaultwardn",
+        "category": "typo",
+        "relevant": [["opt:services.vaultwarden.enable"]]
+    },
+    {
+        "id": "g071",
+        "q": "tailscle",
+        "category": "typo",
+        "relevant": [["opt:services.tailscale.enable"]]
+    },
+    {
+        "id": "g072",
+        "q": "fial2ban",
+        "category": "typo",
+        "relevant": [["opt:services.fail2ban.enable"]]
+    },
+    {
+        "id": "g073",
+        "q": "mosquito",
+        "category": "typo",
+        "relevant": [["opt:services.mosquitto.enable"]]
+    },
+    {
+        "id": "g074",
+        "q": "syncthign",
+        "category": "typo",
+        "relevant": [["opt:services.syncthing.enable"]]
+    },
+    {
+        "id": "g075",
+        "q": "cady",
+        "category": "typo",
+        "relevant": [["opt:services.caddy.enable"]]
+    },
+    {
+        "id": "g076",
+        "q": "services.nginx",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.nginx.enable"],
+            [
+                "opt:services.nginx.virtualHosts",
+                "opt:services.nginx.user",
+                "opt:services.nginx.group",
+                "opt:services.nginx.package",
+                "opt:services.nginx.config",
+                "opt:services.nginx.httpConfig",
+                "opt:services.nginx.appendHttpConfig",
+                "opt:services.nginx.recommendedProxySettings",
+                "opt:services.nginx.recommendedTlsSettings",
+                "opt:services.nginx.recommendedGzipSettings",
+                "opt:services.nginx.recommendedOptimisation"
+            ]
+        ]
+    },
+    {
+        "id": "g077",
+        "q": "virtualisation.docker",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:virtualisation.docker.enable"],
+            [
+                "opt:virtualisation.docker.rootless.enable",
+                "opt:virtualisation.docker.rootless.setSocketVariable",
+                "opt:virtualisation.docker.storageDriver",
+                "opt:virtualisation.docker.daemon.settings",
+                "opt:virtualisation.docker.enableOnBoot",
+                "opt:virtualisation.docker.autoPrune.enable",
+                "opt:virtualisation.docker.package",
+                "opt:virtualisation.docker.extraOptions",
+                "opt:virtualisation.docker.logDriver",
+                "opt:virtualisation.docker.liveRestore"
+            ]
+        ]
+    },
+    {
+        "id": "g078",
+        "q": "services.openssh",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.openssh.enable"],
+            [
+                "opt:services.openssh.settings",
+                "opt:services.openssh.ports",
+                "opt:services.openssh.extraConfig",
+                "opt:services.openssh.openFirewall",
+                "opt:services.openssh.package",
+                "opt:services.openssh.hostKeys",
+                "opt:services.openssh.authorizedKeysFiles",
+                "opt:services.openssh.listenAddresses",
+                "opt:services.openssh.startWhenNeeded",
+                "opt:services.openssh.settings.PasswordAuthentication",
+                "opt:services.openssh.settings.PermitRootLogin"
+            ]
+        ]
+    },
+    {
+        "id": "g079",
+        "q": "services.postgresql",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.postgresql.enable"],
+            [
+                "opt:services.postgresql.package",
+                "opt:services.postgresql.dataDir",
+                "opt:services.postgresql.settings",
+                "opt:services.postgresql.ensureDatabases",
+                "opt:services.postgresql.ensureUsers",
+                "opt:services.postgresql.authentication",
+                "opt:services.postgresql.enableTCPIP",
+                "opt:services.postgresql.identMap",
+                "opt:services.postgresql.initialScript",
+                "opt:services.postgresql.extensions"
+            ]
+        ]
+    },
+    {
+        "id": "g080",
+        "q": "services.grafana",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.grafana.enable"],
+            [
+                "opt:services.grafana.settings",
+                "opt:services.grafana.settings.server.http_port",
+                "opt:services.grafana.settings.server.http_addr",
+                "opt:services.grafana.settings.server.domain",
+                "opt:services.grafana.provision.enable",
+                "opt:services.grafana.declarativePlugins",
+                "opt:services.grafana.package"
+            ]
+        ]
+    },
+    {
+        "id": "g081",
+        "q": "services.prometheus",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.prometheus.enable"],
+            [
+                "opt:services.prometheus.exporters",
+                "opt:services.prometheus.port",
+                "opt:services.prometheus.listenAddress",
+                "opt:services.prometheus.stateDir",
+                "opt:services.prometheus.scrapeConfigs",
+                "opt:services.prometheus.globalConfig",
+                "opt:services.prometheus.alertmanager.enable",
+                "opt:services.prometheus.exporters.node.enable"
+            ]
+        ]
+    },
+    {
+        "id": "g082",
+        "q": "networking.firewall",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:networking.firewall.enable"],
+            [
+                "opt:networking.firewall.allowedTCPPorts",
+                "opt:networking.firewall.allowedUDPPorts",
+                "opt:networking.firewall.allowedTCPPortRanges",
+                "opt:networking.firewall.allowedUDPPortRanges",
+                "opt:networking.firewall.extraCommands",
+                "opt:networking.firewall.extraInputRules",
+                "opt:networking.firewall.checkReversePath",
+                "opt:networking.firewall.trustedInterfaces",
+                "opt:networking.firewall.allowPing",
+                "opt:networking.firewall.interfaces",
+                "opt:networking.firewall.logRefusedConnections"
+            ]
+        ]
+    },
+    {
+        "id": "g083",
+        "q": "networking.wireguard",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:networking.wireguard.enable"],
+            [
+                "opt:networking.wireguard.interfaces",
+                "opt:networking.wireguard.interfaces.<name>.privateKeyFile",
+                "opt:networking.wg-quick.interfaces",
+                "opt:networking.wg-quick.interfaces.<name>.address",
+                "opt:networking.firewall.checkReversePath"
+            ]
+        ]
+    },
+    {
+        "id": "g084",
+        "q": "services.redis",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.redis.servers"],
+            [
+                "opt:services.redis.servers.<name>.enable",
+                "opt:services.redis.servers.<name>.port",
+                "opt:services.redis.servers.<name>.unixSocket",
+                "opt:services.redis.servers.<name>.user",
+                "opt:services.redis.package"
+            ]
+        ]
+    },
+    {
+        "id": "g085",
+        "q": "services.caddy",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.caddy.enable"],
+            [
+                "opt:services.caddy.virtualHosts",
+                "opt:services.caddy.user",
+                "opt:services.caddy.group",
+                "opt:services.caddy.package",
+                "opt:services.caddy.email",
+                "opt:services.caddy.globalConfig",
+                "opt:services.caddy.configFile",
+                "opt:services.caddy.dataDir"
+            ]
+        ]
+    },
+    {
+        "id": "g086",
+        "q": "boot.loader.systemd-boot",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:boot.loader.systemd-boot.enable"],
+            [
+                "opt:boot.loader.systemd-boot.configurationLimit",
+                "opt:boot.loader.systemd-boot.consoleMode",
+                "opt:boot.loader.systemd-boot.editor",
+                "opt:boot.loader.systemd-boot.extraEntries",
+                "opt:boot.loader.systemd-boot.extraFiles",
+                "opt:boot.loader.systemd-boot.memtest86.enable",
+                "opt:boot.loader.systemd-boot.netbootxyz.enable",
+                "opt:boot.loader.efi.canTouchEfiVariables"
+            ]
+        ]
+    },
+    {
+        "id": "g087",
+        "q": "programs.hyprland",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:programs.hyprland.enable"],
+            [
+                "opt:programs.hyprland.xwayland.enable",
+                "opt:programs.hyprland.package",
+                "opt:programs.hyprland.withUWSM"
+            ]
+        ]
+    },
+    {
+        "id": "g088",
+        "q": "services.jellyfin",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.jellyfin.enable"],
+            [
+                "opt:services.jellyfin.openFirewall",
+                "opt:services.jellyfin.dataDir",
+                "opt:services.jellyfin.cacheDir",
+                "opt:services.jellyfin.user",
+                "opt:services.jellyfin.group"
+            ]
+        ]
+    },
+    {
+        "id": "g089",
+        "q": "services.syncthing",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.syncthing.enable"],
+            [
+                "opt:services.syncthing.settings",
+                "opt:services.syncthing.dataDir",
+                "opt:services.syncthing.configDir",
+                "opt:services.syncthing.user",
+                "opt:services.syncthing.group",
+                "opt:services.syncthing.guiAddress",
+                "opt:services.syncthing.openDefaultPorts",
+                "opt:services.syncthing.key",
+                "opt:services.syncthing.cert",
+                "opt:services.syncthing.extraFlags",
+                "opt:services.syncthing.settings.folders",
+                "opt:services.syncthing.settings.devices"
+            ]
+        ]
+    },
+    {
+        "id": "g090",
+        "q": "hardware.bluetooth",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:hardware.bluetooth.enable"],
+            [
+                "opt:hardware.bluetooth.powerOnBoot",
+                "opt:hardware.bluetooth.settings",
+                "opt:hardware.bluetooth.package",
+                "opt:services.blueman.enable"
+            ]
+        ]
+    },
+    {
+        "id": "g091",
+        "q": "services.samba",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.samba.enable"],
+            [
+                "opt:services.samba.settings",
+                "opt:services.samba.openFirewall",
+                "opt:services.samba.package",
+                "opt:services.samba.usershares.enable"
+            ]
+        ]
+    },
+    {
+        "id": "g092",
+        "q": "services.tailscale",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.tailscale.enable"],
+            [
+                "opt:services.tailscale.port",
+                "opt:services.tailscale.useRoutingFeatures",
+                "opt:services.tailscale.authKeyFile",
+                "opt:services.tailscale.permitCertUid",
+                "opt:services.tailscale.interfaceName",
+                "opt:services.tailscale.package"
+            ]
+        ]
+    },
+    {
+        "id": "g093",
+        "q": "services.restic",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.restic.backups"],
+            [
+                "opt:services.restic.backups.<name>.paths",
+                "opt:services.restic.backups.<name>.repository",
+                "opt:services.restic.backups.<name>.passwordFile",
+                "opt:services.restic.backups.<name>.initialize",
+                "opt:services.restic.backups.<name>.pruneOpts",
+                "opt:services.restic.backups.<name>.timerConfig",
+                "opt:services.restic.backups.<name>.user",
+                "opt:services.restic.backups.<name>.environmentFile"
+            ]
+        ]
+    },
+    {
+        "id": "g094",
+        "q": "services.openssh.ports",
+        "category": "dotted",
+        "relevant": [["opt:services.openssh.ports"]]
+    },
+    {
+        "id": "g095",
+        "q": "services.nginx.enable",
+        "category": "dotted",
+        "relevant": [["opt:services.nginx.enable"]]
+    },
+    {
+        "id": "g096",
+        "q": "virtualisation.docker.enable",
+        "category": "dotted",
+        "relevant": [["opt:virtualisation.docker.enable"]]
+    },
+    {
+        "id": "g097",
+        "q": "services.grafana.settings",
+        "category": "dotted",
+        "relevant": [["opt:services.grafana.settings"]]
+    },
+    {
+        "id": "g098",
+        "q": "services.postgresql.dataDir",
+        "category": "dotted",
+        "relevant": [["opt:services.postgresql.dataDir"]]
+    },
+    {
+        "id": "g099",
+        "q": "services.mysql",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.mysql.enable"],
+            [
+                "opt:services.mysql.package",
+                "opt:services.mysql.settings",
+                "opt:services.mysql.dataDir",
+                "opt:services.mysql.ensureDatabases",
+                "opt:services.mysql.ensureUsers"
+            ]
+        ]
+    },
+    {
+        "id": "g100",
+        "q": "services.fail2ban",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.fail2ban.enable"],
+            [
+                "opt:services.fail2ban.jails",
+                "opt:services.fail2ban.maxretry",
+                "opt:services.fail2ban.ignoreIP",
+                "opt:services.fail2ban.bantime",
+                "opt:services.fail2ban.package"
+            ]
+        ]
+    },
+    {
+        "id": "g166",
+        "q": "services.xserver",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.xserver.enable"],
+            [
+                "opt:services.xserver.videoDrivers",
+                "opt:services.xserver.xkb.layout",
+                "opt:services.xserver.xkb.options",
+                "opt:services.xserver.dpi",
+                "opt:services.displayManager.defaultSession"
+            ]
+        ]
+    },
+    {
+        "id": "g167",
+        "q": "hardware.graphics",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:hardware.graphics.enable"],
+            [
+                "opt:hardware.graphics.enable32Bit",
+                "opt:hardware.graphics.extraPackages"
+            ]
+        ]
+    },
+    {
+        "id": "g168",
+        "q": "boot.initrd",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:boot.initrd.enable"],
+            [
+                "opt:boot.initrd.kernelModules",
+                "opt:boot.initrd.availableKernelModules",
+                "opt:boot.initrd.luks.devices",
+                "opt:boot.initrd.systemd.enable"
+            ]
+        ]
+    },
+    {
+        "id": "g101",
+        "q": "docker container",
+        "category": "multiterm",
+        "relevant": [["opt:virtualisation.docker.enable"]]
+    },
+    {
+        "id": "g102",
+        "q": "ssh daemon",
+        "category": "multiterm",
+        "relevant": [["opt:services.openssh.enable"]]
+    },
+    {
+        "id": "g103",
+        "q": "home assistant",
+        "category": "multiterm",
+        "relevant": [["opt:services.home-assistant.enable"]]
+    },
+    {
+        "id": "g104",
+        "q": "matrix synapse",
+        "category": "multiterm",
+        "relevant": [["opt:services.matrix-synapse.enable"]]
+    },
+    {
+        "id": "g106",
+        "q": "vault warden",
+        "category": "multiterm",
+        "relevant": [["opt:services.vaultwarden.enable"]]
+    },
+    {
+        "id": "g107",
+        "q": "next cloud",
+        "category": "multiterm",
+        "relevant": [["opt:services.nextcloud.enable"]]
+    },
+    {
+        "id": "g109",
+        "q": "network manager",
+        "category": "multiterm",
+        "relevant": [["opt:networking.networkmanager.enable"]]
+    },
+    {
+        "id": "g110",
+        "q": "virtual hosts",
+        "category": "multiterm",
+        "relevant": [["opt:services.nginx.virtualHosts"]]
+    },
+    {
+        "id": "g111",
+        "q": "allowed tcp ports",
+        "category": "multiterm",
+        "relevant": [["opt:networking.firewall.allowedTCPPorts"]]
+    },
+    {
+        "id": "g112",
+        "q": "allowed udp ports",
+        "category": "multiterm",
+        "relevant": [["opt:networking.firewall.allowedUDPPorts"]]
+    },
+    {
+        "id": "g113",
+        "q": "enable on boot",
+        "category": "multiterm",
+        "relevant": [["opt:virtualisation.docker.enableOnBoot"]]
+    },
+    {
+        "id": "g114",
+        "q": "allow ping",
+        "category": "multiterm",
+        "relevant": [["opt:networking.firewall.allowPing"]]
+    },
+    {
+        "id": "g115",
+        "q": "host keys",
+        "category": "multiterm",
+        "relevant": [["opt:services.openssh.hostKeys"]]
+    },
+    {
+        "id": "g116",
+        "q": "listen addresses",
+        "category": "multiterm",
+        "relevant": [["opt:services.openssh.listenAddresses"]]
+    },
+    {
+        "id": "g117",
+        "q": "enable nvidia",
+        "category": "multiterm",
+        "relevant": [["opt:virtualisation.docker.enableNvidia"]]
+    },
+    {
+        "id": "g118",
+        "q": "object storage",
+        "category": "multiterm",
+        "relevant": [["opt:services.minio.enable"]]
+    },
+    {
+        "id": "g119",
+        "q": "secret management",
+        "category": "multiterm",
+        "relevant": [["opt:services.vault.enable"]]
+    },
+    {
+        "id": "g120",
+        "q": "network firewall",
+        "category": "multiterm",
+        "relevant": [["opt:networking.firewall.enable"]]
+    },
+    {
+        "id": "g121",
+        "q": "wireguard vpn",
+        "category": "multiterm",
+        "relevant": [["opt:networking.wireguard.enable"]]
+    },
+    {
+        "id": "g122",
         "q": "container runtime",
         "category": "multiterm",
         "relevant": [
@@ -684,85 +1279,19 @@
         ]
     },
     {
-        "id": "g202",
-        "q": "docker container",
-        "category": "multiterm",
-        "relevant": [["opt:virtualisation.docker.enable"]]
-    },
-    {
-        "id": "g203",
-        "q": "home assistant",
-        "category": "multiterm",
-        "relevant": [["opt:services.home-assistant.enable"]]
-    },
-    {
-        "id": "g204",
-        "q": "matrix synapse",
-        "category": "multiterm",
-        "relevant": [["opt:services.matrix-synapse.enable"]]
-    },
-    {
-        "id": "g205",
+        "id": "g123",
         "q": "mesh vpn",
         "category": "multiterm",
         "relevant": [["opt:services.tailscale.enable"]]
     },
     {
-        "id": "g206",
-        "q": "next cloud",
-        "category": "multiterm",
-        "relevant": [["opt:services.nextcloud.enable"]]
-    },
-    {
-        "id": "g207",
-        "q": "object storage",
-        "category": "multiterm",
-        "relevant": [["opt:services.minio.enable"]]
-    },
-    {
-        "id": "g209",
+        "id": "g124",
         "q": "password manager",
         "category": "multiterm",
         "relevant": [["opt:services.vaultwarden.enable"]]
     },
     {
-        "id": "g210",
-        "q": "secret management",
-        "category": "multiterm",
-        "relevant": [["opt:services.vault.enable"]]
-    },
-    {
-        "id": "g211",
-        "q": "ssh daemon",
-        "category": "multiterm",
-        "relevant": [["opt:services.openssh.enable"]]
-    },
-    {
-        "id": "g212",
-        "q": "vault warden",
-        "category": "multiterm",
-        "relevant": [["opt:services.vaultwarden.enable"]]
-    },
-    {
-        "id": "g213",
-        "q": "allow ping",
-        "category": "multiterm",
-        "relevant": [["opt:networking.firewall.allowPing"]]
-    },
-    {
-        "id": "g214",
-        "q": "allowed tcp ports",
-        "category": "multiterm",
-        "relevant": [["opt:networking.firewall.allowedTCPPorts"]]
-    },
-    {
-        "id": "g215",
-        "q": "allowed udp ports",
-        "category": "multiterm",
-        "relevant": [["opt:networking.firewall.allowedUDPPorts"]]
-    },
-    {
-        "id": "g216",
+        "id": "g125",
         "q": "boot loader",
         "category": "multiterm",
         "relevant": [
@@ -773,115 +1302,386 @@
         ]
     },
     {
-        "id": "g217",
-        "q": "enable nvidia",
-        "category": "multiterm",
-        "relevant": [["opt:virtualisation.docker.enableNvidia"]]
+        "id": "g169",
+        "q": "nginx config",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.nginx.config"],
+            [
+                "opt:services.nginx.httpConfig",
+                "opt:services.nginx.appendHttpConfig",
+                "opt:services.nginx.commonHttpConfig",
+                "opt:services.nginx.appendConfig",
+                "opt:services.nginx.prependConfig",
+                "opt:services.nginx.streamConfig",
+                "opt:services.nginx.eventsConfig"
+            ]
+        ]
     },
     {
-        "id": "g218",
-        "q": "enable on boot",
-        "category": "multiterm",
+        "id": "g170",
+        "q": "nginx virtual hosts",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.nginx.virtualHosts"],
+            [
+                "opt:services.nginx.virtualHosts.<name>.locations.<name>.proxyPass",
+                "opt:services.nginx.virtualHosts.<name>.forceSSL",
+                "opt:services.nginx.virtualHosts.<name>.enableACME",
+                "opt:services.nginx.virtualHosts.<name>.root",
+                "opt:services.nginx.virtualHosts.<name>.extraConfig"
+            ]
+        ]
+    },
+    {
+        "id": "g171",
+        "q": "nginx extra config",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [
+            [
+                "opt:services.nginx.appendHttpConfig",
+                "opt:services.nginx.commonHttpConfig",
+                "opt:services.nginx.appendConfig",
+                "opt:services.nginx.prependConfig",
+                "opt:services.nginx.httpConfig",
+                "opt:services.nginx.config",
+                "opt:services.nginx.virtualHosts.<name>.extraConfig"
+            ]
+        ]
+    },
+    {
+        "id": "g172",
+        "q": "nginx user",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:services.nginx.user"], ["opt:services.nginx.group"]]
+    },
+    {
+        "id": "g173",
+        "q": "nginx reverse proxy",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [
+            [
+                "opt:services.nginx.recommendedProxySettings",
+                "opt:services.nginx.recommendedTlsSettings",
+                "opt:services.nginx.virtualHosts",
+                "opt:services.nginx.virtualHosts.<name>.locations.<name>.proxyPass",
+                "opt:services.nginx.proxyTimeout"
+            ]
+        ]
+    },
+    {
+        "id": "g174",
+        "q": "openssh port",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.openssh.ports"],
+            ["opt:services.openssh.openFirewall"]
+        ]
+    },
+    {
+        "id": "g175",
+        "q": "openssh settings",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.openssh.settings"],
+            [
+                "opt:services.openssh.settings.PasswordAuthentication",
+                "opt:services.openssh.settings.PermitRootLogin",
+                "opt:services.openssh.settings.Ciphers"
+            ]
+        ]
+    },
+    {
+        "id": "g176",
+        "q": "openssh extra config",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:services.openssh.extraConfig"]]
+    },
+    {
+        "id": "g177",
+        "q": "openssh authorized keys",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [
+            [
+                "opt:services.openssh.authorizedKeysFiles",
+                "opt:services.openssh.authorizedKeysCommand",
+                "opt:users.users.<name>.openssh.authorizedKeys.keys"
+            ]
+        ]
+    },
+    {
+        "id": "g178",
+        "q": "postgresql package",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:services.postgresql.package"]]
+    },
+    {
+        "id": "g179",
+        "q": "postgresql data dir",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:services.postgresql.dataDir"]]
+    },
+    {
+        "id": "g180",
+        "q": "postgresql authentication",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.postgresql.authentication"],
+            [
+                "opt:services.postgresql.identMap",
+                "opt:services.postgresql.enableTCPIP"
+            ]
+        ]
+    },
+    {
+        "id": "g181",
+        "q": "postgresql ensure databases",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.postgresql.ensureDatabases"],
+            ["opt:services.postgresql.ensureUsers"]
+        ]
+    },
+    {
+        "id": "g182",
+        "q": "postgres settings",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:services.postgresql.settings"]]
+    },
+    {
+        "id": "g183",
+        "q": "git config",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:programs.git.config"], ["opt:programs.git.settings"]]
+    },
+    {
+        "id": "g184",
+        "q": "docker rootless",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:virtualisation.docker.rootless.enable"],
+            [
+                "opt:virtualisation.docker.rootless.setSocketVariable",
+                "opt:virtualisation.docker.rootless.daemon.settings",
+                "opt:virtualisation.docker.rootless.package",
+                "opt:virtualisation.docker.rootless.extraPackages"
+            ]
+        ]
+    },
+    {
+        "id": "g185",
+        "q": "docker storage driver",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:virtualisation.docker.storageDriver"]]
+    },
+    {
+        "id": "g186",
+        "q": "docker enable on boot",
+        "category": "scoped",
+        "exhaustive": true,
         "relevant": [["opt:virtualisation.docker.enableOnBoot"]]
     },
     {
-        "id": "g219",
-        "q": "host keys",
-        "category": "multiterm",
-        "relevant": [["opt:services.openssh.hostKeys"]]
-    },
-    {
-        "id": "g220",
-        "q": "listen addresses",
-        "category": "multiterm",
-        "relevant": [["opt:services.openssh.listenAddresses"]]
-    },
-    {
-        "id": "g221",
-        "q": "network firewall",
-        "category": "multiterm",
-        "relevant": [["opt:networking.firewall.enable"]]
-    },
-    {
-        "id": "g222",
-        "q": "network manager",
-        "category": "multiterm",
-        "relevant": [["opt:networking.networkmanager.enable"]]
-    },
-    {
-        "id": "g223",
-        "q": "virtual hosts",
-        "category": "multiterm",
-        "relevant": [["opt:services.nginx.virtualHosts"]]
-    },
-    {
-        "id": "g224",
-        "q": "wireguard vpn",
-        "category": "multiterm",
-        "relevant": [["opt:networking.wireguard.enable"]]
-    },
-    {
-        "id": "g251",
-        "q": "bittorrent client",
-        "category": "intent",
-        "relevant": [["opt:services.transmission.enable"]]
-    },
-    {
-        "id": "g252",
-        "q": "caching dns resolver",
-        "category": "intent",
+        "id": "g187",
+        "q": "firewall allowed tcp ports",
+        "category": "scoped",
+        "exhaustive": true,
         "relevant": [
-            ["opt:services.unbound.enable", "opt:services.dnsmasq.enable"]
+            ["opt:networking.firewall.allowedTCPPorts"],
+            ["opt:networking.firewall.allowedTCPPortRanges"]
         ]
     },
     {
-        "id": "g254",
-        "q": "document management",
-        "category": "intent",
-        "relevant": [["opt:services.paperless.enable"]]
+        "id": "g188",
+        "q": "bluetooth power on boot",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:hardware.bluetooth.powerOnBoot"]]
     },
     {
-        "id": "g255",
-        "q": "file synchronization",
-        "category": "intent",
-        "relevant": [["opt:services.syncthing.enable"]]
+        "id": "g189",
+        "q": "printing drivers",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:services.printing.drivers"]]
     },
     {
-        "id": "g257",
-        "q": "in memory key value store",
-        "category": "intent",
-        "relevant": [["opt:services.redis.servers"]]
+        "id": "g190",
+        "q": "systemd-boot configuration limit",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:boot.loader.systemd-boot.configurationLimit"]]
     },
     {
-        "id": "g259",
-        "q": "media streaming server",
-        "category": "intent",
-        "relevant": [["opt:services.jellyfin.enable"]]
-    },
-    {
-        "id": "g260",
-        "q": "metrics monitoring stack",
-        "category": "intent",
+        "id": "g191",
+        "q": "restic backups",
+        "category": "scoped",
+        "exhaustive": true,
         "relevant": [
-            ["opt:services.prometheus.enable", "opt:services.grafana.enable"]
+            ["opt:services.restic.backups"],
+            [
+                "opt:services.restic.backups.<name>.paths",
+                "opt:services.restic.backups.<name>.repository",
+                "opt:services.restic.backups.<name>.passwordFile",
+                "opt:services.restic.backups.<name>.initialize",
+                "opt:services.restic.backups.<name>.pruneOpts",
+                "opt:services.restic.backups.<name>.timerConfig",
+                "opt:services.restic.backups.<name>.user",
+                "opt:services.restic.backups.<name>.environmentFile"
+            ]
         ]
     },
     {
-        "id": "g261",
-        "q": "printing support",
-        "category": "intent",
-        "relevant": [["opt:services.printing.enable"]]
-    },
-    {
-        "id": "g263",
-        "q": "relational database server",
-        "category": "intent",
+        "id": "g192",
+        "q": "prometheus exporters",
+        "category": "scoped",
+        "exhaustive": true,
         "relevant": [
-            ["opt:services.postgresql.enable", "opt:services.mysql.enable"]
+            ["opt:services.prometheus.exporters"],
+            ["opt:services.prometheus.exporters.node.enable"]
         ]
     },
     {
-        "id": "g264",
+        "id": "g193",
+        "q": "redis servers",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.redis.servers"],
+            [
+                "opt:services.redis.servers.<name>.enable",
+                "opt:services.redis.servers.<name>.port",
+                "opt:services.redis.servers.<name>.unixSocket",
+                "opt:services.redis.servers.<name>.user",
+                "opt:services.redis.package"
+            ]
+        ]
+    },
+    {
+        "id": "g194",
+        "q": "grafana settings",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.grafana.settings"],
+            [
+                "opt:services.grafana.settings.server.http_port",
+                "opt:services.grafana.settings.server.http_addr",
+                "opt:services.grafana.settings.server.domain"
+            ]
+        ]
+    },
+    {
+        "id": "g195",
+        "q": "nextcloud hostname",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:services.nextcloud.hostName"]]
+    },
+    {
+        "id": "g196",
+        "q": "nextcloud max upload size",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:services.nextcloud.maxUploadSize"]]
+    },
+    {
+        "id": "g197",
+        "q": "syncthing data dir",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.syncthing.dataDir"],
+            ["opt:services.syncthing.configDir"]
+        ]
+    },
+    {
+        "id": "g198",
+        "q": "tailscale routing features",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:services.tailscale.useRoutingFeatures"]]
+    },
+    {
+        "id": "g199",
+        "q": "samba open firewall",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:services.samba.openFirewall"]]
+    },
+    {
+        "id": "g200",
+        "q": "jellyfin open firewall",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:services.jellyfin.openFirewall"]]
+    },
+    {
+        "id": "g201",
+        "q": "home assistant extra components",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:services.home-assistant.extraComponents"]]
+    },
+    {
+        "id": "g202",
+        "q": "fail2ban jails",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:services.fail2ban.jails"]]
+    },
+    {
+        "id": "g203",
+        "q": "mysql package",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:services.mysql.package"]]
+    },
+    {
+        "id": "g204",
+        "q": "nginx recommended proxy settings",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.nginx.recommendedProxySettings"],
+            ["opt:services.nginx.recommendedTlsSettings"]
+        ]
+    },
+    {
+        "id": "g205",
+        "q": "transmission download dir",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.transmission.settings.download-dir"],
+            ["opt:services.transmission.home"]
+        ]
+    },
+    {
+        "id": "g126",
+        "q": "web server",
+        "category": "intent",
+        "relevant": [["opt:services.nginx.enable", "opt:services.caddy.enable"]]
+    },
+    {
+        "id": "g127",
         "q": "reverse proxy",
         "category": "intent",
         "relevant": [
@@ -893,25 +1693,7 @@
         ]
     },
     {
-        "id": "g265",
-        "q": "s3 compatible object storage",
-        "category": "intent",
-        "relevant": [["opt:services.minio.enable"]]
-    },
-    {
-        "id": "g266",
-        "q": "secret storage",
-        "category": "intent",
-        "relevant": [["opt:services.vault.enable"]]
-    },
-    {
-        "id": "g267",
-        "q": "self hosted password manager",
-        "category": "intent",
-        "relevant": [["opt:services.vaultwarden.enable"]]
-    },
-    {
-        "id": "g272",
+        "id": "g130",
         "q": "virtual private network",
         "category": "intent",
         "relevant": [
@@ -919,75 +1701,126 @@
         ]
     },
     {
-        "id": "g273",
-        "q": "web server",
+        "id": "g131",
+        "q": "self hosted password manager",
         "category": "intent",
-        "relevant": [["opt:services.nginx.enable", "opt:services.caddy.enable"]]
+        "relevant": [["opt:services.vaultwarden.enable"]]
     },
     {
-        "id": "g274",
+        "id": "g132",
+        "q": "media streaming server",
+        "category": "intent",
+        "relevant": [["opt:services.jellyfin.enable"]]
+    },
+    {
+        "id": "g134",
+        "q": "file synchronization",
+        "category": "intent",
+        "relevant": [["opt:services.syncthing.enable"]]
+    },
+    {
+        "id": "g135",
+        "q": "relational database server",
+        "category": "intent",
+        "relevant": [
+            ["opt:services.postgresql.enable", "opt:services.mysql.enable"]
+        ]
+    },
+    {
+        "id": "g136",
+        "q": "in memory key value store",
+        "category": "intent",
+        "relevant": [["opt:services.redis.servers"]]
+    },
+    {
+        "id": "g137",
+        "q": "secret storage",
+        "category": "intent",
+        "relevant": [["opt:services.vault.enable"]]
+    },
+    {
+        "id": "g138",
+        "q": "s3 compatible object storage",
+        "category": "intent",
+        "relevant": [["opt:services.minio.enable"]]
+    },
+    {
+        "id": "g139",
+        "q": "metrics monitoring stack",
+        "category": "intent",
+        "relevant": [
+            ["opt:services.prometheus.enable", "opt:services.grafana.enable"]
+        ]
+    },
+    {
+        "id": "g140",
+        "q": "document management",
+        "category": "intent",
+        "relevant": [["opt:services.paperless.enable"]]
+    },
+    {
+        "id": "g141",
+        "q": "printing support",
+        "category": "intent",
+        "relevant": [["opt:services.printing.enable"]]
+    },
+    {
+        "id": "g142",
         "q": "wireless bluetooth support",
         "category": "intent",
         "relevant": [["opt:hardware.bluetooth.enable"]]
     },
     {
-        "id": "g313",
+        "id": "g143",
+        "q": "caching dns resolver",
+        "category": "intent",
+        "relevant": [
+            ["opt:services.unbound.enable", "opt:services.dnsmasq.enable"]
+        ]
+    },
+    {
+        "id": "g149",
+        "q": "bittorrent client",
+        "category": "intent",
+        "relevant": [["opt:services.transmission.enable"]]
+    },
+    {
+        "id": "g248",
         "q": "boot.kernelPackages",
         "category": "cased",
         "exhaustive": true,
         "relevant": [["opt:boot.kernelPackages"]]
     },
     {
-        "id": "g314",
-        "q": "boot.loader.efi.canTouchEfiVariables",
-        "category": "cased",
-        "exhaustive": true,
-        "relevant": [["opt:boot.loader.efi.canTouchEfiVariables"]]
-    },
-    {
-        "id": "g315",
+        "id": "g249",
         "q": "boot.loader.grub.efiSupport",
         "category": "cased",
         "exhaustive": true,
         "relevant": [["opt:boot.loader.grub.efiSupport"]]
     },
     {
-        "id": "g316",
+        "id": "g250",
         "q": "environment.sessionVariables",
         "category": "cased",
         "exhaustive": true,
         "relevant": [["opt:environment.sessionVariables"]]
     },
     {
-        "id": "g317",
-        "q": "networking.firewall.allowedTCPPorts",
-        "category": "cased",
-        "exhaustive": true,
-        "relevant": [["opt:networking.firewall.allowedTCPPorts"]]
-    },
-    {
-        "id": "g318",
+        "id": "g251",
         "q": "networking.hostName",
         "category": "cased",
         "exhaustive": true,
         "relevant": [["opt:networking.hostName"]]
     },
     {
-        "id": "g319",
-        "q": "networking.networkmanager.logLevel",
-        "category": "cased",
-        "exhaustive": true,
-        "relevant": [["opt:networking.networkmanager.logLevel"]]
-    },
-    {
-        "id": "g320",
+        "id": "g252",
         "q": "programs.hyprland.withUWSM",
         "category": "cased",
         "exhaustive": true,
         "relevant": [["opt:programs.hyprland.withUWSM"]]
     },
     {
-        "id": "g321",
+        "id": "g253",
         "q": "services.mysqlBackup",
         "category": "cased",
         "exhaustive": true,
@@ -1006,27 +1839,14 @@
         ]
     },
     {
-        "id": "g322",
-        "q": "services.nextcloud.hostName",
-        "category": "cased",
-        "exhaustive": true,
-        "relevant": [["opt:services.nextcloud.hostName"]]
-    },
-    {
-        "id": "g323",
-        "q": "services.nginx.virtualHosts",
-        "category": "cased",
-        "relevant": [["opt:services.nginx.virtualHosts"]]
-    },
-    {
-        "id": "g324",
+        "id": "g254",
         "q": "services.postgresql.enableTCPIP",
         "category": "cased",
         "exhaustive": true,
         "relevant": [["opt:services.postgresql.enableTCPIP"]]
     },
     {
-        "id": "g325",
+        "id": "g255",
         "q": "system.autoUpgrade",
         "category": "cased",
         "exhaustive": true,
@@ -1051,114 +1871,14 @@
         ]
     },
     {
-        "id": "g326",
+        "id": "g256",
         "q": "virtualisation.docker.logDriver",
         "category": "cased",
         "exhaustive": true,
         "relevant": [["opt:virtualisation.docker.logDriver"]]
     },
     {
-        "id": "g450",
-        "q": "boot.initrd",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:boot.initrd.enable"],
-            [
-                "opt:boot.initrd.kernelModules",
-                "opt:boot.initrd.availableKernelModules",
-                "opt:boot.initrd.luks.devices",
-                "opt:boot.initrd.systemd.enable"
-            ]
-        ]
-    },
-    {
-        "id": "g451",
-        "q": "boot.loader.systemd-boot",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:boot.loader.systemd-boot.enable"],
-            [
-                "opt:boot.loader.systemd-boot.configurationLimit",
-                "opt:boot.loader.systemd-boot.consoleMode",
-                "opt:boot.loader.systemd-boot.editor",
-                "opt:boot.loader.systemd-boot.extraEntries",
-                "opt:boot.loader.systemd-boot.extraFiles",
-                "opt:boot.loader.systemd-boot.memtest86.enable",
-                "opt:boot.loader.systemd-boot.netbootxyz.enable",
-                "opt:boot.loader.efi.canTouchEfiVariables"
-            ]
-        ]
-    },
-    {
-        "id": "g452",
-        "q": "hardware.bluetooth",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:hardware.bluetooth.enable"],
-            [
-                "opt:hardware.bluetooth.powerOnBoot",
-                "opt:hardware.bluetooth.settings",
-                "opt:hardware.bluetooth.package",
-                "opt:services.blueman.enable"
-            ]
-        ]
-    },
-    {
-        "id": "g453",
-        "q": "hardware.graphics",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:hardware.graphics.enable"],
-            [
-                "opt:hardware.graphics.enable32Bit",
-                "opt:hardware.graphics.extraPackages"
-            ]
-        ]
-    },
-    {
-        "id": "g454",
-        "q": "networking.firewall",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:networking.firewall.enable"],
-            [
-                "opt:networking.firewall.allowedTCPPorts",
-                "opt:networking.firewall.allowedUDPPorts",
-                "opt:networking.firewall.allowedTCPPortRanges",
-                "opt:networking.firewall.allowedUDPPortRanges",
-                "opt:networking.firewall.extraCommands",
-                "opt:networking.firewall.extraInputRules",
-                "opt:networking.firewall.checkReversePath",
-                "opt:networking.firewall.trustedInterfaces",
-                "opt:networking.firewall.allowPing",
-                "opt:networking.firewall.interfaces",
-                "opt:networking.firewall.logRefusedConnections"
-            ]
-        ]
-    },
-    {
-        "id": "g455",
-        "q": "networking.wireguard",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:networking.wireguard.enable"],
-            [
-                "opt:networking.wireguard.interfaces",
-                "opt:networking.wireguard.interfaces.<name>.privateKeyFile",
-                "opt:networking.wg-quick.interfaces",
-                "opt:networking.wg-quick.interfaces.<name>.address",
-                "opt:networking.firewall.checkReversePath"
-            ]
-        ]
-    },
-    {
-        "id": "g456",
+        "id": "g257",
         "q": "nix.gc",
         "category": "dotted",
         "exhaustive": true,
@@ -1173,7 +1893,7 @@
         ]
     },
     {
-        "id": "g457",
+        "id": "g258",
         "q": "nix.registry",
         "category": "dotted",
         "exhaustive": true,
@@ -1188,28 +1908,14 @@
         ]
     },
     {
-        "id": "g458",
+        "id": "g259",
         "q": "nix.settings.substituters",
         "category": "dotted",
         "exhaustive": true,
         "relevant": [["opt:nix.settings.substituters"]]
     },
     {
-        "id": "g459",
-        "q": "programs.hyprland",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:programs.hyprland.enable"],
-            [
-                "opt:programs.hyprland.xwayland.enable",
-                "opt:programs.hyprland.package",
-                "opt:programs.hyprland.withUWSM"
-            ]
-        ]
-    },
-    {
-        "id": "g460",
+        "id": "g260",
         "q": "security.pam.u2f",
         "category": "dotted",
         "exhaustive": true,
@@ -1231,7 +1937,7 @@
         ]
     },
     {
-        "id": "g461",
+        "id": "g261",
         "q": "security.wrappers",
         "category": "dotted",
         "exhaustive": true,
@@ -1251,73 +1957,14 @@
         ]
     },
     {
-        "id": "g462",
-        "q": "services.caddy",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.caddy.enable"],
-            [
-                "opt:services.caddy.virtualHosts",
-                "opt:services.caddy.user",
-                "opt:services.caddy.group",
-                "opt:services.caddy.package",
-                "opt:services.caddy.email",
-                "opt:services.caddy.globalConfig",
-                "opt:services.caddy.configFile",
-                "opt:services.caddy.dataDir"
-            ]
-        ]
-    },
-    {
-        "id": "g463",
-        "q": "services.fail2ban",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.fail2ban.enable"],
-            [
-                "opt:services.fail2ban.jails",
-                "opt:services.fail2ban.maxretry",
-                "opt:services.fail2ban.ignoreIP",
-                "opt:services.fail2ban.bantime",
-                "opt:services.fail2ban.package"
-            ]
-        ]
-    },
-    {
-        "id": "g464",
-        "q": "services.grafana",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.grafana.enable"],
-            [
-                "opt:services.grafana.settings",
-                "opt:services.grafana.settings.server.http_port",
-                "opt:services.grafana.settings.server.http_addr",
-                "opt:services.grafana.settings.server.domain",
-                "opt:services.grafana.provision.enable",
-                "opt:services.grafana.declarativePlugins",
-                "opt:services.grafana.package"
-            ]
-        ]
-    },
-    {
-        "id": "g465",
-        "q": "services.grafana.settings",
-        "category": "dotted",
-        "relevant": [["opt:services.grafana.settings"]]
-    },
-    {
-        "id": "g466",
+        "id": "g262",
         "q": "services.home-assistant.package",
         "category": "dotted",
         "exhaustive": true,
         "relevant": [["opt:services.home-assistant.package"]]
     },
     {
-        "id": "g467",
+        "id": "g263",
         "q": "services.immich",
         "category": "dotted",
         "relevant": [
@@ -1330,95 +1977,7 @@
         ]
     },
     {
-        "id": "g468",
-        "q": "services.jellyfin",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.jellyfin.enable"],
-            [
-                "opt:services.jellyfin.openFirewall",
-                "opt:services.jellyfin.dataDir",
-                "opt:services.jellyfin.cacheDir",
-                "opt:services.jellyfin.user",
-                "opt:services.jellyfin.group"
-            ]
-        ]
-    },
-    {
-        "id": "g469",
-        "q": "services.mysql",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.mysql.enable"],
-            [
-                "opt:services.mysql.package",
-                "opt:services.mysql.settings",
-                "opt:services.mysql.dataDir",
-                "opt:services.mysql.ensureDatabases",
-                "opt:services.mysql.ensureUsers"
-            ]
-        ]
-    },
-    {
-        "id": "g470",
-        "q": "services.nginx",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.nginx.enable"],
-            [
-                "opt:services.nginx.virtualHosts",
-                "opt:services.nginx.user",
-                "opt:services.nginx.group",
-                "opt:services.nginx.package",
-                "opt:services.nginx.config",
-                "opt:services.nginx.httpConfig",
-                "opt:services.nginx.appendHttpConfig",
-                "opt:services.nginx.recommendedProxySettings",
-                "opt:services.nginx.recommendedTlsSettings",
-                "opt:services.nginx.recommendedGzipSettings",
-                "opt:services.nginx.recommendedOptimisation"
-            ]
-        ]
-    },
-    {
-        "id": "g471",
-        "q": "services.nginx.enable",
-        "category": "dotted",
-        "relevant": [["opt:services.nginx.enable"]]
-    },
-    {
-        "id": "g472",
-        "q": "services.openssh",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.openssh.enable"],
-            [
-                "opt:services.openssh.settings",
-                "opt:services.openssh.ports",
-                "opt:services.openssh.extraConfig",
-                "opt:services.openssh.openFirewall",
-                "opt:services.openssh.package",
-                "opt:services.openssh.hostKeys",
-                "opt:services.openssh.authorizedKeysFiles",
-                "opt:services.openssh.listenAddresses",
-                "opt:services.openssh.startWhenNeeded",
-                "opt:services.openssh.settings.PasswordAuthentication",
-                "opt:services.openssh.settings.PermitRootLogin"
-            ]
-        ]
-    },
-    {
-        "id": "g473",
-        "q": "services.openssh.ports",
-        "category": "dotted",
-        "relevant": [["opt:services.openssh.ports"]]
-    },
-    {
-        "id": "g474",
+        "id": "g264",
         "q": "services.openvpn.servers",
         "category": "dotted",
         "exhaustive": true,
@@ -1435,213 +1994,27 @@
         ]
     },
     {
-        "id": "g475",
+        "id": "g265",
         "q": "services.paperless.domain",
         "category": "dotted",
         "exhaustive": true,
         "relevant": [["opt:services.paperless.domain"]]
     },
     {
-        "id": "g476",
-        "q": "services.postgresql",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.postgresql.enable"],
-            [
-                "opt:services.postgresql.package",
-                "opt:services.postgresql.dataDir",
-                "opt:services.postgresql.settings",
-                "opt:services.postgresql.ensureDatabases",
-                "opt:services.postgresql.ensureUsers",
-                "opt:services.postgresql.authentication",
-                "opt:services.postgresql.enableTCPIP",
-                "opt:services.postgresql.identMap",
-                "opt:services.postgresql.initialScript",
-                "opt:services.postgresql.extensions"
-            ]
-        ]
-    },
-    {
-        "id": "g477",
-        "q": "services.postgresql.dataDir",
-        "category": "dotted",
-        "relevant": [["opt:services.postgresql.dataDir"]]
-    },
-    {
-        "id": "g478",
-        "q": "services.prometheus",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.prometheus.enable"],
-            [
-                "opt:services.prometheus.exporters",
-                "opt:services.prometheus.port",
-                "opt:services.prometheus.listenAddress",
-                "opt:services.prometheus.stateDir",
-                "opt:services.prometheus.scrapeConfigs",
-                "opt:services.prometheus.globalConfig",
-                "opt:services.prometheus.alertmanager.enable",
-                "opt:services.prometheus.exporters.node.enable"
-            ]
-        ]
-    },
-    {
-        "id": "g479",
-        "q": "services.redis",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.redis.servers"],
-            [
-                "opt:services.redis.servers.<name>.enable",
-                "opt:services.redis.servers.<name>.port",
-                "opt:services.redis.servers.<name>.unixSocket",
-                "opt:services.redis.servers.<name>.user",
-                "opt:services.redis.package"
-            ]
-        ]
-    },
-    {
-        "id": "g480",
-        "q": "services.restic",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.restic.backups"],
-            [
-                "opt:services.restic.backups.<name>.paths",
-                "opt:services.restic.backups.<name>.repository",
-                "opt:services.restic.backups.<name>.passwordFile",
-                "opt:services.restic.backups.<name>.initialize",
-                "opt:services.restic.backups.<name>.pruneOpts",
-                "opt:services.restic.backups.<name>.timerConfig",
-                "opt:services.restic.backups.<name>.user",
-                "opt:services.restic.backups.<name>.environmentFile"
-            ]
-        ]
-    },
-    {
-        "id": "g481",
-        "q": "services.samba",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.samba.enable"],
-            [
-                "opt:services.samba.settings",
-                "opt:services.samba.openFirewall",
-                "opt:services.samba.package",
-                "opt:services.samba.usershares.enable"
-            ]
-        ]
-    },
-    {
-        "id": "g482",
-        "q": "services.syncthing",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.syncthing.enable"],
-            [
-                "opt:services.syncthing.settings",
-                "opt:services.syncthing.dataDir",
-                "opt:services.syncthing.configDir",
-                "opt:services.syncthing.user",
-                "opt:services.syncthing.group",
-                "opt:services.syncthing.guiAddress",
-                "opt:services.syncthing.openDefaultPorts",
-                "opt:services.syncthing.key",
-                "opt:services.syncthing.cert",
-                "opt:services.syncthing.extraFlags",
-                "opt:services.syncthing.settings.folders",
-                "opt:services.syncthing.settings.devices"
-            ]
-        ]
-    },
-    {
-        "id": "g483",
-        "q": "services.tailscale",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.tailscale.enable"],
-            [
-                "opt:services.tailscale.port",
-                "opt:services.tailscale.useRoutingFeatures",
-                "opt:services.tailscale.authKeyFile",
-                "opt:services.tailscale.permitCertUid",
-                "opt:services.tailscale.interfaceName",
-                "opt:services.tailscale.package"
-            ]
-        ]
-    },
-    {
-        "id": "g484",
-        "q": "services.xserver",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.xserver.enable"],
-            [
-                "opt:services.xserver.videoDrivers",
-                "opt:services.xserver.xkb.layout",
-                "opt:services.xserver.xkb.options",
-                "opt:services.xserver.dpi",
-                "opt:services.displayManager.defaultSession"
-            ]
-        ]
-    },
-    {
-        "id": "g485",
+        "id": "g266",
         "q": "system.nixos.label",
         "category": "dotted",
         "exhaustive": true,
         "relevant": [["opt:system.nixos.label"]]
     },
     {
-        "id": "g486",
+        "id": "g267",
         "q": "systemd.user.services",
         "category": "dotted",
         "relevant": [["opt:systemd.user.services"]]
     },
     {
-        "id": "g487",
-        "q": "virtualisation.docker",
-        "category": "dotted",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:virtualisation.docker.enable"],
-            [
-                "opt:virtualisation.docker.rootless.enable",
-                "opt:virtualisation.docker.rootless.setSocketVariable",
-                "opt:virtualisation.docker.storageDriver",
-                "opt:virtualisation.docker.daemon.settings",
-                "opt:virtualisation.docker.enableOnBoot",
-                "opt:virtualisation.docker.autoPrune.enable",
-                "opt:virtualisation.docker.package",
-                "opt:virtualisation.docker.extraOptions",
-                "opt:virtualisation.docker.logDriver",
-                "opt:virtualisation.docker.liveRestore"
-            ]
-        ]
-    },
-    {
-        "id": "g488",
-        "q": "virtualisation.docker.enable",
-        "category": "dotted",
-        "relevant": [["opt:virtualisation.docker.enable"]]
-    },
-    {
-        "id": "g500",
-        "q": "bluetooth power on boot",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [["opt:hardware.bluetooth.powerOnBoot"]]
-    },
-    {
-        "id": "g501",
+        "id": "g268",
         "q": "deviceTree filter",
         "category": "scoped",
         "exhaustive": true,
@@ -1651,88 +2024,14 @@
         ]
     },
     {
-        "id": "g502",
-        "q": "docker enable on boot",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [["opt:virtualisation.docker.enableOnBoot"]]
-    },
-    {
-        "id": "g503",
-        "q": "docker rootless",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:virtualisation.docker.rootless.enable"],
-            [
-                "opt:virtualisation.docker.rootless.setSocketVariable",
-                "opt:virtualisation.docker.rootless.daemon.settings",
-                "opt:virtualisation.docker.rootless.package",
-                "opt:virtualisation.docker.rootless.extraPackages"
-            ]
-        ]
-    },
-    {
-        "id": "g504",
-        "q": "docker storage driver",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [["opt:virtualisation.docker.storageDriver"]]
-    },
-    {
-        "id": "g505",
-        "q": "fail2ban jails",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [["opt:services.fail2ban.jails"]]
-    },
-    {
-        "id": "g506",
-        "q": "firewall allowed tcp ports",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:networking.firewall.allowedTCPPorts"],
-            ["opt:networking.firewall.allowedTCPPortRanges"]
-        ]
-    },
-    {
-        "id": "g507",
-        "q": "git config",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [["opt:programs.git.config"], ["opt:programs.git.settings"]]
-    },
-    {
-        "id": "g508",
-        "q": "grafana settings",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.grafana.settings"],
-            [
-                "opt:services.grafana.settings.server.http_port",
-                "opt:services.grafana.settings.server.http_addr",
-                "opt:services.grafana.settings.server.domain"
-            ]
-        ]
-    },
-    {
-        "id": "g509",
-        "q": "home assistant extra components",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [["opt:services.home-assistant.extraComponents"]]
-    },
-    {
-        "id": "g510",
+        "id": "g269",
         "q": "initrd authorizedkeys",
         "category": "scoped",
         "exhaustive": true,
         "relevant": [["opt:boot.initrd.network.ssh.authorizedKeys"]]
     },
     {
-        "id": "g511",
+        "id": "g270",
         "q": "ipv6 privacy",
         "category": "scoped",
         "exhaustive": true,
@@ -1742,327 +2041,35 @@
         ]
     },
     {
-        "id": "g512",
-        "q": "jellyfin open firewall",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [["opt:services.jellyfin.openFirewall"]]
-    },
-    {
-        "id": "g513",
+        "id": "g271",
         "q": "kernel parameters",
         "category": "scoped",
         "exhaustive": true,
         "relevant": [["opt:boot.kernelParams"]]
     },
     {
-        "id": "g514",
-        "q": "mysql package",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [["opt:services.mysql.package"]]
-    },
-    {
-        "id": "g515",
-        "q": "nextcloud hostname",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [["opt:services.nextcloud.hostName"]]
-    },
-    {
-        "id": "g516",
-        "q": "nextcloud max upload size",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [["opt:services.nextcloud.maxUploadSize"]]
-    },
-    {
-        "id": "g517",
-        "q": "nginx config",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.nginx.config"],
-            [
-                "opt:services.nginx.httpConfig",
-                "opt:services.nginx.appendHttpConfig",
-                "opt:services.nginx.commonHttpConfig",
-                "opt:services.nginx.appendConfig",
-                "opt:services.nginx.prependConfig",
-                "opt:services.nginx.streamConfig",
-                "opt:services.nginx.eventsConfig"
-            ]
-        ]
-    },
-    {
-        "id": "g518",
-        "q": "nginx extra config",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [
-            [
-                "opt:services.nginx.appendHttpConfig",
-                "opt:services.nginx.commonHttpConfig",
-                "opt:services.nginx.appendConfig",
-                "opt:services.nginx.prependConfig",
-                "opt:services.nginx.httpConfig",
-                "opt:services.nginx.config",
-                "opt:services.nginx.virtualHosts.<name>.extraConfig"
-            ]
-        ]
-    },
-    {
-        "id": "g519",
-        "q": "nginx recommended proxy settings",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.nginx.recommendedProxySettings"],
-            ["opt:services.nginx.recommendedTlsSettings"]
-        ]
-    },
-    {
-        "id": "g520",
-        "q": "nginx reverse proxy",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [
-            [
-                "opt:services.nginx.recommendedProxySettings",
-                "opt:services.nginx.recommendedTlsSettings",
-                "opt:services.nginx.virtualHosts",
-                "opt:services.nginx.virtualHosts.<name>.locations.<name>.proxyPass",
-                "opt:services.nginx.proxyTimeout"
-            ]
-        ]
-    },
-    {
-        "id": "g521",
-        "q": "nginx user",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [["opt:services.nginx.user"], ["opt:services.nginx.group"]]
-    },
-    {
-        "id": "g522",
-        "q": "nginx virtual hosts",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.nginx.virtualHosts"],
-            [
-                "opt:services.nginx.virtualHosts.<name>.locations.<name>.proxyPass",
-                "opt:services.nginx.virtualHosts.<name>.forceSSL",
-                "opt:services.nginx.virtualHosts.<name>.enableACME",
-                "opt:services.nginx.virtualHosts.<name>.root",
-                "opt:services.nginx.virtualHosts.<name>.extraConfig"
-            ]
-        ]
-    },
-    {
-        "id": "g523",
+        "id": "g272",
         "q": "nix channel enable",
         "category": "scoped",
         "exhaustive": true,
         "relevant": [["opt:nix.channel.enable"]]
     },
     {
-        "id": "g524",
-        "q": "openssh authorized keys",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [
-            [
-                "opt:services.openssh.authorizedKeysFiles",
-                "opt:services.openssh.authorizedKeysCommand",
-                "opt:users.users.<name>.openssh.authorizedKeys.keys"
-            ]
-        ]
-    },
-    {
-        "id": "g525",
-        "q": "openssh extra config",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [["opt:services.openssh.extraConfig"]]
-    },
-    {
-        "id": "g526",
-        "q": "openssh port",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.openssh.ports"],
-            ["opt:services.openssh.openFirewall"]
-        ]
-    },
-    {
-        "id": "g527",
-        "q": "openssh settings",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.openssh.settings"],
-            [
-                "opt:services.openssh.settings.PasswordAuthentication",
-                "opt:services.openssh.settings.PermitRootLogin",
-                "opt:services.openssh.settings.Ciphers"
-            ]
-        ]
-    },
-    {
-        "id": "g528",
-        "q": "postgres settings",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [["opt:services.postgresql.settings"]]
-    },
-    {
-        "id": "g529",
-        "q": "postgresql authentication",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.postgresql.authentication"],
-            [
-                "opt:services.postgresql.identMap",
-                "opt:services.postgresql.enableTCPIP"
-            ]
-        ]
-    },
-    {
-        "id": "g530",
-        "q": "postgresql data dir",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [["opt:services.postgresql.dataDir"]]
-    },
-    {
-        "id": "g531",
-        "q": "postgresql ensure databases",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.postgresql.ensureDatabases"],
-            ["opt:services.postgresql.ensureUsers"]
-        ]
-    },
-    {
-        "id": "g532",
-        "q": "postgresql package",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [["opt:services.postgresql.package"]]
-    },
-    {
-        "id": "g533",
-        "q": "printing drivers",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [["opt:services.printing.drivers"]]
-    },
-    {
-        "id": "g534",
-        "q": "prometheus exporters",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.prometheus.exporters"],
-            ["opt:services.prometheus.exporters.node.enable"]
-        ]
-    },
-    {
-        "id": "g535",
-        "q": "redis servers",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.redis.servers"],
-            [
-                "opt:services.redis.servers.<name>.enable",
-                "opt:services.redis.servers.<name>.port",
-                "opt:services.redis.servers.<name>.unixSocket",
-                "opt:services.redis.servers.<name>.user",
-                "opt:services.redis.package"
-            ]
-        ]
-    },
-    {
-        "id": "g536",
-        "q": "restic backups",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.restic.backups"],
-            [
-                "opt:services.restic.backups.<name>.paths",
-                "opt:services.restic.backups.<name>.repository",
-                "opt:services.restic.backups.<name>.passwordFile",
-                "opt:services.restic.backups.<name>.initialize",
-                "opt:services.restic.backups.<name>.pruneOpts",
-                "opt:services.restic.backups.<name>.timerConfig",
-                "opt:services.restic.backups.<name>.user",
-                "opt:services.restic.backups.<name>.environmentFile"
-            ]
-        ]
-    },
-    {
-        "id": "g537",
-        "q": "samba open firewall",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [["opt:services.samba.openFirewall"]]
-    },
-    {
-        "id": "g538",
+        "id": "g273",
         "q": "sddm theme",
         "category": "scoped",
         "exhaustive": true,
         "relevant": [["opt:services.displayManager.sddm.theme"]]
     },
     {
-        "id": "g539",
+        "id": "g274",
         "q": "security.acme.certs directory",
         "category": "scoped",
         "exhaustive": true,
         "relevant": [["opt:security.acme.certs.<name>.directory"]]
     },
     {
-        "id": "g540",
-        "q": "syncthing data dir",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.syncthing.dataDir"],
-            ["opt:services.syncthing.configDir"]
-        ]
-    },
-    {
-        "id": "g541",
-        "q": "systemd-boot configuration limit",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [["opt:boot.loader.systemd-boot.configurationLimit"]]
-    },
-    {
-        "id": "g542",
-        "q": "tailscale routing features",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [["opt:services.tailscale.useRoutingFeatures"]]
-    },
-    {
-        "id": "g543",
-        "q": "transmission download dir",
-        "category": "scoped",
-        "exhaustive": true,
-        "relevant": [
-            ["opt:services.transmission.settings.download-dir"],
-            ["opt:services.transmission.home"]
-        ]
-    },
-    {
-        "id": "g550",
+        "id": "g275",
         "q": "activationScripts",
         "category": "leaf",
         "exhaustive": true,
@@ -2072,14 +2079,7 @@
         ]
     },
     {
-        "id": "g551",
-        "q": "canTouchEfiVariables",
-        "category": "leaf",
-        "exhaustive": true,
-        "relevant": [["opt:boot.loader.efi.canTouchEfiVariables"]]
-    },
-    {
-        "id": "g552",
+        "id": "g276",
         "q": "extraPackages",
         "category": "leaf",
         "relevant": [
@@ -2093,7 +2093,7 @@
         ]
     },
     {
-        "id": "g553",
+        "id": "g277",
         "q": "initialHashedPassword",
         "category": "leaf",
         "relevant": [
@@ -2104,7 +2104,7 @@
         ]
     },
     {
-        "id": "g554",
+        "id": "g278",
         "q": "initialPassword",
         "category": "leaf",
         "relevant": [
@@ -2115,28 +2115,28 @@
         ]
     },
     {
-        "id": "g555",
+        "id": "g279",
         "q": "kernelPackages",
         "category": "leaf",
         "exhaustive": true,
         "relevant": [["opt:boot.kernelPackages"]]
     },
     {
-        "id": "g556",
+        "id": "g280",
         "q": "nixPath",
         "category": "leaf",
         "exhaustive": true,
         "relevant": [["opt:nix.nixPath"]]
     },
     {
-        "id": "g557",
+        "id": "g281",
         "q": "sessionVariables",
         "category": "leaf",
         "exhaustive": true,
         "relevant": [["opt:environment.sessionVariables"]]
     },
     {
-        "id": "g558",
+        "id": "g282",
         "q": "shellAliases",
         "category": "leaf",
         "exhaustive": true,
@@ -2150,20 +2150,20 @@
         ]
     },
     {
-        "id": "g559",
+        "id": "g283",
         "q": "systemPackages",
         "category": "leaf",
         "exhaustive": true,
         "relevant": [["opt:environment.systemPackages"]]
     },
     {
-        "id": "g560",
+        "id": "g284",
         "q": "timeZone",
         "category": "leaf",
         "relevant": [["opt:time.timeZone"]]
     },
     {
-        "id": "g561",
+        "id": "g285",
         "q": "wakeOnLan",
         "category": "leaf",
         "exhaustive": true,

@@ -100,37 +100,25 @@ Options only:
 | `scoped` | a module plus the setting inside it: `nginx virtual hosts` |
 | `leaf`   | a bare last segment with no path: `systemPackages`         |
 
-Ids are block-allocated per category, so a new category takes a fresh block and
-adding a query never renumbers an existing one:
-
-| block  | category    |
-| ------ | ----------- |
-| `g001` | `exact`     |
-| `g100` | `prefix`    |
-| `g150` | `typo`      |
-| `g200` | `multiterm` |
-| `g250` | `intent`    |
-| `g300` | `cased`     |
-| `g350` | `attrpath`  |
-| `g400` | `versioned` |
-| `g450` | `dotted`    |
-| `g500` | `scoped`    |
-| `g550` | `leaf`      |
+An id is a stable handle: once given, it does not change, so a diff of the query
+files shows each change to an expectation on the line where it happens. A new
+query takes the next id that is free in both files.
 
 A query that appears in both files carries the same id in both, which is what
 pairs the `pkg` and `opt` rows for one query in the per-query table. Two
-different queries must never share an id.
+different queries must never share an id. `run.mjs` fails up front if they do.
 
 ## Adding a category
 
 1. Add the queries, taking their text from `corpus/observed-queries.json` where
    you can, so the category describes something users do rather than something
-   we imagined. Give it a fresh id block.
+   we imagined.
 2. Add its weight to that track's table in `WEIGHTS`, taking the weight back out
    of the categories it is carving from so the table still sums to 1. Say in the
    comment whether the number is observed or judgement.
 3. Run the benchmark. `run.mjs` fails up front if a category has no weight, a
-   weight has no queries, or a table does not sum to 1.
+   weight has no queries, a table does not sum to 1, or an id names two
+   queries.
 4. Check the new rows against the live index by hand before trusting them. A
    0.000 in a new category is more often a real ranking finding than a bad gold
    set - `python3Packages.absl-py` returns nothing because the index carries

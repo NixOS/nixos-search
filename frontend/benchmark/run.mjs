@@ -13,7 +13,10 @@
  *
  * Each curated query is an object:
  *
- *   id          stable handle, also the sort key of the per-query table
+ *   id          stable handle, also the sort key of the per-query table. A
+ *               query in both files has the same id in both, and an id in both
+ *               files names the same query. A new query takes the next id that
+ *               is free in both files; an existing id never changes.
  *   q           the search term, as a user would type it
  *   category    the one axis this query is here to exercise, e.g. `typo` or
  *               `attrpath`. Also the unit the aggregate is weighted in, so
@@ -427,6 +430,42 @@ function checkWeights(track, queries, weights) {
 
 checkWeights("packages", pkgQueries, WEIGHTS.packages);
 checkWeights("options", optQueries, WEIGHTS.options);
+
+// The per-query table pairs the `pkg` and `opt` rows of a query by id, so an id
+// must name one query across both files, and a query in both files one id.
+function checkIds(pkg, opt) {
+    const queryOf = new Map(),
+        idOf = new Map();
+    for (const [file, queries] of [
+        ["packages", pkg],
+        ["options", opt],
+    ]) {
+        const seen = new Set();
+        for (const q of queries) {
+            if (seen.has(q.id)) {
+                throw new Error(`${file}: id ${q.id} is used more than once`);
+            }
+            seen.add(q.id);
+            if ((queryOf.get(q.id) ?? q.q) !== q.q) {
+                throw new Error(
+                    `${q.id} is "${queryOf.get(q.id)}" in packages but "${q.q}" in options`,
+                );
+            }
+            if ((idOf.get(q.q) ?? q.id) !== q.id) {
+                throw new Error(
+                    `"${q.q}" is ${idOf.get(q.q)} in packages but ${q.id} in options`,
+                );
+            }
+        }
+        // Only after the whole file, so a clash is always packages vs options.
+        for (const q of queries) {
+            queryOf.set(q.id, q.q);
+            idOf.set(q.q, q.id);
+        }
+    }
+}
+
+checkIds(pkgQueries, optQueries);
 
 console.error(
     `[benchmark] scoring ${pkgQueries.length} package queries against ${INDEX}`,
