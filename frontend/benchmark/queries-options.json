@@ -197,27 +197,27 @@
     {
         "id": "g022",
         "q": "services.nginx.virtualHosts",
-        "category": "exact",
+        "category": "cased",
         "relevant": [["opt:services.nginx.virtualHosts"]]
     },
     {
         "id": "g023",
         "q": "networking.firewall.allowedTCPPorts",
-        "category": "exact",
+        "category": "cased",
         "exhaustive": true,
         "relevant": [["opt:networking.firewall.allowedTCPPorts"]]
     },
     {
         "id": "g024",
         "q": "services.nextcloud.hostName",
-        "category": "exact",
+        "category": "cased",
         "exhaustive": true,
         "relevant": [["opt:services.nextcloud.hostName"]]
     },
     {
         "id": "g025",
         "q": "networking.networkmanager.logLevel",
-        "category": "exact",
+        "category": "cased",
         "exhaustive": true,
         "relevant": [["opt:networking.networkmanager.logLevel"]]
     },
@@ -480,14 +480,14 @@
     {
         "id": "g164",
         "q": "boot.loader.efi.canTouchEfiVariables",
-        "category": "exact",
+        "category": "cased",
         "exhaustive": true,
         "relevant": [["opt:boot.loader.efi.canTouchEfiVariables"]]
     },
     {
         "id": "g165",
         "q": "canTouchEfiVariables",
-        "category": "exact",
+        "category": "leaf",
         "exhaustive": true,
         "relevant": [["opt:boot.loader.efi.canTouchEfiVariables"]]
     },
@@ -1783,5 +1783,393 @@
         "q": "bittorrent client",
         "category": "intent",
         "relevant": [["opt:services.transmission.enable"]]
+    },
+    {
+        "id": "g248",
+        "q": "boot.kernelPackages",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["opt:boot.kernelPackages"]]
+    },
+    {
+        "id": "g249",
+        "q": "boot.loader.grub.efiSupport",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["opt:boot.loader.grub.efiSupport"]]
+    },
+    {
+        "id": "g250",
+        "q": "environment.sessionVariables",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["opt:environment.sessionVariables"]]
+    },
+    {
+        "id": "g251",
+        "q": "networking.hostName",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["opt:networking.hostName"]]
+    },
+    {
+        "id": "g252",
+        "q": "programs.hyprland.withUWSM",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["opt:programs.hyprland.withUWSM"]]
+    },
+    {
+        "id": "g253",
+        "q": "services.mysqlBackup",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.mysqlBackup.enable"],
+            [
+                "opt:services.mysqlBackup.calendar",
+                "opt:services.mysqlBackup.compressionAlg",
+                "opt:services.mysqlBackup.compressionLevel",
+                "opt:services.mysqlBackup.databases",
+                "opt:services.mysqlBackup.gzipOptions",
+                "opt:services.mysqlBackup.location",
+                "opt:services.mysqlBackup.singleTransaction",
+                "opt:services.mysqlBackup.user"
+            ]
+        ]
+    },
+    {
+        "id": "g254",
+        "q": "services.postgresql.enableTCPIP",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["opt:services.postgresql.enableTCPIP"]]
+    },
+    {
+        "id": "g255",
+        "q": "system.autoUpgrade",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:system.autoUpgrade.enable"],
+            [
+                "opt:system.autoUpgrade.allowReboot",
+                "opt:system.autoUpgrade.channel",
+                "opt:system.autoUpgrade.dates",
+                "opt:system.autoUpgrade.fixedRandomDelay",
+                "opt:system.autoUpgrade.flags",
+                "opt:system.autoUpgrade.flake",
+                "opt:system.autoUpgrade.operation",
+                "opt:system.autoUpgrade.persistent",
+                "opt:system.autoUpgrade.randomizedDelaySec",
+                "opt:system.autoUpgrade.rebootWindow",
+                "opt:system.autoUpgrade.rebootWindow.lower",
+                "opt:system.autoUpgrade.rebootWindow.upper",
+                "opt:system.autoUpgrade.runGarbageCollection",
+                "opt:system.autoUpgrade.upgrade"
+            ]
+        ]
+    },
+    {
+        "id": "g256",
+        "q": "virtualisation.docker.logDriver",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["opt:virtualisation.docker.logDriver"]]
+    },
+    {
+        "id": "g257",
+        "q": "nix.gc",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            [
+                "opt:nix.gc.automatic",
+                "opt:nix.gc.dates",
+                "opt:nix.gc.options",
+                "opt:nix.gc.persistent",
+                "opt:nix.gc.randomizedDelaySec"
+            ]
+        ]
+    },
+    {
+        "id": "g258",
+        "q": "nix.registry",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:nix.registry"],
+            [
+                "opt:nix.registry.<name>.exact",
+                "opt:nix.registry.<name>.flake",
+                "opt:nix.registry.<name>.from",
+                "opt:nix.registry.<name>.to"
+            ]
+        ]
+    },
+    {
+        "id": "g259",
+        "q": "nix.settings.substituters",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [["opt:nix.settings.substituters"]]
+    },
+    {
+        "id": "g260",
+        "q": "security.pam.u2f",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:security.pam.u2f.enable"],
+            [
+                "opt:security.pam.u2f.control",
+                "opt:security.pam.u2f.settings",
+                "opt:security.pam.u2f.settings.appid",
+                "opt:security.pam.u2f.settings.authfile",
+                "opt:security.pam.u2f.settings.cue",
+                "opt:security.pam.u2f.settings.cue_prompt",
+                "opt:security.pam.u2f.settings.debug",
+                "opt:security.pam.u2f.settings.interactive",
+                "opt:security.pam.u2f.settings.origin",
+                "opt:security.pam.u2f.settings.prompt",
+                "opt:security.pam.services.<name>.u2f.enable"
+            ]
+        ]
+    },
+    {
+        "id": "g261",
+        "q": "security.wrappers",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:security.wrappers"],
+            [
+                "opt:security.wrappers.<name>.enable",
+                "opt:security.wrappers.<name>.capabilities",
+                "opt:security.wrappers.<name>.group",
+                "opt:security.wrappers.<name>.owner",
+                "opt:security.wrappers.<name>.permissions",
+                "opt:security.wrappers.<name>.program",
+                "opt:security.wrappers.<name>.setgid",
+                "opt:security.wrappers.<name>.setuid",
+                "opt:security.wrappers.<name>.source"
+            ]
+        ]
+    },
+    {
+        "id": "g262",
+        "q": "services.home-assistant.package",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [["opt:services.home-assistant.package"]]
+    },
+    {
+        "id": "g263",
+        "q": "services.immich",
+        "category": "dotted",
+        "relevant": [
+            ["opt:services.immich.enable"],
+            [
+                "opt:services.immich.database.enable",
+                "opt:services.immich.machine-learning.enable",
+                "opt:services.immich.redis.enable"
+            ]
+        ]
+    },
+    {
+        "id": "g264",
+        "q": "services.openvpn.servers",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:services.openvpn.servers"],
+            [
+                "opt:services.openvpn.servers.<name>.authUserPass",
+                "opt:services.openvpn.servers.<name>.autoStart",
+                "opt:services.openvpn.servers.<name>.config",
+                "opt:services.openvpn.servers.<name>.down",
+                "opt:services.openvpn.servers.<name>.up",
+                "opt:services.openvpn.servers.<name>.updateResolvConf"
+            ]
+        ]
+    },
+    {
+        "id": "g265",
+        "q": "services.paperless.domain",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [["opt:services.paperless.domain"]]
+    },
+    {
+        "id": "g266",
+        "q": "system.nixos.label",
+        "category": "dotted",
+        "exhaustive": true,
+        "relevant": [["opt:system.nixos.label"]]
+    },
+    {
+        "id": "g267",
+        "q": "systemd.user.services",
+        "category": "dotted",
+        "relevant": [["opt:systemd.user.services"]]
+    },
+    {
+        "id": "g268",
+        "q": "deviceTree filter",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:hardware.deviceTree.filter"],
+            ["opt:hardware.deviceTree.overlays.*.filter"]
+        ]
+    },
+    {
+        "id": "g269",
+        "q": "initrd authorizedkeys",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:boot.initrd.network.ssh.authorizedKeys"]]
+    },
+    {
+        "id": "g270",
+        "q": "ipv6 privacy",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:networking.tempAddresses"],
+            ["opt:networking.interfaces.<name>.tempAddress"]
+        ]
+    },
+    {
+        "id": "g271",
+        "q": "kernel parameters",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:boot.kernelParams"]]
+    },
+    {
+        "id": "g272",
+        "q": "nix channel enable",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:nix.channel.enable"]]
+    },
+    {
+        "id": "g273",
+        "q": "sddm theme",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:services.displayManager.sddm.theme"]]
+    },
+    {
+        "id": "g274",
+        "q": "security.acme.certs directory",
+        "category": "scoped",
+        "exhaustive": true,
+        "relevant": [["opt:security.acme.certs.<name>.directory"]]
+    },
+    {
+        "id": "g275",
+        "q": "activationScripts",
+        "category": "leaf",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:system.activationScripts"],
+            ["opt:system.userActivationScripts"]
+        ]
+    },
+    {
+        "id": "g276",
+        "q": "extraPackages",
+        "category": "leaf",
+        "relevant": [
+            [
+                "opt:hardware.graphics.extraPackages",
+                "opt:networking.firewall.extraPackages",
+                "opt:programs.bat.extraPackages",
+                "opt:programs.opengamepadui.extraPackages",
+                "opt:programs.river-classic.extraPackages"
+            ]
+        ]
+    },
+    {
+        "id": "g277",
+        "q": "initialHashedPassword",
+        "category": "leaf",
+        "relevant": [
+            [
+                "opt:users.users.<name>.initialHashedPassword",
+                "opt:users.extraUsers.<name>.initialHashedPassword"
+            ]
+        ]
+    },
+    {
+        "id": "g278",
+        "q": "initialPassword",
+        "category": "leaf",
+        "relevant": [
+            [
+                "opt:users.users.<name>.initialPassword",
+                "opt:users.extraUsers.<name>.initialPassword"
+            ]
+        ]
+    },
+    {
+        "id": "g279",
+        "q": "kernelPackages",
+        "category": "leaf",
+        "exhaustive": true,
+        "relevant": [["opt:boot.kernelPackages"]]
+    },
+    {
+        "id": "g280",
+        "q": "nixPath",
+        "category": "leaf",
+        "exhaustive": true,
+        "relevant": [["opt:nix.nixPath"]]
+    },
+    {
+        "id": "g281",
+        "q": "sessionVariables",
+        "category": "leaf",
+        "exhaustive": true,
+        "relevant": [["opt:environment.sessionVariables"]]
+    },
+    {
+        "id": "g282",
+        "q": "shellAliases",
+        "category": "leaf",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:environment.shellAliases"],
+            [
+                "opt:programs.bash.shellAliases",
+                "opt:programs.fish.shellAliases",
+                "opt:programs.zsh.shellAliases"
+            ]
+        ]
+    },
+    {
+        "id": "g283",
+        "q": "systemPackages",
+        "category": "leaf",
+        "exhaustive": true,
+        "relevant": [["opt:environment.systemPackages"]]
+    },
+    {
+        "id": "g284",
+        "q": "timeZone",
+        "category": "leaf",
+        "relevant": [["opt:time.timeZone"]]
+    },
+    {
+        "id": "g285",
+        "q": "wakeOnLan",
+        "category": "leaf",
+        "exhaustive": true,
+        "relevant": [
+            ["opt:networking.interfaces.<name>.wakeOnLan.enable"],
+            ["opt:networking.interfaces.<name>.wakeOnLan.policy"]
+        ]
     }
 ]
