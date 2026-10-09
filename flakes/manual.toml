@@ -344,6 +344,11 @@ repo = "filestash-nix"
 
 [[sources]]
 type = "github"
+owner = "meshcloud"
+repo = "meshstack-cli"
+
+[[sources]]
+type = "github"
 owner = "Mic92"
 repo = "sops-nix"
 
