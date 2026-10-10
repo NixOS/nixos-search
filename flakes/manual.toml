@@ -239,11 +239,6 @@ repo = "eza"
 
 [[sources]]
 type = "github"
-owner = "fort-nix"
-repo = "nix-bitcoin"
-
-[[sources]]
-type = "github"
 owner = "fzakaria"
 repo = "nixpkgs-multiverse"
 
