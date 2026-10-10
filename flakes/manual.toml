@@ -94,6 +94,11 @@ repo = "atuin"
 
 [[sources]]
 type = "github"
+owner = "bitcoinix"
+repo = "bitcoinix"
+
+[[sources]]
+type = "github"
 owner = "bobvanderlinden"
 repo = "nixpkgs-ruby"
 
@@ -236,11 +241,6 @@ repo = "flake-compat"
 type = "github"
 owner = "eza-community"
 repo = "eza"
-
-[[sources]]
-type = "github"
-owner = "fort-nix"
-repo = "nix-bitcoin"
 
 [[sources]]
 type = "github"
