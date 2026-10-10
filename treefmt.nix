@@ -7,6 +7,10 @@
     rustfmt.enable = true;
     elm-format.enable = true;
 
+    # Python linter and formatter, configured in `ruff.toml`.
+    ruff-check.enable = true;
+    ruff-format.enable = true;
+
     # JavaScript/JSON/Markdown formatter
     prettier = {
       enable = true;

@@ -58,6 +58,10 @@ pub fn process_nixpkgs(
     packages_json_url: &Option<String>,
     repology_counts_file: &Option<PathBuf>,
     user_agent: &Option<String>,
+    desktop_entries_file: &Option<PathBuf>,
+    icon_dir: &Option<PathBuf>,
+    icon_theme_dir: &Option<PathBuf>,
+    screenshot_dir: &Option<PathBuf>,
 ) -> Result<Vec<Export>, anyhow::Error> {
     let drvs = if matches!(kind, Kind::All | Kind::Package) {
         commands::get_nixpkgs_info(
@@ -66,6 +70,10 @@ pub fn process_nixpkgs(
             packages_json_url,
             repology_counts_file,
             user_agent,
+            desktop_entries_file,
+            icon_dir,
+            icon_theme_dir,
+            screenshot_dir,
         )?
     } else {
         Vec::new()
