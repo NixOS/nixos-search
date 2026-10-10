@@ -30,7 +30,12 @@ pub struct Flake {
 impl Flake {
     pub(crate) fn resolve_name(mut self) -> Self {
         self.name = match &self.resolved {
-            Repo::Git { .. } => Default::default(),
+            // Use the last path segment of the URL without a `.git` suffix
+            Repo::Git { url } => url
+                .file_name()
+                .and_then(|name| name.to_str())
+                .map(|name| name.strip_suffix(".git").unwrap_or(name).to_owned())
+                .unwrap_or_default(),
             Repo::GitHub { repo, .. } => repo.clone(),
             Repo::Gitlab { repo, .. } => repo.clone(),
             Repo::SourceHut { repo, .. } => repo.clone(),
@@ -81,6 +86,32 @@ mod tests {
                 .resolve_name()
                 .name,
             "neuropil"
+        );
+    }
+
+    #[test]
+    fn git_flake_name() {
+        let name = |resolved: &str| {
+            let nix_info_out = format!(r#"{{"description":null,"resolved":{resolved}}}"#);
+            serde_json::de::from_str::<Flake>(&nix_info_out)
+                .unwrap()
+                .resolve_name()
+                .name
+        };
+
+        assert_eq!(
+            name(r#"{"type":"git","url":"https://gitlab.com/pi-lar/neuropil"}"#),
+            "neuropil"
+        );
+        assert_eq!(
+            name(
+                r#"{"ref":"main","type":"git","url":"https://codeberg.org/alch_emi/embers-nix-packages.git"}"#
+            ),
+            "embers-nix-packages"
+        );
+        assert_eq!(
+            name(r#"{"type":"git","url":"https://example.org/owner/repo/"}"#),
+            "repo"
         );
     }
 }
