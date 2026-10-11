@@ -16,7 +16,6 @@ module Page.Options exposing
     )
 
 import Browser.Navigation
-import Components.Badge as Badge
 import Dict exposing (Dict)
 import Html
     exposing
@@ -195,72 +194,121 @@ view nixosChannels model =
         (viewSuccess model.activeOptionSource)
         viewBuckets
         SearchMsg
-        [ viewSourceTabs model.activeOptionSource model.sourceCounts ]
+        (viewSourceTabs model.activeOptionSource model.sourceCounts)
 
 
-{-| Tab strip: one tab per option source. Each tab pulls its count from
-the shared `sourceCounts` dict (the active tab's count is mirrored
-there on `QueryResponse`, inactive ones come from `size: 0` queries
-fired alongside the main one). Pulling counts uniformly from one place
-means the badges survive a tab switch unchanged — the previous tab's
-count stays visible until a fresh count for the new tab arrives.
+{-| Tab strip: one fieldset per source category, with one tab per option
+source. All tabs share one radio group, so only one source is active
+across the fieldsets. Each tab pulls its count from the shared
+`sourceCounts` dict (the active tab's count is mirrored there on
+`QueryResponse`, inactive ones come from `size: 0` queries fired
+alongside the main one). Pulling counts uniformly from one place means
+the badges survive a tab switch unchanged -- the previous tab's count
+stays visible until a fresh count for the new tab arrives.
 -}
-viewSourceTabs : OptionSource -> Dict String Int -> Html Msg
+viewSourceTabs : OptionSource -> Dict String Int -> List (Html Msg)
 viewSourceTabs activeSource sourceCounts =
-    fieldset [ class "search-source-tabs search-bucket" ]
-        (legend [ class "header" ] [ text "Source" ]
-            :: List.map
-                (\source ->
-                    let
-                        isActive =
-                            source == activeSource
+    List.filterMap
+        (\category ->
+            case List.filter (\source -> sourceCategory source == category) Route.allOptionSources of
+                [] ->
+                    Nothing
 
-                        id =
-                            Route.optionSourceId source
-
-                        badge =
-                            case Dict.get id sourceCounts of
-                                Just n ->
-                                    [ span [ class "badge" ] [ text (formatCount n) ] ]
-
-                                Nothing ->
-                                    []
-
-                        badgeLabel =
-                            case source of
-                                Route.ModularServiceOptions ->
-                                    [ Badge.view Badge.Experimental ]
-
-                                Route.HomeManagerOptionSource ->
-                                    [ Badge.view Badge.Community ]
-
-                                Route.DarwinOptionSource ->
-                                    [ Badge.view Badge.External ]
-
-                                _ ->
-                                    []
-                    in
-                    label
-                        [ classList
-                            [ ( "search-source-tab", True )
-                            , ( "search-source-" ++ id, True )
-                            , ( "selected", isActive )
-                            ]
-                        ]
-                        (span [ class "source-label" ] (badgeLabel ++ [ text (Route.optionSourceLabel source) ])
-                            :: badge
-                            ++ [ input
-                                    [ type_ "radio"
-                                    , name "option-source"
-                                    , checked isActive
-                                    , Html.Events.onClick (SearchMsg (Search.SetActiveOptionSource source))
-                                    ]
-                                    []
-                               ]
+                sources ->
+                    Just
+                        (fieldset [ class "search-source-tabs search-bucket" ]
+                            (legend [ class "header" ] [ text (sourceCategoryLabel category) ]
+                                :: List.map (viewSourceTab activeSource sourceCounts) sources
+                            )
                         )
-                )
-                Route.allOptionSources
         )
+        allSourceCategories
+
+
+viewSourceTab : OptionSource -> Dict String Int -> OptionSource -> Html Msg
+viewSourceTab activeSource sourceCounts source =
+    let
+        isActive =
+            source == activeSource
+
+        id =
+            Route.optionSourceId source
+
+        badge =
+            case Dict.get id sourceCounts of
+                Just n ->
+                    [ span [ class "badge" ] [ text (formatCount n) ] ]
+
+                Nothing ->
+                    []
+    in
+    label
+        [ classList
+            [ ( "search-source-tab", True )
+            , ( "search-source-" ++ id, True )
+            , ( "selected", isActive )
+            ]
+        ]
+        (span [ class "source-label" ] [ text (Route.optionSourceLabel source) ]
+            :: badge
+            ++ [ input
+                    [ type_ "radio"
+                    , name "option-source"
+                    , checked isActive
+                    , Html.Events.onClick (SearchMsg (Search.SetActiveOptionSource source))
+                    ]
+                    []
+               ]
+        )
+
+
+{-| Groups the option sources in the sidebar, so that the category of a
+source shows in the title of its fieldset.
+-}
+type SourceCategory
+    = Official
+    | Community
+    | External
+    | Experimental
+
+
+{-| Order of the category fieldsets in the sidebar.
+-}
+allSourceCategories : List SourceCategory
+allSourceCategories =
+    [ Official, Community, External, Experimental ]
+
+
+sourceCategory : OptionSource -> SourceCategory
+sourceCategory source =
+    case source of
+        Route.NixosOptions ->
+            Official
+
+        Route.HomeManagerOptionSource ->
+            Community
+
+        Route.DarwinOptionSource ->
+            External
+
+        Route.ModularServiceOptions ->
+            Experimental
+
+
+sourceCategoryLabel : SourceCategory -> String
+sourceCategoryLabel category =
+    case category of
+        Official ->
+            "Official"
+
+        Community ->
+            "Community"
+
+        External ->
+            "External"
+
+        Experimental ->
+            "Experimental"
 
 
 {-| Compact rendering of a hit count for the tab badge: 1.2k, 23k, etc.
