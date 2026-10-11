@@ -55,7 +55,7 @@ type OptionSource
 
 allOptionSources : List OptionSource
 allOptionSources =
-    [ NixosOptions, ModularServiceOptions, HomeManagerOptionSource, DarwinOptionSource ]
+    [ NixosOptions, HomeManagerOptionSource, DarwinOptionSource, ModularServiceOptions ]
 
 
 {-| Default tab when no source is specified in the URL.

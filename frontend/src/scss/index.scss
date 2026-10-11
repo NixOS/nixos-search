@@ -31,16 +31,12 @@
 
   /* Color of the animation above the `Loading` text that is shown when searching */
   --loader-color: #000;
-  /* Background color of the experimental badge next to the flakes search */
-  --info-label-background: #007dbb;
   /* Text color for links. Probably overwritten by bootstrap */
   --link-color: #007dbb;
   /* Background color for the small badges with number in the sidebar */
   --badge-background: #757575;
 
-  --blue-dark-13: #28395f;
   --orange-75: #e99861;
-  --pink-75: oklch(.75 0.12 330);
 
   --dark-blue: #5277C3; // Blue background
   --light-blue: #7ebae4;
@@ -65,7 +61,6 @@
   & {
     --text-color: rgba(255, 255, 255, 0.85);
     --text-color-light: rgba(255, 255, 255, 0.5);
-    --text-color-warning: #f8e45c;
     --background-color: #242424;
     --hover-background: #ffffff13;
     --button-background: #393939;
@@ -93,7 +88,6 @@
     --search-result-expanded-tab-border: var(--line-color);
     /* Color of the animation above the `Loading` text that is shown when searching */
     --loader-color: var(--text-color);
-    /* Background color of the experimental badge next to the flakes search */
     /* Text color for links. Probably overwritten by bootstrap */
     --link-color: var(--light-blue); // #007dbb;
     /* Background color for the small badges with number in the sidebar */
@@ -440,24 +434,18 @@ footer {
 
 
   // Title row of an option result: a single-item list holding the option
-  // name. Laid out as a flex row by `.search-result-title.option-title`
-  // below.
+  // name.
   .option-title {
     list-style: none;
     margin: 0;
     padding: 0;
 
     & > li {
+      // Long unbreakable identifiers wrap instead of overflowing.
+      overflow-wrap: anywhere;
+
       & > a:hover {
         text-decoration: underline;
-      }
-
-      // The name column takes all the space the row has left and lets long
-      // unbreakable identifiers wrap inside it instead of overflowing.
-      &:last-child {
-        flex: 1 1 auto;
-        min-width: 0;
-        overflow-wrap: anywhere;
       }
     }
   }
@@ -566,16 +554,6 @@ footer {
             display: block;
             a {
               color: inherit !important;
-            }
-
-            // For options, the title row is a flex layout so a long option
-            // name wraps inside its own column instead of dropping below the
-            // category badge. Without this override the surrounding
-            // `.search-result-title` rule forces `display: block`.
-            &.option-title {
-              display: flex;
-              align-items: baseline;
-              gap: 0.5em;
             }
           }
 
@@ -835,14 +813,14 @@ a:focus-visible {
   }
 }
 
-// Tab strip in the Options sidebar — one tab per option source. Active
-// tab inherits the `.selected` background/foreground from the sidebar's
-// generic styling, but not its layout: a tab carries a category badge
-// next to its label, so it is a flex row (baseline-aligned, with a gap)
-// instead of the bucket's two-column grid. `margin-left: auto` on the
-// count badge pushes it to the right edge, which keeps the label
-// left-aligned whether or not a count is present (it is missing while a
-// fresh query is loading).
+// Tab strips in the Options sidebar -- one fieldset per source category,
+// one tab per option source. Active tab inherits the `.selected`
+// background/foreground from the sidebar's generic styling, but not its
+// layout: a tab is a flex row (baseline-aligned, with a gap) instead of
+// the bucket's two-column grid. `margin-left: auto` on the count badge
+// pushes it to the right edge, which keeps the label left-aligned whether
+// or not a count is present (it is missing while a fresh query is
+// loading).
 //
 // Nested inside `.search-page` to match the specificity of the rule
 // being overridden (which is also `.search-page`-prefixed via outer
@@ -852,31 +830,6 @@ a:focus-visible {
   align-items: baseline;
   gap: 0.3em;
   text-decoration: none;
-
-
-  .label {
-    color: #000;
-    padding: 3px 6px;
-
-    background-color: var(--bg);
-
-    &-experimental {
-      --bg: var(--orange-75);
-    }
-
-    &-community {
-      --bg: var(--light-blue);
-    }
-
-    &-external {
-      --bg: var(--pink-75);
-    }
-  }
-
-  &.selected .label {
-    color: #fff;
-    background-color: oklch(from var(--bg) 0.35 c h);
-  }
 
   & > span {
     text-align: left;
