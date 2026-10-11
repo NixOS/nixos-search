@@ -31,14 +31,11 @@
 
   /* Color of the animation above the `Loading` text that is shown when searching */
   --loader-color: #000;
-  /* Background color of the experimental badge next to the flakes search */
-  --info-label-background: #007dbb;
   /* Text color for links. Probably overwritten by bootstrap */
   --link-color: #007dbb;
   /* Background color for the small badges with number in the sidebar */
   --badge-background: #757575;
 
-  --blue-dark-13: #28395f;
   --orange-75: #e99861;
 
   --dark-blue: #5277C3; // Blue background
@@ -64,7 +61,6 @@
   & {
     --text-color: rgba(255, 255, 255, 0.85);
     --text-color-light: rgba(255, 255, 255, 0.5);
-    --text-color-warning: #f8e45c;
     --background-color: #242424;
     --hover-background: #ffffff13;
     --button-background: #393939;
@@ -92,7 +88,6 @@
     --search-result-expanded-tab-border: var(--line-color);
     /* Color of the animation above the `Loading` text that is shown when searching */
     --loader-color: var(--text-color);
-    /* Background color of the experimental badge next to the flakes search */
     /* Text color for links. Probably overwritten by bootstrap */
     --link-color: var(--light-blue); // #007dbb;
     /* Background color for the small badges with number in the sidebar */
