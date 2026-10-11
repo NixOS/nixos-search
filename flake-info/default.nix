@@ -1,4 +1,16 @@
 { pkgs, flake-schemas }:
+let
+  # GitLab.com sends a Cloudflare challenge (HTTP 403) for the list endpoint
+  # that the `gitlab` fetcher uses. Remove when the patch is in `pkgs.nix`.
+  nix = pkgs.nix.appendPatches [
+    (pkgs.fetchpatch {
+      name = "libfetchers-gitlab-single-commit-endpoint.patch";
+      url = "https://github.com/NixOS/nix/commit/dbd8a75eecb92342f510c3eafc4504e4e590dc2b.patch";
+      includes = [ "src/libfetchers/github.cc" ];
+      hash = "sha256-9+qqu70fJO284aGFfGRBB30/IJcihg3CeR2o7gG40HA=";
+    })
+  ];
+in
 pkgs.rustPlatform.buildRustPackage rec {
   name = "flake-info";
   src = ./.;
@@ -39,6 +51,7 @@ pkgs.rustPlatform.buildRustPackage rec {
     wrapProgram $out/bin/flake-info \
       --prefix PATH : ${
         pkgs.lib.makeBinPath [
+          nix
           pkgs.pandoc
           pkgs.nix-eval-jobs
         ]
