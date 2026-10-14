@@ -10,12 +10,9 @@ import Html
         ( Html
         , a
         , div
-        , fieldset
         , footer
         , header
         , img
-        , input
-        , label
         , li
         , span
         , text
@@ -25,16 +22,13 @@ import Html.Attributes
     exposing
         ( alt
         , attribute
-        , checked
         , class
         , classList
         , href
         , id
-        , name
         , src
         , target
         , title
-        , type_
         )
 import Html.Events exposing (onClick)
 import Json.Decode
@@ -67,6 +61,7 @@ type alias Flags =
     , elasticsearchPassword : String
     , nixosChannels : Json.Decode.Value
     , theme : String
+    , systemDark : Bool
     , isPrideMonth : Bool
     , saveData : Bool
     }
@@ -104,17 +99,48 @@ themeToString t =
             "dark"
 
 
-themeLabel : Theme -> String
-themeLabel t =
+{-| The palette that shows: the OS palette in `Auto`, else the pinned palette.
+-}
+resolveTheme : Bool -> Theme -> Theme
+resolveTheme systemDark t =
     case t of
         Auto ->
-            "Auto"
+            systemTheme systemDark
 
-        Light ->
-            "Light"
+        _ ->
+            t
 
-        Dark ->
-            "Dark"
+
+systemTheme : Bool -> Theme
+systemTheme systemDark =
+    if systemDark then
+        Dark
+
+    else
+        Light
+
+
+{-| The theme a click on the toggle gives. When the other palette is the OS
+palette, the toggle clears the pin and goes back to `Auto`; otherwise it pins
+the other palette. Thus from `Auto` a click pins the palette the OS does not
+use, and a second click goes back to `Auto`.
+-}
+toggleTheme : Bool -> Theme -> Theme
+toggleTheme systemDark t =
+    let
+        other : Theme
+        other =
+            if resolveTheme systemDark t == Dark then
+                Light
+
+            else
+                Dark
+    in
+    if other == systemTheme systemDark then
+        Auto
+
+    else
+        other
 
 
 type alias Model =
@@ -125,12 +151,16 @@ type alias Model =
     , nixosChannels : List NixOSChannel
     , page : Page
     , theme : Theme
+    , systemDark : Bool
     , isPrideMonth : Bool
     , preferStatic : Bool
     }
 
 
 port setTheme : String -> Cmd msg
+
+
+port systemDarkChanged : (Bool -> msg) -> Sub msg
 
 
 type Page
@@ -173,6 +203,7 @@ init flags url navKey =
             , page = NotFound
             , route = Route.Home
             , theme = themeFromString flags.theme
+            , systemDark = flags.systemDark
             , isPrideMonth = flags.isPrideMonth
             , preferStatic = not flags.saveData
             }
@@ -192,7 +223,8 @@ type Msg
     | FlakesMsg Page.Flakes.Msg
     | CtrlKRegistered
     | SearchFocusResult
-    | SetTheme Theme
+    | ToggleTheme
+    | SystemDarkChanged Bool
 
 
 updateWith :
@@ -427,10 +459,20 @@ update msg model =
         ( CtrlKRegistered, _ ) ->
             ( model, Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> SearchFocusResult) )
 
-        ( SetTheme theme, _ ) ->
+        ( ToggleTheme, _ ) ->
+            let
+                theme : Theme
+                theme =
+                    toggleTheme model.systemDark model.theme
+            in
             ( { model | theme = theme }
             , setTheme (themeToString theme)
             )
+
+        ( SystemDarkChanged systemDark, _ ) ->
+            -- A pin that now equals the OS palette stays, so the next click
+            -- pins the other palette.
+            ( { model | systemDark = systemDark }, Cmd.none )
 
         _ ->
             -- Disregard messages that arrived for the wrong page.
@@ -514,7 +556,7 @@ view model =
                                     ]
                                 , ul [ class "nav" ]
                                     (viewNavigation model.route)
-                                , viewThemeSelector model.theme
+                                , viewThemeToggle (resolveTheme model.systemDark model.theme)
                                 ]
                             ]
                         ]
@@ -592,11 +634,6 @@ viewNavigationItem currentRoute ( route, title ) =
 -- https://github.com/google/material-design-icons
 
 
-themeAutoIconPath : String
-themeAutoIconPath =
-    "M80 61.2398L93.24 47.9998L80 34.7598V15.9998H61.24L48 2.75977L34.76 15.9998H16V34.7598L2.76001 47.9998L16 61.2398V79.9998H34.76L48 93.2398L61.24 79.9998H80V61.2398ZM48 71.9998V23.9998C61.24 23.9998 72 34.7598 72 47.9998C72 61.2398 61.24 71.9998 48 71.9998Z"
-
-
 themeDarkIconPath : String
 themeDarkIconPath =
     "M48 12C28.12 12 12 28.12 12 48C12 67.88 28.12 84 48 84C67.88 84 84 67.88 84 48C84 46.16 83.84 44.32 83.6 42.56C79.68 48.04 73.28 51.6 66 51.6C54.08 51.6 44.4 41.92 44.4 30C44.4 22.76 47.96 16.32 53.44 12.4C51.68 12.16 49.84 12 48 12Z"
@@ -607,59 +644,40 @@ themeLightIconPath =
     "M48 28C36.96 28 28 36.96 28 48C28 59.04 36.96 68 48 68C59.04 68 68 59.04 68 48C68 36.96 59.04 28 48 28ZM8 52H16C18.2 52 20 50.2 20 48C20 45.8 18.2 44 16 44H8C5.8 44 4 45.8 4 48C4 50.2 5.8 52 8 52ZM80 52H88C90.2 52 92 50.2 92 48C92 45.8 90.2 44 88 44H80C77.8 44 76 45.8 76 48C76 50.2 77.8 52 80 52ZM44 8V16C44 18.2 45.8 20 48 20C50.2 20 52 18.2 52 16V8C52 5.8 50.2 4 48 4C45.8 4 44 5.8 44 8ZM44 80V88C44 90.2 45.8 92 48 92C50.2 92 52 90.2 52 88V80C52 77.8 50.2 76 48 76C45.8 76 44 77.8 44 80ZM23.96 18.32C22.4 16.76 19.84 16.76 18.32 18.32C16.76 19.88 16.76 22.44 18.32 23.96L22.56 28.2C24.12 29.76 26.68 29.76 28.2 28.2C29.72 26.64 29.76 24.08 28.2 22.56L23.96 18.32ZM73.44 67.8C71.88 66.24 69.32 66.24 67.8 67.8C66.24 69.36 66.24 71.92 67.8 73.44L72.04 77.68C73.6 79.24 76.16 79.24 77.68 77.68C79.24 76.12 79.24 73.56 77.68 72.04L73.44 67.8ZM77.68 23.96C79.24 22.4 79.24 19.84 77.68 18.32C76.12 16.76 73.56 16.76 72.04 18.32L67.8 22.56C66.24 24.12 66.24 26.68 67.8 28.2C69.36 29.72 71.92 29.76 73.44 28.2L77.68 23.96ZM28.2 73.44C29.76 71.88 29.76 69.32 28.2 67.8C26.64 66.24 24.08 66.24 22.56 67.8L18.32 72.04C16.76 73.6 16.76 76.16 18.32 77.68C19.88 79.2 22.44 79.24 23.96 77.68L28.2 73.44Z"
 
 
-getThemeSvgIconPath : Theme -> String
-getThemeSvgIconPath theme =
-    case theme of
-        Light ->
-            themeLightIconPath
-
-        Dark ->
-            themeDarkIconPath
-
-        Auto ->
-            themeAutoIconPath
-
-
-getThemeSvgIcon : Theme -> Svg msg
-getThemeSvgIcon theme =
+getThemeSvgIcon : String -> Svg msg
+getThemeSvgIcon iconPath =
     svg
         [ viewBox "0 0 96 96"
         , fill "currentColor"
         , width "16"
         , height "16"
         ]
-        [ path [ d (getThemeSvgIconPath theme) ] [] ]
+        [ path [ d iconPath ] [] ]
 
 
-viewThemeSelector : Theme -> Html Msg
-viewThemeSelector currentTheme =
-    fieldset
-        [ class "theme-toggle"
-        , attribute "aria-label" "Theme"
+{-| The toggle shows the palette a click gives: a moon on the light theme and
+a sun on the dark theme. The label names the same action.
+-}
+viewThemeToggle : Theme -> Html Msg
+viewThemeToggle resolvedTheme =
+    let
+        ( iconPath, label ) =
+            if resolvedTheme == Dark then
+                ( themeLightIconPath, "Switch to the light theme" )
+
+            else
+                ( themeDarkIconPath, "Switch to the dark theme" )
+    in
+    -- The wrapper sets the position in the navbar. The dark theme sets
+    -- `margin: 0` on all `.btn` elements.
+    div [ class "theme-toggle" ]
+        [ viewButton
+            [ title label
+            , attribute "aria-label" label
+            , onClick ToggleTheme
+            ]
+            [ span [ class "theme-icon" ] [ getThemeSvgIcon iconPath ] ]
         ]
-        (List.map
-            (\t ->
-                label
-                    [ classList
-                        [ ( "btn", True )
-                        , ( "theme-radio", True )
-                        , ( "active", t == currentTheme )
-                        ]
-                    , title (themeLabel t)
-                    , attribute "aria-label" (themeLabel t)
-                    ]
-                    [ span [ class "theme-icon" ] [ getThemeSvgIcon t ]
-                    , input
-                        [ type_ "radio"
-                        , name "theme"
-                        , checked (t == currentTheme)
-                        , onClick (SetTheme t)
-                        ]
-                        []
-                    ]
-            )
-            [ Auto, Light, Dark ]
-        )
 
 
 viewPage : Model -> Html Msg
@@ -684,7 +702,7 @@ viewPage model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    systemDarkChanged SystemDarkChanged
 
 
 

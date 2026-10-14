@@ -18,6 +18,8 @@ function applyTheme(theme) {
 const initialTheme = normalizeTheme(localStorage.getItem("theme"));
 applyTheme(initialTheme);
 
+const systemDarkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
 const connection = navigator.connection || navigator.webkitConnection;
 const saveDataAttr = document.documentElement.dataset.saveData === "on";
 const saveData =
@@ -37,6 +39,7 @@ const app = Elm.Main.init({
             process.env.ELASTICSEARCH_PASSWORD || "X8gPHnzL52wFEekuxsfQ9cSh",
         nixosChannels: JSON.parse(process.env.NIXOS_CHANNELS),
         theme: initialTheme,
+        systemDark: systemDarkQuery.matches,
         isPrideMonth: new Date().getMonth() === 5,
         saveData: Boolean(saveData),
     },
@@ -46,9 +49,19 @@ if (app.ports && app.ports.setTheme) {
     app.ports.setTheme.subscribe((value) => {
         const theme = normalizeTheme(value);
         try {
-            localStorage.setItem("theme", theme);
+            if (theme === "auto") {
+                localStorage.removeItem("theme");
+            } else {
+                localStorage.setItem("theme", theme);
+            }
         } catch (_) {}
         applyTheme(theme);
+    });
+}
+
+if (app.ports && app.ports.systemDarkChanged) {
+    systemDarkQuery.addEventListener("change", (e) => {
+        app.ports.systemDarkChanged.send(e.matches);
     });
 }
 
