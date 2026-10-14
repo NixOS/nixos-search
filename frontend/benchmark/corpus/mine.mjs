@@ -1,0 +1,226 @@
+#!/usr/bin/env node
+/**
+ * Mine real search.nixos.org queries out of public GitHub issues and PRs.
+ *
+ * Nothing in our stack records what users type. The cluster is ES 7.10.2 OSS,
+ * so there is no behavioral-analytics collection and no query log; the frontend
+ * has no tracker. The one place real query text survives in public is a shared
+ * `search.nixos.org/...?query=` link, so that is what this reads.
+ *
+ * Usage:
+ *   GITHUB_TOKEN=... node benchmark/corpus/mine.mjs [--out <path>] [--pages <n>]
+ *
+ * Writes `observed-queries.json` and prints the shape distribution that
+ * `run.mjs`'s `WEIGHTS` tables cite. Deliberately not wired into CI: it needs a
+ * token, it hits the search rate limit, and GitHub search is not deterministic.
+ * Run it by hand when the weights are up for review and commit the new snapshot.
+ *
+ * Known bias, which the weights have to respect: a shared link is a link that
+ * *worked*. The corpus can see the shape of successful queries, so it can set
+ * the plain/dotted/cased/versioned mix. It is blind to typos, misspellings and
+ * failed natural-language queries - nobody shares a search that found nothing -
+ * so it cannot argue the `typo` or `intent` weight down to its observed floor.
+ */
+
+import { writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { parseArgs } from "node:util";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const { values: args } = parseArgs({
+    args: process.argv.slice(2),
+    options: {
+        out: { type: "string", default: join(__dirname, "observed-queries.json") },
+        pages: { type: "string", default: "10" },
+    },
+    strict: false,
+});
+
+const TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+if (!TOKEN) {
+    console.error(
+        "mine.mjs: set GITHUB_TOKEN (e.g. `GITHUB_TOKEN=$(gh auth token)`); " +
+            "unauthenticated search is capped at 10 requests/minute.",
+    );
+    process.exit(1);
+}
+
+// GitHub's search index is word-based, so each URL shape has to be asked for
+// separately - `?query=` and `?channel=` tokenize differently, and the three
+// tracks sit on different paths.
+const VARIANTS = [
+    '"search.nixos.org/packages?query="',
+    '"search.nixos.org/options?query="',
+    '"search.nixos.org/flakes?query="',
+    '"search.nixos.org/packages?channel="',
+    '"search.nixos.org/options?channel="',
+];
+
+const PAGES = parseInt(args.pages, 10);
+const PER_PAGE = 100;
+
+// Search allows 30 requests/minute authenticated; stay under it rather than
+// trading a fixed delay for a retry storm.
+const THROTTLE_MS = 2200;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function search(q, page) {
+    const url =
+        "https://api.github.com/search/issues?" +
+        new URLSearchParams({
+            q,
+            per_page: String(PER_PAGE),
+            page: String(page),
+        });
+    for (let attempt = 1; attempt <= 5; attempt++) {
+        const resp = await fetch(url, {
+            headers: {
+                Accept: "application/vnd.github+json",
+                Authorization: `Bearer ${TOKEN}`,
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+        });
+        if (resp.ok) return resp.json();
+        // 403/429 on search is nearly always the secondary rate limit, which
+        // asks us to back off rather than to give up.
+        if (resp.status === 403 || resp.status === 429) {
+            const retryAfter = Number(resp.headers.get("retry-after")) || 60;
+            console.error(
+                `[mine] rate limited on page ${page}; sleeping ${retryAfter}s`,
+            );
+            await sleep(retryAfter * 1000);
+            continue;
+        }
+        throw new Error(`GitHub ${resp.status}: ${await resp.text()}`);
+    }
+    throw new Error(`GitHub: gave up on "${q}" page ${page}`);
+}
+
+// A link as it appears in prose: stop at whitespace and at the punctuation that
+// ends a markdown link or a sentence, but keep `&`, `=` and `%`.
+const LINK = /search\.nixos\.org\/(packages|options|flakes)\?([^\s)\]"'<>`]*)/g;
+
+// OpenSearch descriptors and shell snippets get pasted into issues too, and
+// their placeholder is not something a user ever typed.
+const TEMPLATE = /\{searchTerms\}|\{\}|%s|\$\{|\$1/;
+
+function extract(text, source, rows) {
+    for (const m of text.matchAll(LINK)) {
+        // A `#show=` fragment names the result the reporter opened, not part of
+        // the query; the same goes for any trailing anchor.
+        const params = new URLSearchParams(m[2].split("#")[0]);
+        const query = (params.get("query") ?? "").trim();
+        if (!query || TEMPLATE.test(query)) continue;
+        rows.push({
+            track: m[1],
+            query,
+            channel: params.get("channel") ?? "",
+            source,
+        });
+    }
+}
+
+const rows = [];
+for (const variant of VARIANTS) {
+    let found = 0;
+    for (let page = 1; page <= PAGES; page++) {
+        const data = await search(variant, page);
+        const items = data.items ?? [];
+        for (const item of items) {
+            const text = `${item.title ?? ""} ${item.body ?? ""}`;
+            extract(text, item.html_url, rows);
+        }
+        found += items.length;
+        if (items.length < PER_PAGE) break;
+        await sleep(THROTTLE_MS);
+    }
+    console.error(`[mine] ${variant}: ${found} issues`);
+    await sleep(THROTTLE_MS);
+}
+
+// The same link pasted into the same issue twice is one observation; the same
+// query shared by two people is two, because that is the mix we are measuring.
+const seen = new Set();
+const queries = rows.filter((r) => {
+    const key = `${r.track}\0${r.query}\0${r.source}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+});
+queries.sort(
+    (a, b) =>
+        a.track.localeCompare(b.track) ||
+        a.query.localeCompare(b.query) ||
+        a.source.localeCompare(b.source),
+);
+
+// A snapshot is only re-derivable if it says when it was taken.
+const mined = new Date().toISOString().slice(0, 10);
+writeFileSync(args.out, JSON.stringify({ mined, queries }, null, 4) + "\n");
+console.error(`[mine] wrote ${queries.length} queries to ${args.out}`);
+
+// The shape buckets `run.mjs` cites. They are exclusive and tested in
+// precedence order, so the percentages sum to 100 and each query lands in the
+// one bucket that describes what makes it hard.
+function shape(q) {
+    if (/\s/.test(q)) return "multiterm";
+    if (q.includes(".")) return "dotted";
+    if (/(_\d|\d{2,}$|_latest$)/.test(q)) return "versioned";
+    if (/[A-Z]/.test(q)) return "cased";
+    return "plain";
+}
+
+const BUCKETS = ["plain", "dotted", "cased", "versioned", "multiterm"];
+
+function report(label, sample) {
+    if (!sample.length) return;
+    const pct = (n) => `${((100 * n) / sample.length).toFixed(1)}%`;
+    const count = (pred) => sample.filter(pred).length;
+
+    console.log(`\n## ${label} (n=${sample.length})\n`);
+    console.log("| shape | n | share |");
+    console.log("| --- | --- | --- |");
+    for (const b of BUCKETS) {
+        const n = count((r) => shape(r.query) === b);
+        console.log(`| ${b} | ${n} | ${pct(n)} |`);
+    }
+
+    console.log("\n| tokens | n | share |");
+    console.log("| --- | --- | --- |");
+    const tokens = sample.map((r) => r.query.split(/\s+/).length);
+    for (const t of [1, 2, 3]) {
+        const n = tokens.filter((x) => (t === 3 ? x >= 3 : x === t)).length;
+        console.log(`| ${t === 3 ? "3+" : t} | ${n} | ${pct(n)} |`);
+    }
+
+    const dotted = sample.filter((r) => r.query.includes("."));
+    console.log(
+        `\ndotted: ${dotted.length} (${pct(dotted.length)}), uppercase anywhere: ` +
+            `${count((r) => /[A-Z]/.test(r.query))} (${pct(count((r) => /[A-Z]/.test(r.query)))})`,
+    );
+    if (dotted.length) {
+        console.log("\n| dot depth | n |");
+        console.log("| --- | --- |");
+        const depths = dotted.map((r) => r.query.split(".").length - 1);
+        for (const d of [1, 2, 3]) {
+            const n = depths.filter((x) => (d === 3 ? x >= 3 : x === d)).length;
+            console.log(`| ${d === 3 ? "3+" : d} | ${n} |`);
+        }
+    }
+}
+
+const byTrack = (t) => queries.filter((r) => r.track === t);
+console.log(`# Observed query distribution (mined ${mined})`);
+console.log(
+    `\n${queries.length} queries. Track mix: ` +
+        ["packages", "options", "flakes"]
+            .map(
+                (t) =>
+                    `${t} ${byTrack(t).length} (${((100 * byTrack(t).length) / queries.length).toFixed(1)}%)`,
+            )
+            .join(", "),
+);
+report("packages", byTrack("packages"));
+report("options", byTrack("options"));
