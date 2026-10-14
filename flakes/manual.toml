@@ -82,6 +82,11 @@ type = "github"
 owner = "anpandey"
 repo = "numen-nix"
 
+[[source]]
+type = "github"
+owner = "Ap6661"
+repo = "septabee-flake"
+
 [[sources]]
 type = "github"
 owner = "astro"
@@ -236,6 +241,11 @@ repo = "std"
 type = "github"
 owner = "edolstra"
 repo = "flake-compat"
+
+[[source]]
+type = "github"
+owner = "JuxGD"
+repo = "septabee-nix"
 
 [[sources]]
 type = "github"
