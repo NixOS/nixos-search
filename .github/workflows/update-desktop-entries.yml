@@ -70,8 +70,15 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Create issue if failed
-        if: failure() && github.repository_owner == 'NixOS'
+  # A separate job, because a runner that is shut down mid-job (e.g. when it
+  # runs out of memory) runs no later step of that job, not even `if: failure()`.
+  report-failure:
+    needs: update-desktop-entries
+    if: failure() && github.repository_owner == 'NixOS'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create issue
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
