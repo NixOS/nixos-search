@@ -136,7 +136,7 @@ Screenshots are much larger, and the index carries them as base64 in Elasticsear
 
 The index also keeps the upstream URL of each screenshot. That is the provenance of an image this index redistributes, and it is where a consumer sends a visitor who wants the image at its own size, which is too large to mirror: the same 2835 screenshots are 806 MB there, ten times what the larger copy costs.
 
-Enumerating packages evaluates nixpkgs' `ci/eval/outpaths.nix`, so the script needs a checkout, taken from `--nixpkgs`, else `$NIXPKGS`, else `NIX_PATH`. `--eval-systems` defaults to `x86_64-linux` alone, since entries do not differ per system and evaluating every supported one needs more memory than a CI runner has. `--outpaths <file>` reads an existing `nix-env -qaP --out-path` dump instead, skipping the evaluation entirely.
+Enumerating packages evaluates nixpkgs the way its own CI does, so the script needs a checkout, taken from `--nixpkgs`, else `$NIXPKGS`, else `NIX_PATH`. `ci/eval/pre-eval.nix` lists the attribute paths, then `ci/eval/chunk.nix` evaluates them in chunks of `--eval-chunk-size` (default 5000), each in its own `nix-env` process, since one process for all of them needs more memory than a CI runner has. `--eval-systems` defaults to `x86_64-linux` alone, since entries do not differ per system. `--outpaths <file>` reads an existing `nix-env -qaP --out-path` dump instead, skipping the evaluation entirely.
 
 A full run takes a while; pass attribute paths to index a few packages only:
 

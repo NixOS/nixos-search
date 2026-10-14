@@ -229,6 +229,11 @@ DEFAULT_CACHE_DIR = (
 # attribute path, since entries do not differ per system.
 DEFAULT_EVAL_SYSTEMS = "x86_64-linux"
 
+# Even one system needs more memory than a CI runner has when evaluated in one
+# process, so attribute paths are evaluated in chunks of this many, each in its
+# own process. This is the default of nixpkgs' own CI, which does the same.
+DEFAULT_EVAL_CHUNK_SIZE = 5000
+
 
 # One node of a `.ls` file tree: `entries` holds the children of a directory,
 # `target` the destination of a symlink.
@@ -609,37 +614,97 @@ def find_nixpkgs() -> str:
     return found
 
 
+def run_nix(command: list[str]) -> str:
+    """The stdout of a Nix `command`. On failure, exits with its stderr shown."""
+    done = subprocess.run(command, capture_output=True, text=True)
+    if done.returncode != 0:
+        sys.stderr.write(done.stderr)
+        raise SystemExit(f"`{command[0]}` failed with exit code {done.returncode}")
+    return done.stdout
+
+
+def eval_outpaths(nixpkgs: str, systems: str, chunk_size: int) -> str:
+    """`nix-env -qaP --no-name --out-path` output for all of `nixpkgs`, in chunks."""
+    eval_dir = pathlib.Path(nixpkgs) / "ci/eval"
+    # A Nix list, which, unlike a JSON one, has no commas.
+    systems_nix = (
+        "[ " + " ".join(json.dumps(s.strip()) for s in systems.split(",") if s.strip()) + " ]"
+    )
+    log("listing attribute paths via ci/eval/pre-eval.nix ...")
+    pre_eval = run_nix(
+        [
+            "nix-instantiate",
+            "--eval",
+            "--strict",
+            "--json",
+            str(eval_dir / "pre-eval.nix"),
+            "-A",
+            "result",
+        ]
+    )
+    pre_eval_result = json.loads(pre_eval)
+    # Nixpkgs CI makes packages with some `meta.problems` kinds, e.g. `removal`,
+    # fail to evaluate. Users can still install these, so evaluate them too.
+    pre_eval_result["attrPathsDisallowedForInternalUse"] = []
+    count = len(pre_eval_result["paths"])
+    chunks = -(-count // chunk_size)
+    outputs: list[str] = []
+    with tempfile.TemporaryDirectory() as tmp:
+        pre_eval_file = pathlib.Path(tmp) / "pre-eval.json"
+        pre_eval_file.write_text(json.dumps(pre_eval_result))
+        for chunk in range(chunks):
+            log(f"evaluating chunk {chunk + 1}/{chunks} of {count} attribute paths ...")
+            outputs.append(
+                run_nix(
+                    [
+                        "nix-env",
+                        "-qaP",
+                        "--no-name",
+                        "--out-path",
+                        "-f",
+                        str(eval_dir / "chunk.nix"),
+                        "--argstr",
+                        "preEvalFile",
+                        str(pre_eval_file),
+                        "--arg",
+                        "chunkSize",
+                        str(chunk_size),
+                        "--arg",
+                        "myChunk",
+                        str(chunk),
+                        "--arg",
+                        "systems",
+                        systems_nix,
+                        # The default of `ci/eval/outpaths.nix`.
+                        "--arg",
+                        "includeBroken",
+                        "true",
+                        "--argstr",
+                        "extraNixpkgsConfigJson",
+                        "{}",
+                    ]
+                )
+            )
+    return "".join(outputs)
+
+
 def read_outpaths(
     path: str | None = None,
     nixpkgs: str | None = None,
     store_dir: str = DEFAULT_STORE_DIR,
     systems: str = DEFAULT_EVAL_SYSTEMS,
+    chunk_size: int = DEFAULT_EVAL_CHUNK_SIZE,
 ) -> dict[str, list[str]]:
     """attrpath -> [store path], as produced by `ci/eval/outpaths.nix`.
 
-    That file documents itself as being called exactly this way.
+    Unless read from a dump at `path`, nixpkgs is evaluated the way its own CI
+    does: `ci/eval/pre-eval.nix` lists the attribute paths, then
+    `ci/eval/chunk.nix` evaluates `chunk_size` of them per process.
     """
     if path is not None:
         text = pathlib.Path(path).read_text()
     else:
-        nixpkgs = nixpkgs or find_nixpkgs()
-        log("enumerating packages via ci/eval/outpaths.nix (this takes a while) ...")
-        text = subprocess.run(
-            [
-                "nix-env",
-                "-qaP",
-                "--no-name",
-                "--out-path",
-                "-f",
-                str(pathlib.Path(nixpkgs) / "ci/eval/outpaths.nix"),
-                "--arg",
-                "systems",
-                json.dumps([system.strip() for system in systems.split(",") if system.strip()]),
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout
+        text = eval_outpaths(nixpkgs or find_nixpkgs(), systems, chunk_size)
 
     result: dict[str, list[str]] = {}
     for line in text.splitlines():
@@ -1068,6 +1133,12 @@ def main() -> None:
         default=DEFAULT_EVAL_SYSTEMS,
         help="comma-separated systems to enumerate packages for",
     )
+    parser.add_argument(
+        "--eval-chunk-size",
+        type=int,
+        default=DEFAULT_EVAL_CHUNK_SIZE,
+        help="attribute paths to evaluate per `nix-env` process; lower values use less memory",
+    )
     parser.add_argument("--outpaths", help="read `nix-env -qaP --out-path` output from this file")
     parser.add_argument("--output", default="-", help="write the JSON index here (default: stdout)")
     parser.add_argument(
@@ -1157,7 +1228,9 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    outpaths = read_outpaths(args.outpaths, args.nixpkgs, args.store_dir, args.eval_systems)
+    outpaths = read_outpaths(
+        args.outpaths, args.nixpkgs, args.store_dir, args.eval_systems, args.eval_chunk_size
+    )
     if args.attrs:
         wanted = set(args.attrs)
         # Attribute paths are suffixed with the system, e.g. `vlc.x86_64-linux`.
