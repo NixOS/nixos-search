@@ -1032,7 +1032,9 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
                         |> Maybe.map
                             (\count ->
                                 li []
-                                    [ text ("Direct dependency of " ++ pluralize count "package" "packages" ++ " in nixpkgs (x86_64-linux)") ]
+                                    [ span [ title "Number of packages in nixpkgs that use this package as a direct dependency, on x86_64-linux" ]
+                                        [ text (pluralize count "dependent" "dependents") ]
+                                    ]
                             )
 
                 repologyItem =
@@ -1040,7 +1042,9 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
                         |> Maybe.map
                             (\count ->
                                 li []
-                                    [ text ("Packaged by " ++ pluralize count "repository" "repositories" ++ " on ")
+                                    [ span [ title "Number of package repositories that contain this project, as counted by Repology" ]
+                                        [ text (pluralize count "repository" "repositories") ]
+                                    , text " on "
                                     , a
                                         [ href
                                             ("https://repology.org/tools/project-by?repo=nix_unstable&name_type=srcname&target_page=project_versions&name="
