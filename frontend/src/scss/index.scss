@@ -622,6 +622,12 @@ footer {
                 border: .1em solid;
               }
 
+              // show that the statistics have a tooltip
+              & > .package-popularity span[title] {
+                cursor: help;
+                text-decoration: underline dotted;
+              }
+
               // maintainers and platforms
               & > .package-maintainers-platforms {
                 margin-top: 1em;
