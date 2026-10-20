@@ -329,6 +329,21 @@ repo = "nix-security"
 
 [[sources]]
 type = "github"
+owner = "kamysh"
+repo = "kryzhen"
+
+[[sources]]
+type = "github"
+owner = "kamysh"
+repo = "mimir"
+
+[[sources]]
+type = "github"
+owner = "kamysh"
+repo = "muninn"
+
+[[sources]]
+type = "github"
 owner = "kashw2"
 repo = "bitbucket-runner-nix"
 
