@@ -755,20 +755,20 @@
         "relevant": [["pkg:transmission_4"]]
     },
     {
-        "id": "g150",
+        "id": "g206",
         "q": "terminal multiplexer",
         "category": "intent",
         "relevant": [["pkg:tmux"]]
     },
     {
-        "id": "g151",
+        "id": "g207",
         "q": "continuwuity",
         "category": "exact",
         "exhaustive": true,
         "relevant": [["pkg:matrix-continuwuity"]]
     },
     {
-        "id": "g152",
+        "id": "g208",
         "q": "node",
         "category": "exact",
         "exhaustive": true,
@@ -791,27 +791,297 @@
         ]
     },
     {
-        "id": "g153",
+        "id": "g209",
         "q": "Dicomizer",
-        "category": "exact",
+        "category": "cased",
         "relevant": [["pkg:weasis"]]
     },
     {
-        "id": "g154",
+        "id": "g210",
         "q": "LibreVNA-GUI",
-        "category": "exact",
+        "category": "cased",
         "relevant": [["pkg:librevna"]]
     },
     {
-        "id": "g155",
+        "id": "g211",
         "q": "nfcDemoApp",
-        "category": "exact",
+        "category": "cased",
         "relevant": [["pkg:libnfc-nci"]]
     },
     {
-        "id": "g156",
+        "id": "g212",
         "q": "yodaStruct",
-        "category": "exact",
+        "category": "cased",
         "relevant": [["pkg:d-seams"]]
+    },
+    {
+        "id": "g213",
+        "q": "apacheKafka",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [
+            ["pkg:apacheKafka"],
+            [
+                "pkg:apacheKafka_4_1",
+                "pkg:apacheKafka_4_2",
+                "pkg:apacheKafka_4_3"
+            ]
+        ]
+    },
+    {
+        "id": "g214",
+        "q": "EveBox",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["pkg:evebox"]]
+    },
+    {
+        "id": "g215",
+        "q": "GNUnet",
+        "category": "cased",
+        "relevant": [
+            ["pkg:gnunet"],
+            ["pkg:gnunet-gtk", "pkg:gnunet-messenger-cli"]
+        ]
+    },
+    {
+        "id": "g216",
+        "q": "GoToSocial",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["pkg:gotosocial"]]
+    },
+    {
+        "id": "g217",
+        "q": "Librecast",
+        "category": "cased",
+        "relevant": [["pkg:librecast"]]
+    },
+    {
+        "id": "g218",
+        "q": "MusicFree",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["pkg:musicfree-desktop"]]
+    },
+    {
+        "id": "g219",
+        "q": "Quickwit",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["pkg:quickwit"]]
+    },
+    {
+        "id": "g220",
+        "q": "xpraWithNvenc",
+        "category": "cased",
+        "exhaustive": true,
+        "relevant": [["pkg:xpraWithNvenc"]]
+    },
+    {
+        "id": "g221",
+        "q": "xxHash",
+        "category": "cased",
+        "relevant": [["pkg:xxhash"]]
+    },
+    {
+        "id": "g222",
+        "q": "jetbrains.rust-rover",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:jetbrains.rust-rover"]]
+    },
+    {
+        "id": "g223",
+        "q": "libsForQt5.qtstyleplugin-kvantum",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:libsForQt5.qtstyleplugin-kvantum"]]
+    },
+    {
+        "id": "g224",
+        "q": "linuxPackages_latest.nvidia_x11",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:linuxPackages_latest.nvidia_x11"]]
+    },
+    {
+        "id": "g225",
+        "q": "llvmPackages_22.clang-tools",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:llvmPackages_22.clang-tools"]]
+    },
+    {
+        "id": "g226",
+        "q": "passExtensions.pass-otp",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:passExtensions.pass-otp"]]
+    },
+    {
+        "id": "g227",
+        "q": "python313Packages.absl-py",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:python313Packages.absl-py"]]
+    },
+    {
+        "id": "g228",
+        "q": "python313Packages.pyqt6",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:python313Packages.pyqt6"]]
+    },
+    {
+        "id": "g229",
+        "q": "python313Packages.torchWithCuda",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:python313Packages.torchWithCuda"]]
+    },
+    {
+        "id": "g230",
+        "q": "python3Packages.absl-py",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:python313Packages.absl-py"]]
+    },
+    {
+        "id": "g231",
+        "q": "qt6.qtmultimedia",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:qt6.qtmultimedia"]]
+    },
+    {
+        "id": "g232",
+        "q": "qt6.qtscxml",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:qt6.qtscxml"]]
+    },
+    {
+        "id": "g233",
+        "q": "vimPlugins.nvim-lspconfig",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:vimPlugins.nvim-lspconfig"]]
+    },
+    {
+        "id": "g234",
+        "q": "vimPlugins.nvim-treesitter",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:vimPlugins.nvim-treesitter"]]
+    },
+    {
+        "id": "g235",
+        "q": "vimPlugins.rustaceanvim",
+        "category": "attrpath",
+        "exhaustive": true,
+        "relevant": [["pkg:vimPlugins.rustaceanvim"]]
+    },
+    {
+        "id": "g236",
+        "q": "docker_29",
+        "category": "versioned",
+        "exhaustive": true,
+        "relevant": [["pkg:docker_29"], ["pkg:docker_25"]]
+    },
+    {
+        "id": "g237",
+        "q": "elixir_1_17",
+        "category": "versioned",
+        "exhaustive": true,
+        "relevant": [
+            [
+                "pkg:beam27Packages.elixir_1_17",
+                "pkg:beamMinimal27Packages.elixir_1_17"
+            ]
+        ]
+    },
+    {
+        "id": "g238",
+        "q": "elixir_1_18",
+        "category": "versioned",
+        "exhaustive": true,
+        "relevant": [
+            [
+                "pkg:beam27Packages.elixir_1_18",
+                "pkg:beam28Packages.elixir_1_18",
+                "pkg:beam29Packages.elixir_1_18",
+                "pkg:beamMinimal27Packages.elixir_1_18",
+                "pkg:beamMinimal28Packages.elixir_1_18",
+                "pkg:beamMinimal29Packages.elixir_1_18"
+            ]
+        ]
+    },
+    {
+        "id": "g239",
+        "q": "fcitx5",
+        "category": "versioned",
+        "relevant": [["pkg:fcitx5"]]
+    },
+    {
+        "id": "g240",
+        "q": "go_1_25",
+        "category": "versioned",
+        "exhaustive": true,
+        "relevant": [["pkg:go_1_25"], ["pkg:go_1_26", "pkg:go_1_27"]]
+    },
+    {
+        "id": "g241",
+        "q": "gtk4",
+        "category": "versioned",
+        "relevant": [["pkg:gtk4"]]
+    },
+    {
+        "id": "g242",
+        "q": "libsoup_3",
+        "category": "versioned",
+        "exhaustive": true,
+        "relevant": [["pkg:libsoup_3"]]
+    },
+    {
+        "id": "g243",
+        "q": "lua5_1",
+        "category": "versioned",
+        "exhaustive": true,
+        "relevant": [
+            ["pkg:lua5_1"],
+            ["pkg:lua5_2", "pkg:lua5_3", "pkg:lua5_4", "pkg:lua5_5"]
+        ]
+    },
+    {
+        "id": "g244",
+        "q": "lua5_3_compat",
+        "category": "versioned",
+        "exhaustive": true,
+        "relevant": [
+            ["pkg:lua5_3_compat"],
+            ["pkg:lua5_2_compat", "pkg:lua5_4_compat", "pkg:lua5_5_compat"]
+        ]
+    },
+    {
+        "id": "g245",
+        "q": "nodejs_24",
+        "category": "versioned",
+        "exhaustive": true,
+        "relevant": [["pkg:nodejs_24"], ["pkg:nodejs_22", "pkg:nodejs_26"]]
+    },
+    {
+        "id": "g246",
+        "q": "python313",
+        "category": "versioned",
+        "exhaustive": true,
+        "relevant": [["pkg:python313"], ["pkg:python313FreeThreading"]]
+    },
+    {
+        "id": "g247",
+        "q": "python314",
+        "category": "versioned",
+        "exhaustive": true,
+        "relevant": [["pkg:python314"], ["pkg:python314FreeThreading"]]
     }
 ]
