@@ -12,7 +12,9 @@ It works in three phases:
      of the NAR's file tree -- and look for `share/applications/*.desktop` and
      the AppStream metadata in `share/metainfo` and `share/appdata`.
      Cheap: a few KB per package, no NAR download.
-  B. Fetch the NAR of these files and extract them. Write their icons
+  B. Read these files. With `NAR_SERVE_TOKEN` set, get each file by itself
+     from the `/nix/store/` endpoint of the cache. Without it, fetch the NAR of
+     these files and extract them. Write their icons
      to `--icon-dir`, with content hashes for name for deduplication. By not
      using a derivation for this, space may be saved by not having to keep all
      package NARs in-store.
@@ -744,8 +746,10 @@ class Scanner:
         screenshot_max_bytes: int = DEFAULT_SCREENSHOT_MAX_BYTES,
         cache_url: str = DEFAULT_CACHE_URL,
         store_dir: str = DEFAULT_STORE_DIR,
+        nar_serve_token: str | None = None,
     ) -> None:
         self.cache_url = cache_url.rstrip("/")
+        self.nar_serve_token = nar_serve_token
         self.store_dir = store_dir_prefix(store_dir)
         self.cache_dir = pathlib.Path(cache_dir)
         self.icon_dir = pathlib.Path(icon_dir) if icon_dir else None
@@ -797,9 +801,11 @@ class Scanner:
             self.local.session = requests.Session()
         return self.local.session
 
-    def get(self, name: str, timeout: int = 120) -> requests.Response | None:
+    def get(
+        self, name: str, timeout: int = 120, headers: dict[str, str] | None = None
+    ) -> requests.Response | None:
         """Fetch a cache object, or None on 404."""
-        response = self.session.get(f"{self.cache_url}/{name}", timeout=timeout)
+        response = self.session.get(f"{self.cache_url}/{name}", timeout=timeout, headers=headers)
         if response.status_code == 404:
             return None
         response.raise_for_status()
@@ -993,40 +999,69 @@ class Scanner:
                 inner: entry for inner in inner_paths if (entry := known.get(inner)) is not None
             }
 
-        narinfo = self.get(f"{path_hash}.narinfo")
-        if narinfo is None:
-            return {}
-        fields = dict(line.partition(": ")[::2] for line in narinfo.text.splitlines())
+        if self.nar_serve_token is not None:
+            self.read_entries(
+                path_hash, wanted, known, lambda inner: self.read_file(path_hash, inner)
+            )
+        else:
+            narinfo = self.get(f"{path_hash}.narinfo")
+            if narinfo is None:
+                return {}
+            fields = dict(line.partition(": ")[::2] for line in narinfo.text.splitlines())
 
-        nar = self.get(fields["URL"])
-        if nar is None:
-            return {}
+            nar = self.get(fields["URL"])
+            if nar is None:
+                return {}
 
-        with tempfile.TemporaryDirectory() as workdir:
-            nar_path = pathlib.Path(workdir) / "package.nar"
-            nar_path.write_bytes(decompress(nar.content, fields.get("Compression", "xz")))
+            with tempfile.TemporaryDirectory() as workdir:
+                nar_path = pathlib.Path(workdir) / "package.nar"
+                nar_path.write_bytes(decompress(nar.content, fields.get("Compression", "xz")))
 
-            def member(inner: str) -> bytes | None:
-                extracted = subprocess.run(
-                    [*NIX, "nar", "cat", str(nar_path), inner], capture_output=True
-                )
-                return extracted.stdout if extracted.returncode == 0 else None
+                def member(inner: str) -> bytes | None:
+                    extracted = subprocess.run(
+                        [*NIX, "nar", "cat", str(nar_path), inner], capture_output=True
+                    )
+                    return extracted.stdout if extracted.returncode == 0 else None
 
-            for inner in wanted:
-                data = member(inner)
-                text = data.decode("utf-8", "replace") if data else None
-                parsed: Parsed | None = None
-                if text is not None and inner.endswith(".desktop"):
-                    entry = parse_desktop_file(text)
-                    if entry is not None:
-                        entry["iconFile"] = self.read_icon(path_hash, entry["icon"], member)
-                    parsed = entry
-                elif text is not None:
-                    parsed = parse_metainfo(text)
-                known[inner] = parsed
+                self.read_entries(path_hash, wanted, known, member)
 
         cached.write_text(json.dumps(known))
         return {inner: entry for inner in inner_paths if (entry := known.get(inner)) is not None}
+
+    def read_file(self, path_hash: str, inner: str) -> bytes | None:
+        """-> one file of a store path, or None.
+
+        The cache decompresses the NAR up to the file and sends only that file.
+        This costs the cache CPU time, thus the endpoint is only for the
+        clients that have a token. The endpoint is at `/nix/store/` also when
+        `--store-dir` is different.
+        """
+        response = self.get(
+            f"nix/store/{path_hash}{urllib.parse.quote(inner)}",
+            headers={"Authorization": f"Bearer {self.nar_serve_token}"},
+        )
+        return response.content if response is not None else None
+
+    def read_entries(
+        self,
+        path_hash: str,
+        wanted: list[str],
+        known: dict[str, Parsed | None],
+        member: Callable[[str], bytes | None],
+    ) -> None:
+        """Parse the `wanted` files of one store path into `known`."""
+        for inner in wanted:
+            data = member(inner)
+            text = data.decode("utf-8", "replace") if data else None
+            parsed: Parsed | None = None
+            if text is not None and inner.endswith(".desktop"):
+                entry = parse_desktop_file(text)
+                if entry is not None:
+                    entry["iconFile"] = self.read_icon(path_hash, entry["icon"], member)
+                parsed = entry
+            elif text is not None:
+                parsed = parse_metainfo(text)
+            known[inner] = parsed
 
     # -- phase C ----------------------------------------------------------
 
@@ -1220,9 +1255,7 @@ def main() -> None:
         help="skip screenshots larger than this",
     )
     parser.add_argument("--jobs", type=int, default=32, help="concurrent requests in phase A")
-    parser.add_argument(
-        "--nar-jobs", type=int, default=4, help="concurrent NAR downloads in phase B"
-    )
+    parser.add_argument("--nar-jobs", type=int, default=4, help="concurrent store paths in phase B")
     parser.add_argument(
         "--screenshot-jobs", type=int, default=16, help="concurrent downloads in phase C"
     )
@@ -1266,6 +1299,8 @@ def main() -> None:
         args.screenshot_max_bytes,
         args.cache_url,
         args.store_dir,
+        # An empty value is an Actions secret that is not set, e.g. on a fork.
+        os.environ.get("NAR_SERVE_TOKEN") or None,
     )
 
     log("phase A: listing NAR contents ...")
@@ -1281,7 +1316,7 @@ def main() -> None:
         if location is not None:
             by_nar.setdefault(location[0], set()).add(location[1])
 
-    log(f"phase B: fetching {len(by_nar)} NARs holding indexable files ...")
+    log(f"phase B: reading the indexable files of {len(by_nar)} store paths ...")
     contents = run_pool(
         args.nar_jobs,
         lambda path_hash: scanner.fetch_entries(path_hash, sorted(by_nar[path_hash])),
