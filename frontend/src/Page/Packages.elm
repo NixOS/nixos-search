@@ -70,6 +70,7 @@ import Search
         , viewBucket
         )
 import Search.Query
+import Url
 import Utils
 
 
@@ -104,6 +105,8 @@ type alias ResultItemSource =
     , flakeDescription : Maybe String
     , flakeUrl : Maybe ( String, String )
     , modularServices : List String
+    , depCount : Maybe Int
+    , repologyRepos : Maybe Int
     }
 
 
@@ -726,6 +729,60 @@ viewResultItem nixosChannels channel showUsageDetails show item =
                         term
                         ("/flakes?type=options&query=" ++ term)
 
+        popularity =
+            let
+                pluralize count singular plural =
+                    String.fromInt count
+                        ++ " "
+                        ++ (if count == 1 then
+                                singular
+
+                            else
+                                plural
+                           )
+
+                -- `package_dep_count` is absent both for packages without
+                -- dependents and for packages not evaluated on x86_64-linux,
+                -- thus do not show 0.
+                depCountItem =
+                    item.source.depCount
+                        |> Maybe.map
+                            (\count ->
+                                li []
+                                    [ span [ title "Number of packages in nixpkgs that use this package as a direct dependency, on x86_64-linux" ]
+                                        [ text (pluralize count "dependent" "dependents") ]
+                                    ]
+                            )
+
+                repologyItem =
+                    item.source.repologyRepos
+                        |> Maybe.map
+                            (\count ->
+                                li []
+                                    [ span [ title "Number of package repositories that contain this project, as counted by Repology" ]
+                                        [ text (pluralize count "repository" "repositories") ]
+                                    , text " on "
+                                    , a
+                                        [ href
+                                            ("https://repology.org/tools/project-by?repo=nix_unstable&name_type=srcname&target_page=project_versions&name="
+                                                ++ Url.percentEncode item.source.attr_name
+                                            )
+                                        , target "_blank"
+                                        ]
+                                        [ text "Repology" ]
+                                    ]
+                            )
+            in
+            case List.filterMap identity [ depCountItem, repologyItem ] of
+                [] ->
+                    text ""
+
+                items ->
+                    div [ class "package-popularity" ]
+                        [ h4 [] [ text "Popularity" ]
+                        , ul [] items
+                        ]
+
         longerPackageDetails =
             optionals (Just item.source.attr_name == show)
                 [ div [ class "package-details", trapClick ]
@@ -892,6 +949,7 @@ viewResultItem nixosChannels channel showUsageDetails show item =
                     , programs
                     , maintainersTeamsAndPlatforms
                     , optionsLink
+                    , popularity
                     , if List.isEmpty item.source.modularServices then
                         text ""
 
@@ -1275,6 +1333,8 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "flake_description" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_resolved" (Json.Decode.map Just decodeResolvedFlake) Nothing
         |> Json.Decode.Pipeline.optional "package_modular_services" (Json.Decode.list Json.Decode.string) []
+        |> Json.Decode.Pipeline.optional "package_dep_count" (Json.Decode.map Just Json.Decode.int) Nothing
+        |> Json.Decode.Pipeline.optional "package_repology_repos" (Json.Decode.map Just Json.Decode.int) Nothing
 
 
 type alias ResolvedFlake =
