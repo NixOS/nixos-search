@@ -2,13 +2,30 @@ use std::collections::HashMap;
 
 use clap::arg_enum;
 pub use elasticsearch::http::transport::Transport;
-use elasticsearch::{BulkOperation, Elasticsearch as Client, http::response, indices::*};
+use elasticsearch::{
+    BulkOperation, Elasticsearch as Client,
+    http::{StatusCode, response},
+    indices::*,
+};
 use lazy_static::lazy_static;
 use log::{info, warn};
+use serde::Serialize;
 use serde_json::{Value, json};
 use thiserror::Error;
 
 use crate::data::Export;
+
+/// The maximum number of documents in one bulk request.
+const BULK_MAX_DOCS: usize = 7_000;
+
+/// The maximum size in bytes of the documents in one bulk request.
+/// Elasticsearch refuses a request that is larger than its
+/// `http.max_content_length` (100 MiB by default) with a 413 status, and the
+/// proxy in front of the cluster stops a slow request with a 504 status. The
+/// document count limit alone does not prevent this: icon and screenshot
+/// documents each contain a base64 image, and 7,000 of them are larger than
+/// 100 MiB.
+const BULK_MAX_BYTES: usize = 10 * 1024 * 1024;
 lazy_static! {
     static ref MAPPING: Value = json!({
         "mappings": {
@@ -280,6 +297,8 @@ pub enum ElasticsearchError {
     PushResponseError(response::Exception),
     #[error("One or more bulk requests had failed items")]
     BulkRequestPartialFailure,
+    #[error("Elasticsearch returned HTTP {status}: {body}")]
+    HttpStatusError { status: StatusCode, body: String },
 
     #[error("Failed to iitialize index: {0}")]
     InitIndexError(elasticsearch::Error),
@@ -315,7 +334,12 @@ impl Elasticsearch {
     ) -> Result<(), ElasticsearchError> {
         // let exports: Result<Vec<Value>, serde_json::Error> = exports.iter().map(serde_json::to_value).collect();
         // let exports = exports?;
-        let chunks = exports.chunks(7_000);
+        let chunks = bulk_chunks(exports, BULK_MAX_DOCS, BULK_MAX_BYTES)?;
+        info!(
+            "Pushing {} documents in {} bulk requests",
+            exports.len(),
+            chunks.len()
+        );
 
         let mut had_failures = false;
 
@@ -332,16 +356,7 @@ impl Elasticsearch {
                 .send()
                 .await
                 .map_err(ElasticsearchError::PushError)?;
-
-            if response.status_code().is_client_error() || response.status_code().is_server_error()
-            {
-                return Err(response
-                    .exception()
-                    .await
-                    .map_err(ElasticsearchError::ClientError)?
-                    .map(ElasticsearchError::PushResponseError)
-                    .unwrap_or(ElasticsearchError::BulkRequestPartialFailure));
-            }
+            let response = check_response(response).await?;
 
             // Elasticsearch bulk API returns HTTP 200 even when some items fail
             // Reference: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html
@@ -465,12 +480,7 @@ impl Elasticsearch {
             .await
             .map_err(ElasticsearchError::InitIndexError)?;
 
-        response
-            .exception()
-            .await
-            .map_err(ElasticsearchError::ClientError)?
-            .map(ElasticsearchError::PushResponseError)
-            .map_or(Ok(()), Err)?;
+        check_response(response).await?;
 
         Ok(())
     }
@@ -496,12 +506,8 @@ impl Elasticsearch {
             .await
             .map_err(ElasticsearchError::InitIndexError)?;
 
-        response
-            .exception()
-            .await
-            .map_err(ElasticsearchError::ClientError)?
-            .map(ElasticsearchError::PushResponseError)
-            .map_or(Ok(()), Err)
+        check_response(response).await?;
+        Ok(())
     }
 
     pub async fn write_alias(
@@ -547,13 +553,60 @@ impl Elasticsearch {
             .await
             .map_err(ElasticsearchError::InitIndexError)?;
 
-        response
-            .exception()
-            .await
-            .map_err(ElasticsearchError::ClientError)?
-            .map(ElasticsearchError::PushResponseError)
-            .map_or(Ok(()), Err)
+        check_response(response).await?;
+        Ok(())
     }
+}
+
+/// Return `response` if its status is not an error. Otherwise return the error.
+/// A proxy in front of Elasticsearch can send an error that is not an
+/// Elasticsearch exception, for example a 413 or a 504 status with an empty
+/// body. For such an error, the result contains the status and the start of
+/// the body.
+async fn check_response(
+    response: response::Response,
+) -> Result<response::Response, ElasticsearchError> {
+    let status = response.status_code();
+    if !(status.is_client_error() || status.is_server_error()) {
+        return Ok(response);
+    }
+    let body = response
+        .text()
+        .await
+        .map_err(ElasticsearchError::ClientError)?;
+    Err(match serde_json::from_str::<response::Exception>(&body) {
+        Ok(exception) => ElasticsearchError::PushResponseError(exception),
+        Err(_) => ElasticsearchError::HttpStatusError {
+            status,
+            body: body.chars().take(200).collect(),
+        },
+    })
+}
+
+/// Divide `docs` into chunks of at most `max_docs` documents and at most
+/// `max_bytes` bytes of serialized JSON. A document that is larger than
+/// `max_bytes` goes into a chunk alone.
+fn bulk_chunks<T: Serialize>(
+    docs: &[T],
+    max_docs: usize,
+    max_bytes: usize,
+) -> Result<Vec<&[T]>, serde_json::Error> {
+    let mut chunks = Vec::new();
+    let mut start = 0;
+    let mut bytes = 0;
+    for (i, doc) in docs.iter().enumerate() {
+        let size = serde_json::to_vec(doc)?.len();
+        if i > start && (i - start == max_docs || bytes + size > max_bytes) {
+            chunks.push(&docs[start..i]);
+            start = i;
+            bytes = 0;
+        }
+        bytes += size;
+    }
+    if start < docs.len() {
+        chunks.push(&docs[start..]);
+    }
+    Ok(chunks)
 }
 
 #[derive(Debug)]
@@ -584,6 +637,37 @@ mod tests {
         data::{self, import::Kind},
         process_flake,
     };
+
+    #[test]
+    fn test_bulk_chunks_by_count() {
+        let docs = vec![1u8; 7];
+        let chunks = bulk_chunks(&docs, 3, usize::MAX).unwrap();
+        let lens: Vec<usize> = chunks.iter().map(|c| c.len()).collect();
+        assert_eq!(lens, vec![3, 3, 1]);
+    }
+
+    #[test]
+    fn test_bulk_chunks_by_bytes() {
+        // Each string serializes to 10 bytes: 8 characters and 2 quotes.
+        let docs = vec!["x".repeat(8); 5];
+        let chunks = bulk_chunks(&docs, usize::MAX, 25).unwrap();
+        let lens: Vec<usize> = chunks.iter().map(|c| c.len()).collect();
+        assert_eq!(lens, vec![2, 2, 1]);
+    }
+
+    #[test]
+    fn test_bulk_chunks_oversized_doc_alone() {
+        let docs = vec!["a".to_string(), "x".repeat(100), "b".to_string()];
+        let chunks = bulk_chunks(&docs, usize::MAX, 10).unwrap();
+        let lens: Vec<usize> = chunks.iter().map(|c| c.len()).collect();
+        assert_eq!(lens, vec![1, 1, 1]);
+    }
+
+    #[test]
+    fn test_bulk_chunks_empty() {
+        let docs: Vec<u8> = Vec::new();
+        assert!(bulk_chunks(&docs, 3, 10).unwrap().is_empty());
+    }
 
     #[tokio::test]
     async fn test_delete() -> Result<(), Box<dyn std::error::Error>> {
