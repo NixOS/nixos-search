@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Writes the AppStream screenshots out of Elasticsearch as static files, one
 // per `screenshot` document. Writes `<SCREENSHOTS_OUT_DIR>/<screenshot_file>`
-// for every channel in `NIXOS_CHANNELS` (default output dir:
+// for the screenshots of all channels (default output dir:
 // `public/screenshots`). See `lib/image-assets.mjs` for how and when the files
 // are written.
 //

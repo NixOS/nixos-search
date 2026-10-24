@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Writes the desktop entry icons out of Elasticsearch as static files, one per
-// `icon` document. Writes `<ICONS_OUT_DIR>/<icon_file>` for every channel in
-// `NIXOS_CHANNELS` (default output dir: `public/icons`). See
-// `lib/image-assets.mjs` for how and when the files are written.
+// `icon` document. Writes `<ICONS_OUT_DIR>/<icon_file>` for the icons of all
+// channels (default output dir: `public/icons`). See `lib/image-assets.mjs` for
+// how and when the files are written.
 
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
