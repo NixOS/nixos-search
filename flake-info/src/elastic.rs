@@ -1,9 +1,9 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use clap::arg_enum;
 pub use elasticsearch::http::transport::Transport;
 use elasticsearch::{
-    BulkOperation, Elasticsearch as Client,
+    BulkOperation, Elasticsearch as Client, MgetParts,
     http::{StatusCode, response},
     indices::*,
 };
@@ -26,6 +26,10 @@ const BULK_MAX_DOCS: usize = 7_000;
 /// documents each contain a base64 image, and 7,000 of them are larger than
 /// 100 MiB.
 const BULK_MAX_BYTES: usize = 10 * 1024 * 1024;
+
+/// The maximum number of ids in one multi get request.
+const MGET_MAX_IDS: usize = 10_000;
+
 lazy_static! {
     static ref MAPPING: Value = json!({
         "mappings": {
@@ -177,8 +181,8 @@ lazy_static! {
                 // Rendered, never queried: the entry's own fields are searched
                 // through the flattened sets below.
                 "package_desktop_entries": {"type": "object", "enabled": false},
-                // File names of the images, which are `icon` documents of their
-                // own. Rendered, never queried.
+                // File names of the images, which are `icon` documents in the
+                // shared image index. Rendered, never queried.
                 "package_desktop_icons": {"type": "object", "enabled": false},
                 "package_categories_set": {"type": "keyword"},
                 "package_mime_types_set": {"type": "keyword"},
@@ -332,12 +336,128 @@ impl Elasticsearch {
         config: &Config<'_>,
         exports: &[Export],
     ) -> Result<(), ElasticsearchError> {
-        // let exports: Result<Vec<Value>, serde_json::Error> = exports.iter().map(serde_json::to_value).collect();
-        // let exports = exports?;
-        let chunks = bulk_chunks(exports, BULK_MAX_DOCS, BULK_MAX_BYTES)?;
+        self.push_bulk(config.index, exports, |_| None).await
+    }
+
+    /// Push the image documents `images` into the shared image index `index`,
+    /// and create the index with the alias `alias` if it does not exist. The
+    /// index must have an alias, because the weekly prune deletes all indices
+    /// that do not have an alias. All imports of one schema
+    /// version share this index, thus Elasticsearch keeps each image one time
+    /// and not one time for each channel and revision. An image id identifies
+    /// the same image always (see `Export::image_id`), thus this function
+    /// pushes only the images that the index does not contain.
+    pub async fn push_images(
+        &self,
+        index: &str,
+        alias: &str,
+        images: &[Export],
+    ) -> Result<(), ElasticsearchError> {
+        self.ensure_shared_index(index, alias).await?;
+
+        let mut seen = HashSet::new();
+        let mut ids = Vec::new();
+        for image in images {
+            if let Some(id) = image.image_id() {
+                if seen.insert(id.clone()) {
+                    ids.push((id, image));
+                }
+            }
+        }
+        let present = self
+            .present_ids(index, ids.iter().map(|(id, _)| id.as_str()))
+            .await?;
+        let missing: Vec<&Export> = ids
+            .iter()
+            .filter(|(id, _)| !present.contains(id))
+            .map(|(_, image)| *image)
+            .collect();
         info!(
-            "Pushing {} documents in {} bulk requests",
-            exports.len(),
+            "{} of {} images are not in index {}",
+            missing.len(),
+            ids.len(),
+            index
+        );
+
+        self.push_bulk(index, &missing, |image| image.image_id())
+            .await
+    }
+
+    /// Create the index `index` with the alias `alias` if the index does not
+    /// exist. Imports that run at the same time can try to create the same
+    /// index. The create request adds the alias, thus if the request fails,
+    /// the index is correct if it exists after the failure.
+    async fn ensure_shared_index(
+        &self,
+        index: &str,
+        alias: &str,
+    ) -> Result<(), ElasticsearchError> {
+        let config = Config {
+            index,
+            exists_strategy: ExistsStrategy::Ignore,
+        };
+        if self.check_index(&config).await? {
+            return Ok(());
+        }
+
+        let mut body = MAPPING.clone();
+        body["aliases"][alias] = json!({});
+        let response = self
+            .client
+            .indices()
+            .create(IndicesCreateParts::Index(index))
+            .body(body)
+            .send()
+            .await
+            .map_err(ElasticsearchError::InitIndexError)?;
+        if let Err(e) = check_response(response).await {
+            if !self.check_index(&config).await? {
+                return Err(e);
+            }
+        }
+        Ok(())
+    }
+
+    /// Return the ids in `ids` that the index `index` contains.
+    async fn present_ids<'a>(
+        &self,
+        index: &str,
+        ids: impl Iterator<Item = &'a str>,
+    ) -> Result<HashSet<String>, ElasticsearchError> {
+        let ids: Vec<&str> = ids.collect();
+        let mut present = HashSet::new();
+        for chunk in ids.chunks(MGET_MAX_IDS) {
+            let response = self
+                .client
+                .mget(MgetParts::Index(index))
+                ._source(&["false"])
+                .body(json!({ "ids": chunk }))
+                .send()
+                .await
+                .map_err(ElasticsearchError::ClientError)?;
+            let body: Value = check_response(response)
+                .await?
+                .json()
+                .await
+                .map_err(ElasticsearchError::ClientError)?;
+            present.extend(found_ids(&body));
+        }
+        Ok(present)
+    }
+
+    /// Push `docs` into the index `index`. If `id` gives an id for a document,
+    /// the document gets that id. Otherwise Elasticsearch makes an id.
+    async fn push_bulk<T: Serialize>(
+        &self,
+        index: &str,
+        docs: &[T],
+        id: impl Fn(&T) -> Option<String>,
+    ) -> Result<(), ElasticsearchError> {
+        let chunks = bulk_chunks(docs, BULK_MAX_DOCS, BULK_MAX_BYTES)?;
+        info!(
+            "Pushing {} documents to {} in {} bulk requests",
+            docs.len(),
+            index,
             chunks.len()
         );
 
@@ -346,12 +466,18 @@ impl Elasticsearch {
         for chunk in chunks {
             let body = chunk
                 .iter()
-                .map(|e| BulkOperation::from(BulkOperation::index(e)))
+                .map(|doc| {
+                    let operation = BulkOperation::index(doc);
+                    BulkOperation::from(match id(doc) {
+                        Some(id) => operation.id(id),
+                        None => operation,
+                    })
+                })
                 .collect();
 
             let response = self
                 .client
-                .bulk(elasticsearch::BulkParts::Index(config.index))
+                .bulk(elasticsearch::BulkParts::Index(index))
                 .body(body)
                 .send()
                 .await
@@ -583,6 +709,16 @@ async fn check_response(
     })
 }
 
+/// Return the ids of the documents that a multi get response `body` found.
+fn found_ids(body: &Value) -> impl Iterator<Item = String> + '_ {
+    body["docs"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|doc| doc["found"].as_bool() == Some(true))
+        .filter_map(|doc| doc["_id"].as_str().map(str::to_owned))
+}
+
 /// Divide `docs` into chunks of at most `max_docs` documents and at most
 /// `max_bytes` bytes of serialized JSON. A document that is larger than
 /// `max_bytes` goes into a chunk alone.
@@ -661,6 +797,20 @@ mod tests {
         let chunks = bulk_chunks(&docs, usize::MAX, 10).unwrap();
         let lens: Vec<usize> = chunks.iter().map(|c| c.len()).collect();
         assert_eq!(lens, vec![1, 1, 1]);
+    }
+
+    #[test]
+    fn test_found_ids() {
+        let body = json!({"docs": [
+            {"_index": "images-1", "_id": "icon-a.png", "found": true},
+            {"_index": "images-1", "_id": "icon-b.png", "found": false},
+            {"_index": "images-1", "_id": "screenshot-c.webp", "found": true},
+        ]});
+        assert_eq!(
+            found_ids(&body).collect::<Vec<_>>(),
+            ["icon-a.png", "screenshot-c.webp"]
+        );
+        assert_eq!(found_ids(&json!({})).count(), 0);
     }
 
     #[test]
