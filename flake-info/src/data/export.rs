@@ -802,6 +802,20 @@ impl Export {
             item: Derivation::try_from(item)?,
         })
     }
+
+    /// The id of an image document in the shared image index: its type and
+    /// its file name. The file name contains a hash of the image, thus one id
+    /// always identifies the same image. `None` if the document is not an
+    /// image.
+    pub fn image_id(&self) -> Option<String> {
+        match &self.item {
+            Derivation::Icon { icon_file, .. } => Some(format!("icon-{icon_file}")),
+            Derivation::Screenshot {
+                screenshot_file, ..
+            } => Some(format!("screenshot-{screenshot_file}")),
+            _ => None,
+        }
+    }
 }
 
 #[cfg(test)]

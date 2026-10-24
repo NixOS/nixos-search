@@ -670,10 +670,26 @@ async fn push_to_elastic(
     // guard it anyway.
     let created_index = !matches!(elastic.elastic_exists, ExistsStrategy::Ignore);
 
-    let successes = collect_exports(exports).await?;
+    // Images go into one index that all imports share, and not into the
+    // index of this import. Push them first, thus the index of this import
+    // never refers to an image that is not available.
+    let (images, successes): (Vec<Export>, Vec<Export>) = collect_exports(exports)
+        .await?
+        .into_iter()
+        .partition(|export| export.image_id().is_some());
+    let images_index = format!("images-{}", elastic.elastic_schema_version.unwrap());
+    let images_alias = format!("latest-{}-images", elastic.elastic_schema_version.unwrap());
 
     info!("Pushing to elastic");
-    if let Err(e) = es.push_exports(&config, &successes).await {
+    let pushed = async {
+        if !images.is_empty() {
+            es.push_images(&images_index, &images_alias, &images)
+                .await?;
+        }
+        es.push_exports(&config, &successes).await
+    }
+    .await;
+    if let Err(e) = pushed {
         if created_index {
             warn!("push failed, clearing partial index {index} so next run rebuilds");
             if let Err(clear_err) = es.clear_index(&config).await {
