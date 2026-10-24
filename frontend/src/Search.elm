@@ -3,6 +3,7 @@ module Search exposing
     , AggregationsBucketItem
     , BucketInputType(..)
     , Details(..)
+    , Language
     , Model
     , Msg(..)
     , NixOSChannel
@@ -20,17 +21,20 @@ module Search exposing
     , decodeResolvedFlake
     , defaultFlakeId
     , elementId
+    , fetchLocales
     , init
     , makeRequest
     , makeRequestTask
     , onClickStop
     , shouldLoad
     , showMoreButton
+    , translate
     , trapClick
     , update
     , view
     , viewBucket
     , viewFlakes
+    , viewLanguages
     , viewResult
     , viewSearchInput
     )
@@ -92,6 +96,7 @@ import Html.Events
 import Http
 import Json.Decode
 import Json.Decode.Pipeline
+import Ports
 import RemoteData
 import Route
     exposing
@@ -134,7 +139,43 @@ type alias Model a b =
     -- flashing the full loader. Cleared once the new response lands.
     , previousResult : Maybe (SearchResult a b)
     , options : Options
+
+    -- Whether the visitor asked for less data, via `Save-Data` or a connection
+    -- the browser reports as metered. Results skip images under it.
+    , saveData : Bool
     , typeahead : Typeahead.Model
+
+    -- The language desktop entries are shown in, as a BCP 47 tag. `Nothing`
+    -- shows them as their packages wrote them, which is nearly always English.
+    , lang : Maybe String
+
+    -- `lang` as the URL carries it, following `urlChannel`: a language restored
+    -- from storage is a standing preference rather than part of the search, so
+    -- it stays out of links until the visitor picks one on this page.
+    , urlLang : Maybe String
+
+    -- What `/locales/index.json` offers, most widely translated first. Empty
+    -- until it arrives, and on the pages that never ask for it.
+    , languages : List Language
+
+    -- The translations for `lang`, keyed by the string each one translates.
+    -- Anything not in here is shown untranslated, which is what a partly
+    -- translated corpus means anyway.
+    , localization : Dict String String
+
+    -- A language the visitor picked on an earlier visit, if any. Picks the
+    -- initial language when the URL names none.
+    , storedLanguage : Maybe String
+    }
+
+
+{-| A language `/locales` has a file for. `strings` counts how much of the
+corpus it covers, which is what the dropdown is ordered by.
+-}
+type alias Language =
+    { locale : String
+    , name : String
+    , strings : Int
     }
 
 
@@ -298,12 +339,13 @@ decodeResolvedFlake =
 init :
     Options
     -> Bool
+    -> Maybe String
     -> Route.SearchArgs
     -> String
     -> List NixOSChannel
     -> Maybe (Model a b)
     -> ( Model a b, Cmd (Msg a b) )
-init options preferStatic args defaultNixOSChannel nixosChannels maybeModel =
+init options preferStatic storedLanguage args defaultNixOSChannel nixosChannels maybeModel =
     let
         getField getFn default =
             maybeModel
@@ -326,6 +368,24 @@ init options preferStatic args defaultNixOSChannel nixosChannels maybeModel =
 
             else
                 ( defaultNixOSChannel, args.channel )
+
+        previousLang =
+            getField .lang Nothing
+
+        -- A language taken from storage is not in the URL, so it has to survive
+        -- a re-init on its own. Storage is only consulted on the first init:
+        -- afterwards the model holds the current choice, and falling back to
+        -- storage would resurrect a language just switched away from.
+        effectiveLang =
+            case ( args.lang, maybeModel ) of
+                ( Just _, _ ) ->
+                    args.lang
+
+                ( Nothing, Just _ ) ->
+                    previousLang
+
+                ( Nothing, Nothing ) ->
+                    storedLanguage
     in
     ( { channel = validChannel
       , redirectedChannel = redirected
@@ -360,7 +420,21 @@ init options preferStatic args defaultNixOSChannel nixosChannels maybeModel =
       , previousResult = Nothing
       , urlChannel = args.channel
       , options = options
+      , saveData = not preferStatic
       , typeahead = Typeahead.init preferStatic
+      , lang = effectiveLang
+      , urlLang = args.lang
+      , languages = getField .languages []
+      , localization =
+            -- Kept across a re-init only while it is still the right language,
+            -- so that paging through results does not refetch it and a change
+            -- of language does not briefly show the old one.
+            if previousLang == effectiveLang then
+                getField .localization Dict.empty
+
+            else
+                Dict.empty
+      , storedLanguage = storedLanguage
       }
         |> ensureLoading nixosChannels
     , Browser.Dom.focus "search-query-input" |> Task.attempt (\_ -> NoOp)
@@ -447,6 +521,9 @@ type Msg a b
     | TypeaheadMsg Typeahead.Msg
     | TypeaheadBlur
     | TypeaheadFocus
+    | SetLanguage (Maybe String)
+    | LanguagesResponse (Result Http.Error (List Language))
+    | LocalizationResponse String (Result Http.Error (Dict String String))
 
 
 type Details
@@ -456,6 +533,74 @@ type Details
     | ViaNixEnv
     | FromFlake
     | Unset
+
+
+{-| Everything the page needs to show desktop entries in another language: the
+list of languages on offer, and the translations for the one in force. Issued by
+the pages that show desktop entries, so the others make no extra requests.
+-}
+fetchLocales : Model a b -> Cmd (Msg a b)
+fetchLocales model =
+    Cmd.batch
+        [ if List.isEmpty model.languages then
+            fetchLanguages
+
+          else
+            Cmd.none
+        , case model.lang of
+            Just locale ->
+                if Dict.isEmpty model.localization then
+                    fetchLocalization locale
+
+                else
+                    Cmd.none
+
+            Nothing ->
+                Cmd.none
+        ]
+
+
+{-| The languages desktop entries have been translated into, written as static
+files by the frontend build. A deploy that could not reach Elasticsearch writes
+no manifest, and the dropdown then simply does not appear.
+-}
+fetchLanguages : Cmd (Msg a b)
+fetchLanguages =
+    Http.get
+        { url = "/locales/index.json"
+        , expect = Http.expectJson LanguagesResponse (Json.Decode.list decodeLanguage)
+        }
+
+
+decodeLanguage : Json.Decode.Decoder Language
+decodeLanguage =
+    Json.Decode.map3 Language
+        (Json.Decode.field "locale" Json.Decode.string)
+        (Json.Decode.field "name" Json.Decode.string)
+        (Json.Decode.field "strings" Json.Decode.int)
+
+
+{-| One language's translations, for the whole corpus rather than for the hits
+currently on screen: a search response is a POST and is never cached, whereas
+this is a GET a visitor pays for once.
+-}
+fetchLocalization : String -> Cmd (Msg a b)
+fetchLocalization locale =
+    Http.get
+        { url = "/locales/" ++ locale ++ ".json"
+        , expect =
+            Http.expectJson (LocalizationResponse locale)
+                (Json.Decode.dict Json.Decode.string)
+        }
+
+
+{-| A string as the chosen language has it, or as it was written where that
+language does not have it. A corpus is translated in patches, so a fallback is
+the common case rather than the error case.
+-}
+translate : Dict String String -> String -> String
+translate localization string =
+    Dict.get string localization |> Maybe.withDefault string
 
 
 scrollToEntry :
@@ -656,6 +801,49 @@ update toRoute navKey msg model nixosChannels =
         TypeaheadFocus ->
             ( { model | typeahead = Typeahead.focusModel model.typeahead }, Cmd.none )
 
+        SetLanguage lang ->
+            if lang == model.lang then
+                ( model, Cmd.none )
+
+            else
+                let
+                    ( newModel, urlCmd ) =
+                        { model
+                            | lang = lang
+                            , urlLang = lang
+                            , localization = Dict.empty
+                        }
+                            |> pushUrl toRoute navKey
+                in
+                ( newModel
+                , Cmd.batch
+                    [ urlCmd
+                    , Ports.setLanguage (Maybe.withDefault "" lang)
+                    , case lang of
+                        Just locale ->
+                            fetchLocalization locale
+
+                        Nothing ->
+                            Cmd.none
+                    ]
+                )
+
+        LanguagesResponse result ->
+            -- No manifest means no translations were deployed, which is the
+            -- same to a reader as none existing.
+            ( { model | languages = Result.withDefault [] result }, Cmd.none )
+
+        LocalizationResponse locale result ->
+            -- A response for a language that has since been changed away from
+            -- would otherwise translate the entries into the previous one.
+            if model.lang == Just locale then
+                ( { model | localization = Result.withDefault Dict.empty result }
+                , Cmd.none
+                )
+
+            else
+                ( model, Cmd.none )
+
 
 pushUrl :
     Route.SearchRoute
@@ -695,6 +883,7 @@ createUrl toRoute model =
                     |> Maybe.map toSortId
             , type_ = justIfNotDefault model.searchType defaultSearchArgs.searchType
             , activeOptionSource = model.activeOptionSource
+            , lang = model.urlLang
             }
 
 
@@ -1041,6 +1230,7 @@ crossSearchHint categoryName query channel =
             , sort = Nothing
             , type_ = Nothing
             , activeOptionSource = Route.defaultOptionSource
+            , lang = Nothing
             }
 
         hint : String -> String -> Route.Route -> List (Html c)
@@ -1353,6 +1543,61 @@ viewSortSelection currentSort =
                 sortBy
             )
         ]
+
+
+{-| The language desktop entries are shown in. Nothing else on a result is
+translated, hence the caption: a package's own description comes from nixpkgs in
+English, and only what a desktop file itself carries has been translated.
+
+Nothing renders where no manifest was deployed, so a frontend built without
+locale assets looks exactly as it did before they existed.
+
+-}
+viewLanguages :
+    Maybe String
+    -> List Language
+    -> (Maybe String -> a)
+    -> List (Html a)
+    -> List (Html a)
+viewLanguages selected languages searchMsgFor sets =
+    List.append
+        sets
+        (if List.isEmpty languages then
+            []
+
+         else
+            [ fieldset [ class "search-bucket search-language" ]
+                [ legend [ class "header" ] [ text "Language" ]
+                , select
+                    [ id "language-select"
+                    , name "lang"
+                    , class "language-select"
+                    , value (Maybe.withDefault "" selected)
+                    , onInput
+                        (\val ->
+                            searchMsgFor
+                                (if String.isEmpty val then
+                                    Nothing
+
+                                 else
+                                    Just val
+                                )
+                        )
+                    ]
+                    (option [ value "" ] [ text "As published" ]
+                        :: List.map
+                            (\language ->
+                                option
+                                    [ value language.locale ]
+                                    [ text (language.name ++ " (" ++ language.locale ++ ")") ]
+                            )
+                            languages
+                    )
+                , p [ class "search-language-hint" ]
+                    [ text "Applies to desktop entry names and descriptions." ]
+                ]
+            ]
+        )
 
 
 viewPager :
