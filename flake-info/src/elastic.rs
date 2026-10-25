@@ -317,6 +317,9 @@ pub enum ElasticsearchError {
 
     #[error("An index with the name \"{0}\" already exists and the (default) stategy is abort")]
     IndexExistsError(String),
+
+    #[error("Elasticsearch returned no UUID for the index \"{0}\"")]
+    IndexUuidMissingError(String),
 }
 
 impl Elasticsearch {
@@ -623,6 +626,32 @@ impl Elasticsearch {
         Ok(response.status_code() == 200)
     }
 
+    /// Return the UUID of the index `index`. Elasticsearch gives a new UUID
+    /// to each index that it creates, also to an index that has the name of
+    /// an index that it deleted. Thus a different UUID shows that the index
+    /// was deleted and created again.
+    pub async fn index_uuid(&self, index: &str) -> Result<String, ElasticsearchError> {
+        let response = self
+            .client
+            .indices()
+            .get_settings(IndicesGetSettingsParts::IndexName(
+                &[index],
+                &["index.uuid"],
+            ))
+            .send()
+            .await
+            .map_err(ElasticsearchError::InitIndexError)?;
+        let body: Value = check_response(response)
+            .await?
+            .json()
+            .await
+            .map_err(ElasticsearchError::InitIndexError)?;
+        body[index]["settings"]["index"]["uuid"]
+            .as_str()
+            .map(str::to_owned)
+            .ok_or_else(|| ElasticsearchError::IndexUuidMissingError(index.to_owned()))
+    }
+
     pub async fn clear_index(&self, config: &Config<'_>) -> Result<(), ElasticsearchError> {
         let response = self
             .client
@@ -905,6 +934,28 @@ mod tests {
 
         es.clear_index(config_a).await?;
         es.clear_index(config_b).await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_index_uuid() -> Result<(), Box<dyn std::error::Error>> {
+        let es = Elasticsearch::new("http://localhost:9200").unwrap();
+        let config = &Config {
+            index: "test_index_uuid",
+            exists_strategy: ExistsStrategy::Recreate,
+        };
+
+        es.ensure_index(config).await?;
+        let uuid = es.index_uuid(config.index).await?;
+        assert_eq!(uuid, es.index_uuid(config.index).await?);
+
+        // Create the index again with the same name.
+        es.ensure_index(config).await?;
+        assert_ne!(uuid, es.index_uuid(config.index).await?);
+
+        es.clear_index(config).await?;
+        assert!(es.index_uuid(config.index).await.is_err());
 
         Ok(())
     }
