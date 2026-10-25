@@ -3,9 +3,9 @@ name: "Daily Repology counts refresh"
 on:
   workflow_dispatch:
   schedule:
-    # Daily, offset from the 2-hourly imports. Repology refreshes its
+    # Daily, offset from the 3-hourly imports. Repology refreshes its
     # `nix_unstable` data roughly daily, so this is a generous ceiling.
-    - cron: "0 3 * * *"
+    - cron: "0 2 * * *"
 
 permissions:
   contents: read

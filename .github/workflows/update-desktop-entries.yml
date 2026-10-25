@@ -3,7 +3,7 @@ name: "Daily desktop entries refresh"
 on:
   workflow_dispatch:
   schedule:
-    # Daily, offset from the 2-hourly imports and from the Repology refresh.
+    # Daily, offset from the 3-hourly imports and from the Repology refresh.
     # Only `nixos-unstable` is scanned: entries merge by attribute path, so a
     # stable channel gets a slightly stale entry rather than a wrong one.
     - cron: "0 1 * * *"
