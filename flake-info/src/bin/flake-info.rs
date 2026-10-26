@@ -636,7 +636,10 @@ async fn push_to_elastic(
         // rebuilds from scratch, rather than aborting on the same stale index
         // forever. `alias_points_at` propagates lookup errors and only returns
         // false on a definitive miss, so a transient check failure fails the
-        // run without wiping a still-good aliased index.
+        // run without wiping a still-good aliased index. An index that a
+        // concurrent import still fills also matches this case, thus the
+        // import workflow must not run two imports of one channel at the same
+        // time (see its `concurrency` groups).
         match &alias {
             Some(a) if !elastic.no_alias => {
                 if es.alias_points_at(a, &index).await? {
@@ -650,8 +653,10 @@ async fn push_to_elastic(
                     warn!("failed to clear stranded index {index}: {clear_err}");
                 }
                 return Err(anyhow!(
-                    "Index {index} existed but alias {a} did not point at it \
-                     (stale/half-built import); cleared it - failing so the next run rebuilds"
+                    "Index {} existed but alias {} did not point at it \
+                     (stale/half-built import); cleared it - failing so the next run rebuilds",
+                    index,
+                    a
                 ));
             }
             _ => return Ok(()),
@@ -682,25 +687,45 @@ async fn push_to_elastic(
 
     info!("Pushing to elastic");
     let pushed = async {
+        // If a different process deletes the index during the push, the next
+        // bulk request makes Elasticsearch create the index again
+        // automatically, without the analyzers of `MAPPING`. The frontend
+        // cannot search such an index. Keep the UUID, thus we can find this
+        // case before we move the alias.
+        let uuid = es.index_uuid(&index).await?;
         if !images.is_empty() {
             es.push_images(&images_index, &images_alias, &images)
                 .await?;
         }
-        es.push_exports(&config, &successes).await
+        es.push_exports(&config, &successes).await?;
+        Ok::<_, ElasticsearchError>(uuid)
     }
     .await;
-    if let Err(e) = pushed {
-        if created_index {
-            warn!("push failed, clearing partial index {index} so next run rebuilds");
-            if let Err(clear_err) = es.clear_index(&config).await {
-                warn!("failed to clear partial index {index}: {clear_err}");
+    let uuid = match pushed {
+        Ok(uuid) => uuid,
+        Err(e) => {
+            if created_index {
+                warn!("push failed, clearing partial index {index} so next run rebuilds");
+                if let Err(clear_err) = es.clear_index(&config).await {
+                    warn!("failed to clear partial index {index}: {clear_err}");
+                }
             }
+            return Err(e).with_context(|| "Failed to push results to elasticsearch".to_string());
         }
-        return Err(e).with_context(|| "Failed to push results to elasticsearch".to_string());
-    }
+    };
 
     if let Some(alias) = alias {
         if !elastic.no_alias {
+            // Do not clear the index here: a different process deleted ours,
+            // and possibly this index is its index.
+            if es.index_uuid(&index).await? != uuid {
+                return Err(anyhow!(
+                    "Index {} was deleted and created again during the push; \
+                     alias {} continues to point at the previous index",
+                    index,
+                    alias
+                ));
+            }
             if let Err(e) = es.write_alias(&config, &index, &alias).await {
                 if created_index {
                     warn!(

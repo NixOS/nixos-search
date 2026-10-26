@@ -1,9 +1,9 @@
-name: "2-hourly import to Elasticsearch"
+name: "3-hourly import to Elasticsearch"
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 */2 * * *"
+    - cron: "0 */3 * * *"
 
 permissions:
   contents: read
@@ -37,6 +37,14 @@ jobs:
   import-nixpkgs:
     needs: nixos-channels
     runs-on: ubuntu-latest
+
+    # One import of a channel can take longer than the schedule interval. Two
+    # imports of one channel at the same time use the same index: the second
+    # import thinks that the index is stranded and deletes it while the first
+    # import fills it.
+    concurrency:
+      group: import-nixpkgs-${{ matrix.channel }}
+      cancel-in-progress: false
 
     strategy:
       fail-fast: false
@@ -126,6 +134,12 @@ jobs:
 
   import-flakes:
     runs-on: ubuntu-latest
+
+    # The `recreate` strategy deletes the index of an import that runs at the
+    # same time.
+    concurrency:
+      group: import-flakes-${{ matrix.group }}
+      cancel-in-progress: false
 
     strategy:
       fail-fast: false
