@@ -82,6 +82,7 @@ import Search.Query
 import Svg exposing (path, svg)
 import Svg.Attributes as SA
 import Task
+import Url
 import Utils
 
 
@@ -124,6 +125,8 @@ type alias ResultItemSource =
 
     -- The screenshots the package's AppStream metainfo points at.
     , screenshots : List Screenshot
+    , depCount : Maybe Int
+    , repologyRepos : Maybe Int
     }
 
 
@@ -1009,6 +1012,60 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
                         term
                         ("/flakes?type=options&query=" ++ term)
 
+        popularity =
+            let
+                pluralize count singular plural =
+                    String.fromInt count
+                        ++ " "
+                        ++ (if count == 1 then
+                                singular
+
+                            else
+                                plural
+                           )
+
+                -- `package_dep_count` is absent both for packages without
+                -- dependents and for packages not evaluated on x86_64-linux,
+                -- thus do not show 0.
+                depCountItem =
+                    item.source.depCount
+                        |> Maybe.map
+                            (\count ->
+                                li []
+                                    [ span [ title "Number of packages in nixpkgs that use this package as a direct dependency, on x86_64-linux" ]
+                                        [ text (pluralize count "dependent" "dependents") ]
+                                    ]
+                            )
+
+                repologyItem =
+                    item.source.repologyRepos
+                        |> Maybe.map
+                            (\count ->
+                                li []
+                                    [ span [ title "Number of package repositories that contain this project, as counted by Repology" ]
+                                        [ text (pluralize count "repository" "repositories") ]
+                                    , text " on "
+                                    , a
+                                        [ href
+                                            ("https://repology.org/tools/project-by?repo=nix_unstable&name_type=srcname&target_page=project_versions&name="
+                                                ++ Url.percentEncode item.source.attr_name
+                                            )
+                                        , target "_blank"
+                                        ]
+                                        [ text "Repology" ]
+                                    ]
+                            )
+            in
+            case List.filterMap identity [ depCountItem, repologyItem ] of
+                [] ->
+                    text ""
+
+                items ->
+                    div [ class "package-popularity" ]
+                        [ h4 [] [ text "Popularity" ]
+                        , ul [] items
+                        ]
+
         longerPackageDetails =
             optionals (Just item.source.attr_name == show)
                 [ div [ class "package-details", trapClick ]
@@ -1177,6 +1234,7 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
                     , screenshots
                     , maintainersTeamsAndPlatforms
                     , optionsLink
+                    , popularity
                     , if List.isEmpty item.source.modularServices then
                         text ""
 
@@ -1576,6 +1634,8 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "package_desktop_entries" (Json.Decode.list decodeDesktopEntry) []
         |> Json.Decode.Pipeline.optional "package_desktop_icons" (Json.Decode.dict Json.Decode.string) Dict.empty
         |> Json.Decode.Pipeline.optional "package_screenshots" (Json.Decode.list decodeScreenshot) []
+        |> Json.Decode.Pipeline.optional "package_dep_count" (Json.Decode.map Just Json.Decode.int) Nothing
+        |> Json.Decode.Pipeline.optional "package_repology_repos" (Json.Decode.map Just Json.Decode.int) Nothing
 
 
 decodeDesktopEntry : Json.Decode.Decoder DesktopEntry
