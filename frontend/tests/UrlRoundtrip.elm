@@ -40,7 +40,6 @@ searchArgsFuzzer =
         |> Fuzz.andMap (Fuzz.maybe Fuzz.string)
         |> Fuzz.andMap (Fuzz.maybe searchTypeFuzzer)
         |> Fuzz.andMap optionSourceFuzzer
-        |> Fuzz.andMap (Fuzz.maybe Fuzz.string)
 
 
 searchTypeFuzzer : Fuzzer SearchType

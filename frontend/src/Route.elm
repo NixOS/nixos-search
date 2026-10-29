@@ -39,7 +39,6 @@ type alias SearchArgs =
     , sort : Maybe String
     , type_ : Maybe SearchType
     , activeOptionSource : OptionSource
-    , lang : Maybe String
     }
 
 
@@ -294,7 +293,6 @@ searchQueryParser appUrl =
         string "source"
             |> Maybe.andThen optionSourceFromId
             |> Maybe.withDefault defaultOptionSource
-    , lang = string "lang"
     }
 
 
@@ -324,7 +322,6 @@ searchArgsToUrl args =
          else
             Just (optionSourceId args.activeOptionSource)
         )
-    , string "lang" args.lang
     ]
         |> Maybe.Extra.values
         |> Dict.fromList
