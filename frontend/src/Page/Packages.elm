@@ -1,5 +1,6 @@
 module Page.Packages exposing
     ( Aggregations
+    , DesktopEntry
     , LicenseExpression
     , Model
     , Msg(..)
@@ -10,6 +11,7 @@ module Page.Packages exposing
     , ResultPackageLicense
     , ResultPackageMaintainer
     , ResultPackageTeam
+    , Screenshot
     , decodeResultAggregations
     , decodeResultItemSource
     , init
@@ -21,16 +23,20 @@ module Page.Packages exposing
     , viewSuccess
     )
 
+import Browser.Dom
 import Browser.Navigation
+import Dict exposing (Dict)
 import Html
     exposing
         ( Html
         , a
+        , button
         , code
         , div
         , em
         , fieldset
         , h4
+        , img
         , input
         , label
         , legend
@@ -44,12 +50,15 @@ import Html
         )
 import Html.Attributes
     exposing
-        ( checked
+        ( alt
+        , attribute
+        , checked
         , class
         , classList
         , href
         , id
         , name
+        , src
         , target
         , title
         , type_
@@ -70,6 +79,9 @@ import Search
         , viewBucket
         )
 import Search.Query
+import Svg exposing (path, svg)
+import Svg.Attributes as SA
+import Task
 import Utils
 
 
@@ -104,6 +116,44 @@ type alias ResultItemSource =
     , flakeDescription : Maybe String
     , flakeUrl : Maybe ( String, String )
     , modularServices : List String
+    , desktopEntries : List DesktopEntry
+
+    -- The file under `/icons` holding each entry's image, keyed by the name the
+    -- entry's `icon` refers to.
+    , desktopIcons : Dict String String
+
+    -- The screenshots the package's AppStream metainfo points at.
+    , screenshots : List Screenshot
+    }
+
+
+{-| A freedesktop.org desktop entry, as shipped by the package. `icon` names an
+icon rather than holding one; look it up in `desktopIcons` for the file that
+holds it.
+-}
+type alias DesktopEntry =
+    { entryType : Maybe String
+    , desktopName : Maybe String
+    , genericName : Maybe String
+    , comment : Maybe String
+    , icon : Maybe String
+    , mimeTypes : List String
+    , categories : List String
+    , noDisplay : Bool
+    }
+
+
+{-| One of the screenshots a package's AppStream metainfo names. `file` holds
+the thumbnail shown in a result, and `largeFile` the copy a reader who opens it
+gets; both name files under `/screenshots`, which the frontend build writes out
+of the index. `url` is the image on the project's own hosting, at the size
+upstream serves it, which is too large for an index to hold.
+-}
+type alias Screenshot =
+    { url : String
+    , caption : Maybe String
+    , file : Maybe String
+    , largeFile : Maybe String
     }
 
 
@@ -173,6 +223,8 @@ type alias ResultAggregations =
     , package_maintainers_set : Search.Aggregation
     , package_teams_set : Search.Aggregation
     , package_license_set : Search.Aggregation
+    , package_categories_set : Search.Aggregation
+    , package_mime_types_set : Search.Aggregation
     }
 
 
@@ -183,6 +235,8 @@ type alias Aggregations =
     , package_maintainers_set : Search.Aggregation
     , package_teams_set : Search.Aggregation
     , package_license_set : Search.Aggregation
+    , package_categories_set : Search.Aggregation
+    , package_mime_types_set : Search.Aggregation
     }
 
 
@@ -192,6 +246,8 @@ type alias Buckets =
     , maintainers : List String
     , teams : List String
     , platforms : List String
+    , categories : List String
+    , mimeTypes : List String
     }
 
 
@@ -202,6 +258,8 @@ emptyBuckets =
     , maintainers = []
     , teams = []
     , platforms = []
+    , categories = []
+    , mimeTypes = []
     }
 
 
@@ -251,6 +309,8 @@ init options preferStatic searchArgs defaultNixOSChannel nixosChannels includeCh
 type Msg
     = SearchMsg (Search.Msg ResultItemSource ResultAggregations)
     | CopyToClipboard String
+    | ScrollScreenshots String Float
+    | NoOp
 
 
 update :
@@ -276,6 +336,24 @@ update navKey msg model nixosChannels =
         CopyToClipboard text_ ->
             ( model, Ports.copyToClipboard text_ )
 
+        ScrollScreenshots rowId direction ->
+            ( model
+            , Browser.Dom.getViewportOf rowId
+                |> Task.andThen
+                    (\{ viewport } ->
+                        -- A step of less than the full width keeps the
+                        -- screenshot at the edge in view, thus the reader
+                        -- keeps the place in the row.
+                        Browser.Dom.setViewportOf rowId
+                            (viewport.x + direction * viewport.width * 0.8)
+                            0
+                    )
+                |> Task.attempt (\_ -> NoOp)
+            )
+
+        NoOp ->
+            ( model, Cmd.none )
+
 
 
 -- VIEW
@@ -292,7 +370,7 @@ view nixosChannels model =
         ]
         nixosChannels
         model
-        viewSuccess
+        (viewSuccess model.saveData)
         viewBuckets
         SearchMsg
         []
@@ -363,21 +441,57 @@ viewBuckets bucketsAsString result =
             (result.aggregations.package_platforms.buckets |> sortBuckets)
             (createBucketsMsg False .platforms (\s v -> { s | platforms = v }))
             selectedBucket.platforms
+        |> viewBucket
+            Search.CheckboxInput
+            "Categories"
+            (result.aggregations.package_categories_set.buckets |> sortBuckets)
+            (createBucketsMsg False .categories (\s v -> { s | categories = v }))
+            selectedBucket.categories
+        |> viewBucket
+            Search.CheckboxInput
+            "File types"
+            (result.aggregations.package_mime_types_set.buckets |> sortBuckets)
+            (createBucketsMsg False .mimeTypes (\s v -> { s | mimeTypes = v }))
+            selectedBucket.mimeTypes
 
 
 viewSuccess :
-    List NixOSChannel
+    Bool
+    -> List NixOSChannel
     -> String
     -> Details
     -> Maybe String
     -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
-viewSuccess nixosChannels channel showUsageDetails show hits =
+viewSuccess saveData nixosChannels channel showUsageDetails show hits =
     ul [ class "search-results-list" ]
         (List.map
-            (viewResultItem nixosChannels channel showUsageDetails show)
+            (viewResultItem saveData nixosChannels channel showUsageDetails show)
             hits
         )
+
+
+{-| The arrow on a button that moves a screenshot row. It points forward; the
+button that moves the row back turns it around.
+-}
+chevronSvg : Html msg
+chevronSvg =
+    svg
+        [ SA.width "16"
+        , SA.height "16"
+        , SA.viewBox "0 0 16 16"
+        , SA.fill "none"
+        , attribute "aria-hidden" "true"
+        ]
+        [ path
+            [ SA.d "M6 3L11 8L6 13"
+            , SA.stroke "currentColor"
+            , SA.strokeWidth "2"
+            , SA.strokeLinecap "round"
+            , SA.strokeLinejoin "round"
+            ]
+            []
+        ]
 
 
 {-| Render an install command or configuration snippet together with a
@@ -391,13 +505,14 @@ copyableCommand preClass commandText content =
 
 
 viewResultItem :
-    List NixOSChannel
+    Bool
+    -> List NixOSChannel
     -> String
     -> Details
     -> Maybe String
     -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItem nixosChannels channel showUsageDetails show item =
+viewResultItem saveData nixosChannels channel showUsageDetails show item =
     let
         optionals b l =
             if b then
@@ -428,6 +543,174 @@ viewResultItem nixosChannels channel showUsageDetails show item =
                 , target "_blank"
                 ]
                 [ text title ]
+
+        -- Icons are served as static files written by the frontend build, one
+        -- per image, named after its contents. A file the last deploy did not
+        -- write yet is simply not there; an `<img>` without alt text renders as
+        -- nothing rather than as a broken image, so a card degrades to the one
+        -- it showed before icons existed.
+        iconFor entry =
+            if saveData then
+                Nothing
+
+            else
+                entry.icon
+                    |> Maybe.andThen (\iconName -> Dict.get iconName item.source.desktopIcons)
+
+        viewIcon extraClass entry =
+            case iconFor entry of
+                Just file ->
+                    -- Decorative: every entry is labelled in text beside it.
+                    img
+                        [ class extraClass
+                        , src ("/icons/" ++ file)
+                        , alt ""
+                        , attribute "loading" "lazy"
+                        ]
+                        []
+
+                Nothing ->
+                    text ""
+
+        -- `NoDisplay` entries exist to claim MIME types or URL schemes and are
+        -- kept out of application menus. They still feed the category and file
+        -- type facets, so a package remains findable by what it opens.
+        displayedEntries =
+            List.filter (\entry -> not entry.noDisplay) item.source.desktopEntries
+
+        packageIcon =
+            case List.filter (\entry -> iconFor entry /= Nothing) displayedEntries of
+                entry :: _ ->
+                    viewIcon "package-icon" entry
+
+                [] ->
+                    text ""
+
+        viewDesktopEntry entry =
+            li []
+                (span [ class "desktop-entry-name" ]
+                    [ viewIcon "desktop-entry-icon" entry
+                    , text (Maybe.withDefault item.source.pname entry.desktopName)
+                    ]
+                    -- `GenericName` says what the application is where its name
+                    -- does not, and `Comment` is the entry's own description,
+                    -- which is often more concrete than the package's.
+                    :: optionals (entry.genericName /= Nothing)
+                        [ div [ class "desktop-entry-detail" ]
+                            [ text (Maybe.withDefault "" entry.genericName) ]
+                        ]
+                    ++ optionals (entry.comment /= Nothing)
+                        [ div [ class "desktop-entry-detail" ]
+                            [ text (Maybe.withDefault "" entry.comment) ]
+                        ]
+                    ++ optionals (not (List.isEmpty entry.categories))
+                        [ div [ class "desktop-entry-detail" ]
+                            [ text ("Categories: " ++ String.join ", " entry.categories) ]
+                        ]
+                    ++ optionals (not (List.isEmpty entry.mimeTypes))
+                        [ div [ class "desktop-entry-detail" ]
+                            [ text ("Opens: " ++ String.join ", " entry.mimeTypes) ]
+                        ]
+                )
+
+        desktopEntries =
+            if List.isEmpty displayedEntries then
+                text ""
+
+            else
+                div []
+                    [ h4 [] [ text "Desktop Entries" ]
+                    , ul [ class "desktop-entries" ]
+                        (List.map viewDesktopEntry displayedEntries)
+                    ]
+
+        -- Screenshots are served as static files by the same build that writes
+        -- the icons, thus one the last deploy did not write is simply not
+        -- there. A screenshot with no thumbnail is left out: there is nothing
+        -- to show for it.
+        mirroredScreenshots =
+            if saveData then
+                []
+
+            else
+                List.filterMap
+                    (\shot -> Maybe.map (Tuple.pair shot) shot.file)
+                    item.source.screenshots
+
+        viewScreenshot ( shot, file ) =
+            let
+                caption =
+                    shot.caption
+
+                -- Opening a thumbnail gives the larger copy this index holds,
+                -- and the image on the project's own hosting where it holds
+                -- none.
+                opened =
+                    shot.largeFile
+                        |> Maybe.map (\large -> "/screenshots/" ++ large)
+                        |> Maybe.withDefault shot.url
+            in
+            li []
+                (a
+                    [ href opened
+                    , target "_blank"
+                    , title (Maybe.withDefault "Open the larger copy" caption)
+                    ]
+                    [ img
+                        [ class "screenshot-image"
+                        , src ("/screenshots/" ++ file)
+                        , alt (Maybe.withDefault "" caption)
+                        , attribute "loading" "lazy"
+                        ]
+                        []
+                    ]
+                    :: optionals (caption /= Nothing)
+                        [ div [ class "screenshot-caption" ]
+                            [ text (Maybe.withDefault "" caption) ]
+                        ]
+                )
+
+        -- The row scrolls, thus it gets a button at each end. A pointer can
+        -- also drag the row and the tab key moves along it, but neither says
+        -- so on the first look. One screenshot never scrolls, thus it keeps
+        -- the row alone.
+        scrollButton rowId direction buttonLabel =
+            button
+                [ type_ "button"
+                , classList
+                    [ ( "screenshots-scroll", True )
+                    , ( "back", direction < 0 )
+                    ]
+                , title buttonLabel
+                , attribute "aria-label" buttonLabel
+                , attribute "aria-controls" rowId
+                , onClick (ScrollScreenshots rowId direction)
+                ]
+                [ chevronSvg ]
+
+        screenshots =
+            if List.isEmpty mirroredScreenshots then
+                text ""
+
+            else
+                let
+                    rowId =
+                        "screenshots-" ++ item.id
+
+                    scrollable =
+                        List.length mirroredScreenshots > 1
+                in
+                div []
+                    [ h4 [] [ text "Screenshots" ]
+                    , div [ class "screenshots-row" ]
+                        (optionals scrollable
+                            [ scrollButton rowId -1.0 "Show the previous screenshots" ]
+                            ++ ul [ class "screenshots", id rowId ]
+                                (List.map viewScreenshot mirroredScreenshots)
+                            :: optionals scrollable
+                                [ scrollButton rowId 1.0 "Show the next screenshots" ]
+                        )
+                    ]
 
         shortPackageDetails =
             ul [ class "package-short-details" ]
@@ -890,6 +1173,8 @@ viewResultItem nixosChannels channel showUsageDetails show item =
                                     )
                                 ]
                     , programs
+                    , desktopEntries
+                    , screenshots
                     , maintainersTeamsAndPlatforms
                     , optionsLink
                     , if List.isEmpty item.source.modularServices then
@@ -965,7 +1250,7 @@ viewResultItem nixosChannels channel showUsageDetails show item =
         , classList [ ( "opened", isOpen ) ]
         , Search.elementId item.source.attr_name
         ]
-        ([ span [ class "search-result-title" ] flakeOrNixpkgs
+        ([ span [ class "search-result-title" ] (packageIcon :: flakeOrNixpkgs)
          , div [ class "package-description" ] [ text <| Maybe.withDefault "" item.source.description ]
          , shortPackageDetails
          , Search.showMoreButton toggle isOpen
@@ -1215,6 +1500,8 @@ encodeRequestBody query from size maybeBuckets sort =
         , ( "package_maintainers_set", currentBuckets.maintainers )
         , ( "package_teams_set", currentBuckets.teams )
         , ( "package_platforms", currentBuckets.platforms )
+        , ( "package_categories_set", currentBuckets.categories )
+        , ( "package_mime_types_set", currentBuckets.mimeTypes )
         ]
 
 
@@ -1235,17 +1522,28 @@ encodeBuckets options =
         , ( "package_maintainers_set", Json.Encode.list Json.Encode.string options.maintainers )
         , ( "package_teams_set", Json.Encode.list Json.Encode.string options.teams )
         , ( "package_platforms", Json.Encode.list Json.Encode.string options.platforms )
+        , ( "package_categories_set", Json.Encode.list Json.Encode.string options.categories )
+        , ( "package_mime_types_set", Json.Encode.list Json.Encode.string options.mimeTypes )
         ]
 
 
 decodeBuckets : Json.Decode.Decoder Buckets
 decodeBuckets =
-    Json.Decode.map5 Buckets
-        (Json.Decode.field "package_attr_set" (Json.Decode.list Json.Decode.string))
-        (Json.Decode.field "package_license_set" (Json.Decode.list Json.Decode.string))
-        (Json.Decode.field "package_maintainers_set" (Json.Decode.list Json.Decode.string))
-        (Json.Decode.field "package_teams_set" (Json.Decode.list Json.Decode.string))
-        (Json.Decode.field "package_platforms" (Json.Decode.list Json.Decode.string))
+    let
+        -- Buckets travel in the URL, so a link made before a facet existed is
+        -- missing its key. Decoding those as absent rather than as a failure
+        -- keeps the rest of the link's selection.
+        strings field =
+            Json.Decode.Pipeline.optional field (Json.Decode.list Json.Decode.string) []
+    in
+    Json.Decode.succeed Buckets
+        |> strings "package_attr_set"
+        |> strings "package_license_set"
+        |> strings "package_maintainers_set"
+        |> strings "package_teams_set"
+        |> strings "package_platforms"
+        |> strings "package_categories_set"
+        |> strings "package_mime_types_set"
 
 
 decodeResultItemSource : Json.Decode.Decoder ResultItemSource
@@ -1275,6 +1573,31 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "flake_description" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_resolved" (Json.Decode.map Just decodeResolvedFlake) Nothing
         |> Json.Decode.Pipeline.optional "package_modular_services" (Json.Decode.list Json.Decode.string) []
+        |> Json.Decode.Pipeline.optional "package_desktop_entries" (Json.Decode.list decodeDesktopEntry) []
+        |> Json.Decode.Pipeline.optional "package_desktop_icons" (Json.Decode.dict Json.Decode.string) Dict.empty
+        |> Json.Decode.Pipeline.optional "package_screenshots" (Json.Decode.list decodeScreenshot) []
+
+
+decodeDesktopEntry : Json.Decode.Decoder DesktopEntry
+decodeDesktopEntry =
+    Json.Decode.succeed DesktopEntry
+        |> Json.Decode.Pipeline.optional "type" (Json.Decode.nullable Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "desktopName" (Json.Decode.nullable Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "genericName" (Json.Decode.nullable Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "comment" (Json.Decode.nullable Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "icon" (Json.Decode.nullable Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "mimeTypes" (Json.Decode.list Json.Decode.string) []
+        |> Json.Decode.Pipeline.optional "categories" (Json.Decode.list Json.Decode.string) []
+        |> Json.Decode.Pipeline.optional "noDisplay" Json.Decode.bool False
+
+
+decodeScreenshot : Json.Decode.Decoder Screenshot
+decodeScreenshot =
+    Json.Decode.succeed Screenshot
+        |> Json.Decode.Pipeline.required "url" Json.Decode.string
+        |> Json.Decode.Pipeline.optional "caption" (Json.Decode.nullable Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "file" (Json.Decode.nullable Json.Decode.string) Nothing
+        |> Json.Decode.Pipeline.optional "largeFile" (Json.Decode.nullable Json.Decode.string) Nothing
 
 
 type alias ResolvedFlake =
@@ -1456,21 +1779,25 @@ decodeResultPackageHydraPath =
 
 decodeResultAggregations : Json.Decode.Decoder ResultAggregations
 decodeResultAggregations =
-    Json.Decode.map6 ResultAggregations
+    Json.Decode.map8 ResultAggregations
         (Json.Decode.field "all" decodeAggregations)
         (Json.Decode.field "package_platforms" Search.decodeAggregation)
         (Json.Decode.field "package_attr_set" Search.decodeAggregation)
         (Json.Decode.field "package_maintainers_set" Search.decodeAggregation)
         (Json.Decode.field "package_teams_set" Search.decodeAggregation)
         (Json.Decode.field "package_license_set" Search.decodeAggregation)
+        (Json.Decode.field "package_categories_set" Search.decodeAggregation)
+        (Json.Decode.field "package_mime_types_set" Search.decodeAggregation)
 
 
 decodeAggregations : Json.Decode.Decoder Aggregations
 decodeAggregations =
-    Json.Decode.map6 Aggregations
+    Json.Decode.map8 Aggregations
         (Json.Decode.field "doc_count" Json.Decode.int)
         (Json.Decode.field "package_platforms" Search.decodeAggregation)
         (Json.Decode.field "package_attr_set" Search.decodeAggregation)
         (Json.Decode.field "package_maintainers_set" Search.decodeAggregation)
         (Json.Decode.field "package_teams_set" Search.decodeAggregation)
         (Json.Decode.field "package_license_set" Search.decodeAggregation)
+        (Json.Decode.field "package_categories_set" Search.decodeAggregation)
+        (Json.Decode.field "package_mime_types_set" Search.decodeAggregation)

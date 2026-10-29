@@ -105,7 +105,7 @@ impl Source {
         }
     }
 
-    pub async fn nixpkgs(channel: String) -> Result<Nixpkgs> {
+    pub async fn nixpkgs(channel: String, user_agent: Option<&str>) -> Result<Nixpkgs> {
         #[derive(Deserialize, Debug)]
         struct ApiResult {
             commit: Commit,
@@ -117,7 +117,7 @@ impl Source {
         }
 
         let request = reqwest::Client::builder()
-            .user_agent("nixos-search")
+            .user_agent(crate::user_agent::resolve(user_agent))
             .build()?
             .get(format!(
                 "https://api.github.com/repos/nixos/nixpkgs/branches/nixos-{}",

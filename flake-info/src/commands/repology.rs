@@ -10,7 +10,6 @@ use serde::Deserialize;
 
 const API_BASE: &str = "https://repology.org/api/v1/projects/";
 const REPOLOGY_REPO: &str = "nix_unstable";
-const USER_AGENT: &str = "nixos-search (https://github.com/NixOS/nixos-search)";
 const REQUEST_DELAY: Duration = Duration::from_secs(1);
 
 /// Subset of a Repology package entry.
@@ -26,11 +25,11 @@ type RepologyPage = HashMap<String, Vec<RepologyPackage>>;
 /// the `package_repology_repos` popularity signal. Always queries the
 /// unstable nixpkgs repository, since the signal only reflects overall
 /// popularity, not the exact channel contents.
-pub fn get_repology_repo_counts() -> Result<HashMap<String, u64>> {
+pub fn get_repology_repo_counts(user_agent: Option<&str>) -> Result<HashMap<String, u64>> {
     info!("Fetching Repology repository counts for {}", REPOLOGY_REPO);
 
     let client = reqwest::blocking::Client::builder()
-        .user_agent(USER_AGENT)
+        .user_agent(crate::user_agent::resolve(user_agent))
         .build()?;
 
     let mut counts: HashMap<String, u64> = HashMap::new();

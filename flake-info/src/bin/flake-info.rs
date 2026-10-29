@@ -40,6 +40,15 @@ struct Args {
     )]
     save_summary: Option<String>,
 
+    #[structopt(
+        long = "user-agent",
+        env = "FI_USER_AGENT",
+        help = "Override the User-Agent sent to repology.org, the GitHub API and \
+                channels.nixos.org. Defaults to \
+                `nixos-search (https://github.com/NixOS/nixos-search)`"
+    )]
+    user_agent: Option<String>,
+
     #[structopt(flatten)]
     elastic: ElasticOpts,
 
@@ -86,6 +95,43 @@ enum Command {
                     the signal."
         )]
         repology_counts_file: Option<PathBuf>,
+
+        #[structopt(
+            long = "desktop-entries-file",
+            help = "Read desktop entries (the JSON written by \
+                    `flake-info/scripts/desktop-entries-index.py`) from this file. \
+                    Run that script with `--icon-extensions png,svg`: it also scans \
+                    for XPM by default, which no browser renders and this importer \
+                    therefore drops. A missing/unreadable file drops the signal."
+        )]
+        desktop_entries_file: Option<PathBuf>,
+
+        #[structopt(
+            long = "icon-dir",
+            help = "Read the desktop entry images from this directory: the \
+                    `--icon-dir` the scanner above wrote them to, which its index \
+                    names rather than carries. Omit to index only the icons \
+                    `--icon-theme-dir` supplies."
+        )]
+        icon_dir: Option<PathBuf>,
+
+        #[structopt(
+            long = "icon-theme-dir",
+            help = "Look icons up by name in this freedesktop icon theme directory (for \
+                    example `<papirus-icon-theme>/share/icons/Papirus`), for desktop \
+                    entries that arrived without one. Omit to index only the icons a \
+                    package itself supplies."
+        )]
+        icon_theme_dir: Option<PathBuf>,
+
+        #[structopt(
+            long = "screenshot-dir",
+            help = "Read the AppStream screenshots from this directory: the \
+                    `--screenshot-dir` the scanner above mirrored them to, which \
+                    its index names rather than carries. Omit to index the \
+                    packages without screenshots."
+        )]
+        screenshot_dir: Option<PathBuf>,
     },
 
     #[structopt(about = "Import nixpkgs channel from archive or local git path")]
@@ -203,13 +249,25 @@ struct ElasticOpts {
     no_alias: bool,
 }
 
-type LazyExports = Box<dyn FnOnce() -> Result<Vec<Export>, FlakeInfoError>>;
+type LazyExports = Box<dyn FnOnce() -> Result<Vec<Export>, FlakeInfoError> + Send>;
+
+/// Collecting exports shells out and fetches over HTTP through
+/// `reqwest::blocking`, which builds a runtime of its own. Dropping such a
+/// runtime on the `#[tokio::main]` thread panics with "Cannot drop a runtime in
+/// a context where blocking is not allowed", so the thunk runs on a thread where
+/// blocking is permitted instead.
+async fn collect_exports(exports: LazyExports) -> Result<Vec<Export>> {
+    Ok(tokio::task::spawn_blocking(exports)
+        .await
+        .context("Collecting exports panicked")??)
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init();
 
     let args = Args::from_args();
+    let user_agent = args.user_agent.clone();
 
     let summary = match args.save_summary {
         Some(filename) => Some(
@@ -227,9 +285,11 @@ async fn main() -> Result<()> {
         // `get_repology_repo_counts` uses `reqwest::blocking`, whose internal
         // runtime must not be dropped on the `#[tokio::main]` block_on thread.
         // Run it on a blocking-permitted thread instead.
-        let counts = tokio::task::spawn_blocking(flake_info::commands::get_repology_repo_counts)
-            .await
-            .context("Repology counts task panicked")??;
+        let counts = tokio::task::spawn_blocking(move || {
+            flake_info::commands::get_repology_repo_counts(user_agent.as_deref())
+        })
+        .await
+        .context("Repology counts task panicked")??;
         let json = serde_json::to_string(&counts)?;
         match output {
             Some(path) => std::fs::write(path, json)?,
@@ -243,7 +303,13 @@ async fn main() -> Result<()> {
         "at least one of --push or --json must be specified"
     );
 
-    let (exports, ident, partial_error) = run_command(args.command, args.kind, &args.extra).await?;
+    let (exports, ident, partial_error) = run_command(
+        args.command,
+        args.kind,
+        &args.extra,
+        args.user_agent.as_deref(),
+    )
+    .await?;
 
     if args.elastic.enable {
         if let Err(e) = push_to_elastic(&args.elastic, exports, ident).await {
@@ -258,7 +324,10 @@ async fn main() -> Result<()> {
             return Err(e);
         }
     } else if args.elastic.json {
-        println!("{}", serde_json::to_string(&exports()?)?);
+        println!(
+            "{}",
+            serde_json::to_string(&collect_exports(exports).await?)?
+        );
     }
 
     // Surface partial failures (e.g. some group members failed to evaluate) as a
@@ -292,6 +361,7 @@ async fn run_command(
     command: Command,
     kind: Kind,
     extra: &[String],
+    user_agent: Option<&str>,
 ) -> Result<
     (
         LazyExports,
@@ -336,8 +406,12 @@ async fn run_command(
             attribute,
             packages_json_url,
             repology_counts_file,
+            desktop_entries_file,
+            icon_dir,
+            icon_theme_dir,
+            screenshot_dir,
         } => {
-            let nixpkgs = Source::nixpkgs(channel)
+            let nixpkgs = Source::nixpkgs(channel, user_agent)
                 .await
                 .map_err(FlakeInfoError::Nixpkgs)?;
             let ident = (
@@ -354,6 +428,8 @@ async fn run_command(
                 kind
             };
 
+            let user_agent = user_agent.map(str::to_owned);
+
             Ok((
                 Box::new(move || {
                     flake_info::process_nixpkgs(
@@ -362,6 +438,11 @@ async fn run_command(
                         &attribute,
                         &packages_json_url,
                         &repology_counts_file,
+                        &user_agent,
+                        &desktop_entries_file,
+                        &icon_dir,
+                        &icon_theme_dir,
+                        &screenshot_dir,
                     )
                     .map_err(FlakeInfoError::Nixpkgs)
                 }),
@@ -388,12 +469,19 @@ async fn run_command(
                 kind
             };
 
+            let user_agent = user_agent.map(str::to_owned);
+
             Ok((
                 Box::new(move || {
                     flake_info::process_nixpkgs(
                         &Source::Git { url: source },
                         &kind,
                         &attribute,
+                        &None,
+                        &None,
+                        &user_agent,
+                        &None,
+                        &None,
                         &None,
                         &None,
                     )
@@ -415,20 +503,27 @@ async fn run_command(
                 tokio::fs::remove_file("report.txt").await?;
             }
 
+            let user_agent = user_agent.map(str::to_owned);
             let sources = Source::read_sources_file(&targets)?;
             let (exports_and_hashes, errors) = sources
                 .iter()
                 .map(|source| match source {
-                    Source::Nixpkgs(nixpkgs) => {
-                        flake_info::process_nixpkgs(source, &kind, &None, &None, &None)
-                            .with_context(|| {
-                                format!(
-                                    "While processing nixpkgs archive {}",
-                                    source.to_flake_ref()
-                                )
-                            })
-                            .map(|result| (result, nixpkgs.git_ref.to_owned()))
-                    }
+                    Source::Nixpkgs(nixpkgs) => flake_info::process_nixpkgs(
+                        source,
+                        &kind,
+                        &None,
+                        &None,
+                        &None,
+                        &user_agent,
+                        &None,
+                        &None,
+                        &None,
+                        &None,
+                    )
+                    .with_context(|| {
+                        format!("While processing nixpkgs archive {}", source.to_flake_ref())
+                    })
+                    .map(|result| (result, nixpkgs.git_ref.to_owned())),
                     _ => flake_info::process_flake(source, &kind, temp_store, &extra, with_gc)
                         .with_context(|| {
                             format!("While processing flake {}", source.to_flake_ref())
@@ -541,7 +636,10 @@ async fn push_to_elastic(
         // rebuilds from scratch, rather than aborting on the same stale index
         // forever. `alias_points_at` propagates lookup errors and only returns
         // false on a definitive miss, so a transient check failure fails the
-        // run without wiping a still-good aliased index.
+        // run without wiping a still-good aliased index. An index that a
+        // concurrent import still fills also matches this case, thus the
+        // import workflow must not run two imports of one channel at the same
+        // time (see its `concurrency` groups).
         match &alias {
             Some(a) if !elastic.no_alias => {
                 if es.alias_points_at(a, &index).await? {
@@ -555,8 +653,10 @@ async fn push_to_elastic(
                     warn!("failed to clear stranded index {index}: {clear_err}");
                 }
                 return Err(anyhow!(
-                    "Index {index} existed but alias {a} did not point at it \
-                     (stale/half-built import); cleared it - failing so the next run rebuilds"
+                    "Index {} existed but alias {} did not point at it \
+                     (stale/half-built import); cleared it - failing so the next run rebuilds",
+                    index,
+                    a
                 ));
             }
             _ => return Ok(()),
@@ -575,21 +675,57 @@ async fn push_to_elastic(
     // guard it anyway.
     let created_index = !matches!(elastic.elastic_exists, ExistsStrategy::Ignore);
 
-    let successes = exports()?;
+    // Images go into one index that all imports share, and not into the
+    // index of this import. Push them first, thus the index of this import
+    // never refers to an image that is not available.
+    let (images, successes): (Vec<Export>, Vec<Export>) = collect_exports(exports)
+        .await?
+        .into_iter()
+        .partition(|export| export.image_id().is_some());
+    let images_index = format!("images-{}", elastic.elastic_schema_version.unwrap());
+    let images_alias = format!("latest-{}-images", elastic.elastic_schema_version.unwrap());
 
     info!("Pushing to elastic");
-    if let Err(e) = es.push_exports(&config, &successes).await {
-        if created_index {
-            warn!("push failed, clearing partial index {index} so next run rebuilds");
-            if let Err(clear_err) = es.clear_index(&config).await {
-                warn!("failed to clear partial index {index}: {clear_err}");
-            }
+    let pushed = async {
+        // If a different process deletes the index during the push, the next
+        // bulk request makes Elasticsearch create the index again
+        // automatically, without the analyzers of `MAPPING`. The frontend
+        // cannot search such an index. Keep the UUID, thus we can find this
+        // case before we move the alias.
+        let uuid = es.index_uuid(&index).await?;
+        if !images.is_empty() {
+            es.push_images(&images_index, &images_alias, &images)
+                .await?;
         }
-        return Err(e).with_context(|| "Failed to push results to elasticsearch".to_string());
+        es.push_exports(&config, &successes).await?;
+        Ok::<_, ElasticsearchError>(uuid)
     }
+    .await;
+    let uuid = match pushed {
+        Ok(uuid) => uuid,
+        Err(e) => {
+            if created_index {
+                warn!("push failed, clearing partial index {index} so next run rebuilds");
+                if let Err(clear_err) = es.clear_index(&config).await {
+                    warn!("failed to clear partial index {index}: {clear_err}");
+                }
+            }
+            return Err(e).with_context(|| "Failed to push results to elasticsearch".to_string());
+        }
+    };
 
     if let Some(alias) = alias {
         if !elastic.no_alias {
+            // Do not clear the index here: a different process deleted ours,
+            // and possibly this index is its index.
+            if es.index_uuid(&index).await? != uuid {
+                return Err(anyhow!(
+                    "Index {} was deleted and created again during the push; \
+                     alias {} continues to point at the previous index",
+                    index,
+                    alias
+                ));
+            }
             if let Err(e) = es.write_alias(&config, &index, &alias).await {
                 if created_index {
                     warn!(
@@ -637,5 +773,21 @@ mod tests {
     fn push_requires_schema_version() {
         let args = Args::from_iter_safe(["flake-info", "--push", "group", "f.toml", "name"]);
         assert!(args.is_err());
+    }
+
+    /// The user-agent override is declared on the top level, so it parses ahead of
+    /// any subcommand. The absent case is deliberately not asserted: `FI_USER_AGENT`
+    /// may be set in the environment running the tests.
+    #[test]
+    fn user_agent_override_is_parsed() {
+        let args = Args::from_iter_safe([
+            "flake-info",
+            "--json",
+            "--user-agent",
+            "custom/1.0",
+            "repology-counts",
+        ])
+        .expect("parses");
+        assert_eq!(args.user_agent.as_deref(), Some("custom/1.0"));
     }
 }

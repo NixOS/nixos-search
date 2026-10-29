@@ -3,9 +3,9 @@ name: "Daily Repology counts refresh"
 on:
   workflow_dispatch:
   schedule:
-    # Daily, offset from the 2-hourly imports. Repology refreshes its
+    # Daily, offset from the 3-hourly imports. Repology refreshes its
     # `nix_unstable` data roughly daily, so this is a generous ceiling.
-    - cron: "0 3 * * *"
+    - cron: "0 2 * * *"
 
 permissions:
   contents: read
@@ -45,6 +45,15 @@ jobs:
           # Actions cache keys are immutable, so a rotating date lets each daily
           # run publish fresh data. The `v1` prefix allows format bumps.
           key: repology-counts-v1-${{ steps.date.outputs.date }}
+
+      - name: Upload Repology counts as artifact
+        if: github.repository_owner == 'NixOS'
+        uses: actions/upload-artifact@v7
+        with:
+          name: repology-counts
+          path: repology-counts.json
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Create issue if failed
         if: failure() && github.repository_owner == 'NixOS'

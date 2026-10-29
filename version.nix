@@ -4,9 +4,9 @@
   # When making backwards-incompatible schema changes,
   # change the code for the import job first, updating this version number.
   # Only after the new index has been populated, update the frontend.
-  import = "51";
+  import = "52";
 
   # Frontend index version used by the UI when querying Elasticsearch
   # Keep this at the old version while 'import' populates a new index, then update to switch traffic
-  frontend = "50";
+  frontend = "52";
 }

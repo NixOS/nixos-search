@@ -18,6 +18,14 @@ url = "git+https://codeberg.org/raboof/browserify?ref=nix"
 
 [[sources]]
 type = "git"
+url = "git+https://codeberg.org/raboof/nix-dkimdo"
+
+[[sources]]
+type = "git"
+url = "git+https://codeberg.org/raboof/nix-pyobd"
+
+[[sources]]
+type = "git"
 url = "git+https://codeberg.org/raboof/mock-oauth2-server?ref=nix"
 
 [[sources]]
@@ -66,8 +74,18 @@ repo = "swiftformat-nix"
 
 [[sources]]
 type = "github"
+owner = "Algorithmiq"
+repo = "monoprop"
+
+[[sources]]
+type = "github"
 owner = "anpandey"
 repo = "numen-nix"
+
+[[source]]
+type = "github"
+owner = "Ap6661"
+repo = "septabee-flake"
 
 [[sources]]
 type = "github"
@@ -78,6 +96,11 @@ repo = "deadnix"
 type = "github"
 owner = "atuinsh"
 repo = "atuin"
+
+[[sources]]
+type = "github"
+owner = "bitcoinix"
+repo = "bitcoinix"
 
 [[sources]]
 type = "github"
@@ -103,6 +126,11 @@ repo = "fleet"
 type = "github"
 owner = "chaotic-cx"
 repo = "nyx"
+
+[[sources]]
+type = "github"
+owner = "ChrisDKN"
+repo = "Amethyst-Mod-Manager"
 
 [[sources]]
 type = "github"
@@ -196,6 +224,11 @@ repo = "nix-atlas"
 
 [[sources]]
 type = "github"
+owner = "dimanovikov"
+repo = "datadiff"
+
+[[sources]]
+type = "github"
 owner = "divnix"
 repo = "nosys"
 
@@ -209,6 +242,11 @@ type = "github"
 owner = "edolstra"
 repo = "flake-compat"
 
+[[source]]
+type = "github"
+owner = "JuxGD"
+repo = "septabee-nix"
+
 [[sources]]
 type = "github"
 owner = "eza-community"
@@ -216,13 +254,13 @@ repo = "eza"
 
 [[sources]]
 type = "github"
-owner = "felbinger"
-repo = "srsran.nix"
+owner = "fzakaria"
+repo = "nixpkgs-multiverse"
 
 [[sources]]
 type = "github"
-owner = "fort-nix"
-repo = "nix-bitcoin"
+owner = "Geekiac"
+repo = "nix-interactive"
 
 [[sources]]
 type = "github"
@@ -291,6 +329,21 @@ repo = "nix-security"
 
 [[sources]]
 type = "github"
+owner = "kamysh"
+repo = "kryzhen"
+
+[[sources]]
+type = "github"
+owner = "kamysh"
+repo = "mimir"
+
+[[sources]]
+type = "github"
+owner = "kamysh"
+repo = "muninn"
+
+[[sources]]
+type = "github"
 owner = "kashw2"
 repo = "bitbucket-runner-nix"
 
@@ -313,6 +366,11 @@ repo = "lnbits-legend"
 type = "github"
 owner = "matthewcroughan"
 repo = "filestash-nix"
+
+[[sources]]
+type = "github"
+owner = "meshcloud"
+repo = "meshstack-cli"
 
 [[sources]]
 type = "github"
@@ -353,6 +411,11 @@ repo = "autofirma-nix"
 type = "github"
 owner = "nix-community"
 repo = "fenix"
+
+[[sources]]
+type = "github"
+owner = "nix-community"
+repo = "lanzaboote"
 
 [[sources]]
 type = "github"
@@ -432,6 +495,11 @@ repo = "llm-agents.nix"
 
 [[sources]]
 type = "github"
+owner = "ominit"
+repo = "helium-browser-flake"
+
+[[sources]]
+type = "github"
 owner = "outagedeck"
 repo = "cli"
 
@@ -454,6 +522,26 @@ repo = "pyproject.nix"
 type = "github"
 owner = "pyproject-nix"
 repo = "uv2nix"
+
+[[sources]]
+type = "github"
+owner = "rat-nix"
+repo = "srsran.nix"
+
+[[sources]]
+type = "github"
+owner = "rat-nix"
+repo = "open5gs.nix"
+
+[[sources]]
+type = "github"
+owner = "rat-nix"
+repo = "ueransim.nix"
+
+[[sources]]
+type = "github"
+owner = "rat-nix"
+repo = "free5gc.nix"
 
 [[sources]]
 type = "github"
@@ -568,6 +656,11 @@ repo = "kconfq"
 
 [[sources]]
 type = "github"
+owner = "tomodachi94"
+repo = "dotfiles"
+
+[[sources]]
+type = "github"
 owner = "TraceMachina"
 repo = "nativelink"
 
@@ -590,6 +683,11 @@ repo = "bazel-nix"
 type = "github"
 owner = "Wazzaps"
 repo = "fingerpaint"
+
+[[sources]]
+type = "github"
+owner = "Wyze3306"
+repo = "BedrockOnLinux"
 
 [[sources]]
 type = "github"

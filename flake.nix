@@ -133,6 +133,14 @@
 
           treefmt = treefmtEval.config.build.wrapper;
 
+          desktopEntriesIndex = ./flake-info/scripts/desktop-entries-index.py;
+          desktopEntriesIndexDeps =
+            ps: with ps; [
+              requests
+              zstandard
+              brotli
+            ];
+
           mkDevShell =
             {
               inputsFrom ? [ ],
@@ -159,6 +167,18 @@
             frontend = pkgs.callPackage ./frontend {
               inherit nixosChannels version;
             };
+            # Reads desktop entries and icons out of the binary cache, to feed the
+            # importer's `--desktop-entries-file` and `--icon-dir`.
+            desktop-entries-index = pkgs.writeShellApplication {
+              name = "desktop-entries-index";
+              runtimeInputs = [
+                (pkgs.python3.withPackages desktopEntriesIndexDeps)
+                pkgs.nix
+                pkgs.imagemagick
+                pkgs.librsvg
+              ];
+              text = ''exec python3 ${desktopEntriesIndex} "$@"'';
+            };
             nixosChannels = nixosChannelsFile;
             nixosChannelsJson = pkgs.writeText "nixosChannels.json" (lib.toJSON nixosChannels);
           };
@@ -168,6 +188,17 @@
               inherit pkgs;
               inherit (inputs) flake-schemas;
             };
+
+            # `nix fmt` runs `ruff check`, which does not look at types.
+            desktop-entries-index-types =
+              let
+                # `requests` ships no types of its own.
+                python = pkgs.python3.withPackages (ps: desktopEntriesIndexDeps ps ++ [ ps.types-requests ]);
+              in
+              pkgs.runCommand "desktop-entries-index-types" { nativeBuildInputs = [ pkgs.ty ]; } ''
+                ty check --python ${python} ${desktopEntriesIndex}
+                touch $out
+              '';
           };
 
           formatter = treefmt;

@@ -27,6 +27,8 @@ pandoc = "0.8.10"
 semver = "1.0"
 sqlite = "0.30"
 tempfile = "3"
+# Already in the lock file via reqwest; used to embed icons as `data:` URIs.
+base64 = "0.13"
 
 elasticsearch = {git = "https://github.com/elastic/elasticsearch-rs", features = ["rustls-tls"], optional = true}
 

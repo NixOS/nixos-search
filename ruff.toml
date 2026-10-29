@@ -1,0 +1,20 @@
+# The desktop entry indexer is the only Python here; see
+# `flake-info/scripts/desktop-entries-index.py`.
+line-length = 100
+target-version = "py313"
+
+[lint]
+select = [
+  "ANN", # every signature is annotated
+  "B",   # bugbear
+  "C4",  # comprehensions
+  "E",   # pycodestyle errors
+  "F",   # pyflakes
+  "I",   # import order
+  "PTH", # pathlib over `os.path`
+  "RET", # return statements
+  "RUF", # ruff's own rules
+  "SIM", # simplifications
+  "UP",  # modern syntax
+  "W",   # pycodestyle warnings
+]
