@@ -69,7 +69,6 @@ type alias Flags =
     , theme : String
     , isPrideMonth : Bool
     , saveData : Bool
-    , language : Maybe String
     }
 
 
@@ -128,10 +127,6 @@ type alias Model =
     , theme : Theme
     , isPrideMonth : Bool
     , preferStatic : Bool
-
-    -- A language the visitor picked on an earlier visit, if any, so that a
-    -- return visit starts in it.
-    , storedLanguage : Maybe String
     }
 
 
@@ -180,7 +175,6 @@ init flags url navKey =
             , theme = themeFromString flags.theme
             , isPrideMonth = flags.isPrideMonth
             , preferStatic = not flags.saveData
-            , storedLanguage = flags.language
             }
     in
     changeRouteTo model url
@@ -358,7 +352,7 @@ changeRouteTo currentModel url =
                         _ ->
                             Nothing
             in
-            Page.Packages.init currentModel.elasticsearch currentModel.preferStatic currentModel.storedLanguage searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels True modelPage
+            Page.Packages.init currentModel.elasticsearch currentModel.preferStatic searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels True modelPage
                 |> updateWith Packages PackagesMsg model
                 |> avoidReinit
                 |> attemptQuery
@@ -373,7 +367,7 @@ changeRouteTo currentModel url =
                         _ ->
                             Nothing
             in
-            Page.Options.init currentModel.elasticsearch currentModel.preferStatic currentModel.storedLanguage searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels True modelPage
+            Page.Options.init currentModel.elasticsearch currentModel.preferStatic searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels True modelPage
                 |> updateWith Options OptionsMsg model
                 |> avoidReinit
                 |> attemptQuery
@@ -388,7 +382,7 @@ changeRouteTo currentModel url =
                         _ ->
                             Nothing
             in
-            Page.Flakes.init currentModel.elasticsearch currentModel.preferStatic currentModel.storedLanguage searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
+            Page.Flakes.init currentModel.elasticsearch currentModel.preferStatic searchArgs currentModel.defaultNixOSChannel currentModel.nixosChannels modelPage
                 |> updateWith Flakes FlakesMsg model
                 |> avoidReinit
                 |> attemptQuery
@@ -568,7 +562,7 @@ viewNavigation route =
                         args
 
                     _ ->
-                        Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Route.defaultOptionSource Nothing
+                        Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Route.defaultOptionSource
     in
     li [] [ a [ href "https://nixos.org" ] [ text "Back to nixos.org" ] ]
         :: List.map
