@@ -138,6 +138,10 @@ type alias Model a b =
     -- Whether the visitor asked for less data, via `Save-Data` or a connection
     -- the browser reports as metered. Results skip images under it.
     , saveData : Bool
+
+    -- The screenshot that the package page shows in its lightbox: the id of
+    -- the result and the index of the screenshot in that result.
+    , screenshotShown : Maybe ( String, Int )
     , typeahead : Typeahead.Model
     }
 
@@ -365,6 +369,7 @@ init options preferStatic args defaultNixOSChannel nixosChannels maybeModel =
       , urlChannel = args.channel
       , options = options
       , saveData = not preferStatic
+      , screenshotShown = Nothing
       , typeahead = Typeahead.init preferStatic
       }
         |> ensureLoading nixosChannels

@@ -52,18 +52,20 @@ import Html.Attributes
     exposing
         ( alt
         , attribute
+        , autofocus
         , checked
         , class
         , classList
         , href
         , id
         , name
+        , rel
         , src
         , target
         , title
         , type_
         )
-import Html.Events exposing (onClick)
+import Html.Events exposing (on, onClick, preventDefaultOn, stopPropagationOn)
 import Http exposing (Body)
 import Json.Decode
 import Json.Decode.Pipeline
@@ -313,6 +315,8 @@ type Msg
     = SearchMsg (Search.Msg ResultItemSource ResultAggregations)
     | CopyToClipboard String
     | ScrollScreenshots String Float
+    | ShowScreenshot String Int
+    | CloseScreenshot
     | NoOp
 
 
@@ -340,18 +344,26 @@ update navKey msg model nixosChannels =
             ( model, Ports.copyToClipboard text_ )
 
         ScrollScreenshots rowId direction ->
-            ( model
-            , Browser.Dom.getViewportOf rowId
-                |> Task.andThen
-                    (\{ viewport } ->
-                        -- A step of less than the full width keeps the
-                        -- screenshot at the edge in view, thus the reader
-                        -- keeps the place in the row.
-                        Browser.Dom.setViewportOf rowId
-                            (viewport.x + direction * viewport.width * 0.8)
-                            0
-                    )
-                |> Task.attempt (\_ -> NoOp)
+            ( model, Ports.scrollRow { id = rowId, direction = direction } )
+
+        ShowScreenshot itemId index ->
+            ( { model | screenshotShown = Just ( itemId, index ) }
+            , Ports.showModal screenshotLightboxId
+            )
+
+        CloseScreenshot ->
+            ( { model | screenshotShown = Nothing }
+            , case model.screenshotShown of
+                -- The focus goes to the thumbnail of the screenshot that the
+                -- lightbox showed last. `Browser.Dom.focus` waits for the next
+                -- animation frame, thus the dialog that keeps the page inert
+                -- is gone.
+                Just ( itemId, index ) ->
+                    Browser.Dom.focus (screenshotThumbnailId itemId index)
+                        |> Task.attempt (\_ -> NoOp)
+
+                Nothing ->
+                    Cmd.none
             )
 
         NoOp ->
@@ -373,7 +385,7 @@ view nixosChannels model =
         ]
         nixosChannels
         model
-        (viewSuccess model.saveData)
+        (viewSuccess model)
         viewBuckets
         SearchMsg
         []
@@ -459,23 +471,80 @@ viewBuckets bucketsAsString result =
 
 
 viewSuccess :
-    Bool
+    Model
     -> List NixOSChannel
     -> String
     -> Details
     -> Maybe String
     -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
-viewSuccess saveData nixosChannels channel showUsageDetails show hits =
+viewSuccess model nixosChannels channel showUsageDetails show hits =
     ul [ class "search-results-list" ]
         (List.map
-            (viewResultItem saveData nixosChannels channel showUsageDetails show)
+            (viewResultItem model.saveData model.screenshotShown nixosChannels channel showUsageDetails show)
             hits
         )
 
 
-{-| The arrow on a button that moves a screenshot row. It points forward; the
-button that moves the row back turns it around.
+{-| The id of the `<dialog>` that shows a screenshot. The page shows one at a
+time.
+-}
+screenshotLightboxId : String
+screenshotLightboxId =
+    "screenshot-lightbox"
+
+
+screenshotThumbnailId : String -> Int -> String
+screenshotThumbnailId itemId index =
+    "screenshot-" ++ itemId ++ "-" ++ String.fromInt index
+
+
+{-| Send `message` on a click without a modifier key, in place of following the
+link. A click with a modifier key follows the link.
+-}
+onPlainClick : msg -> Html.Attribute msg
+onPlainClick message =
+    preventDefaultOn "click"
+        (Json.Decode.map4
+            (\ctrl meta shift alt -> ctrl || meta || shift || alt)
+            (Json.Decode.field "ctrlKey" Json.Decode.bool)
+            (Json.Decode.field "metaKey" Json.Decode.bool)
+            (Json.Decode.field "shiftKey" Json.Decode.bool)
+            (Json.Decode.field "altKey" Json.Decode.bool)
+            |> Json.Decode.andThen
+                (\modified ->
+                    if modified then
+                        Json.Decode.fail "A click with a modifier key follows the link"
+
+                    else
+                        Json.Decode.succeed ( message, True )
+                )
+        )
+
+
+{-| The cross on the button that closes the screenshot lightbox.
+-}
+closeSvg : Html msg
+closeSvg =
+    svg
+        [ SA.width "16"
+        , SA.height "16"
+        , SA.viewBox "0 0 16 16"
+        , SA.fill "none"
+        , attribute "aria-hidden" "true"
+        ]
+        [ path
+            [ SA.d "M3 3L13 13M13 3L3 13"
+            , SA.stroke "currentColor"
+            , SA.strokeWidth "2"
+            , SA.strokeLinecap "round"
+            ]
+            []
+        ]
+
+
+{-| The arrow on a button that moves through the screenshots. It points
+forward; a button that moves back turns it around.
 -}
 chevronSvg : Html msg
 chevronSvg =
@@ -509,13 +578,14 @@ copyableCommand preClass commandText content =
 
 viewResultItem :
     Bool
+    -> Maybe ( String, Int )
     -> List NixOSChannel
     -> String
     -> Details
     -> Maybe String
     -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItem saveData nixosChannels channel showUsageDetails show item =
+viewResultItem saveData screenshotShown nixosChannels channel showUsageDetails show item =
     let
         optionals b l =
             if b then
@@ -640,36 +710,39 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
                     (\shot -> Maybe.map (Tuple.pair shot) shot.file)
                     item.source.screenshots
 
-        viewScreenshot ( shot, file ) =
-            let
-                caption =
-                    shot.caption
+        screenshotCount =
+            List.length mirroredScreenshots
 
-                -- Opening a thumbnail gives the larger copy this index holds,
-                -- and the image on the project's own hosting where it holds
-                -- none.
-                opened =
-                    shot.largeFile
-                        |> Maybe.map (\large -> "/screenshots/" ++ large)
-                        |> Maybe.withDefault shot.url
-            in
+        -- The lightbox shows the larger copy this index holds, and the image
+        -- on the project's own hosting where it holds none.
+        largeScreenshot shot =
+            shot.largeFile
+                |> Maybe.map (\large -> "/screenshots/" ++ large)
+                |> Maybe.withDefault shot.url
+
+        -- A plain click on a thumbnail opens the lightbox. A click with a
+        -- modifier key or the middle button keeps the behavior of a link, and
+        -- opens the larger copy in a new tab.
+        viewScreenshot index ( shot, file ) =
             li []
                 (a
-                    [ href opened
+                    [ href (largeScreenshot shot)
                     , target "_blank"
-                    , title (Maybe.withDefault "Open the larger copy" caption)
+                    , id (screenshotThumbnailId item.id index)
+                    , title (Maybe.withDefault "Show the larger copy" shot.caption)
+                    , onPlainClick (ShowScreenshot item.id index)
                     ]
                     [ img
                         [ class "screenshot-image"
                         , src ("/screenshots/" ++ file)
-                        , alt (Maybe.withDefault "" caption)
+                        , alt (Maybe.withDefault "" shot.caption)
                         , attribute "loading" "lazy"
                         ]
                         []
                     ]
-                    :: optionals (caption /= Nothing)
+                    :: optionals (shot.caption /= Nothing)
                         [ div [ class "screenshot-caption" ]
-                            [ text (Maybe.withDefault "" caption) ]
+                            [ text (Maybe.withDefault "" shot.caption) ]
                         ]
                 )
 
@@ -691,6 +764,135 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
                 ]
                 [ chevronSvg ]
 
+        -- The lightbox goes around the screenshots of the result, thus the
+        -- last screenshot is followed by the first.
+        stepScreenshot index delta =
+            ShowScreenshot item.id (modBy screenshotCount (index + delta))
+
+        lightboxButton classes buttonLabel message icon =
+            button
+                [ type_ "button"
+                , class classes
+                , title buttonLabel
+                , attribute "aria-label" buttonLabel
+                , onClick message
+                ]
+                [ icon ]
+
+        lightboxStepButton index delta buttonLabel =
+            optionals (screenshotCount > 1)
+                [ lightboxButton
+                    (if delta < 0 then
+                        "screenshot-lightbox-step back"
+
+                     else
+                        "screenshot-lightbox-step"
+                    )
+                    buttonLabel
+                    (stepScreenshot index delta)
+                    chevronSvg
+                ]
+
+        -- The arrow keys show the other screenshots. The Escape key closes
+        -- the dialog through its `cancel` event. No key goes to the page
+        -- behind the dialog, where the Enter, `j` and `k` keys move between
+        -- the results.
+        lightboxKey index =
+            Json.Decode.field "key" Json.Decode.string
+                |> Json.Decode.map
+                    (\key ->
+                        ( case ( key, screenshotCount > 1 ) of
+                            ( "ArrowLeft", True ) ->
+                                stepScreenshot index -1
+
+                            ( "ArrowRight", True ) ->
+                                stepScreenshot index 1
+
+                            _ ->
+                                NoOp
+                        , True
+                        )
+                    )
+
+        -- A click on the area around the image closes the dialog. The dialog
+        -- fills the window, thus a click on the backdrop is a click on the
+        -- dialog itself.
+        lightboxClick =
+            Json.Decode.oneOf
+                [ Json.Decode.at [ "target", "className" ] Json.Decode.string
+                , Json.Decode.succeed ""
+                ]
+                |> Json.Decode.map
+                    (\classes ->
+                        ( if
+                            List.any
+                                (\c -> List.member c [ "screenshot-lightbox", "screenshot-lightbox-stage" ])
+                                (String.words classes)
+                          then
+                            CloseScreenshot
+
+                          else
+                            NoOp
+                        , True
+                        )
+                    )
+
+        -- A click on the image opens the image on the project's own hosting,
+        -- at the size upstream serves it.
+        viewLightbox index ( shot, _ ) =
+            Html.node "dialog"
+                [ id screenshotLightboxId
+                , class "screenshot-lightbox"
+                , attribute "aria-label" "Screenshots"
+                , stopPropagationOn "click" lightboxClick
+                , stopPropagationOn "keydown" (lightboxKey index)
+                , preventDefaultOn "cancel" (Json.Decode.succeed ( CloseScreenshot, True ))
+                , on "close" (Json.Decode.succeed CloseScreenshot)
+                ]
+                [ div [ class "screenshot-lightbox-bar" ]
+                    [ span [ class "screenshot-lightbox-position" ]
+                        [ text (String.fromInt (index + 1) ++ " / " ++ String.fromInt screenshotCount) ]
+                    , a
+                        [ href shot.url
+                        , target "_blank"
+                        , rel "noopener"
+                        ]
+                        [ text "Open the original" ]
+                    , button
+                        [ type_ "button"
+                        , class "screenshot-lightbox-close"
+                        , title "Close"
+                        , attribute "aria-label" "Close"
+                        , autofocus True
+                        , onClick CloseScreenshot
+                        ]
+                        [ closeSvg ]
+                    ]
+                , div [ class "screenshot-lightbox-stage" ]
+                    (lightboxStepButton index -1 "Show the previous screenshot"
+                        ++ a
+                            [ href shot.url
+                            , target "_blank"
+                            , rel "noopener"
+                            , title "Open the original"
+                            ]
+                            [ img
+                                [ class "screenshot-lightbox-image"
+                                , src (largeScreenshot shot)
+                                , alt (Maybe.withDefault "" shot.caption)
+                                ]
+                                []
+                            ]
+                        :: lightboxStepButton index 1 "Show the next screenshot"
+                    )
+                , case shot.caption of
+                    Just caption ->
+                        p [ class "screenshot-lightbox-caption" ] [ text caption ]
+
+                    Nothing ->
+                        text ""
+                ]
+
         screenshots =
             if List.isEmpty mirroredScreenshots then
                 text ""
@@ -701,7 +903,22 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
                         "screenshots-" ++ item.id
 
                     scrollable =
-                        List.length mirroredScreenshots > 1
+                        screenshotCount > 1
+
+                    lightbox =
+                        case screenshotShown of
+                            Just ( shownId, index ) ->
+                                if shownId == item.id then
+                                    List.drop index mirroredScreenshots
+                                        |> List.head
+                                        |> Maybe.map (viewLightbox index)
+                                        |> Maybe.withDefault (text "")
+
+                                else
+                                    text ""
+
+                            Nothing ->
+                                text ""
                 in
                 div []
                     [ h4 [] [ text "Screenshots" ]
@@ -709,10 +926,11 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
                         (optionals scrollable
                             [ scrollButton rowId -1.0 "Show the previous screenshots" ]
                             ++ ul [ class "screenshots", id rowId ]
-                                (List.map viewScreenshot mirroredScreenshots)
+                                (List.indexedMap viewScreenshot mirroredScreenshots)
                             :: optionals scrollable
                                 [ scrollButton rowId 1.0 "Show the next screenshots" ]
                         )
+                    , lightbox
                     ]
 
         shortPackageDetails =
