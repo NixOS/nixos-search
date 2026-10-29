@@ -139,6 +139,12 @@ update navKey msg model nixosChannels =
                 Page.Packages.CopyToClipboard text_ ->
                     ( PackagesModel model_, Ports.copyToClipboard text_ )
 
+                -- The other messages of the package page do not know which
+                -- route they are on, thus the page itself answers them.
+                other ->
+                    Page.Packages.update navKey other model_ nixosChannels
+                        |> Tuple.mapBoth PackagesModel (Cmd.map PackagesMsg)
+
         _ ->
             ( model, Cmd.none )
 
@@ -190,7 +196,7 @@ view nixosChannels model =
             Html.map OptionsMsg <| mkBody "3rd-party flake options" model_ (Page.Options.viewSuccess model_.activeOptionSource) Page.Options.viewBuckets Page.Options.SearchMsg
 
         PackagesModel model_ ->
-            Html.map PackagesMsg <| mkBody "3rd-party flake packages" model_ Page.Packages.viewSuccess Page.Packages.viewBuckets Page.Packages.SearchMsg
+            Html.map PackagesMsg <| mkBody "3rd-party flake packages" model_ (Page.Packages.viewSuccess model_.saveData) Page.Packages.viewBuckets Page.Packages.SearchMsg
 
 
 

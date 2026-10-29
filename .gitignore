@@ -1,4 +1,6 @@
 frontend/public/autocomplete/
+frontend/public/icons/
+frontend/public/screenshots/
 *.log
 .DS_Store
 .cache

@@ -134,6 +134,10 @@ type alias Model a b =
     -- flashing the full loader. Cleared once the new response lands.
     , previousResult : Maybe (SearchResult a b)
     , options : Options
+
+    -- Whether the visitor asked for less data, via `Save-Data` or a connection
+    -- the browser reports as metered. Results skip images under it.
+    , saveData : Bool
     , typeahead : Typeahead.Model
     }
 
@@ -360,6 +364,7 @@ init options preferStatic args defaultNixOSChannel nixosChannels maybeModel =
       , previousResult = Nothing
       , urlChannel = args.channel
       , options = options
+      , saveData = not preferStatic
       , typeahead = Typeahead.init preferStatic
       }
         |> ensureLoading nixosChannels
