@@ -130,6 +130,11 @@ type alias ResultItemSource =
 {-| A freedesktop.org desktop entry, as shipped by the package. `icon` names an
 icon rather than holding one; look it up in `desktopIcons` for the file that
 holds it.
+
+`desktopName`, `genericName` and `comment` are shown in the language chosen on
+the page, by looking each one up in the translations from `/locales`; the entry
+carries them as its package wrote them, which is nearly always English.
+
 -}
 type alias DesktopEntry =
     { entryType : Maybe String
@@ -148,6 +153,10 @@ the thumbnail shown in a result, and `largeFile` the copy a reader who opens it
 gets; both name files under `/screenshots`, which the frontend build writes out
 of the index. `url` is the image on the project's own hosting, at the size
 upstream serves it, which is too large for an index to hold.
+
+`caption` is shown in the language chosen on the page, in the same way a desktop
+entry's strings are.
+
 -}
 type alias Screenshot =
     { url : String
@@ -276,19 +285,20 @@ initBuckets bucketsAsString =
 init :
     Search.Options
     -> Bool
+    -> Maybe String
     -> Route.SearchArgs
     -> String
     -> List NixOSChannel
     -> Bool
     -> Maybe Model
     -> ( Model, Cmd Msg )
-init options preferStatic searchArgs defaultNixOSChannel nixosChannels includeChannelInUrl model =
+init options preferStatic storedLanguage searchArgs defaultNixOSChannel nixosChannels includeChannelInUrl model =
     let
         searchArgsForPackages =
             { searchArgs | type_ = Just Route.PackageSearch }
 
         ( newModel, newCmd ) =
-            Search.init options preferStatic searchArgsForPackages defaultNixOSChannel nixosChannels model
+            Search.init options preferStatic storedLanguage searchArgsForPackages defaultNixOSChannel nixosChannels model
 
         finalModel =
             if includeChannelInUrl then
@@ -298,7 +308,9 @@ init options preferStatic searchArgs defaultNixOSChannel nixosChannels includeCh
                 newModel
     in
     ( finalModel
-    , Cmd.map SearchMsg newCmd
+      -- Desktop entries are the only translated part of a result, so this is
+      -- the one page that asks for the locale assets.
+    , Cmd.map SearchMsg (Cmd.batch [ newCmd, Search.fetchLocales finalModel ])
     )
 
 
@@ -370,17 +382,19 @@ view nixosChannels model =
         ]
         nixosChannels
         model
-        (viewSuccess model.saveData)
-        viewBuckets
+        (viewSuccess model.saveData model.localization)
+        (viewBuckets model.lang model.languages)
         SearchMsg
         []
 
 
 viewBuckets :
     Maybe String
+    -> List Search.Language
+    -> Maybe String
     -> Search.SearchResult ResultItemSource ResultAggregations
     -> List (Html Msg)
-viewBuckets bucketsAsString result =
+viewBuckets lang languages bucketsAsString result =
     let
         initialBuckets =
             initBuckets bucketsAsString
@@ -453,20 +467,22 @@ viewBuckets bucketsAsString result =
             (result.aggregations.package_mime_types_set.buckets |> sortBuckets)
             (createBucketsMsg False .mimeTypes (\s v -> { s | mimeTypes = v }))
             selectedBucket.mimeTypes
+        |> Search.viewLanguages lang languages (SearchMsg << Search.SetLanguage)
 
 
 viewSuccess :
     Bool
+    -> Dict String String
     -> List NixOSChannel
     -> String
     -> Details
     -> Maybe String
     -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
-viewSuccess saveData nixosChannels channel showUsageDetails show hits =
+viewSuccess saveData localization nixosChannels channel showUsageDetails show hits =
     ul [ class "search-results-list" ]
         (List.map
-            (viewResultItem saveData nixosChannels channel showUsageDetails show)
+            (viewResultItem saveData localization nixosChannels channel showUsageDetails show)
             hits
         )
 
@@ -506,13 +522,14 @@ copyableCommand preClass commandText content =
 
 viewResultItem :
     Bool
+    -> Dict String String
     -> List NixOSChannel
     -> String
     -> Details
     -> Maybe String
     -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItem saveData nixosChannels channel showUsageDetails show item =
+viewResultItem saveData localization nixosChannels channel showUsageDetails show item =
     let
         optionals b l =
             if b then
@@ -586,22 +603,28 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
                 [] ->
                     text ""
 
+        -- Shown in the chosen language where that language has the string, and
+        -- as the package wrote it otherwise. Translations are patchy, so an
+        -- entry commonly shows one translated line beside an untranslated one.
+        localized =
+            Search.translate localization
+
         viewDesktopEntry entry =
             li []
                 (span [ class "desktop-entry-name" ]
                     [ viewIcon "desktop-entry-icon" entry
-                    , text (Maybe.withDefault item.source.pname entry.desktopName)
+                    , text (localized (Maybe.withDefault item.source.pname entry.desktopName))
                     ]
                     -- `GenericName` says what the application is where its name
                     -- does not, and `Comment` is the entry's own description,
                     -- which is often more concrete than the package's.
                     :: optionals (entry.genericName /= Nothing)
                         [ div [ class "desktop-entry-detail" ]
-                            [ text (Maybe.withDefault "" entry.genericName) ]
+                            [ text (localized (Maybe.withDefault "" entry.genericName)) ]
                         ]
                     ++ optionals (entry.comment /= Nothing)
                         [ div [ class "desktop-entry-detail" ]
-                            [ text (Maybe.withDefault "" entry.comment) ]
+                            [ text (localized (Maybe.withDefault "" entry.comment)) ]
                         ]
                     ++ optionals (not (List.isEmpty entry.categories))
                         [ div [ class "desktop-entry-detail" ]
@@ -640,7 +663,7 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
         viewScreenshot ( shot, file ) =
             let
                 caption =
-                    shot.caption
+                    Maybe.map localized shot.caption
 
                 -- Opening a thumbnail gives the larger copy this index holds,
                 -- and the image on the project's own hosting where it holds
