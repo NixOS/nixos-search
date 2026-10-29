@@ -130,7 +130,6 @@ type alias ResultItemSource =
 {-| A freedesktop.org desktop entry, as shipped by the package. `icon` names an
 icon rather than holding one; look it up in `desktopIcons` for the file that
 holds it.
-
 -}
 type alias DesktopEntry =
     { entryType : Maybe String
@@ -149,7 +148,6 @@ the thumbnail shown in a result, and `largeFile` the copy a reader who opens it
 gets; both name files under `/screenshots`, which the frontend build writes out
 of the index. `url` is the image on the project's own hosting, at the size
 upstream serves it, which is too large for an index to hold.
-
 -}
 type alias Screenshot =
     { url : String
