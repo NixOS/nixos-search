@@ -41,6 +41,14 @@ const ELASTICSEARCH_PASSWORD =
 // the pages are read with `search_after` over the name field and not by offset.
 const PAGE_SIZE = 1000;
 
+// A page usually arrives in about one second. Sometimes the cluster stalls on
+// one, and the proxy in front of it then closes the connection after 60 seconds.
+// A page that takes longer than the timeout is thus requested again, and the
+// script fails only after all attempts fail.
+const FETCH_TIMEOUT_MS = 20_000;
+const FETCH_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 2_000;
+
 // A name reaches this script over the network and is then used as a path, so it
 // is checked against the shape `flake-info` gives it rather than trusted to
 // stay inside the output directory.
@@ -54,7 +62,7 @@ const authHeader =
           ).toString("base64")
         : null;
 
-async function fetchPage(type, fileField, dataField, searchAfter) {
+async function fetchPage(label, type, fileField, dataField, searchAfter) {
     const index = `latest-${ELASTICSEARCH_MAPPING_SCHEMA_VERSION}-images`;
     // Before the first import of a schema version, its image index does not
     // exist. `ignore_unavailable` makes that an empty result and not an error,
@@ -75,9 +83,33 @@ async function fetchPage(type, fileField, dataField, searchAfter) {
 
     const headers = { "Content-Type": "application/json" };
     if (authHeader) headers["Authorization"] = authHeader;
-    const res = await fetch(url, { method: "POST", headers, body });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return (await res.json())?.hits?.hits ?? [];
+
+    for (let attempt = 1; ; attempt++) {
+        try {
+            // The signal also stops the body read, which is where a stalled
+            // page waits.
+            const res = await fetch(url, {
+                method: "POST",
+                headers,
+                body,
+                signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+            });
+            if (!res.ok) {
+                const err = new Error(`HTTP ${res.status}`);
+                // A different request does not fix a 4xx status, other than
+                // 429, so only a 429 or a 5xx status is retried.
+                err.retry = res.status === 429 || res.status >= 500;
+                throw err;
+            }
+            return (await res.json())?.hits?.hits ?? [];
+        } catch (err) {
+            if (err.retry === false || attempt === FETCH_ATTEMPTS) throw err;
+            console.warn(
+                `[${label}] ${err.message} -- attempt ${attempt} of ${FETCH_ATTEMPTS}, trying again`,
+            );
+            await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * attempt));
+        }
+    }
 }
 
 /**
@@ -106,6 +138,7 @@ export async function writeImages({
     try {
         for (;;) {
             const hits = await fetchPage(
+                label,
                 type,
                 fileField,
                 dataField,
