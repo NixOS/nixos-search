@@ -469,12 +469,12 @@ viewSuccess :
 viewSuccess saveData nixosChannels channel showUsageDetails show hits =
     let
         -- Only a page that shows an icon needs room for one in each result.
-        reserveIconSlot =
+        showIconMargin =
             List.any (\hit -> packageIconFile saveData hit.source /= Nothing) hits
     in
     ul [ class "search-results-list" ]
         (List.map
-            (viewResultItem saveData reserveIconSlot nixosChannels channel showUsageDetails show)
+            (viewResultItem saveData showIconMargin nixosChannels channel showUsageDetails show)
             hits
         )
 
@@ -554,7 +554,7 @@ viewResultItem :
     -> Maybe String
     -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItem saveData reserveIconSlot nixosChannels channel showUsageDetails show item =
+viewResultItem saveData showIconMargin nixosChannels channel showUsageDetails show item =
     let
         optionals b l =
             if b then
@@ -607,15 +607,8 @@ viewResultItem saveData reserveIconSlot nixosChannels channel showUsageDetails s
         displayedEntries =
             displayedDesktopEntries item.source
 
-        -- An empty slot in place of a missing icon keeps the attribute names
-        -- of all results in one column.
         packageIcon =
-            case ( packageIconFile saveData item.source, reserveIconSlot ) of
-                ( Nothing, True ) ->
-                    span [ class "package-icon" ] []
-
-                ( iconFile, _ ) ->
-                    viewIcon "package-icon" iconFile
+            viewIcon "package-icon" (packageIconFile saveData item.source)
 
         viewDesktopEntry entry =
             li []
@@ -1333,7 +1326,10 @@ viewResultItem saveData reserveIconSlot nixosChannels channel showUsageDetails s
     in
     li
         [ class "package"
-        , classList [ ( "opened", isOpen ) ]
+
+        -- The icon is in a margin to the left of the result, thus all lines
+        -- of all results start in one column.
+        , classList [ ( "opened", isOpen ), ( "with-icon-margin", showIconMargin ) ]
         , Search.elementId item.source.attr_name
         ]
         ([ span [ class "search-result-title" ] (packageIcon :: flakeOrNixpkgs)
