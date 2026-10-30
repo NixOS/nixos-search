@@ -96,6 +96,37 @@ if (app.ports && app.ports.copyToClipboard) {
     });
 }
 
+if (app.ports && app.ports.scrollRow) {
+    app.ports.scrollRow.subscribe(({ id, direction }) => {
+        const element = document.getElementById(id);
+        if (!element) return;
+        // The row goes around: at the last screenshots, the next step goes
+        // to the first, and at the first, the previous step goes to the last.
+        // A tolerance of 1px covers fractional scroll positions.
+        const end = element.scrollWidth - element.clientWidth;
+        if (direction > 0 && element.scrollLeft >= end - 1) {
+            element.scrollTo({ left: 0 });
+        } else if (direction < 0 && element.scrollLeft <= 1) {
+            element.scrollTo({ left: end });
+        } else {
+            // `scrollBy` keeps the `scroll-behavior` of the element. A step
+            // of less than the full width keeps the item at the edge in view.
+            element.scrollBy({ left: direction * element.clientWidth * 0.8 });
+        }
+    });
+}
+
+if (app.ports && app.ports.showModal) {
+    app.ports.showModal.subscribe((id) => {
+        // Elm writes the dialog on the next animation frame, thus this frame
+        // comes after it.
+        requestAnimationFrame(() => {
+            const dialog = document.getElementById(id);
+            if (dialog && !dialog.open) dialog.showModal();
+        });
+    });
+}
+
 document.addEventListener("DOMContentLoaded", function () {
     const shortcutEl = document.getElementById("shortcut-list-el");
     const searchInput = document.getElementById("search-query-input");
