@@ -13,10 +13,10 @@
  *
  * Each curated query is an object:
  *
- *   id          stable handle, also the sort key of the per-query table. A
- *               query in both files has the same id in both, and an id in both
- *               files names the same query. A new query takes the next id that
- *               is free in both files; an existing id never changes.
+ *   id          stable handle, also the sort key of the per-query table. It
+ *               is unique within its file, and a query in both files has the
+ *               same id in both. A new query takes the next id that is free in
+ *               both files; an existing id never changes.
  *   q           the search term, as a user would type it
  *   category    the one axis this query is here to exercise, e.g. `typo` or
  *               `attrpath`. Also the unit the aggregate is weighted in, so
@@ -432,10 +432,11 @@ checkWeights("packages", pkgQueries, WEIGHTS.packages);
 checkWeights("options", optQueries, WEIGHTS.options);
 
 // The per-query table pairs the `pkg` and `opt` rows of a query by id, so an id
-// must name one query across both files, and a query in both files one id.
+// is unique within its file, and a query in both files carries one id. Two
+// different queries in different files may share an id: rows sort by id and
+// then by query, so they do not interleave.
 function checkIds(pkg, opt) {
-    const queryOf = new Map(),
-        idOf = new Map();
+    const idOf = new Map();
     for (const [file, queries] of [
         ["packages", pkg],
         ["options", opt],
@@ -446,11 +447,6 @@ function checkIds(pkg, opt) {
                 throw new Error(`${file}: id ${q.id} is used more than once`);
             }
             seen.add(q.id);
-            if ((queryOf.get(q.id) ?? q.q) !== q.q) {
-                throw new Error(
-                    `${q.id} is "${queryOf.get(q.id)}" in packages but "${q.q}" in options`,
-                );
-            }
             if ((idOf.get(q.q) ?? q.id) !== q.id) {
                 throw new Error(
                     `"${q.q}" is ${idOf.get(q.q)} in packages but ${q.id} in options`,
@@ -458,10 +454,7 @@ function checkIds(pkg, opt) {
             }
         }
         // Only after the whole file, so a clash is always packages vs options.
-        for (const q of queries) {
-            queryOf.set(q.id, q.q);
-            idOf.set(q.q, q.id);
-        }
+        for (const q of queries) idOf.set(q.q, q.id);
     }
 }
 
@@ -698,7 +691,12 @@ function section(label, results, weights) {
 const perQuery = [
     ...pkgResults.map((r) => ({ track: "pkg", ...r })),
     ...optResults.map((r) => ({ track: "opt", ...r })),
-].sort((a, b) => a.id.localeCompare(b.id) || a.track.localeCompare(b.track));
+].sort(
+    (a, b) =>
+        a.id.localeCompare(b.id) ||
+        a.q.localeCompare(b.q) ||
+        a.track.localeCompare(b.track),
+);
 
 const lines = [
     "# Relevance benchmark: frontend query vs deployed ES",

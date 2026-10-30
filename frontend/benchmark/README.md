@@ -105,8 +105,10 @@ files shows each change to an expectation on the line where it happens. A new
 query takes the next id that is free in both files.
 
 A query that appears in both files carries the same id in both, which is what
-pairs the `pkg` and `opt` rows for one query in the per-query table. Two
-different queries must never share an id. `run.mjs` fails up front if they do.
+pairs the `pkg` and `opt` rows for one query in the per-query table. The
+per-query table sorts by id and then by query, so two different queries that
+share an id across the files do not interleave. `run.mjs` fails up front if an
+id is used twice in one file, or if a query has different ids in the two files.
 
 ## Adding a category
 
@@ -117,8 +119,8 @@ different queries must never share an id. `run.mjs` fails up front if they do.
    of the categories it is carving from so the table still sums to 1. Say in the
    comment whether the number is observed or judgement.
 3. Run the benchmark. `run.mjs` fails up front if a category has no weight, a
-   weight has no queries, a table does not sum to 1, or an id names two
-   queries.
+   weight has no queries, a table does not sum to 1, or the ids break
+   the rules above.
 4. Check the new rows against the live index by hand before trusting them. A
    0.000 in a new category is more often a real ranking finding than a bad gold
    set - `python3Packages.absl-py` returns nothing because the index carries

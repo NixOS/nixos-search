@@ -1785,42 +1785,42 @@
         "relevant": [["opt:services.transmission.enable"]]
     },
     {
-        "id": "g248",
+        "id": "g241",
         "q": "boot.kernelPackages",
         "category": "cased",
         "exhaustive": true,
         "relevant": [["opt:boot.kernelPackages"]]
     },
     {
-        "id": "g249",
+        "id": "g242",
         "q": "boot.loader.grub.efiSupport",
         "category": "cased",
         "exhaustive": true,
         "relevant": [["opt:boot.loader.grub.efiSupport"]]
     },
     {
-        "id": "g250",
+        "id": "g243",
         "q": "environment.sessionVariables",
         "category": "cased",
         "exhaustive": true,
         "relevant": [["opt:environment.sessionVariables"]]
     },
     {
-        "id": "g251",
+        "id": "g244",
         "q": "networking.hostName",
         "category": "cased",
         "exhaustive": true,
         "relevant": [["opt:networking.hostName"]]
     },
     {
-        "id": "g252",
+        "id": "g245",
         "q": "programs.hyprland.withUWSM",
         "category": "cased",
         "exhaustive": true,
         "relevant": [["opt:programs.hyprland.withUWSM"]]
     },
     {
-        "id": "g253",
+        "id": "g246",
         "q": "services.mysqlBackup",
         "category": "cased",
         "exhaustive": true,
@@ -1839,14 +1839,14 @@
         ]
     },
     {
-        "id": "g254",
+        "id": "g247",
         "q": "services.postgresql.enableTCPIP",
         "category": "cased",
         "exhaustive": true,
         "relevant": [["opt:services.postgresql.enableTCPIP"]]
     },
     {
-        "id": "g255",
+        "id": "g248",
         "q": "system.autoUpgrade",
         "category": "cased",
         "exhaustive": true,
@@ -1871,14 +1871,14 @@
         ]
     },
     {
-        "id": "g256",
+        "id": "g249",
         "q": "virtualisation.docker.logDriver",
         "category": "cased",
         "exhaustive": true,
         "relevant": [["opt:virtualisation.docker.logDriver"]]
     },
     {
-        "id": "g257",
+        "id": "g250",
         "q": "nix.gc",
         "category": "dotted",
         "exhaustive": true,
@@ -1893,7 +1893,7 @@
         ]
     },
     {
-        "id": "g258",
+        "id": "g251",
         "q": "nix.registry",
         "category": "dotted",
         "exhaustive": true,
@@ -1908,14 +1908,14 @@
         ]
     },
     {
-        "id": "g259",
+        "id": "g252",
         "q": "nix.settings.substituters",
         "category": "dotted",
         "exhaustive": true,
         "relevant": [["opt:nix.settings.substituters"]]
     },
     {
-        "id": "g260",
+        "id": "g253",
         "q": "security.pam.u2f",
         "category": "dotted",
         "exhaustive": true,
@@ -1937,7 +1937,7 @@
         ]
     },
     {
-        "id": "g261",
+        "id": "g254",
         "q": "security.wrappers",
         "category": "dotted",
         "exhaustive": true,
@@ -1957,14 +1957,14 @@
         ]
     },
     {
-        "id": "g262",
+        "id": "g255",
         "q": "services.home-assistant.package",
         "category": "dotted",
         "exhaustive": true,
         "relevant": [["opt:services.home-assistant.package"]]
     },
     {
-        "id": "g263",
+        "id": "g256",
         "q": "services.immich",
         "category": "dotted",
         "relevant": [
@@ -1977,7 +1977,7 @@
         ]
     },
     {
-        "id": "g264",
+        "id": "g257",
         "q": "services.openvpn.servers",
         "category": "dotted",
         "exhaustive": true,
@@ -1994,27 +1994,27 @@
         ]
     },
     {
-        "id": "g265",
+        "id": "g258",
         "q": "services.paperless.domain",
         "category": "dotted",
         "exhaustive": true,
         "relevant": [["opt:services.paperless.domain"]]
     },
     {
-        "id": "g266",
+        "id": "g259",
         "q": "system.nixos.label",
         "category": "dotted",
         "exhaustive": true,
         "relevant": [["opt:system.nixos.label"]]
     },
     {
-        "id": "g267",
+        "id": "g260",
         "q": "systemd.user.services",
         "category": "dotted",
         "relevant": [["opt:systemd.user.services"]]
     },
     {
-        "id": "g268",
+        "id": "g261",
         "q": "deviceTree filter",
         "category": "scoped",
         "exhaustive": true,
@@ -2024,14 +2024,14 @@
         ]
     },
     {
-        "id": "g269",
+        "id": "g262",
         "q": "initrd authorizedkeys",
         "category": "scoped",
         "exhaustive": true,
         "relevant": [["opt:boot.initrd.network.ssh.authorizedKeys"]]
     },
     {
-        "id": "g270",
+        "id": "g263",
         "q": "ipv6 privacy",
         "category": "scoped",
         "exhaustive": true,
@@ -2041,35 +2041,35 @@
         ]
     },
     {
-        "id": "g271",
+        "id": "g264",
         "q": "kernel parameters",
         "category": "scoped",
         "exhaustive": true,
         "relevant": [["opt:boot.kernelParams"]]
     },
     {
-        "id": "g272",
+        "id": "g265",
         "q": "nix channel enable",
         "category": "scoped",
         "exhaustive": true,
         "relevant": [["opt:nix.channel.enable"]]
     },
     {
-        "id": "g273",
+        "id": "g266",
         "q": "sddm theme",
         "category": "scoped",
         "exhaustive": true,
         "relevant": [["opt:services.displayManager.sddm.theme"]]
     },
     {
-        "id": "g274",
+        "id": "g267",
         "q": "security.acme.certs directory",
         "category": "scoped",
         "exhaustive": true,
         "relevant": [["opt:security.acme.certs.<name>.directory"]]
     },
     {
-        "id": "g275",
+        "id": "g268",
         "q": "activationScripts",
         "category": "leaf",
         "exhaustive": true,
@@ -2079,7 +2079,7 @@
         ]
     },
     {
-        "id": "g276",
+        "id": "g269",
         "q": "extraPackages",
         "category": "leaf",
         "relevant": [
@@ -2093,7 +2093,7 @@
         ]
     },
     {
-        "id": "g277",
+        "id": "g270",
         "q": "initialHashedPassword",
         "category": "leaf",
         "relevant": [
@@ -2104,7 +2104,7 @@
         ]
     },
     {
-        "id": "g278",
+        "id": "g271",
         "q": "initialPassword",
         "category": "leaf",
         "relevant": [
@@ -2115,28 +2115,28 @@
         ]
     },
     {
-        "id": "g279",
+        "id": "g272",
         "q": "kernelPackages",
         "category": "leaf",
         "exhaustive": true,
         "relevant": [["opt:boot.kernelPackages"]]
     },
     {
-        "id": "g280",
+        "id": "g273",
         "q": "nixPath",
         "category": "leaf",
         "exhaustive": true,
         "relevant": [["opt:nix.nixPath"]]
     },
     {
-        "id": "g281",
+        "id": "g274",
         "q": "sessionVariables",
         "category": "leaf",
         "exhaustive": true,
         "relevant": [["opt:environment.sessionVariables"]]
     },
     {
-        "id": "g282",
+        "id": "g275",
         "q": "shellAliases",
         "category": "leaf",
         "exhaustive": true,
@@ -2150,20 +2150,20 @@
         ]
     },
     {
-        "id": "g283",
+        "id": "g276",
         "q": "systemPackages",
         "category": "leaf",
         "exhaustive": true,
         "relevant": [["opt:environment.systemPackages"]]
     },
     {
-        "id": "g284",
+        "id": "g277",
         "q": "timeZone",
         "category": "leaf",
         "relevant": [["opt:time.timeZone"]]
     },
     {
-        "id": "g285",
+        "id": "g278",
         "q": "wakeOnLan",
         "category": "leaf",
         "exhaustive": true,
