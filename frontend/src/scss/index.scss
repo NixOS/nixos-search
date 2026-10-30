@@ -744,10 +744,11 @@ footer {
               }
             }
 
-            // The package's own icon, next to its attribute name. Sized to the
-            // title's line so a result with one does not stand taller than a
-            // result without.
+            // The package's own icon, next to its attribute name, or the empty
+            // slot that holds its place. Sized to the title's line so a result
+            // with one does not stand taller than a result without.
             .package-icon {
+              display: inline-block;
               height: 1.2em;
               width: 1.2em;
               margin-right: 0.4em;
