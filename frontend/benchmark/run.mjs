@@ -21,9 +21,8 @@
  *   category    the one axis this query is here to exercise, e.g. `typo` or
  *               `attrpath`. Also the unit the aggregate is weighted in, so
  *               every category needs an entry in `WEIGHTS` and vice versa.
- *               Where a query fits more than one, the rarer axis wins: an
- *               uppercase name is `cased` before it is `exact`, and a bare last
- *               segment is `leaf` before it is `cased`.
+ *               Where a query fits more than one, the category that comes
+ *               first in the precedence list in `README.md` wins.
  *   relevant    tiers of ids we accept as answers, `pkg:`/`opt:` prefixed. Each
  *               tier is a list of ids tied at that rank: order *between* tiers
  *               is a claim, order *within* one is not. `[[a, b, c]]` states no

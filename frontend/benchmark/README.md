@@ -71,19 +71,43 @@ worth a curated file yet.
 ## Categories
 
 A query's `category` is the one axis it exists to exercise. Where a query fits
-more than one, the rarer axis wins - an uppercase name is `cased` before it is
-`exact`, and a bare last segment is `leaf` before it is `cased`.
+more than one, the category that comes first in this list wins:
+
+1. `intent`
+2. `scoped`
+3. `multiterm`
+4. `typo`
+5. `prefix`
+6. `leaf`
+7. `attrpath`
+8. `versioned`
+9. `cased`
+10. `dotted`
+11. `exact`
+
+The categories that change how the query relates to a name come first: a
+description, words, a misspelling, a part of a name. Then come the shapes of the
+name. `exact` comes last, because it is what remains when no other axis applies.
+For example, `llvmPackages_22.clang-tools` is `attrpath`, not `versioned` or
+`cased`, and `services.openssh.enable` is `dotted`, not `exact`.
+
+`cased` comes before `dotted` on purpose. Almost all option names that have an
+uppercase letter also have a dot. If `dotted` came first, it would take them all
+and `cased` would have no option queries. So `services.postgresql.enableTCPIP`
+is `cased`.
+
+The tables below list the categories in the same order.
 
 Shared across both tracks:
 
 | category    | what it tests                                                    |
 | ----------- | ---------------------------------------------------------------- |
-| `exact`     | the full name, spelled correctly                                 |
-| `prefix`    | a name typed part-way, as the typeahead sees it                  |
-| `typo`      | a name misspelled                                                |
-| `multiterm` | two or more words                                                |
 | `intent`    | a description of the thing rather than its name                  |
+| `multiterm` | two or more words                                                |
+| `typo`      | a name misspelled                                                |
+| `prefix`    | a name typed part-way, as the typeahead sees it                  |
 | `cased`     | mixed-case input: `MusicFree`, `services.postgresql.enableTCPIP` |
+| `exact`     | the full name, spelled correctly                                 |
 
 Packages only:
 
@@ -96,9 +120,9 @@ Options only:
 
 | category | what it tests                                              |
 | -------- | ---------------------------------------------------------- |
-| `dotted` | a literal attribute path: `services.paperless.domain`      |
 | `scoped` | a module plus the setting inside it: `nginx virtual hosts` |
 | `leaf`   | a bare last segment with no path: `systemPackages`         |
+| `dotted` | a literal attribute path: `services.paperless.domain`      |
 
 An id is a stable handle: once given, it does not change, so a diff of the query
 files shows each change to an expectation on the line where it happens. A new

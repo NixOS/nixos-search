@@ -153,7 +153,7 @@
     {
         "id": "g016",
         "q": "services.openssh.enable",
-        "category": "exact",
+        "category": "dotted",
         "exhaustive": true,
         "relevant": [
             ["opt:services.openssh.enable"],
@@ -163,34 +163,34 @@
     {
         "id": "g017",
         "q": "services.grafana.enable",
-        "category": "exact",
+        "category": "dotted",
         "exhaustive": true,
         "relevant": [["opt:services.grafana.enable"]]
     },
     {
         "id": "g018",
         "q": "networking.firewall.enable",
-        "category": "exact",
+        "category": "dotted",
         "exhaustive": true,
         "relevant": [["opt:networking.firewall.enable"]]
     },
     {
         "id": "g019",
         "q": "services.redis.servers",
-        "category": "exact",
+        "category": "dotted",
         "relevant": [["opt:services.redis.servers"]]
     },
     {
         "id": "g020",
         "q": "services.syncthing.enable",
-        "category": "exact",
+        "category": "dotted",
         "exhaustive": true,
         "relevant": [["opt:services.syncthing.enable"]]
     },
     {
         "id": "g021",
         "q": "services.printing.enable",
-        "category": "exact",
+        "category": "dotted",
         "exhaustive": true,
         "relevant": [["opt:services.printing.enable"]]
     },
@@ -1074,7 +1074,7 @@
     {
         "id": "g098",
         "q": "services.postgresql.dataDir",
-        "category": "dotted",
+        "category": "cased",
         "relevant": [["opt:services.postgresql.dataDir"]]
     },
     {
