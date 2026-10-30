@@ -70,8 +70,8 @@ worth a curated file yet.
 
 ## Categories
 
-A query's `category` is the one axis it exists to exercise. Where a query fits
-more than one, the category that comes first in this list wins:
+Where a query fits more than one `category`, the category that comes first in
+this list wins:
 
 1. `intent`
 2. `scoped`
