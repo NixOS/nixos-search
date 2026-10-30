@@ -264,6 +264,11 @@ repo = "nix-interactive"
 
 [[sources]]
 type = "github"
+owner = "George-Miao"
+repo = "flakes"
+
+[[sources]]
+type = "github"
 owner = "gmodena"
 repo = "nix-flatpak"
 
