@@ -467,11 +467,49 @@ viewSuccess :
     -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
 viewSuccess saveData nixosChannels channel showUsageDetails show hits =
+    let
+        -- Only a page that shows an icon needs room for one in each result.
+        showIconMargin =
+            List.any (\hit -> packageIconFile saveData hit.source /= Nothing) hits
+    in
     ul [ class "search-results-list" ]
         (List.map
-            (viewResultItem saveData nixosChannels channel showUsageDetails show)
+            (viewResultItem saveData showIconMargin nixosChannels channel showUsageDetails show)
             hits
         )
+
+
+{-| The desktop entries a result shows. `NoDisplay` entries exist to claim MIME
+types or URL schemes and are kept out of application menus. They still feed the
+category and file type facets, so a package remains findable by what it opens.
+-}
+displayedDesktopEntries : ResultItemSource -> List DesktopEntry
+displayedDesktopEntries source =
+    List.filter (\entry -> not entry.noDisplay) source.desktopEntries
+
+
+{-| The file under `/icons` holding the image of a desktop entry, if there is
+one to show. Icons are served as static files written by the frontend build,
+one per image, named after its contents.
+-}
+desktopIconFile : Bool -> ResultItemSource -> DesktopEntry -> Maybe String
+desktopIconFile saveData source entry =
+    if saveData then
+        Nothing
+
+    else
+        entry.icon
+            |> Maybe.andThen (\iconName -> Dict.get iconName source.desktopIcons)
+
+
+{-| The file holding the icon beside the attribute name of a package: that of
+its first displayed desktop entry with an icon.
+-}
+packageIconFile : Bool -> ResultItemSource -> Maybe String
+packageIconFile saveData source =
+    displayedDesktopEntries source
+        |> List.filterMap (desktopIconFile saveData source)
+        |> List.head
 
 
 {-| The arrow on a button that moves a screenshot row. It points forward; the
@@ -509,13 +547,14 @@ copyableCommand preClass commandText content =
 
 viewResultItem :
     Bool
+    -> Bool
     -> List NixOSChannel
     -> String
     -> Details
     -> Maybe String
     -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItem saveData nixosChannels channel showUsageDetails show item =
+viewResultItem saveData showIconMargin nixosChannels channel showUsageDetails show item =
     let
         optionals b l =
             if b then
@@ -547,21 +586,11 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
                 ]
                 [ text title ]
 
-        -- Icons are served as static files written by the frontend build, one
-        -- per image, named after its contents. A file the last deploy did not
-        -- write yet is simply not there; an `<img>` without alt text renders as
-        -- nothing rather than as a broken image, so a card degrades to the one
-        -- it showed before icons existed.
-        iconFor entry =
-            if saveData then
-                Nothing
-
-            else
-                entry.icon
-                    |> Maybe.andThen (\iconName -> Dict.get iconName item.source.desktopIcons)
-
-        viewIcon extraClass entry =
-            case iconFor entry of
+        -- A file the last deploy did not write yet is simply not there; an
+        -- `<img>` without alt text renders as nothing rather than as a broken
+        -- image, so a card degrades to the one it showed before icons existed.
+        viewIcon extraClass iconFile =
+            case iconFile of
                 Just file ->
                     -- Decorative: every entry is labelled in text beside it.
                     img
@@ -575,24 +604,16 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
                 Nothing ->
                     text ""
 
-        -- `NoDisplay` entries exist to claim MIME types or URL schemes and are
-        -- kept out of application menus. They still feed the category and file
-        -- type facets, so a package remains findable by what it opens.
         displayedEntries =
-            List.filter (\entry -> not entry.noDisplay) item.source.desktopEntries
+            displayedDesktopEntries item.source
 
         packageIcon =
-            case List.filter (\entry -> iconFor entry /= Nothing) displayedEntries of
-                entry :: _ ->
-                    viewIcon "package-icon" entry
-
-                [] ->
-                    text ""
+            viewIcon "package-icon" (packageIconFile saveData item.source)
 
         viewDesktopEntry entry =
             li []
                 (span [ class "desktop-entry-name" ]
-                    [ viewIcon "desktop-entry-icon" entry
+                    [ viewIcon "desktop-entry-icon" (desktopIconFile saveData item.source entry)
                     , text (Maybe.withDefault item.source.pname entry.desktopName)
                     ]
                     -- `GenericName` says what the application is where its name
@@ -1305,7 +1326,10 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
     in
     li
         [ class "package"
-        , classList [ ( "opened", isOpen ) ]
+
+        -- The icon is in a margin to the left of the result, thus all lines
+        -- of all results start in one column.
+        , classList [ ( "opened", isOpen ), ( "with-icon-margin", showIconMargin ) ]
         , Search.elementId item.source.attr_name
         ]
         ([ span [ class "search-result-title" ] (packageIcon :: flakeOrNixpkgs)

@@ -264,6 +264,11 @@
   margin: 0;
 }
 
+// The size of a package's icon and the gap between the icon and the
+// attribute name, relative to the font size of the attribute name.
+$package-icon-size: 1.2em;
+$package-icon-gap: 0.4em;
+
 @mixin search-result-item() {
   padding-bottom: 0;
 
@@ -744,14 +749,24 @@ footer {
               }
             }
 
-            // The package's own icon, next to its attribute name. Sized to the
-            // title's line so a result with one does not stand taller than a
-            // result without.
+            // The package's own icon, in the margin to the left of its
+            // attribute name. Sized to the title's line so a result with one
+            // does not stand taller than a result without.
             .package-icon {
-              height: 1.2em;
-              width: 1.2em;
-              margin-right: 0.4em;
+              display: inline-block;
+              height: $package-icon-size;
+              width: $package-icon-size;
+              margin-left: -($package-icon-size + $package-icon-gap);
+              margin-right: $package-icon-gap;
               vertical-align: text-bottom;
+            }
+
+            // The margin for the icon. It is on all results of a page that
+            // shows an icon, thus the lines of all results start in one
+            // column. The icon is in the title, which has 1.5 times the font
+            // size of the result.
+            &.with-icon-margin {
+              padding-left: 1.5 * ($package-icon-size + $package-icon-gap);
             }
           }
 
