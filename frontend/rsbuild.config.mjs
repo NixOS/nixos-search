@@ -2,6 +2,13 @@ import { defineConfig } from "@rsbuild/core";
 import { pluginSass } from "@rsbuild/plugin-sass";
 import * as sass from "sass";
 
+// When true, the dev server serves the icons and screenshots from `public/`,
+// which the `dev:local-images` npm script writes. Otherwise it gets them from
+// search.nixos.org. The image names are derived from their contents, thus a
+// file from search.nixos.org is the same file that a local build writes.
+const LOCAL_IMAGES = process.env.LOCAL_IMAGES === "true";
+const IMAGES_URL = "https://search.nixos.org";
+
 const FAVICON_PATH = "/images/nixos-logomark-default-gradient-none.svg";
 
 const generateOpenSearchXml = (type, title, description) => `<?xml version="1.0"?>
@@ -70,6 +77,16 @@ export default defineConfig({
                 pathRewrite: { "^/backend": "" },
                 changeOrigin: true,
             },
+            // The proxy comes before `public/` in the dev server, thus it is
+            // only set when the images are not local.
+            ...(LOCAL_IMAGES
+                ? {}
+                : Object.fromEntries(
+                      ["/icons", "/screenshots"].map((path) => [
+                          path,
+                          { target: IMAGES_URL, changeOrigin: true },
+                      ]),
+                  )),
         },
     },
     tools: {
