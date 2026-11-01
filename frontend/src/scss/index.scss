@@ -323,9 +323,12 @@ footer {
   height: 4rem;
 }
 
+// An inline icon aligns to the text baseline. Thus center the icon in a box
+// with the height of one line, which keeps the height of the button.
 .theme-toggle .theme-icon {
-  font-size: 1.4em;
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  height: 1lh;
 }
 
 // Search seatch
