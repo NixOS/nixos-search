@@ -23,7 +23,6 @@ module Search exposing
     , init
     , makeRequest
     , makeRequestTask
-    , onClickStop
     , shouldLoad
     , showMoreButton
     , trapClick
@@ -101,7 +100,7 @@ import Route
         , searchTypeToTitle
         )
 import Search.Typeahead as Typeahead
-import Svg exposing (Svg, path, rect, svg)
+import Svg exposing (path, rect, svg)
 import Svg.Attributes as SA
 import Task
 
@@ -459,7 +458,6 @@ type Details
     | ViaNixOS
     | ViaNixProfile
     | ViaNixEnv
-    | FromFlake
     | Unset
 
 
@@ -541,9 +539,7 @@ update toRoute navKey msg model nixosChannels =
         QueryInput query ->
             let
                 ( typeaheadModel, typeaheadCmd ) =
-                    Typeahead.queryChanged model.options
-                        nixosChannels
-                        model.searchType
+                    Typeahead.queryChanged model.searchType
                         model.activeOptionSource
                         model.channel
                         query
@@ -1638,16 +1634,6 @@ showMoreButton toggle isOpen =
 
 
 -- Html Event Helpers
-
-
-onClickStop : msg -> Html.Attribute msg
-onClickStop message =
-    Html.Events.custom "click" <|
-        Json.Decode.succeed
-            { message = message
-            , stopPropagation = True
-            , preventDefault = True
-            }
 
 
 trapClick : Html.Attribute (Msg a b)

@@ -314,12 +314,10 @@ makeOptionsRequest elasticsearch nixosChannels searchModel =
     Page.Options.makeRequest
         elasticsearch
         nixosChannels
-        OptionSearch
         searchModel.channel
         searchModel.query
         searchModel.from
         searchModel.size
-        searchModel.buckets
         searchModel.sort
         searchModel.activeOptionSource
 
