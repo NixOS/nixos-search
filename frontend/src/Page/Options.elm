@@ -57,7 +57,7 @@ import Json.Decode.Pipeline
 import List.Extra
 import Ports
 import RemoteData
-import Route exposing (OptionSource, SearchType)
+import Route exposing (OptionSource)
 import Search
     exposing
         ( Details
@@ -643,7 +643,7 @@ findSource nixosChannels channel source =
             else
                 let
                     version =
-                        String.dropLeft (String.length "nixos-") nixpkgsBranch
+                        String.dropLeft 6 nixpkgsBranch
                 in
                 prefixPattern ++ version
 
@@ -833,16 +833,14 @@ was designed for.
 makeRequest :
     Search.Options
     -> List NixOSChannel
-    -> SearchType
     -> String
     -> String
     -> Int
     -> Int
-    -> Maybe String
     -> Search.Sort
     -> OptionSource
     -> Cmd Msg
-makeRequest options nixosChannels _ channel query from size _ sort activeSource =
+makeRequest options nixosChannels channel query from size sort activeSource =
     let
         activeQuery : Cmd (Search.Msg ResultItemSource ResultAggregations)
         activeQuery =

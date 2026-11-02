@@ -11,7 +11,6 @@ Used for benchmarking
 -}
 
 import Json.Encode
-import Platform
 import Search
 import Search.Query
 

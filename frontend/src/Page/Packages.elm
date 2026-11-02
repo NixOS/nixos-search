@@ -1007,17 +1007,9 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
 
                 Just ( flakeRef, _ ) ->
                     let
-                        repoName =
-                            flakeRef
-                                |> String.split "/"
-                                |> List.filter (\segment -> not (String.isEmpty segment))
-                                |> List.reverse
-                                |> List.head
-                                |> Maybe.withDefault item.source.attr_name
-
                         term =
                             if item.source.attr_name == "default" && String.contains "/" flakeRef then
-                                repoName
+                                repoName item.source.attr_name flakeRef
 
                             else
                                 item.source.attr_name
@@ -1157,6 +1149,18 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
          ]
             ++ longerPackageDetails
         )
+
+
+{-| The last segment of a flake reference, or the fallback if there is no segment.
+-}
+repoName : String -> String -> String
+repoName fallback flakeRef =
+    flakeRef
+        |> String.split "/"
+        |> List.filter (\segment -> not (String.isEmpty segment))
+        |> List.reverse
+        |> List.head
+        |> Maybe.withDefault fallback
 
 
 viewFlakeUsage : String -> String -> Html Msg
