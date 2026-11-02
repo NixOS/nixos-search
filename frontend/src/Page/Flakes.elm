@@ -22,10 +22,9 @@ import Html.Attributes
         ( class
         , href
         )
-import Html.Events exposing (onClick)
 import Http exposing (Body)
-import Page.Options exposing (Msg(..))
-import Page.Packages exposing (Msg(..))
+import Page.Options
+import Page.Packages
 import Ports
 import RemoteData
 import Route
@@ -34,8 +33,7 @@ import Route
         )
 import Search
     exposing
-        ( Msg(..)
-        , NixOSChannel
+        ( NixOSChannel
         , viewFlakes
         , viewResult
         , viewSearchInput

@@ -218,23 +218,25 @@ fragmentParameters maybeFragment =
         Just frag ->
             frag
                 |> String.split "&"
-                |> List.filterMap
-                    (\pair ->
-                        case String.indexes "=" pair of
-                            [] ->
-                                Nothing
-
-                            idx :: _ ->
-                                let
-                                    k =
-                                        String.left idx pair
-
-                                    v =
-                                        String.dropLeft (idx + 1) pair
-                                in
-                                Just ( k, Maybe.withDefault v (Url.percentDecode v) )
-                    )
+                |> List.filterMap fragmentParameter
                 |> Dict.fromList
+
+
+fragmentParameter : String -> Maybe ( String, String )
+fragmentParameter pair =
+    case String.indexes "=" pair of
+        [] ->
+            Nothing
+
+        idx :: _ ->
+            let
+                k =
+                    String.left idx pair
+
+                v =
+                    String.dropLeft (idx + 1) pair
+            in
+            Just ( k, Maybe.withDefault v (Url.percentDecode v) )
 
 
 fragmentToString : Dict.Dict String String -> Maybe String

@@ -15,6 +15,7 @@ import Docs.ReviewAtDocs
 import NoConfusingPrefixOperator
 import NoDebug.Log
 import NoDebug.TodoOrToString
+import NoDeepIndentation
 import NoExposingEverything
 import NoImportingEverything
 import NoMissingTypeAnnotation
@@ -37,6 +38,7 @@ config : List Rule
 config =
     [ Docs.ReviewAtDocs.rule
     , NoConfusingPrefixOperator.rule
+    , NoDeepIndentation.rule 32
     , NoDebug.Log.rule
     , NoDebug.TodoOrToString.rule
         |> Rule.ignoreErrorsForDirectories [ "tests/" ]

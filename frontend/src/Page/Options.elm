@@ -57,7 +57,7 @@ import Json.Decode.Pipeline
 import List.Extra
 import Ports
 import RemoteData
-import Route exposing (OptionSource, SearchType)
+import Route exposing (OptionSource)
 import Search
     exposing
         ( Details
@@ -360,12 +360,6 @@ viewResultItem :
     -> Html Msg
 viewResultItem nixosChannels channel show activeSource item =
     let
-        asPre value =
-            pre [] [ text value ]
-
-        asPreCode value =
-            div [] [ pre [] [ code [ class "code-block" ] [ text value ] ] ]
-
         nameSegments =
             optionNameSegments item.source
 
@@ -375,103 +369,9 @@ viewResultItem nixosChannels channel show activeSource item =
         itemId =
             item.source.docType ++ ":" ++ item.source.name
 
-        pkgLink pkg =
-            a
-                [ href ("/packages?channel=" ++ channel ++ "&query=" ++ pkg ++ "#show=" ++ Url.percentEncode pkg) ]
-                [ code [] [ text pkg ] ]
-
         showDetails =
             if Just itemId == show then
-                let
-                    isService =
-                        item.source.docType == "service"
-                in
-                Just <|
-                    dl [ class "option-details", Html.Attributes.map SearchMsg Search.trapClick ] <|
-                        [ dt [] [ text "Name" ]
-                        , dd [] [ viewOptionNamePath channel activeSource item.source.name nameSegments ]
-                        ]
-                            ++ (item.source.description
-                                    |> Maybe.andThen Utils.showHtml
-                                    |> Maybe.map
-                                        (\description ->
-                                            [ dt [] [ text "Description" ]
-                                            , dd [] description
-                                            ]
-                                        )
-                                    |> Maybe.withDefault []
-                               )
-                            ++ (item.source.type_
-                                    |> Maybe.map
-                                        (\t ->
-                                            [ dt [] [ text "Type" ]
-                                            , dd [] [ asPre t ]
-                                            ]
-                                        )
-                                    |> Maybe.withDefault []
-                               )
-                            ++ (item.source.default
-                                    |> Maybe.map
-                                        (\default ->
-                                            [ dt [] [ text "Default" ]
-                                            , dd [] <| Maybe.withDefault [ Utils.copyable CopyToClipboard default (asPreCode default) ] (Utils.showHtml default)
-                                            ]
-                                        )
-                                    |> Maybe.withDefault []
-                               )
-                            ++ (item.source.example
-                                    |> Maybe.map
-                                        (\example ->
-                                            [ dt [] [ text "Example" ]
-                                            , dd [] <| Maybe.withDefault [ Utils.copyable CopyToClipboard example (asHighlightPreCode example) ] (Utils.showHtml example)
-                                            ]
-                                        )
-                                    |> Maybe.withDefault []
-                               )
-                            ++ (if isService then
-                                    [ dt [] [ text "About" ]
-                                    , dd []
-                                        [ a
-                                            [ href "https://nixos.org/manual/nixos/stable/#modular-services"
-                                            , Html.Attributes.target "_blank"
-                                            ]
-                                            [ text "What are modular services?" ]
-                                        ]
-                                    ]
-
-                                else
-                                    []
-                               )
-                            ++ (if isService then
-                                    case item.source.servicePackages of
-                                        [] ->
-                                            item.source.servicePackage
-                                                |> Maybe.map
-                                                    (\pkg ->
-                                                        [ dt [] [ text "Provided by package" ]
-                                                        , dd [] [ pkgLink pkg ]
-                                                        ]
-                                                    )
-                                                |> Maybe.withDefault []
-
-                                        [ single ] ->
-                                            [ dt [] [ text "Provided by package" ]
-                                            , dd [] [ pkgLink single ]
-                                            ]
-
-                                        many ->
-                                            [ dt [] [ text "Provided by packages" ]
-                                            , dd []
-                                                (List.intersperse (text ", ") (List.map pkgLink many))
-                                            ]
-
-                                else
-                                    []
-                               )
-                            ++ viewUsageSnippet item.source
-                            ++ [ dt [] [ text "Declared in" ]
-                               , dd [] <| findSource nixosChannels channel item.source
-                               ]
+                Just (viewOptionDetails nixosChannels channel activeSource nameSegments item.source)
 
             else
                 Nothing
@@ -501,6 +401,134 @@ viewResultItem nixosChannels channel show activeSource item =
                     ]
             , showDetails
             ]
+
+
+viewOptionDetails :
+    List NixOSChannel
+    -> String
+    -> OptionSource
+    -> List ( String, Maybe String )
+    -> ResultItemSource
+    -> Html Msg
+viewOptionDetails nixosChannels channel activeSource nameSegments source =
+    let
+        asPre value =
+            pre [] [ text value ]
+
+        asPreCode value =
+            div [] [ pre [] [ code [ class "code-block" ] [ text value ] ] ]
+
+        pkgLink pkg =
+            a
+                [ href ("/packages?channel=" ++ channel ++ "&query=" ++ pkg ++ "#show=" ++ Url.percentEncode pkg) ]
+                [ code [] [ text pkg ] ]
+
+        isService : Bool
+        isService =
+            source.docType == "service"
+
+        descriptionItems : List (Html Msg)
+        descriptionItems =
+            source.description
+                |> Maybe.andThen Utils.showHtml
+                |> Maybe.map
+                    (\description ->
+                        [ dt [] [ text "Description" ]
+                        , dd [] description
+                        ]
+                    )
+                |> Maybe.withDefault []
+
+        typeItems : List (Html Msg)
+        typeItems =
+            source.type_
+                |> Maybe.map
+                    (\t ->
+                        [ dt [] [ text "Type" ]
+                        , dd [] [ asPre t ]
+                        ]
+                    )
+                |> Maybe.withDefault []
+
+        defaultItems : List (Html Msg)
+        defaultItems =
+            source.default
+                |> Maybe.map
+                    (\default ->
+                        [ dt [] [ text "Default" ]
+                        , dd [] <| Maybe.withDefault [ Utils.copyable CopyToClipboard default (asPreCode default) ] (Utils.showHtml default)
+                        ]
+                    )
+                |> Maybe.withDefault []
+
+        exampleItems : List (Html Msg)
+        exampleItems =
+            source.example
+                |> Maybe.map
+                    (\example ->
+                        [ dt [] [ text "Example" ]
+                        , dd [] <| Maybe.withDefault [ Utils.copyable CopyToClipboard example (asHighlightPreCode example) ] (Utils.showHtml example)
+                        ]
+                    )
+                |> Maybe.withDefault []
+
+        aboutItems : List (Html Msg)
+        aboutItems =
+            if isService then
+                [ dt [] [ text "About" ]
+                , dd []
+                    [ a
+                        [ href "https://nixos.org/manual/nixos/stable/#modular-services"
+                        , Html.Attributes.target "_blank"
+                        ]
+                        [ text "What are modular services?" ]
+                    ]
+                ]
+
+            else
+                []
+
+        providedByPackage : String -> List (Html Msg)
+        providedByPackage pkg =
+            [ dt [] [ text "Provided by package" ]
+            , dd [] [ pkgLink pkg ]
+            ]
+
+        packageItems : List (Html Msg)
+        packageItems =
+            if isService then
+                case source.servicePackages of
+                    [] ->
+                        source.servicePackage
+                            |> Maybe.map providedByPackage
+                            |> Maybe.withDefault []
+
+                    [ single ] ->
+                        providedByPackage single
+
+                    many ->
+                        [ dt [] [ text "Provided by packages" ]
+                        , dd []
+                            (List.intersperse (text ", ") (List.map pkgLink many))
+                        ]
+
+            else
+                []
+    in
+    dl [ class "option-details", Html.Attributes.map SearchMsg Search.trapClick ] <|
+        [ dt [] [ text "Name" ]
+        , dd [] [ viewOptionNamePath channel activeSource source.name nameSegments ]
+        ]
+            ++ descriptionItems
+            ++ typeItems
+            ++ defaultItems
+            ++ exampleItems
+            ++ aboutItems
+            ++ packageItems
+            ++ viewUsageSnippet source
+            ++ [ dt [] [ text "Declared in" ]
+               , dd [] <| findSource nixosChannels channel source
+               ]
 
 
 asHighlightPreCode : String -> Html msg
@@ -615,7 +643,7 @@ findSource nixosChannels channel source =
             else
                 let
                     version =
-                        String.dropLeft (String.length "nixos-") nixpkgsBranch
+                        String.dropLeft 6 nixpkgsBranch
                 in
                 prefixPattern ++ version
 
@@ -805,16 +833,14 @@ was designed for.
 makeRequest :
     Search.Options
     -> List NixOSChannel
-    -> SearchType
     -> String
     -> String
     -> Int
     -> Int
-    -> Maybe String
     -> Search.Sort
     -> OptionSource
     -> Cmd Msg
-makeRequest options nixosChannels _ channel query from size _ sort activeSource =
+makeRequest options nixosChannels channel query from size sort activeSource =
     let
         activeQuery : Cmd (Search.Msg ResultItemSource ResultAggregations)
         activeQuery =
@@ -848,20 +874,7 @@ makeRequest options nixosChannels _ channel query from size _ sort activeSource 
                 decodeResultItemSource
                 decodeResultAggregations
                 options
-                |> Task.attempt
-                    (\result ->
-                        case result of
-                            Ok r ->
-                                Search.SourceCount
-                                    (Route.optionSourceId source)
-                                    r.hits.total.value
-
-                            Err _ ->
-                                -- Swallow the error; the badge just won't
-                                -- appear for that tab. The active tab's
-                                -- own failure mode is handled by `result`.
-                                Search.NoOp
-                    )
+                |> Task.attempt (sourceCountMsg source)
 
         inactiveSources =
             Route.allOptionSources
@@ -870,6 +883,24 @@ makeRequest options nixosChannels _ channel query from size _ sort activeSource 
     (activeQuery :: List.map countQuery inactiveSources)
         |> Cmd.batch
         |> Cmd.map SearchMsg
+
+
+sourceCountMsg :
+    OptionSource
+    -> Result Http.Error (Search.SearchResult ResultItemSource ResultAggregations)
+    -> Search.Msg ResultItemSource ResultAggregations
+sourceCountMsg source result =
+    case result of
+        Ok r ->
+            Search.SourceCount
+                (Route.optionSourceId source)
+                r.hits.total.value
+
+        Err _ ->
+            -- Swallow the error; the badge just won't
+            -- appear for that tab. The active tab's
+            -- own failure mode is handled by `result`.
+            Search.NoOp
 
 
 makeRequestBody : List String -> String -> Int -> Int -> Search.Sort -> Body
