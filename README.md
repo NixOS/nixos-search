@@ -77,6 +77,8 @@ nix develop -c npm --prefix=frontend run review
 
 to check the code. You can add `-- --fix` for automatic fixes, and `-- --watch` to run it in watch mode during development.
 
+The `Frontend: Check` workflow runs `elm-review` and `elm-test` for each pull request that changes `frontend/`.
+
 ### Code style
 
 When code is deeply indented, a small change to the logic can change the indentation of many lines, and thus give a large diff. Thus the `NoDeepIndentation` rule of `elm-review` reports a top-level function with a line that is indented more than 32 spaces. Lines in multi-line strings and comments are not examined. To keep the indentation low:
