@@ -82,7 +82,7 @@ type = "github"
 owner = "anpandey"
 repo = "numen-nix"
 
-[[source]]
+[[sources]]
 type = "github"
 owner = "Ap6661"
 repo = "septabee-flake"
@@ -242,7 +242,7 @@ type = "github"
 owner = "edolstra"
 repo = "flake-compat"
 
-[[source]]
+[[sources]]
 type = "github"
 owner = "JuxGD"
 repo = "septabee-nix"
