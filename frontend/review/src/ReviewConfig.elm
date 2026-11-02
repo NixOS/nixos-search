@@ -13,6 +13,7 @@ when inside the directory containing this file.
 
 import Docs.ReviewAtDocs
 import NoConfusingPrefixOperator
+import NoDeepIndentation
 import NoDebug.Log
 import NoDebug.TodoOrToString
 import NoExposingEverything
@@ -37,6 +38,7 @@ config : List Rule
 config =
     [ Docs.ReviewAtDocs.rule
     , NoConfusingPrefixOperator.rule
+    , NoDeepIndentation.rule 32
     , NoDebug.Log.rule
     , NoDebug.TodoOrToString.rule
         |> Rule.ignoreErrorsForDirectories [ "tests/" ]

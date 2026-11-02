@@ -77,6 +77,23 @@ nix develop -c npm --prefix=frontend run review
 
 to check the code. You can add `-- --fix` for automatic fixes, and `-- --watch` to run it in watch mode during development.
 
+### Code style
+
+When code is deeply indented, a small change to the logic can change the indentation of many lines, and thus give a large diff. Thus the `NoDeepIndentation` rule of `elm-review` reports a top-level function with a line that is indented more than 32 spaces. Lines in multi-line strings and comments are not examined. To keep the indentation low:
+
+- Give inner values a name in a `let`, or in a top-level function with a type annotation.
+- Make nested JSON from the inside out with a pipeline. `Json.Encode.Extra.wrap` puts a value in an object as its only field, and `Json.Encode.Extra.optional` gives a field only if there is a value:
+
+  ```elm
+  filters =
+      Json.Encode.list Json.Encode.object clauses
+          |> wrap "must"
+          |> wrap "bool"
+  ```
+
+- Move a long lambda or a deep sub-view into a top-level function.
+- Bind a `case` or an `if` in a `let`, not inline in a list concatenation.
+
 ### End-to-end testing
 
 If you want to do a full round-trip test of importing information with
