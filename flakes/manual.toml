@@ -89,6 +89,11 @@ repo = "septabee-flake"
 
 [[sources]]
 type = "github"
+owner = "arcmira"
+repo = "integrations"
+
+[[sources]]
+type = "github"
 owner = "astro"
 repo = "deadnix"
 
