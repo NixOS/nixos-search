@@ -13,9 +13,9 @@ when inside the directory containing this file.
 
 import Docs.ReviewAtDocs
 import NoConfusingPrefixOperator
-import NoDeepIndentation
 import NoDebug.Log
 import NoDebug.TodoOrToString
+import NoDeepIndentation
 import NoExposingEverything
 import NoImportingEverything
 import NoMissingTypeAnnotation
