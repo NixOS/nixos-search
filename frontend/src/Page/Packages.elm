@@ -2121,15 +2121,21 @@ decodeResultPackageHydraPath =
 
 decodeResultAggregations : Json.Decode.Decoder ResultAggregations
 decodeResultAggregations =
+    let
+        -- Each facet is counted inside a `filter` aggregation of the same
+        -- name, see `Search.Query.toAggregations`.
+        filtered field =
+            Json.Decode.at [ field, field ] Search.decodeAggregation
+    in
     Json.Decode.map8 ResultAggregations
         (Json.Decode.field "all" decodeAggregations)
-        (Json.Decode.field "package_platforms" Search.decodeAggregation)
-        (Json.Decode.field "package_attr_set" Search.decodeAggregation)
-        (Json.Decode.field "package_maintainers_set" Search.decodeAggregation)
-        (Json.Decode.field "package_teams_set" Search.decodeAggregation)
-        (Json.Decode.field "package_license_set" Search.decodeAggregation)
-        (Json.Decode.field "package_categories_set" Search.decodeAggregation)
-        (Json.Decode.field "package_mime_types_set" Search.decodeAggregation)
+        (filtered "package_platforms")
+        (filtered "package_attr_set")
+        (filtered "package_maintainers_set")
+        (filtered "package_teams_set")
+        (filtered "package_license_set")
+        (filtered "package_categories_set")
+        (filtered "package_mime_types_set")
 
 
 decodeAggregations : Json.Decode.Decoder Aggregations
