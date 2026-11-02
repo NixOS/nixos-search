@@ -15,8 +15,8 @@
   --search-sidebar-container-border-color: #ccc;
   --search-sidebar-link-color: var(--text-color);
   --hovered-item-background: #eee;
-  --selected-item-background: var(--light-blue);
-  --selected-item-color: #000;
+  --selected-item-background: #dedede;
+  --selected-item-color: var(--text-color);
   /* Divider between search results */
   --search-result-divider-line-color: #ccc;
   /* Gets overwritten by bootstrap; has no effect */
@@ -35,6 +35,16 @@
   --link-color: #007dbb;
   /* Background color for the small badges with number in the sidebar */
   --badge-background: #757575;
+
+  --button-background: #f5f5f5;
+  --button-border-color: #d4d4d4;
+  --button-hover-background: #ebebeb;
+  --button-active-background: var(--selected-item-background);
+  --button-active-hover-background: #d4d4d4;
+  --button-active-color: var(--selected-item-color);
+
+  /* Headerbar background color */
+  --headerbar-background-color: #fafafa;
 
   --orange-75: #e99861;
 
@@ -64,9 +74,11 @@
     --background-color: #242424;
     --hover-background: #ffffff13;
     --button-background: #393939;
+    --button-border-color: transparent;
     --button-hover-background: #454545;
     --button-active-background: #656565;
     --button-active-hover-background: #707070;
+    --button-active-color: var(--text-color);
     --terminal-background: #353535;
     --terminal-color: var(--text-color);
     --line-color: #ffffff26; // Color for separating lines
@@ -76,6 +88,7 @@
     --search-sidebar-container-border-color: var(--line-color);
     --search-sidebar-link-color: var(--text-color);
     --hovered-item-background: var(--hover-background);
+    --selected-item-background: var(--light-blue);
     --selected-item-color: #000;
     /* Divider between search results */
     --search-result-divider-line-color: var(--line-color);
@@ -140,18 +153,16 @@
 
   .btn.btn {
     margin: 0;
-    border-left: none;
-    border-right: none;
     background: var(--button-background);
     box-shadow: none;
     text-shadow: none;
-    border-bottom: none;
     color: var(--text-color);
     transition: background 0.2s;
     font-weight: bold;
 
     &.active {
       background: var(--button-active-background);
+      color: var(--button-active-color);
 
       &:hover {
         background: var(--button-active-hover-background);
@@ -170,7 +181,6 @@
 
   .sort-container {
     background: var(--button-background);
-    border: 1px solid var(--line-color);
     color: var(--text-color);
     text-shadow: none;
     box-shadow: none;
@@ -196,7 +206,7 @@
   .navbar {
     &>.navbar-inner {
       background: var(--headerbar-background-color);
-      border-bottom: none;
+      border-bottom-color: transparent;
 
       li>a {
         color: var(--text-color);

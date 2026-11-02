@@ -82,6 +82,8 @@
       cursor: pointer;
       font-size: 14px;
       user-select: none;
+      // Change the background and the border at the same time.
+      transition: none;
 
       &:hover,
       &:focus {
