@@ -77,6 +77,8 @@ nix develop -c npm --prefix=frontend run review
 
 to check the code. You can add `-- --fix` for automatic fixes, and `-- --watch` to run it in watch mode during development.
 
+The `Frontend: Check` workflow runs `elm-review` and `elm-test` for each pull request that changes `frontend/`.
+
 ### End-to-end testing
 
 If you want to do a full round-trip test of importing information with
