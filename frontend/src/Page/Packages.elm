@@ -715,67 +715,86 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
                         )
                     ]
 
+        versionItems : List (Html Msg)
+        versionItems =
+            optionals (not (String.isEmpty item.source.pversion))
+                [ li []
+                    [ text "Version: "
+                    , strong [] [ text item.source.pversion ]
+                    ]
+                ]
+
+        outputItems : List (Html Msg)
+        outputItems =
+            let
+                defaultOutput : List (Html Msg)
+                defaultOutput =
+                    item.source.default_output
+                        |> Maybe.map (\d -> strong [] [ text d ])
+                        |> Maybe.map List.singleton
+                        |> Maybe.withDefault []
+
+                otherOutputs : List (Html Msg)
+                otherOutputs =
+                    item.source.outputs
+                        |> List.filter (\o -> Just o /= item.source.default_output)
+                        |> List.sort
+                        |> List.map (\o -> text o)
+            in
+            optionals (List.length item.source.outputs > 1)
+                [ li []
+                    [ text "Outputs: "
+                    , inlineListCode (defaultOutput ++ otherOutputs)
+                    ]
+                ]
+
+        homepageItems : List (Html Msg)
+        homepageItems =
+            item.source.homepage
+                |> List.head
+                |> Maybe.map
+                    (\x ->
+                        [ li [ trapClick ]
+                            [ createShortDetailsItem "🌐 Homepage" x ]
+                        ]
+                    )
+                |> Maybe.withDefault []
+
+        licenseItems : List (Html Msg)
+        licenseItems =
+            case item.source.licenseExpression of
+                Just expression ->
+                    [ li []
+                        (text "License: "
+                            :: renderLicenseExpression expression
+                        )
+                    ]
+
+                Nothing ->
+                    let
+                        licenses : List (Html Msg)
+                        licenses =
+                            item.source.licenses
+                                |> List.map renderLicenseLeaf
+                    in
+                    optionals (not (List.isEmpty licenses))
+                        [ li []
+                            [ text "License: "
+                            , inlineListCode licenses
+                            ]
+                        ]
+
         shortPackageDetails =
             ul [ class "package-short-details" ]
                 (li []
                     [ text "Name: "
                     , code [ class "package-name" ] [ text item.source.pname ]
                     ]
-                    :: (optionals (not (String.isEmpty item.source.pversion))
-                            [ li []
-                                [ text "Version: "
-                                , strong [] [ text item.source.pversion ]
-                                ]
-                            ]
-                            ++ optionals (List.length item.source.outputs > 1)
-                                [ li []
-                                    [ text "Outputs: "
-                                    , inlineListCode
-                                        ((item.source.default_output
-                                            |> Maybe.map (\d -> strong [] [ text d ])
-                                            |> Maybe.map List.singleton
-                                            |> Maybe.withDefault []
-                                         )
-                                            ++ (item.source.outputs
-                                                    |> List.filter (\o -> Just o /= item.source.default_output)
-                                                    |> List.sort
-                                                    |> List.map (\o -> text o)
-                                               )
-                                        )
-                                    ]
-                                ]
-                            ++ (item.source.homepage
-                                    |> List.head
-                                    |> Maybe.map
-                                        (\x ->
-                                            [ li [ trapClick ]
-                                                [ createShortDetailsItem "🌐 Homepage" x ]
-                                            ]
-                                        )
-                                    |> Maybe.withDefault []
-                               )
+                    :: (versionItems
+                            ++ outputItems
+                            ++ homepageItems
                             ++ renderSource item nixosChannels channel trapClick createShortDetailsItem createGithubUrl
-                            ++ (case item.source.licenseExpression of
-                                    Just expression ->
-                                        [ li []
-                                            (text "License: "
-                                                :: renderLicenseExpression expression
-                                            )
-                                        ]
-
-                                    Nothing ->
-                                        let
-                                            licenses =
-                                                item.source.licenses
-                                                    |> List.map renderLicenseLeaf
-                                        in
-                                        optionals (not (List.isEmpty licenses))
-                                            [ li []
-                                                [ text "License: "
-                                                , inlineListCode licenses
-                                                ]
-                                            ]
-                               )
+                            ++ licenseItems
                        )
                 )
 
@@ -853,11 +872,7 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
                             []
 
                         nonEmptyScope ->
-                            [ ul []
-                                [ li []
-                                    [ em [] [ text nonEmptyScope ] ]
-                                ]
-                            ]
+                            [ ul [] [ li [] [ em [] [ text nonEmptyScope ] ] ] ]
             in
             li [] <|
                 case Maybe.withDefault [] team.githubTeams of
@@ -1027,34 +1042,40 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
                 -- `package_dep_count` is absent both for packages without
                 -- dependents and for packages not evaluated on x86_64-linux,
                 -- thus do not show 0.
+                depCountItem : Maybe (Html Msg)
                 depCountItem =
                     item.source.depCount
-                        |> Maybe.map
-                            (\count ->
-                                li []
-                                    [ span [ title "Number of packages in nixpkgs that use this package as a direct dependency, on x86_64-linux" ]
-                                        [ text (pluralize count "dependent" "dependents") ]
-                                    ]
-                            )
+                        |> Maybe.map viewDepCount
 
+                viewDepCount : Int -> Html Msg
+                viewDepCount count =
+                    li []
+                        [ span [ title "Number of packages in nixpkgs that use this package as a direct dependency, on x86_64-linux" ]
+                            [ text (pluralize count "dependent" "dependents") ]
+                        ]
+
+                repologyItem : Maybe (Html Msg)
                 repologyItem =
                     item.source.repologyRepos
-                        |> Maybe.map
-                            (\count ->
-                                li []
-                                    [ span [ title "Number of package repositories that contain this project, as counted by Repology" ]
-                                        [ text (pluralize count "repository" "repositories") ]
-                                    , text " on "
-                                    , a
-                                        [ href
-                                            ("https://repology.org/tools/project-by?repo=nix_unstable&name_type=srcname&target_page=project_versions&name="
-                                                ++ Url.percentEncode item.source.attr_name
-                                            )
-                                        , target "_blank"
-                                        ]
-                                        [ text "Repology" ]
-                                    ]
-                            )
+                        |> Maybe.map viewRepologyCount
+
+                repologyUrl : String
+                repologyUrl =
+                    "https://repology.org/tools/project-by?repo=nix_unstable&name_type=srcname&target_page=project_versions&name="
+                        ++ Url.percentEncode item.source.attr_name
+
+                viewRepologyCount : Int -> Html Msg
+                viewRepologyCount count =
+                    li []
+                        [ span [ title "Number of package repositories that contain this project, as counted by Repology" ]
+                            [ text (pluralize count "repository" "repositories") ]
+                        , text " on "
+                        , a
+                            [ href repologyUrl
+                            , target "_blank"
+                            ]
+                            [ text "Repology" ]
+                        ]
             in
             case List.filterMap identity [ depCountItem, repologyItem ] of
                 [] ->
@@ -1076,159 +1097,10 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
                         )
                     , case item.source.flakeUrl of
                         Just ( flakeUrl, _ ) ->
-                            div [ class "package-usage" ]
-                                [ fieldset
-                                    [ class "radio-group-tabs usage-radios" ]
-                                    [ legend [ class "usage-title" ]
-                                        [ text "Usage" ]
-                                    , div [ class "radio-tabs-list" ]
-                                        [ label
-                                            [ class "usage-radio active" ]
-                                            [ text "Install from flake"
-                                            , input
-                                                [ type_ "radio"
-                                                , name ("usage-method-" ++ item.source.attr_name)
-                                                , checked True
-                                                ]
-                                                []
-                                            ]
-                                        ]
-                                    ]
-                                , div
-                                    [ class "tab-content" ]
-                                    [ copyableCommand "code-block shell-command"
-                                        ("nix profile add " ++ flakeUrl ++ "#" ++ item.source.attr_name)
-                                        [ text "nix profile add "
-                                        , strong [] [ text flakeUrl ]
-                                        , text "#"
-                                        , em [] [ text item.source.attr_name ]
-                                        ]
-                                    ]
-                                ]
+                            viewFlakeUsage item.source.attr_name flakeUrl
 
                         Nothing ->
-                            let
-                                currentMethod =
-                                    if showUsageDetails == Search.Unset then
-                                        Search.ViaNixShell
-
-                                    else
-                                        showUsageDetails
-
-                                methods =
-                                    [ ( Search.ViaNixShell, "nix-shell", False )
-                                    , ( Search.ViaNixOS, "NixOS Configuration", False )
-                                    , ( Search.ViaNixProfile, "nix profile", False )
-                                    , ( Search.ViaNixEnv, "nix-env", True )
-                                    ]
-                            in
-                            div [ class "package-usage" ]
-                                [ fieldset
-                                    [ class "radio-group-tabs usage-radios" ]
-                                    [ legend [ class "usage-title" ]
-                                        [ text "Usage" ]
-                                    , div [ class "radio-tabs-list" ]
-                                        (List.map
-                                            (\( method, labelText, isDeprecated ) ->
-                                                let
-                                                    isActive =
-                                                        currentMethod == method
-                                                in
-                                                label
-                                                    [ classList
-                                                        [ ( "usage-radio", True )
-                                                        , ( "active", isActive )
-                                                        , ( "deprecated", isDeprecated )
-                                                        ]
-                                                    ]
-                                                    [ text labelText
-                                                    , input
-                                                        [ type_ "radio"
-                                                        , name ("usage-method-" ++ item.source.attr_name)
-                                                        , checked isActive
-                                                        , onClick <| SearchMsg <| Search.ShowUsageDetails method
-                                                        ]
-                                                        []
-                                                    ]
-                                            )
-                                            methods
-                                        )
-                                    ]
-                                , div
-                                    [ class "tab-content" ]
-                                    (case currentMethod of
-                                        Search.ViaNixEnv ->
-                                            [ p []
-                                                [ strong [] [ text "Warning:" ]
-                                                , text " Using "
-                                                , code [] [ text "nix-env" ]
-                                                , text """
-                                                permanently modifies a local profile of installed packages.
-                                                This must be updated and maintained by the user in the same
-                                                way as with a traditional package manager, foregoing many
-                                                of the benefits that make Nix uniquely powerful. Using
-                                                """
-                                                , code [] [ text "nix-shell" ]
-                                                , text """
-                                                or a NixOS configuration is recommended instead.
-                                                """
-                                                ]
-                                            , p [] [ strong [] [ text "On NixOS:" ] ]
-                                            , copyableCommand "code-block shell-command"
-                                                ("nix-env -iA nixos." ++ item.source.attr_name)
-                                                [ text "nix-env -iA nixos."
-                                                , strong [] [ text item.source.attr_name ]
-                                                ]
-                                            , p [] []
-                                            , p [] [ strong [] [ text "On Non NixOS:" ] ]
-                                            , copyableCommand "code-block shell-command"
-                                                ("# without flakes:\nnix-env -iA nixpkgs." ++ item.source.attr_name ++ "\n# with flakes:\nnix profile add nixpkgs#" ++ item.source.attr_name)
-                                                [ text "# without flakes:\nnix-env -iA nixpkgs."
-                                                , strong [] [ text item.source.attr_name ]
-                                                , text "\n# with flakes:\nnix profile add nixpkgs#"
-                                                , strong [] [ text item.source.attr_name ]
-                                                ]
-                                            ]
-
-                                        Search.ViaNixOS ->
-                                            [ p []
-                                                [ text "Add the following Nix code to your NixOS Configuration, usually located in "
-                                                , strong [] [ text "/etc/nixos/configuration.nix" ]
-                                                ]
-                                            , copyableCommand "code-block"
-                                                ("  environment.systemPackages = [\n    pkgs." ++ item.source.attr_name ++ "\n  ];")
-                                                [ text <| "  environment.systemPackages = [\n    pkgs."
-                                                , strong [] [ text item.source.attr_name ]
-                                                , text <| "\n  ];"
-                                                ]
-                                            ]
-
-                                        Search.ViaNixProfile ->
-                                            [ copyableCommand "code-block shell-command"
-                                                ("nix profile add nixpkgs#" ++ item.source.attr_name)
-                                                [ text "nix profile add nixpkgs#"
-                                                , strong [] [ text item.source.attr_name ]
-                                                ]
-                                            ]
-
-                                        _ ->
-                                            [ p []
-                                                [ text """
-                                                A nix-shell will temporarily modify
-                                                your $PATH environment variable.
-                                                This can be used to try a piece of
-                                                software before deciding to
-                                                permanently install it.
-                                              """
-                                                ]
-                                            , copyableCommand "code-block shell-command"
-                                                ("nix-shell -p " ++ item.source.attr_name)
-                                                [ text "nix-shell -p "
-                                                , strong [] [ text item.source.attr_name ]
-                                                ]
-                                            ]
-                                    )
-                                ]
+                            viewNixpkgsUsage item.source.attr_name showUsageDetails
                     , programs
                     , desktopEntries
                     , screenshots
@@ -1239,37 +1111,7 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
                         text ""
 
                       else
-                        div []
-                            [ h4 []
-                                [ text "Modular Services"
-                                , text " "
-                                , a
-                                    [ href "https://nixos.org/manual/nixos/stable/#modular-services"
-                                    , Html.Attributes.target "_blank"
-                                    , Html.Attributes.title "What are modular services?"
-                                    ]
-                                    [ text "(?)" ]
-                                ]
-                            , ul []
-                                (List.map
-                                    (\mod_ ->
-                                        let
-                                            suffix =
-                                                if mod_ == "default" then
-                                                    ""
-
-                                                else
-                                                    "." ++ mod_
-                                        in
-                                        li []
-                                            [ a
-                                                [ href ("/options?channel=" ++ channel ++ "&query=" ++ item.source.attr_name ++ "&include_nixos_options=0") ]
-                                                [ code [] [ text ("pkgs." ++ item.source.attr_name ++ ".services" ++ suffix) ] ]
-                                            ]
-                                    )
-                                    item.source.modularServices
-                                )
-                            ]
+                        viewModularServices channel item.source.attr_name item.source.modularServices
                     ]
                 ]
 
@@ -1315,6 +1157,207 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
          ]
             ++ longerPackageDetails
         )
+
+
+viewFlakeUsage : String -> String -> Html Msg
+viewFlakeUsage attrName flakeUrl =
+    div [ class "package-usage" ]
+        [ fieldset
+            [ class "radio-group-tabs usage-radios" ]
+            [ legend [ class "usage-title" ]
+                [ text "Usage" ]
+            , div [ class "radio-tabs-list" ]
+                [ label
+                    [ class "usage-radio active" ]
+                    [ text "Install from flake"
+                    , input
+                        [ type_ "radio"
+                        , name ("usage-method-" ++ attrName)
+                        , checked True
+                        ]
+                        []
+                    ]
+                ]
+            ]
+        , div
+            [ class "tab-content" ]
+            [ copyableCommand "code-block shell-command"
+                ("nix profile add " ++ flakeUrl ++ "#" ++ attrName)
+                [ text "nix profile add "
+                , strong [] [ text flakeUrl ]
+                , text "#"
+                , em [] [ text attrName ]
+                ]
+            ]
+        ]
+
+
+viewNixpkgsUsage : String -> Details -> Html Msg
+viewNixpkgsUsage attrName showUsageDetails =
+    let
+        currentMethod : Details
+        currentMethod =
+            if showUsageDetails == Search.Unset then
+                Search.ViaNixShell
+
+            else
+                showUsageDetails
+
+        methods : List ( Details, String, Bool )
+        methods =
+            [ ( Search.ViaNixShell, "nix-shell", False )
+            , ( Search.ViaNixOS, "NixOS Configuration", False )
+            , ( Search.ViaNixProfile, "nix profile", False )
+            , ( Search.ViaNixEnv, "nix-env", True )
+            ]
+    in
+    div [ class "package-usage" ]
+        [ fieldset
+            [ class "radio-group-tabs usage-radios" ]
+            [ legend [ class "usage-title" ]
+                [ text "Usage" ]
+            , div [ class "radio-tabs-list" ]
+                (List.map (viewUsageMethod attrName currentMethod) methods)
+            ]
+        , div
+            [ class "tab-content" ]
+            (viewUsageInstructions attrName currentMethod)
+        ]
+
+
+viewUsageMethod : String -> Details -> ( Details, String, Bool ) -> Html Msg
+viewUsageMethod attrName currentMethod ( method, labelText, isDeprecated ) =
+    let
+        isActive : Bool
+        isActive =
+            currentMethod == method
+    in
+    label
+        [ classList
+            [ ( "usage-radio", True )
+            , ( "active", isActive )
+            , ( "deprecated", isDeprecated )
+            ]
+        ]
+        [ text labelText
+        , input
+            [ type_ "radio"
+            , name ("usage-method-" ++ attrName)
+            , checked isActive
+            , onClick <| SearchMsg <| Search.ShowUsageDetails method
+            ]
+            []
+        ]
+
+
+viewUsageInstructions : String -> Details -> List (Html Msg)
+viewUsageInstructions attrName currentMethod =
+    case currentMethod of
+        Search.ViaNixEnv ->
+            [ p []
+                [ strong [] [ text "Warning:" ]
+                , text " Using "
+                , code [] [ text "nix-env" ]
+                , text """
+                                                permanently modifies a local profile of installed packages.
+                                                This must be updated and maintained by the user in the same
+                                                way as with a traditional package manager, foregoing many
+                                                of the benefits that make Nix uniquely powerful. Using
+                                                """
+                , code [] [ text "nix-shell" ]
+                , text """
+                                                or a NixOS configuration is recommended instead.
+                                                """
+                ]
+            , p [] [ strong [] [ text "On NixOS:" ] ]
+            , copyableCommand "code-block shell-command"
+                ("nix-env -iA nixos." ++ attrName)
+                [ text "nix-env -iA nixos."
+                , strong [] [ text attrName ]
+                ]
+            , p [] []
+            , p [] [ strong [] [ text "On Non NixOS:" ] ]
+            , copyableCommand "code-block shell-command"
+                ("# without flakes:\nnix-env -iA nixpkgs." ++ attrName ++ "\n# with flakes:\nnix profile add nixpkgs#" ++ attrName)
+                [ text "# without flakes:\nnix-env -iA nixpkgs."
+                , strong [] [ text attrName ]
+                , text "\n# with flakes:\nnix profile add nixpkgs#"
+                , strong [] [ text attrName ]
+                ]
+            ]
+
+        Search.ViaNixOS ->
+            [ p []
+                [ text "Add the following Nix code to your NixOS Configuration, usually located in "
+                , strong [] [ text "/etc/nixos/configuration.nix" ]
+                ]
+            , copyableCommand "code-block"
+                ("  environment.systemPackages = [\n    pkgs." ++ attrName ++ "\n  ];")
+                [ text <| "  environment.systemPackages = [\n    pkgs."
+                , strong [] [ text attrName ]
+                , text <| "\n  ];"
+                ]
+            ]
+
+        Search.ViaNixProfile ->
+            [ copyableCommand "code-block shell-command"
+                ("nix profile add nixpkgs#" ++ attrName)
+                [ text "nix profile add nixpkgs#"
+                , strong [] [ text attrName ]
+                ]
+            ]
+
+        _ ->
+            [ p []
+                [ text """
+                                                A nix-shell will temporarily modify
+                                                your $PATH environment variable.
+                                                This can be used to try a piece of
+                                                software before deciding to
+                                                permanently install it.
+                                              """
+                ]
+            , copyableCommand "code-block shell-command"
+                ("nix-shell -p " ++ attrName)
+                [ text "nix-shell -p "
+                , strong [] [ text attrName ]
+                ]
+            ]
+
+
+viewModularServices : String -> String -> List String -> Html msg
+viewModularServices channel attrName modularServices =
+    div []
+        [ h4 []
+            [ text "Modular Services"
+            , text " "
+            , a
+                [ href "https://nixos.org/manual/nixos/stable/#modular-services"
+                , Html.Attributes.target "_blank"
+                , Html.Attributes.title "What are modular services?"
+                ]
+                [ text "(?)" ]
+            ]
+        , ul [] (List.map (viewModularService channel attrName) modularServices)
+        ]
+
+
+viewModularService : String -> String -> String -> Html msg
+viewModularService channel attrName mod_ =
+    let
+        suffix : String
+        suffix =
+            if mod_ == "default" then
+                ""
+
+            else
+                "." ++ mod_
+    in
+    li []
+        [ a
+            [ href ("/options?channel=" ++ channel ++ "&query=" ++ attrName ++ "&include_nixos_options=0") ]
+            [ code [] [ text ("pkgs." ++ attrName ++ ".services" ++ suffix) ] ]
+        ]
 
 
 inlineListElementsCopyableCode : (a -> String) -> (a -> String) -> (a -> Html Msg) -> List a -> Html Msg
