@@ -283,17 +283,7 @@ attemptQuery (( model, _ ) as pair) =
                         Cmd.batch
                             [ cmd
                             , Cmd.map OptionsMsg <|
-                                Page.Options.makeRequest
-                                    model.elasticsearch
-                                    model.nixosChannels
-                                    OptionSearch
-                                    searchModel.channel
-                                    searchModel.query
-                                    searchModel.from
-                                    searchModel.size
-                                    searchModel.buckets
-                                    searchModel.sort
-                                    searchModel.activeOptionSource
+                                makeOptionsRequest model.elasticsearch model.nixosChannels searchModel
                             ]
                     )
                     pair
@@ -317,6 +307,21 @@ attemptQuery (( model, _ ) as pair) =
 
         _ ->
             pair
+
+
+makeOptionsRequest : Search.Options -> List NixOSChannel -> Page.Options.Model -> Cmd Page.Options.Msg
+makeOptionsRequest elasticsearch nixosChannels searchModel =
+    Page.Options.makeRequest
+        elasticsearch
+        nixosChannels
+        OptionSearch
+        searchModel.channel
+        searchModel.query
+        searchModel.from
+        searchModel.size
+        searchModel.buckets
+        searchModel.sort
+        searchModel.activeOptionSource
 
 
 pageMatch : Page -> Page -> Bool
@@ -540,22 +545,8 @@ view model =
                     [ div [ class "navbar navbar-static-top" ]
                         [ div [ class "navbar-inner" ]
                             [ div [ class "container" ]
-                                [ a [ class "brand", href "https://nixos.org" ]
-                                    [ img
-                                        [ alt "NixOS logo"
-                                        , src
-                                            (if model.isPrideMonth then
-                                                "/images/nixos-logomark-rainbow-gradient-none.svg"
-
-                                             else
-                                                "/images/nixos-logomark-default-gradient-none.svg"
-                                            )
-                                        , class "logo"
-                                        ]
-                                        []
-                                    ]
-                                , ul [ class "nav" ]
-                                    (viewNavigation model.route)
+                                [ viewBrand model.isPrideMonth
+                                , ul [ class "nav" ] (viewNavigation model.route)
                                 , viewThemeToggle (resolveTheme model.systemDark model.theme)
                                 ]
                             ]
@@ -585,6 +576,24 @@ view model =
             ]
         ]
     }
+
+
+viewBrand : Bool -> Html msg
+viewBrand isPrideMonth =
+    a [ class "brand", href "https://nixos.org" ]
+        [ img
+            [ alt "NixOS logo"
+            , src
+                (if isPrideMonth then
+                    "/images/nixos-logomark-rainbow-gradient-none.svg"
+
+                 else
+                    "/images/nixos-logomark-default-gradient-none.svg"
+                )
+            , class "logo"
+            ]
+            []
+        ]
 
 
 viewNavigation : Route.Route -> List (Html Msg)
