@@ -1102,9 +1102,12 @@ a:focus-visible {
   font-weight: bold;
 }
 
+// A fixed width: a selection changes the values in the buckets, and the
+// sidebar and the results must not move when it does.
 @media (min-width: 761px) {
   .search-sidebar {
-    max-width: 320px;
+    flex: 0 0 320px;
+    width: 320px;
   }
 }
 

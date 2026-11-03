@@ -1083,7 +1083,18 @@ viewBucket :
     -> List String
     -> List (Html a)
     -> List (Html a)
-viewBucket inputType title buckets searchMsgFor selectedBucket sets =
+viewBucket inputType title buckets_ searchMsgFor selectedBucket sets =
+    let
+        -- The other facets filter the counts of this facet. A selected value
+        -- can thus fall out of the top values or go to zero. Keep it, so that
+        -- the user can clear it.
+        buckets =
+            buckets_
+                ++ (selectedBucket
+                        |> List.filter (\key -> not (List.any (\bucket -> bucket.key == key) buckets_))
+                        |> List.map (\key -> { key = key, doc_count = 0 })
+                   )
+    in
     List.append
         sets
         (if List.isEmpty buckets then
