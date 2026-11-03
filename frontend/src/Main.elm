@@ -580,20 +580,21 @@ view model =
 
 viewBrand : Bool -> Html msg
 viewBrand isPrideMonth =
-    a [ class "brand", href "https://nixos.org" ]
-        [ img
-            [ alt "NixOS logo"
-            , src
-                (if isPrideMonth then
-                    "/images/nixos-logomark-rainbow-gradient-none.svg"
+    let
+        variant : String
+        variant =
+            if isPrideMonth then
+                "rainbow"
 
-                 else
-                    "/images/nixos-logomark-default-gradient-none.svg"
-                )
-            , class "logo"
-            ]
-            []
-        ]
+            else
+                "default"
+
+        logo : String
+        logo =
+            "/images/nixos-logomark-" ++ variant ++ "-gradient-none.svg"
+    in
+    a [ class "brand", href "https://nixos.org" ]
+        [ img [ alt "NixOS logo", src logo, class "logo" ] [] ]
 
 
 viewNavigation : Route.Route -> List (Html Msg)
