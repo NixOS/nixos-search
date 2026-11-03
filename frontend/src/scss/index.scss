@@ -732,6 +732,10 @@ footer {
                 gap: 0.75em;
                 overflow-x: auto;
                 margin: 0;
+                // Space between the screenshots and the scrollbar. Without it,
+                // the scrollbar touches the tallest screenshot, and an overlay
+                // scrollbar is drawn over its bottom edge.
+                padding-bottom: 0.75em;
 
                 // The buttons move the row a step at a time, thus the step is
                 // shown as movement to a reader who accepts motion.
