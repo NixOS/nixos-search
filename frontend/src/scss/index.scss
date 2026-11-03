@@ -19,8 +19,8 @@
   --selected-item-color: var(--text-color);
   /* Divider between search results */
   --search-result-divider-line-color: #ccc;
-  /* Gets overwritten by bootstrap; has no effect */
-  --search-result-title-color: #08c;
+  /* Text color for the title of a search result */
+  --search-result-title-color: var(--link-color);
   /* Text color for the details in a search result (like name, version, outputs...) */
   --search-result-short-details-color: #666;
   /* When search results are expanded, they show tabbed help for installing the result. This is the border color for that tabbed thing.
@@ -31,8 +31,8 @@
 
   /* Color of the animation above the `Loading` text that is shown when searching */
   --loader-color: #000;
-  /* Text color for links. Probably overwritten by bootstrap */
-  --link-color: #007dbb;
+  /* Text color for links. It has a contrast of 4.5:1 or more on the light backgrounds */
+  --link-color: #0078b4;
   /* Background color for the small badges with number in the sidebar */
   --badge-background: #757575;
 
@@ -101,8 +101,8 @@
     --search-result-expanded-tab-border: var(--line-color);
     /* Color of the animation above the `Loading` text that is shown when searching */
     --loader-color: var(--text-color);
-    /* Text color for links. Probably overwritten by bootstrap */
-    --link-color: var(--light-blue); // #007dbb;
+    /* Text color for links */
+    --link-color: var(--light-blue);
     /* Background color for the small badges with number in the sidebar */
     --badge-background: var(--button-active-hover-background);
 
@@ -917,6 +917,12 @@ a:focus-visible {
   color: var(--link-color);
 }
 
+// A link in a line of text must not show only by its color
+.package-license > a,
+.package-popularity li > a {
+  text-decoration: underline;
+}
+
 // // Alternative: Use a slightly more contrasty color
 // a:focus,
 // a:hover,
@@ -1132,7 +1138,6 @@ a:focus-visible {
 .license-operator {
   font-weight: bold;
   font-size: 0.85em;
-  opacity: 0.75;
 }
 
 ul.inline-list-elements {

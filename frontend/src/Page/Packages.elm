@@ -1003,7 +1003,7 @@ viewResultItem saveData showIconMargin screenshotShown nixosChannels channel sho
         licenseItems =
             case item.source.licenseExpression of
                 Just expression ->
-                    [ li []
+                    [ li [ class "package-license" ]
                         (text "License: "
                             :: renderLicenseExpression expression
                         )
