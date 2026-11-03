@@ -535,13 +535,6 @@ footer {
     display: flex;
     flex-direction: row;
 
-    // The results column and the empty-state block each take up whatever
-    // width the sidebar leaves.
-    & > .search-results-main,
-    & > .search-no-results {
-      width: 100%;
-    }
-
     // Results section
     & > .search-results-main {
 
@@ -1106,7 +1099,6 @@ a:focus-visible {
 // sidebar and the results must not move when it does.
 @media (min-width: 761px) {
   .search-sidebar {
-    flex: 0 0 320px;
     width: 320px;
   }
 }
