@@ -594,7 +594,14 @@ viewBrand isPrideMonth =
             "/images/nixos-logomark-" ++ variant ++ "-gradient-none.svg"
     in
     a [ class "brand", href "https://nixos.org" ]
-        [ img [ alt "NixOS logo", src logo, class "logo" ] [] ]
+        [ img
+            [ width "28px"
+            , alt "NixOS logo"
+            , src logo
+            , class "logo"
+            ]
+            []
+        ]
 
 
 viewNavigation : Route.Route -> List (Html Msg)
