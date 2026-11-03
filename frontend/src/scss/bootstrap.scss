@@ -399,50 +399,6 @@ input[type=submit].btn::-moz-focus-inner {
   float:right
 }
 
-
-
-.pager {
-  list-style:none;
-  margin:20px 0;
-  text-align:center
-}
-.pager:after,
-.pager:before {
-  content:"";
-  display:table;
-  line-height:0
-}
-.pager:after {
-  clear:both
-}
-.pager li {
-  display:inline
-}
-.pager li>a,
-.pager li>span {
-  background-color:#fff;
-  border:1px solid #ddd;
-  border-radius:15px;
-  display:inline-block;
-  padding:5px 14px
-}
-.pager li>a:focus,
-.pager li>a:hover {
-  background-color:#f5f5f5;
-  text-decoration:none
-}
-.pager .previous>a,
-.pager .previous>span {
-  float:left
-}
-.pager .disabled>a,
-.pager .disabled>a:focus,
-.pager .disabled>a:hover,
-.pager .disabled>span {
-  background-color:#fff;
-  color:#999;
-  cursor:default
-}
 .badge {
   background-color:#999;
   color:#fff;

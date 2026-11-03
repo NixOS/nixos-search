@@ -925,12 +925,16 @@ a:focus-visible {
 // }
 
 .pager {
+  list-style:none;
   display: flex;
   justify-content: space-between;
   align-items: center;
   max-width: 20em;
   margin: 0 auto;
   padding: 20px 0;
+  .btn.btn.btn {
+    font-weight: 500;
+  }
 }
 
 .badge {
