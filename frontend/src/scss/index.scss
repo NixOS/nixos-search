@@ -1000,7 +1000,7 @@ a:focus-visible {
   background: var(--background-color, #fff);
 
   &:hover {
-    color: var(--text-color);
+    color: var(--terminal-color);
     background: var(--hover-background, rgba(0, 0, 0, 0.05));
   }
 }
