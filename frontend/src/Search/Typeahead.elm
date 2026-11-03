@@ -1,7 +1,11 @@
 module Search.Typeahead exposing
-    ( Model
+    ( Corpus
+    , Item
+    , Model
     , Msg
-    , disabled
+    , Options
+    , StaticKey
+    , Suggestion
     , focusModel
     , hide
     , hideAfterBlur
@@ -116,11 +120,6 @@ init preferStatic =
     }
 
 
-disabled : Model -> Bool
-disabled m =
-    not m.preferStatic
-
-
 
 -- CONSTANTS
 
@@ -212,15 +211,13 @@ hideAfterBlur =
 
 
 queryChanged :
-    Options r
-    -> List (Channel c)
-    -> SearchType
+    SearchType
     -> OptionSource
     -> String
     -> String
     -> Model
     -> ( Model, Cmd Msg )
-queryChanged options nixosChannels searchType activeSource channel query model =
+queryChanged searchType activeSource channel query model =
     if not model.preferStatic then
         ( model, Cmd.none )
 
@@ -491,7 +488,7 @@ score tokens item =
         results =
             List.map perToken tokens
     in
-    if List.any ((==) Nothing) results then
+    if List.member Nothing results then
         Nothing
 
     else
