@@ -1075,11 +1075,11 @@ a:focus-visible {
 // Make the "Please provide more precise search terms." hint stand out so
 // users notice when their query has been truncated to 10000 results.
 .search-refine-hint {
-  margin-top: 0.3em;
-  padding: 0.4em 0.6em;
+  margin-top: 0.6em;
+  padding: 0.8em;
   border-left: 3px solid var(--orange-75);
-  background: color-mix( in srgb, var(--hover-background), var(--orange-75) 10%);
-  font-size: 0.7em;
+  background: color-mix(in srgb, var(--background-color), oklch(from var(--orange-75) l calc(c * 0.5) h) 25%);
+  font-size: 1.5em;
   font-weight: bold;
 }
 
