@@ -1282,10 +1282,7 @@ viewResults nixosChannels model result viewSuccess outMsg categoryName =
                 , text " of "
                 ]
                 (if result.hits.total.value == 10000 then
-                    [ text "more than 10000."
-                    , p [ class "search-refine-hint" ]
-                        [ text "Please provide more precise search terms." ]
-                    ]
+                    [ text "more than 10000." ]
 
                  else
                     let
@@ -1301,6 +1298,13 @@ viewResults nixosChannels model result viewSuccess outMsg categoryName =
                     ]
                 )
             )
+        , if result.hits.total.value == 10000 then
+            p [ class "search-refine-hint" ]
+                [ text "Please provide more precise search terms." ]
+
+          else
+            -- this is an ugly hack for type correctness
+            span [] []
         , p []
             (case List.head result.hits.hits of
                 Nothing ->
