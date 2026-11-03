@@ -1441,16 +1441,7 @@ viewPager model total =
 
 lastPageFrom : Int -> Int -> Int
 lastPageFrom size total =
-    let
-        remainder : Int
-        remainder =
-            if remainderBy size total == 0 then
-                1
-
-            else
-                0
-    in
-    ((total // size) - remainder) * size
+    max 0 (((total - 1) // size) * size)
 
 
 
