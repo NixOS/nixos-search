@@ -10,7 +10,7 @@
 /// version.nix `import` version in the root of the repo,
 /// so a fresh index will be created.
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     convert::{TryFrom, TryInto},
     path::PathBuf,
 };
@@ -297,6 +297,10 @@ pub enum Derivation {
         package_mime_types_set: Vec<String>,
         package_problems: Vec<PackageProblem>,
         package_problem_kinds_set: Vec<String>,
+        /// The categories the package is listed under as an application: those
+        /// of the entries it shows. Empty where another attribute ships the same
+        /// application, which is then listed in its place.
+        package_app_categories: Vec<String>,
         /// The identifiers of the package's AppStream components, which name
         /// the same application in every other catalog.
         package_component_ids: Vec<String>,
@@ -475,6 +479,7 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                     package_mime_types_set: Vec::new(),
                     package_problems: Vec::new(),
                     package_problem_kinds_set: Vec::new(),
+                    package_app_categories: Vec::new(),
                     package_component_ids: Vec::new(),
                     package_screenshots: Vec::new(),
                     package_dep_count: None,
@@ -510,6 +515,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                 nixos_modules,
                 dep_count,
                 repology_repos,
+                duplicate_app,
             } => {
                 let package_attr_set: Vec<_> = attribute.split(".").collect();
                 let package_attr_set: String = (if package_attr_set.len() > 1 {
@@ -590,6 +596,17 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                 let package_mime_types_set = flatten_entries(|entry| &entry.mime_types);
                 let (package_problems, package_problem_kinds_set) =
                     convert_problems(package.meta.problems);
+                let package_app_categories = if duplicate_app {
+                    Vec::new()
+                } else {
+                    desktop_entries
+                        .iter()
+                        .filter(|entry| !entry.no_display)
+                        .flat_map(|entry| entry.categories.iter().cloned())
+                        .collect::<BTreeSet<String>>()
+                        .into_iter()
+                        .collect()
+                };
 
                 let long_description = package
                     .meta
@@ -639,6 +656,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     package_mime_types_set,
                     package_problems,
                     package_problem_kinds_set,
+                    package_app_categories,
                     package_component_ids: package.component_ids,
                     package_screenshots: package.screenshots,
                     package_dep_count: dep_count,
