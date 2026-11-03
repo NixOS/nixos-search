@@ -992,17 +992,14 @@ viewResultItem saveData nixosChannels channel showUsageDetails show item =
 
                 Just ( flakeRef, _ ) ->
                     let
-                        repoName =
-                            flakeRef
-                                |> String.split "/"
-                                |> List.filter (\segment -> not (String.isEmpty segment))
-                                |> List.reverse
-                                |> List.head
-                                |> Maybe.withDefault item.source.attr_name
-
                         term =
                             if item.source.attr_name == "default" && String.contains "/" flakeRef then
-                                repoName
+                                flakeRef
+                                    |> String.split "/"
+                                    |> List.filter (\segment -> not (String.isEmpty segment))
+                                    |> List.reverse
+                                    |> List.head
+                                    |> Maybe.withDefault item.source.attr_name
 
                             else
                                 item.source.attr_name
