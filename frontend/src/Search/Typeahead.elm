@@ -42,6 +42,7 @@ import Http
 import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
+import Json.Encode.Extra exposing (wrap)
 import Process
 import Regex
 import Route exposing (OptionSource(..), SearchType(..))
@@ -224,41 +225,7 @@ queryChanged searchType activeSource channel query model =
     else
         case staticKeyFor searchType activeSource channel of
             Just key ->
-                let
-                    trimmed =
-                        String.trim query
-                in
-                if String.length trimmed < minQueryLength then
-                    ( { model | suggestions = [], visible = False }
-                    , Cmd.none
-                    )
-
-                else
-                    case Dict.get key model.corpora of
-                        Just corpus ->
-                            let
-                                ranked =
-                                    rankCorpus trimmed corpus
-                            in
-                            ( { model
-                                | suggestions = ranked
-                                , visible = not (List.isEmpty ranked)
-                              }
-                            , Cmd.none
-                            )
-
-                        Nothing ->
-                            let
-                                fetchCmd =
-                                    if Set.member key model.loading then
-                                        Cmd.none
-
-                                    else
-                                        fetchCorpus key
-                            in
-                            ( { model | loading = Set.insert key model.loading }
-                            , fetchCmd
-                            )
+                staticQueryChanged key query model
 
             Nothing ->
                 -- Elasticsearch fallback: debounce with a stale-token drop.
@@ -278,6 +245,45 @@ queryChanged searchType activeSource channel query model =
                     ( { model | token = nextToken, visible = True }
                     , Process.sleep debounceMs |> Task.perform (\_ -> Fire nextToken)
                     )
+
+
+staticQueryChanged : StaticKey -> String -> Model -> ( Model, Cmd Msg )
+staticQueryChanged key query model =
+    let
+        trimmed =
+            String.trim query
+    in
+    if String.length trimmed < minQueryLength then
+        ( { model | suggestions = [], visible = False }
+        , Cmd.none
+        )
+
+    else
+        case Dict.get key model.corpora of
+            Just corpus ->
+                let
+                    ranked =
+                        rankCorpus trimmed corpus
+                in
+                ( { model
+                    | suggestions = ranked
+                    , visible = not (List.isEmpty ranked)
+                  }
+                , Cmd.none
+                )
+
+            Nothing ->
+                let
+                    fetchCmd =
+                        if Set.member key model.loading then
+                            Cmd.none
+
+                        else
+                            fetchCorpus key
+                in
+                ( { model | loading = Set.insert key model.loading }
+                , fetchCmd
+                )
 
 
 update :
@@ -568,6 +574,22 @@ requestBody searchType query =
         fieldsArray =
             edgeFields
                 |> List.map (\( f, b ) -> f ++ "^" ++ String.fromFloat b)
+
+        termFilter : Json.Encode.Value
+        termFilter =
+            Json.Encode.string typeFilter
+                |> wrap "type"
+                |> wrap "term"
+
+        multiMatch : Json.Encode.Value
+        multiMatch =
+            Json.Encode.object
+                [ ( "query", Json.Encode.string query )
+                , ( "type", Json.Encode.string "best_fields" )
+                , ( "operator", Json.Encode.string "and" )
+                , ( "fields", Json.Encode.list Json.Encode.string fieldsArray )
+                ]
+                |> wrap "multi_match"
     in
     Http.jsonBody
         (Json.Encode.object
@@ -585,33 +607,10 @@ requestBody searchType query =
               )
             , ( "query"
               , Json.Encode.object
-                    [ ( "bool"
-                      , Json.Encode.object
-                            [ ( "filter"
-                              , Json.Encode.list Json.Encode.object
-                                    [ [ ( "term"
-                                        , Json.Encode.object
-                                            [ ( "type", Json.Encode.string typeFilter ) ]
-                                        )
-                                      ]
-                                    ]
-                              )
-                            , ( "must"
-                              , Json.Encode.list Json.Encode.object
-                                    [ [ ( "multi_match"
-                                        , Json.Encode.object
-                                            [ ( "query", Json.Encode.string query )
-                                            , ( "type", Json.Encode.string "best_fields" )
-                                            , ( "operator", Json.Encode.string "and" )
-                                            , ( "fields", Json.Encode.list Json.Encode.string fieldsArray )
-                                            ]
-                                        )
-                                      ]
-                                    ]
-                              )
-                            ]
-                      )
+                    [ ( "filter", Json.Encode.list identity [ termFilter ] )
+                    , ( "must", Json.Encode.list identity [ multiMatch ] )
                     ]
+                    |> wrap "bool"
               )
             ]
         )
