@@ -932,6 +932,9 @@ a:focus-visible {
   max-width: 20em;
   margin: 0 auto;
   padding: 20px 0;
+  .btn.btn.btn {
+    font-weight: 500;
+  }
 }
 
 .badge {
