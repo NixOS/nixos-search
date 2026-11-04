@@ -459,9 +459,6 @@ footer {
     padding: 0;
 
     & > li {
-      // Long unbreakable identifiers wrap instead of overflowing.
-      overflow-wrap: anywhere;
-
       & > a:hover {
         text-decoration: underline;
       }
@@ -570,6 +567,8 @@ footer {
             margin-bottom: 0.5em;
             text-align: left;
             display: block;
+            // Long unbreakable identifiers wrap instead of overflowing.
+            overflow-wrap: anywhere;
             a {
               color: inherit !important;
             }
