@@ -626,7 +626,7 @@ viewNavigation route =
                     _ ->
                         Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Route.defaultOptionSource
     in
-    li [] [ a [ href "https://nixos.org" ] [ text "Back to nixos.org" ] ]
+    li [] []
         :: List.map
             (viewNavigationItem route)
             [ ( Route.Packages searchArgs, basicTextIcon Icons.widgets "Packages" )
