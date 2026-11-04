@@ -118,9 +118,10 @@ enum Command {
         #[structopt(
             long = "icon-theme-dir",
             help = "Look icons up by name in this freedesktop icon theme directory (for \
-                    example `<papirus-icon-theme>/share/icons/Papirus`), for desktop \
-                    entries that arrived without one. Omit to index only the icons a \
-                    package itself supplies."
+                    example `<papirus-icon-theme>/share/icons/Papirus`). An icon that \
+                    the theme has replaces the icon of the package, thus the icons \
+                    have one style. Omit to index only the icons a package itself \
+                    supplies."
         )]
         icon_theme_dir: Option<PathBuf>,
 

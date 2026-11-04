@@ -105,7 +105,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: sh
         run: |
-          nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(nix eval --raw --file ./version.nix import) --save-summary $GITHUB_STEP_SUMMARY nixpkgs ${{ matrix.channel }} --repology-counts-file repology-counts.json --desktop-entries-file desktop-entries.json --icon-dir icons --screenshot-dir screenshots
+          nix run --accept-flake-config .#flake-info -- --push --elastic-schema-version=$(nix eval --raw --file ./version.nix import) --save-summary $GITHUB_STEP_SUMMARY nixpkgs ${{ matrix.channel }} --repology-counts-file repology-counts.json --desktop-entries-file desktop-entries.json --icon-dir icons --icon-theme-dir "$(nix build --accept-flake-config --inputs-from . --no-link --print-out-paths nixpkgs#papirus-icon-theme)/share/icons/Papirus" --screenshot-dir screenshots
 
       - name: Warmup ${{ matrix.channel }} channel
         if: github.repository_owner == 'NixOS'
