@@ -489,7 +489,7 @@ footer {
         font-size: 1.2em;
         font-weight: bold;
         margin-bottom: 0.5em;
-        padding: 0;
+        padding: 0 1ch;
         border: 0;
         color: inherit;
         line-height: inherit;
@@ -1386,4 +1386,15 @@ html:has(.screenshot-lightbox[open]) {
     margin: 0;
     text-align: center;
   }
+}
+
+.icon-text-wrapper {
+  display: flex;
+  gap: 1ch;
+  align-items: center;
+}
+
+li.external > a {
+  display: flex;
+  gap: 1ch;
 }

@@ -1,7 +1,9 @@
 module Utils exposing
-    ( copyButton
+    ( basicTextIcon
+    , copyButton
     , copyable
     , showHtml
+    , textIcon
     , toggleList
     )
 
@@ -10,6 +12,7 @@ import Html.Attributes exposing (class, title, type_)
 import Html.Events exposing (onClick)
 import Html.Parser
 import Html.Parser.Util
+import Material.Icons.Types as IconsTypes exposing (Coloring(..))
 
 
 copyButton : (String -> msg) -> String -> String -> String -> Html msg
@@ -51,3 +54,13 @@ showHtml value =
 
         _ ->
             Nothing
+
+
+textIcon : IconsTypes.Icon msg -> Int -> IconsTypes.Coloring -> String -> Html msg
+textIcon icon size style text =
+    Html.span [ class "icon-text-wrapper" ] [ icon size style, Html.text text ]
+
+
+basicTextIcon : IconsTypes.Icon msg -> String -> Html msg
+basicTextIcon icon text =
+    textIcon icon 16 Inherit text

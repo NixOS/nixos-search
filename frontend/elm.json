@@ -14,6 +14,7 @@
             "elm/svg": "1.0.1",
             "elm/url": "1.0.0",
             "hecrj/html-parser": "2.3.4",
+            "icidasset/elm-material-icons": "11.0.0",
             "krisajenkins/remotedata": "6.0.1",
             "leojpod/elm-keyboard-shortcut": "1.0.1",
             "lydell/elm-app-url": "1.0.4",
@@ -21,6 +22,7 @@
             "truqu/elm-base64": "2.0.4"
         },
         "indirect": {
+            "avh4/elm-color": "1.0.0",
             "elm/bytes": "1.0.8",
             "elm/file": "1.0.5",
             "elm/parser": "1.1.0",

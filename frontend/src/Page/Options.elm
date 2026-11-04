@@ -55,6 +55,8 @@ import Http exposing (Body)
 import Json.Decode
 import Json.Decode.Pipeline
 import List.Extra
+import Material.Icons as Icons
+import Material.Icons.Types as IconsTypes
 import Ports
 import RemoteData
 import Route exposing (OptionSource, SearchType)
@@ -68,7 +70,7 @@ import Search.Query
 import SyntaxHighlight exposing (elm, oneDark, toBlockHtml, useTheme)
 import Task
 import Url
-import Utils
+import Utils exposing (basicTextIcon)
 
 
 
@@ -217,7 +219,7 @@ viewSourceTabs activeSource sourceCounts =
                 sources ->
                     Just
                         (fieldset [ class "search-source-tabs search-bucket" ]
-                            (legend [ class "header" ] [ text (sourceCategoryLabel category) ]
+                            (legend [ class "header" ] [ basicTextIcon (sourceCategoryIcon category) (sourceCategoryLabel category) ]
                                 :: List.map (viewSourceTab activeSource sourceCounts) sources
                             )
                         )
@@ -309,6 +311,22 @@ sourceCategoryLabel category =
 
         Experimental ->
             "Experimental"
+
+
+sourceCategoryIcon : SourceCategory -> IconsTypes.Icon i
+sourceCategoryIcon category =
+    case category of
+        Official ->
+            Icons.check
+
+        Community ->
+            Icons.diversity_3
+
+        External ->
+            Icons.public
+
+        Experimental ->
+            Icons.science
 
 
 {-| Compact rendering of a hit count for the tab badge: 1.2k, 23k, etc.
