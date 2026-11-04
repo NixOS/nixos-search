@@ -45,6 +45,11 @@
     version = "2.3.4";
   };
 
+  "icidasset/elm-material-icons" = {
+    sha256 = "sha256-kn3rxFWHDYrjkwANfjTnUP4t3MYHDEACPMdeeebdAhM=";
+    version = "11.0.0";
+  };
+
   "krisajenkins/remotedata" = {
     sha256 = "0m5bk0qhsjv14vajqrkph386696pnhj5rn51kgma8lwyvvx9ihw1";
     version = "6.0.1";
@@ -83,6 +88,11 @@
   "elm-community/maybe-extra" = {
     sha256 = "185jy9jxx3bqf0xl3rmdxfqqmxzcr084llf32glr6hgl5agshywk";
     version = "5.3.0";
+  };
+
+  "avh4/elm-color" = {
+    sha256 = "sha256-+N/aUbdRXUJEK7ancGoo4DxdtaFZ4lLHV6kfdLflJlg=";
+    version = "1.0.0";
   };
 
   "elm/bytes" = {
