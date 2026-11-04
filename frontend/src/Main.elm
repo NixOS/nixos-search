@@ -629,12 +629,18 @@ viewNavigation route =
     li [] [ a [ href "https://nixos.org" ] [ text "Back to nixos.org" ] ]
         :: List.map
             (viewNavigationItem route)
-            [ ( Route.Packages searchArgs, text "Packages" )
-            , ( Route.Options searchArgs, text "Options" )
-            , ( Route.Flakes searchArgs, text "3rd-party Flakes" )
+            [ ( Route.Packages searchArgs, basicTextIcon Icons.widgets "Packages" )
+            , ( Route.Options searchArgs, basicTextIcon Icons.tune "Options" )
+            , ( Route.Flakes searchArgs, basicTextIcon Icons.ac_unit "3rd-party Flakes" )
             ]
-        ++ [ li [ class "external" ] [ a [ href "https://noogle.dev", target "_blank", Html.Attributes.rel "noopener noreferrer" ] [ text "Functions" ] ]
-           , li [ class "external" ] [ a [ href "https://wiki.nixos.org", target "_blank", Html.Attributes.rel "noopener noreferrer" ] [ text "NixOS Wiki" ] ]
+        ++ [ li [ class "external" ]
+                [ a [ href "https://noogle.dev", target "_blank", Html.Attributes.rel "noopener noreferrer" ]
+                    [ basicTextIcon Icons.functions "Functions" ]
+                ]
+           , li [ class "external" ]
+                [ a [ href "https://wiki.nixos.org", target "_blank", Html.Attributes.rel "noopener noreferrer" ]
+                    [ basicTextIcon Icons.local_library "NixOS wiki" ]
+                ]
            ]
 
 

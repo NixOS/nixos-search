@@ -1387,3 +1387,14 @@ html:has(.screenshot-lightbox[open]) {
     text-align: center;
   }
 }
+
+.icon-text-wrapper {
+  display: flex;
+  gap: 1ch;
+  align-items: center;
+}
+
+li.external > a {
+  display: flex;
+  gap: 1ch;
+}
