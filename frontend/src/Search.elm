@@ -91,6 +91,8 @@ import Html.Events
 import Http
 import Json.Decode
 import Json.Decode.Pipeline
+import Material.Icons as Icons
+import Material.Icons.Types as IconsTypes
 import RemoteData
 import Route
     exposing
@@ -103,6 +105,7 @@ import Search.Typeahead as Typeahead
 import Svg exposing (path, rect, svg)
 import Svg.Attributes as SA
 import Task
+import Utils exposing (basicTextIcon)
 
 
 type alias Model a b =
@@ -855,6 +858,7 @@ viewFlakes outMsg selectedCategory =
     viewBucket
         RadioInput
         "Category"
+        Icons.category
         (List.map (\cat -> { key = searchTypeToTitle cat, doc_count = 0 }) allTypes)
         (\title ->
             outMsg
@@ -1077,12 +1081,13 @@ type BucketInputType
 viewBucket :
     BucketInputType
     -> String
+    -> IconsTypes.Icon a
     -> List AggregationsBucketItem
     -> (String -> a)
     -> List String
     -> List (Html a)
     -> List (Html a)
-viewBucket inputType title buckets_ searchMsgFor selectedBucket sets =
+viewBucket inputType title icon buckets_ searchMsgFor selectedBucket sets =
     let
         -- The other facets filter the counts of this facet. A selected value
         -- can thus fall out of the top values or go to zero. Keep it, so that
@@ -1101,7 +1106,7 @@ viewBucket inputType title buckets_ searchMsgFor selectedBucket sets =
 
          else
             [ fieldset [ class "search-bucket" ]
-                (legend [ class "header" ] [ text title ]
+                (legend [ class "header" ] [ basicTextIcon icon title ]
                     :: List.map
                         (viewBucketItem inputType title searchMsgFor selectedBucket)
                         buckets
@@ -1364,7 +1369,7 @@ viewSortSelection :
 viewSortSelection currentSort =
     Html.node "sort-select-wrapper"
         [ class "btn pull-right sort-container" ]
-        [ span [ class "sort-label" ] [ text "Sort: " ]
+        [ span [ class "sort-label" ] [ basicTextIcon Icons.sort "Sort: " ]
         , select
             [ id "sort-select"
             , name "sort"

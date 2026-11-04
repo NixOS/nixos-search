@@ -71,6 +71,7 @@ import Json.Decode
 import Json.Decode.Pipeline
 import Json.Encode
 import List.Extra
+import Material.Icons as Icons
 import Ports
 import Regex
 import Route exposing (SearchType)
@@ -429,42 +430,49 @@ viewBuckets bucketsAsString result =
         |> viewBucket
             Search.RadioInput
             "Package sets"
+            Icons.grid_view
             (result.aggregations.package_attr_set.buckets |> sortBuckets)
             (createBucketsMsg True .packageSets (\s v -> { s | packageSets = v }))
             selectedBucket.packageSets
         |> viewBucket
             Search.CheckboxInput
             "Licenses"
+            Icons.balance
             (result.aggregations.package_license_set.buckets |> sortBuckets)
             (createBucketsMsg False .licenses (\s v -> { s | licenses = v }))
             selectedBucket.licenses
         |> viewBucket
             Search.CheckboxInput
             "Maintainers"
+            Icons.people
             (result.aggregations.package_maintainers_set.buckets |> sortBuckets)
             (createBucketsMsg False .maintainers (\s v -> { s | maintainers = v }))
             selectedBucket.maintainers
         |> viewBucket
             Search.CheckboxInput
             "Teams"
+            Icons.groups
             (result.aggregations.package_teams_set.buckets |> sortBuckets)
             (createBucketsMsg False .teams (\s v -> { s | teams = v }))
             selectedBucket.teams
         |> viewBucket
             Search.CheckboxInput
             "Platforms"
+            Icons.computer
             (result.aggregations.package_platforms.buckets |> sortBuckets)
             (createBucketsMsg False .platforms (\s v -> { s | platforms = v }))
             selectedBucket.platforms
         |> viewBucket
             Search.CheckboxInput
             "Categories"
+            Icons.category
             (result.aggregations.package_categories_set.buckets |> sortBuckets)
             (createBucketsMsg False .categories (\s v -> { s | categories = v }))
             selectedBucket.categories
         |> viewBucket
             Search.CheckboxInput
             "File types"
+            Icons.insert_drive_file
             (result.aggregations.package_mime_types_set.buckets |> sortBuckets)
             (createBucketsMsg False .mimeTypes (\s v -> { s | mimeTypes = v }))
             selectedBucket.mimeTypes
