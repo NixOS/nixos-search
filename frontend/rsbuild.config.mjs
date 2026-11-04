@@ -1,6 +1,7 @@
 import { defineConfig } from "@rsbuild/core";
 import { pluginSass } from "@rsbuild/plugin-sass";
 import * as sass from "sass";
+import countsFunction from "./netlify/edge-functions/counts.js";
 
 // When true, the dev server serves the icons and screenshots from `public/`,
 // which the `dev:local-images` npm script writes. Otherwise it gets them from
@@ -66,6 +67,25 @@ export default defineConfig({
             {
                 from: "node_modules/@nixos/branding/artifacts/internal",
                 to: "images",
+            },
+        ],
+    },
+    dev: {
+        // The dev server runs the `/counts` edge function, as Netlify does in
+        // production. The function uses web APIs only, which Node also has.
+        setupMiddlewares: [
+            (middlewares) => {
+                middlewares.unshift(async (req, res, next) => {
+                    if (new URL(req.url, "http://localhost").pathname !== "/counts") {
+                        return next();
+                    }
+                    const response = await countsFunction(
+                        new Request(new URL(req.url, "http://localhost")),
+                    );
+                    res.statusCode = response.status;
+                    response.headers.forEach((value, name) => res.setHeader(name, value));
+                    res.end(await response.text());
+                });
             },
         ],
     },

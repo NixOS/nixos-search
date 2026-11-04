@@ -21,6 +21,7 @@ module Search exposing
     , defaultFlakeId
     , elementId
     , init
+    , makeDocCountsRequest
     , makeRequest
     , makeRequestTask
     , shouldLoad
@@ -29,6 +30,7 @@ module Search exposing
     , update
     , view
     , viewBucket
+    , viewCountTitle
     , viewFlakes
     , viewResult
     , viewSearchInput
@@ -105,6 +107,7 @@ import Search.Typeahead as Typeahead
 import Svg exposing (path, rect, svg)
 import Svg.Attributes as SA
 import Task
+import Url.Builder
 import Utils exposing (basicTextIcon)
 
 
@@ -850,6 +853,37 @@ view { categoryName } title nixosChannels model viewSuccess viewBuckets outMsg s
         )
 
 
+{-| The page heading, with the number of documents of the channel when it is
+known.
+-}
+viewCountTitle : String -> Maybe Int -> List (Html c)
+viewCountTitle noun maybeCount =
+    case maybeCount of
+        Just count ->
+            [ text "Search "
+            , strong [] [ text (groupThousands count ++ " " ++ noun) ]
+            ]
+
+        Nothing ->
+            [ text ("Search " ++ noun) ]
+
+
+{-| Write a number with a comma between each group of three digits:
+`143000` becomes "143,000".
+-}
+groupThousands : Int -> String
+groupThousands n =
+    let
+        group digits =
+            if String.length digits > 3 then
+                group (String.dropRight 3 digits) ++ "," ++ String.right 3 digits
+
+            else
+                digits
+    in
+    group (String.fromInt n)
+
+
 viewFlakes :
     (Msg a b -> msg)
     -> SearchType
@@ -1572,6 +1606,44 @@ makeRequestTask body nixosChannels channel decodeResultItemSource decodeResultAg
                         Http.BadUrl_ url ->
                             Err (Http.BadUrl url)
         , timeout = Nothing
+        }
+
+
+{-| Count the documents of each `type`, for example `package` or `option`, in
+the index of each channel. The `/counts` edge function sends the query to
+Elasticsearch, and the CDN and the browser keep its response for one day. The
+URL contains the names of the indexes, thus a new channel or a new index version
+uses a new cache entry.
+-}
+makeDocCountsRequest :
+    Options
+    -> List NixOSChannel
+    -> (Result Http.Error (Dict String (Dict String Int)) -> msg)
+    -> Cmd msg
+makeDocCountsRequest options nixosChannels toMsg =
+    let
+        indexOf channel =
+            "latest-" ++ String.fromInt options.mappingSchemaVersion ++ "-" ++ channel.branch
+
+        -- The response uses the index names as keys, the model uses the channel IDs.
+        toChannelCounts countsByIndex =
+            nixosChannels
+                |> List.filterMap
+                    (\channel ->
+                        Dict.get (indexOf channel) countsByIndex
+                            |> Maybe.map (Tuple.pair channel.id)
+                    )
+                |> Dict.fromList
+    in
+    Http.get
+        { url =
+            Url.Builder.absolute [ "counts" ]
+                (List.map (indexOf >> Url.Builder.string "index") nixosChannels)
+        , expect =
+            Http.expectJson toMsg
+                (Json.Decode.dict (Json.Decode.dict Json.Decode.int)
+                    |> Json.Decode.map toChannelCounts
+                )
         }
 
 
