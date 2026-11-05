@@ -873,15 +873,13 @@ viewCountTitle noun maybeCount =
 -}
 groupThousands : Int -> String
 groupThousands n =
-    let
-        group digits =
-            if String.length digits > 3 then
-                group (String.dropRight 3 digits) ++ "," ++ String.right 3 digits
+    if n < 1000 then
+        String.fromInt n
 
-            else
-                digits
-    in
-    group (String.fromInt n)
+    else
+        groupThousands (n // 1000)
+            ++ "\u{202F}"
+            ++ String.padLeft 3 '0' (String.fromInt (modBy 1000 n))
 
 
 viewFlakes :
