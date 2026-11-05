@@ -969,7 +969,9 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
             in
             if result.hits.total.value == 0 && List.isEmpty buckets then
                 div [ class "search-results" ]
-                    [ viewNoResults categoryName model.activeOptionSource model.query model.channel
+                    [ aside [ class "search-sidebar" ] searchBuckets
+                    , div [ class "search-results-main" ]
+                        [ viewNoResults categoryName model.activeOptionSource model.query model.channel ]
                     ]
 
             else
