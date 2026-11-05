@@ -646,11 +646,6 @@ repo = "mcp-nixos"
 
 [[sources]]
 type = "github"
-owner = "viperML"
-repo = "wrapper-manager"
-
-[[sources]]
-type = "github"
 owner = "vorburger"
 repo = "bazel-nix"
 
