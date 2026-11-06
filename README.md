@@ -101,6 +101,14 @@ export ELASTICSEARCH_PASSWORD=""
 
 You may need to manually edit `frontend/src/Search.elm` to use the right index.
 
+### Lighthouse
+
+`nix run .#lighthouse` builds the frontend and audits its main pages with [Lighthouse](https://developer.chrome.com/docs/lighthouse) for accessibility, best practices and SEO. It audits each page in the light and dark color schemes, on the mobile and desktop form factors. The check fails if an audit fails, or if a page does not show the expected content. This check runs on Linux only.
+
+The pages get their data from the production backend. If a backend error occurs, or if the index for the current version does not exist yet, the check fails.
+
+The reports go to `lighthouse-report`. Use `nix run .#lighthouse -- --out <dir>` to change this directory. The `Frontend: Lighthouse` workflow does this check on pull requests that change the frontend, and attaches the reports to the run.
+
 ## Deploying
 
 - On each commit to `main` branch a GitHub Action is triggered.

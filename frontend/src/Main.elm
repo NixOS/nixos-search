@@ -14,6 +14,7 @@ import Html
         , header
         , img
         , li
+        , main_
         , span
         , text
         , ul
@@ -599,7 +600,7 @@ view model =
                         ]
                     ]
                 , div [ class "container main" ]
-                    [ div [ id "content" ] [ viewPage model ]
+                    [ main_ [ id "content" ] [ viewPage model ]
                     , footer
                         [ class "container text-center" ]
                         [ div []

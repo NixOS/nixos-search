@@ -74,6 +74,7 @@ import Html.Attributes
         , class
         , classList
         , disabled
+        , for
         , href
         , id
         , name
@@ -1403,7 +1404,7 @@ viewSortSelection :
 viewSortSelection currentSort =
     Html.node "sort-select-wrapper"
         [ class "btn pull-right sort-container" ]
-        [ span [ class "sort-label" ] [ basicTextIcon Icons.sort "Sort: " ]
+        [ label [ for "sort-select", class "sort-label" ] [ basicTextIcon Icons.sort "Sort: " ]
         , select
             [ id "sort-select"
             , name "sort"

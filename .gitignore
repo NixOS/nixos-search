@@ -21,3 +21,4 @@ repl-temp-*
 result
 src-url
 .direnv/
+lighthouse-report

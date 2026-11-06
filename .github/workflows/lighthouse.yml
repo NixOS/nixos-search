@@ -1,0 +1,41 @@
+name: "Frontend: Lighthouse"
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "flake.nix"
+      - "flake.lock"
+      - "frontend/**"
+      - "version.nix"
+      - ".github/workflows/lighthouse.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checking out the repository
+        uses: actions/checkout@v7.0.1
+
+      - name: Setup
+        uses: ./.github/actions/common-setup
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+
+      - name: Running Lighthouse
+        run: nix run --accept-flake-config .#lighthouse -- --out lighthouse-report
+
+      - name: Adding the summary
+        if: always()
+        run: cat lighthouse-report/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Uploading the reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lighthouse-report
+          path: lighthouse-report
