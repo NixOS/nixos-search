@@ -33,6 +33,30 @@ A less important, but providing better user experience. are suggestions for
 writing better search query. Suggesting feature should guide user to write
 better queries which in turn will produce better results.
 
+## Keyboard shortcuts
+
+These keys work when the focus is not in a text field:
+
+| Key                               | Action                                           |
+| --------------------------------- | ------------------------------------------------ |
+| <kbd>/</kbd> or <kbd>Ctrl+K</kbd> | Move the focus to the search field.              |
+| <kbd>j</kbd>                      | Select the next result.                          |
+| <kbd>k</kbd>                      | Select the previous result.                      |
+| <kbd>Enter</kbd>                  | Show or hide the details of the selected result. |
+
+These keys work in the search field:
+
+| Key            | Action                       |
+| -------------- | ---------------------------- |
+| <kbd>Esc</kbd> | Hide the search suggestions. |
+
+These keys work when a screenshot is open:
+
+| Key                                         | Action                                |
+| ------------------------------------------- | ------------------------------------- |
+| <kbd>Left</kbd> and <kbd>Right</kbd> arrows | Show the previous or next screenshot. |
+| <kbd>Esc</kbd>                              | Close the screenshot.                 |
+
 ## Development
 
 To start developing open a terminal and run:
