@@ -10,6 +10,7 @@ module Page.Packages exposing
     , ResultPackageHydraPath
     , ResultPackageLicense
     , ResultPackageMaintainer
+    , ResultPackageProblem
     , ResultPackageTeam
     , Screenshot
     , decodeResultAggregations
@@ -17,6 +18,7 @@ module Page.Packages exposing
     , init
     , makeRequest
     , makeRequestBody
+    , toggleProblemKind
     , update
     , view
     , viewBuckets
@@ -130,6 +132,17 @@ type alias ResultItemSource =
     , screenshots : List Screenshot
     , depCount : Maybe Int
     , repologyRepos : Maybe Int
+    , problems : List ResultPackageProblem
+    }
+
+
+{-| An entry of the package's `meta.problems`. One package can have more
+problems of the same kind.
+-}
+type alias ResultPackageProblem =
+    { kind : String
+    , message : Maybe String
+    , urls : List String
     }
 
 
@@ -231,6 +244,7 @@ type alias ResultAggregations =
     , package_license_set : Search.Aggregation
     , package_categories_set : Search.Aggregation
     , package_mime_types_set : Search.Aggregation
+    , package_problem_kinds_set : Search.Aggregation
     }
 
 
@@ -243,6 +257,7 @@ type alias Aggregations =
     , package_license_set : Search.Aggregation
     , package_categories_set : Search.Aggregation
     , package_mime_types_set : Search.Aggregation
+    , package_problem_kinds_set : Search.Aggregation
     }
 
 
@@ -254,6 +269,7 @@ type alias Buckets =
     , platforms : List String
     , categories : List String
     , mimeTypes : List String
+    , problemKinds : List String
     }
 
 
@@ -266,6 +282,7 @@ emptyBuckets =
     , platforms = []
     , categories = []
     , mimeTypes = []
+    , problemKinds = []
     }
 
 
@@ -403,6 +420,14 @@ viewBuckets bucketsAsString result =
         selectedBucket =
             initialBuckets
 
+        updateBucketsMsg mergeBuckets value =
+            value
+                |> mergeBuckets initialBuckets
+                |> encodeBuckets
+                |> Json.Encode.encode 0
+                |> Search.BucketsChange
+                |> SearchMsg
+
         createBucketsMsg isRadio getBucket mergeBuckets value =
             (if isRadio then
                 if getBucket initialBuckets == [ value ] then
@@ -414,16 +439,23 @@ viewBuckets bucketsAsString result =
              else
                 Utils.toggleList (getBucket initialBuckets) value
             )
-                |> mergeBuckets initialBuckets
-                |> encodeBuckets
-                |> Json.Encode.encode 0
-                |> Search.BucketsChange
-                |> SearchMsg
+                |> updateBucketsMsg mergeBuckets
 
         sortBuckets items =
             items
                 |> List.sortBy .doc_count
                 |> List.reverse
+
+        -- Keep `<kind>` next to `not <kind>`, whatever their counts are.
+        sortProblemKindBuckets =
+            List.sortBy
+                (\bucket ->
+                    if isNegatedProblemKind bucket.key then
+                        ( problemKindComplement bucket.key, 1 )
+
+                    else
+                        ( bucket.key, 0 )
+                )
     in
     []
         |> viewBucket
@@ -475,6 +507,70 @@ viewBuckets bucketsAsString result =
             (result.aggregations.package_mime_types_set.buckets |> sortBuckets)
             (createBucketsMsg False .mimeTypes (\s v -> { s | mimeTypes = v }))
             selectedBucket.mimeTypes
+        |> viewBucket
+            Search.CheckboxInput
+            "Problems"
+            Icons.warning
+            (result.aggregations.package_problem_kinds_set.buckets |> sortProblemKindBuckets)
+            (toggleProblemKind selectedBucket.problemKinds
+                >> updateBucketsMsg (\s v -> { s | problemKinds = v })
+            )
+            selectedBucket.problemKinds
+
+
+isNegatedProblemKind : String -> Bool
+isNegatedProblemKind =
+    String.startsWith "not "
+
+
+{-| The other half of a `package_problem_kinds_set` value: `broken` for
+`not broken`, and the reverse.
+-}
+problemKindComplement : String -> String
+problemKindComplement kind =
+    if isNegatedProblemKind kind then
+        String.dropLeft 4 kind
+
+    else
+        "not " ++ kind
+
+
+{-| Toggle a value of the problems facet. The selected values must all be true
+for one package, thus selecting a value clears its other half.
+-}
+toggleProblemKind : List String -> String -> List String
+toggleProblemKind selected value =
+    Utils.toggleList
+        (List.filter ((/=) (problemKindComplement value)) selected)
+        value
+
+
+viewProblemLabel : ResultPackageProblem -> Html msg
+viewProblemLabel problem =
+    span
+        [ class "badge package-problem-label"
+        , class ("package-problem-" ++ problem.kind)
+        , title (Maybe.withDefault "" problem.message)
+        ]
+        [ text problem.kind ]
+
+
+viewProblem : ResultPackageProblem -> Html msg
+viewProblem problem =
+    li []
+        [ viewProblemLabel problem
+        , span [ class "package-problem-message" ]
+            [ text (String.trim (Maybe.withDefault "" problem.message)) ]
+        , if List.isEmpty problem.urls then
+            text ""
+
+          else
+            ul []
+                (List.map
+                    (\url -> li [] [ a [ href url ] [ text url ] ])
+                    problem.urls
+                )
+        ]
 
 
 viewSuccess :
@@ -1330,6 +1426,17 @@ viewResultItem saveData showIconMargin screenshotShown nixosChannels channel sho
                         , ul [] items
                         ]
 
+        problems =
+            case item.source.problems of
+                [] ->
+                    text ""
+
+                items ->
+                    div [ class "package-problems" ]
+                        [ h3 [] [ text "Problems" ]
+                        , ul [] (List.map viewProblem items)
+                        ]
+
         longerPackageDetails =
             optionals (Just item.source.attr_name == show)
                 [ div [ class "package-details", trapClick ]
@@ -1338,6 +1445,7 @@ viewResultItem saveData showIconMargin screenshotShown nixosChannels channel sho
                             |> Maybe.andThen Utils.showHtml
                             |> Maybe.withDefault []
                         )
+                    , problems
                     , case item.source.flakeUrl of
                         Just ( flakeUrl, _ ) ->
                             viewFlakeUsage item.source.attr_name flakeUrl
@@ -1396,7 +1504,17 @@ viewResultItem saveData showIconMargin screenshotShown nixosChannels channel sho
         , classList [ ( "opened", isOpen ), ( "with-icon-margin", showIconMargin ) ]
         , Search.elementId item.source.attr_name
         ]
-        ([ span [ class "search-result-title" ] (packageIcon :: flakeOrNixpkgs)
+        ([ span [ class "search-result-title" ]
+            (packageIcon
+                :: flakeOrNixpkgs
+                ++ (item.source.problems
+                        |> List.map .kind
+                        |> List.Extra.unique
+                        |> List.filterMap (\kind -> List.Extra.find (\problem -> problem.kind == kind) item.source.problems)
+                        -- A space goes away at a line break, thus a label on a new line starts in the column of the name.
+                        |> List.concatMap (\problem -> [ text " ", viewProblemLabel problem ])
+                   )
+            )
          , div [ class "package-description" ] [ text <| Maybe.withDefault "" item.source.description ]
          , shortPackageDetails
          , Search.showMoreButton toggle isOpen
@@ -1849,6 +1967,7 @@ encodeRequestBody query from size maybeBuckets sort =
         , ( "package_platforms", currentBuckets.platforms )
         , ( "package_categories_set", currentBuckets.categories )
         , ( "package_mime_types_set", currentBuckets.mimeTypes )
+        , ( Search.Query.problemKindsField, currentBuckets.problemKinds )
         ]
 
 
@@ -1871,6 +1990,7 @@ encodeBuckets options =
         , ( "package_platforms", Json.Encode.list Json.Encode.string options.platforms )
         , ( "package_categories_set", Json.Encode.list Json.Encode.string options.categories )
         , ( "package_mime_types_set", Json.Encode.list Json.Encode.string options.mimeTypes )
+        , ( Search.Query.problemKindsField, Json.Encode.list Json.Encode.string options.problemKinds )
         ]
 
 
@@ -1891,6 +2011,7 @@ decodeBuckets =
         |> strings "package_platforms"
         |> strings "package_categories_set"
         |> strings "package_mime_types_set"
+        |> strings Search.Query.problemKindsField
 
 
 decodeResultItemSource : Json.Decode.Decoder ResultItemSource
@@ -1925,6 +2046,15 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "package_screenshots" (Json.Decode.list decodeScreenshot) []
         |> Json.Decode.Pipeline.optional "package_dep_count" (Json.Decode.map Just Json.Decode.int) Nothing
         |> Json.Decode.Pipeline.optional "package_repology_repos" (Json.Decode.map Just Json.Decode.int) Nothing
+        |> Json.Decode.Pipeline.optional "package_problems" (Json.Decode.list decodeResultPackageProblem) []
+
+
+decodeResultPackageProblem : Json.Decode.Decoder ResultPackageProblem
+decodeResultPackageProblem =
+    Json.Decode.map3 ResultPackageProblem
+        (Json.Decode.field "kind" Json.Decode.string)
+        (Json.Decode.field "message" (Json.Decode.nullable Json.Decode.string))
+        (Json.Decode.field "urls" (Json.Decode.list Json.Decode.string))
 
 
 decodeDesktopEntry : Json.Decode.Decoder DesktopEntry
@@ -2132,27 +2262,33 @@ decodeResultAggregations =
         -- Each facet is counted inside a `filter` aggregation of the same
         -- name, see `Search.Query.toAggregations`.
         filtered field =
-            Json.Decode.at [ field, field ] Search.decodeAggregation
+            Json.Decode.Pipeline.requiredAt [ field, field ] Search.decodeAggregation
     in
-    Json.Decode.map8 ResultAggregations
-        (Json.Decode.field "all" decodeAggregations)
-        (filtered "package_platforms")
-        (filtered "package_attr_set")
-        (filtered "package_maintainers_set")
-        (filtered "package_teams_set")
-        (filtered "package_license_set")
-        (filtered "package_categories_set")
-        (filtered "package_mime_types_set")
+    Json.Decode.succeed ResultAggregations
+        |> Json.Decode.Pipeline.required "all" decodeAggregations
+        |> filtered "package_platforms"
+        |> filtered "package_attr_set"
+        |> filtered "package_maintainers_set"
+        |> filtered "package_teams_set"
+        |> filtered "package_license_set"
+        |> filtered "package_categories_set"
+        |> filtered "package_mime_types_set"
+        |> filtered Search.Query.problemKindsField
 
 
 decodeAggregations : Json.Decode.Decoder Aggregations
 decodeAggregations =
-    Json.Decode.map8 Aggregations
-        (Json.Decode.field "doc_count" Json.Decode.int)
-        (Json.Decode.field "package_platforms" Search.decodeAggregation)
-        (Json.Decode.field "package_attr_set" Search.decodeAggregation)
-        (Json.Decode.field "package_maintainers_set" Search.decodeAggregation)
-        (Json.Decode.field "package_teams_set" Search.decodeAggregation)
-        (Json.Decode.field "package_license_set" Search.decodeAggregation)
-        (Json.Decode.field "package_categories_set" Search.decodeAggregation)
-        (Json.Decode.field "package_mime_types_set" Search.decodeAggregation)
+    let
+        facet field =
+            Json.Decode.Pipeline.required field Search.decodeAggregation
+    in
+    Json.Decode.succeed Aggregations
+        |> Json.Decode.Pipeline.required "doc_count" Json.Decode.int
+        |> facet "package_platforms"
+        |> facet "package_attr_set"
+        |> facet "package_maintainers_set"
+        |> facet "package_teams_set"
+        |> facet "package_license_set"
+        |> facet "package_categories_set"
+        |> facet "package_mime_types_set"
+        |> facet Search.Query.problemKindsField

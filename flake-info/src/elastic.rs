@@ -186,6 +186,8 @@ lazy_static! {
                 "package_desktop_icons": {"type": "object", "enabled": false},
                 "package_categories_set": {"type": "keyword"},
                 "package_mime_types_set": {"type": "keyword"},
+                "package_problems": {"type": "object", "enabled": false},
+                "package_problem_kinds_set": {"type": "keyword"},
                 "package_component_ids": {"type": "keyword"},
                 "package_screenshots": {"type": "object", "enabled": false},
                 "package_dep_count": {

@@ -35,6 +35,9 @@
   --link-color: #0078b4;
   /* Background color for the small badges with number in the sidebar */
   --badge-background: #757575;
+  /* Background colors for the labels of package problems. White text has a contrast of 4.5:1 or more on these. */
+  --problem-severe-background: #b71c1c;
+  --problem-warning-background: #8a5a00;
 
   --button-background: #f5f5f5;
   --button-border-color: #d4d4d4;
@@ -583,6 +586,36 @@ footer {
               font-size: 1.2em;
               margin-bottom: 0.5em;
               text-align: left;
+            }
+
+            // labels of `meta.problems`, next to the package name and in the details
+            .package-problem-label {
+              font-weight: normal;
+              vertical-align: middle;
+
+              &.package-problem-broken,
+              &.package-problem-removal {
+                background-color: var(--problem-severe-background);
+              }
+              &.package-problem-deprecated {
+                background-color: var(--problem-warning-background);
+              }
+            }
+
+            // `meta.problems` in the details
+            .package-problems ul {
+              list-style: none;
+              margin-left: 0;
+
+              ul {
+                margin-top: 0.25em;
+              }
+
+              .package-problem-message {
+                margin-left: 0.5em;
+                white-space: pre-line;
+                vertical-align: top;
+              }
             }
 
             // short details of a pacakge

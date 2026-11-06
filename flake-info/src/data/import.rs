@@ -359,6 +359,16 @@ pub struct Meta {
     pub long_description: Option<String>,
     #[serde(rename = "mainProgram")]
     pub main_program: Option<String>,
+    /// Is `None` for channels from before `meta.problems` was added to nixpkgs.
+    pub problems: Option<BTreeMap<String, Problem>>,
+}
+
+/// An entry of `meta.problems`. The attribute name is the default for `kind`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Problem {
+    pub kind: Option<String>,
+    pub message: Option<String>,
+    pub urls: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -691,6 +701,32 @@ mod tests {
     use std::collections::HashMap;
 
     use super::*;
+
+    /// A failure on `meta.problems` fails the parse of the whole channel.
+    #[test]
+    fn test_meta_problems_deserialize() {
+        let meta: Meta = serde_json::from_str(
+            r#"{
+                "problems": {
+                    "broken": {"kind": "broken", "message": "This package is broken."},
+                    "unsupportedPython": {"kind": "broken", "urls": ["https://example.org/"]},
+                    "new": {}
+                }
+            }"#,
+        )
+        .unwrap();
+        let problems = meta.problems.unwrap();
+        assert_eq!(problems.len(), 3);
+        assert_eq!(problems["broken"].kind.as_deref(), Some("broken"));
+        assert_eq!(
+            problems["unsupportedPython"].urls,
+            Some(vec!["https://example.org/".to_string()])
+        );
+        assert_eq!(problems["new"].message, None);
+
+        let meta: Meta = serde_json::from_str("{}").unwrap();
+        assert_eq!(meta.problems, None);
+    }
 
     #[test]
     fn test_nixpkgs_deserialize() {

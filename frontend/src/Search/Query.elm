@@ -1,4 +1,4 @@
-module Search.Query exposing (optionsBody, packagesBody, platforms)
+module Search.Query exposing (optionsBody, packagesBody, platforms, problemKindsField)
 
 {-| Single source of truth for the Elasticsearch query the client sends.
 
@@ -44,6 +44,15 @@ type alias Ranking =
     }
 
 
+{-| The facet where each selected value narrows the results: the values state
+facts of one package, such as `broken` and `not removal`. In all the other
+facets, a selected value extends the results.
+-}
+problemKindsField : String
+problemKindsField =
+    "package_problem_kinds_set"
+
+
 packagesBody :
     String
     -> Int
@@ -62,6 +71,7 @@ packagesBody query from size sort selectedBuckets =
             , { field = "package_platforms", size = 20, include = Just platforms }
             , { field = "package_categories_set", size = 20, include = Nothing }
             , { field = "package_mime_types_set", size = 20, include = Nothing }
+            , { field = problemKindsField, size = 20, include = Nothing }
             ]
 
         selectionFor : String -> List String
@@ -86,7 +96,13 @@ packagesBody query from size sort selectedBuckets =
                                 , [ ( "bool"
                                     , selection
                                         |> Json.Encode.list (filterByBucket term.field >> Json.Encode.object)
-                                        |> wrap "should"
+                                        |> wrap
+                                            (if term.field == problemKindsField then
+                                                "must"
+
+                                             else
+                                                "should"
+                                            )
                                     )
                                   ]
                                 )
