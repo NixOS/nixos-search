@@ -359,6 +359,7 @@ footer {
 
   // Search section title title
   & > h1 {
+    margin-top: 40px;
     display: flex;
     gap: .5ch; // 1 space = ~1/2 '0'
     font-weight: normal;
@@ -407,7 +408,7 @@ footer {
       gap: 1em;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1.5em;
+      margin-bottom: 40px;
 
       fieldset.channel-radios {
         @include radio-segmented-group;
@@ -459,9 +460,6 @@ footer {
     padding: 0;
 
     & > li {
-      // Long unbreakable identifiers wrap instead of overflowing.
-      overflow-wrap: anywhere;
-
       & > a:hover {
         text-decoration: underline;
       }
@@ -474,7 +472,7 @@ footer {
 
   // Buckets
   .search-sidebar {
-    margin: 0 1em 0 0;
+    margin: 0 40px 0 0;
 
     fieldset.search-bucket {
       border: 1px solid var(--search-sidebar-container-border-color);
@@ -570,6 +568,8 @@ footer {
             margin-bottom: 0.5em;
             text-align: left;
             display: block;
+            // Long unbreakable identifiers wrap instead of overflowing.
+            overflow-wrap: anywhere;
             a {
               color: inherit !important;
             }
@@ -1116,8 +1116,8 @@ a:focus-visible {
 // sidebar and the results must not move when it does.
 @media (min-width: 761px) {
   .search-sidebar {
-    flex: 0 0 320px;
-    width: 320px;
+    flex: 0 0 300px;
+    width: 300px;
   }
 }
 

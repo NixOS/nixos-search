@@ -560,11 +560,6 @@ repo = "agenix"
 
 [[sources]]
 type = "github"
-owner = "sincorchetes"
-repo = "nixos-flake-hardware-profiles"
-
-[[sources]]
-type = "github"
 owner = "skelettor"
 repo = "nix-openlinkhub"
 
@@ -678,11 +673,6 @@ repo = "nativelink"
 type = "github"
 owner = "utensils"
 repo = "mcp-nixos"
-
-[[sources]]
-type = "github"
-owner = "viperML"
-repo = "wrapper-manager"
 
 [[sources]]
 type = "github"

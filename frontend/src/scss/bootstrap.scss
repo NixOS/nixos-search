@@ -137,8 +137,11 @@ a:hover {
   margin-left:20px;
   min-height:1px
 }
+// One fluid width for all screens wider than 767px, with a 20px gutter on
+// each side. Thus the margins do not take a large part of the screen.
 .container {
-  width:940px
+  width: calc(100% - 80px);
+  max-width: 1170px;
 }
 
 [class*=span].pull-right {
