@@ -37,25 +37,25 @@ better queries which in turn will produce better results.
 
 These keys work when the focus is not in a text field:
 
-| Key | Action |
-| --- | --- |
-| `/` or `Ctrl+K` | Move the focus to the search field. |
-| `j` | Select the next result. |
-| `k` | Select the previous result. |
-| `Enter` | Show or hide the details of the selected result. |
+| Key             | Action                                           |
+| --------------- | ------------------------------------------------ |
+| `/` or `Ctrl+K` | Move the focus to the search field.              |
+| `j`             | Select the next result.                          |
+| `k`             | Select the previous result.                      |
+| `Enter`         | Show or hide the details of the selected result. |
 
 These keys work in the search field:
 
-| Key | Action |
-| --- | --- |
+| Key   | Action                       |
+| ----- | ---------------------------- |
 | `Esc` | Hide the search suggestions. |
 
 These keys work when a screenshot is open:
 
-| Key | Action |
-| --- | --- |
+| Key                       | Action                                |
+| ------------------------- | ------------------------------------- |
 | `Left` and `Right` arrows | Show the previous or next screenshot. |
-| `Esc` | Close the screenshot. |
+| `Esc`                     | Close the screenshot.                 |
 
 ## Development
 
