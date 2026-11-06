@@ -33,7 +33,6 @@ import Html
         , li
         , pre
         , span
-        , strong
         , text
         , ul
         )
@@ -184,13 +183,24 @@ update navKey msg model nixosChannels =
 
 view :
     List NixOSChannel
+    -> Dict String Int
     -> Model
     -> Html Msg
-view nixosChannels model =
+view nixosChannels docCounts model =
+    let
+        -- The options of all sources, because the page searches all of them.
+        optionCount =
+            if Dict.isEmpty docCounts then
+                Nothing
+
+            else
+                Route.allOptionSources
+                    |> List.filterMap (\source -> Dict.get (Route.optionSourceDocType source) docCounts)
+                    |> List.sum
+                    |> Just
+    in
     Search.view { categoryName = "options" }
-        [ text "Search more than "
-        , strong [] [ text "20 000 options" ]
-        ]
+        (Search.viewCountTitle "options" optionCount)
         nixosChannels
         model
         (viewSuccess model.activeOptionSource)

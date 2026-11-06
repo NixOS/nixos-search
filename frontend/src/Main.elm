@@ -4,7 +4,7 @@ import Browser
 import Browser.Dom
 import Browser.Navigation
 import Components.Button exposing (viewButton)
-import Dict
+import Dict exposing (Dict)
 import Html
     exposing
         ( Html
@@ -31,6 +31,7 @@ import Html.Attributes
         , title
         )
 import Html.Events exposing (onClick)
+import Http
 import Json.Decode
 import Material.Icons as Icons
 import Material.Icons.Types exposing (Coloring(..))
@@ -157,6 +158,10 @@ type alias Model =
     , systemDark : Bool
     , isPrideMonth : Bool
     , preferStatic : Bool
+
+    -- The number of documents of each type, for each channel. One request
+    -- gets the counts of all channels, the first time that a page needs them.
+    , docCounts : RemoteData.WebData (Dict String (Dict String Int))
     }
 
 
@@ -209,6 +214,7 @@ init flags url navKey =
             , systemDark = flags.systemDark
             , isPrideMonth = flags.isPrideMonth
             , preferStatic = not flags.saveData
+            , docCounts = NotAsked
             }
     in
     changeRouteTo model url
@@ -228,6 +234,7 @@ type Msg
     | SearchFocusResult
     | ToggleTheme
     | SystemDarkChanged Bool
+    | DocCountsResponse (Result Http.Error (Dict String (Dict String Int)))
 
 
 updateWith :
@@ -310,6 +317,35 @@ attemptQuery (( model, _ ) as pair) =
 
         _ ->
             pair
+
+
+{-| Request the document counts of all channels, if the page shows them and no
+request started before.
+-}
+attemptDocCounts : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+attemptDocCounts (( model, cmd ) as pair) =
+    let
+        pageShowsCounts =
+            case model.page of
+                Packages _ ->
+                    True
+
+                Options _ ->
+                    True
+
+                _ ->
+                    False
+    in
+    if pageShowsCounts && model.docCounts == NotAsked then
+        ( { model | docCounts = Loading }
+        , Cmd.batch
+            [ cmd
+            , Search.makeDocCountsRequest model.elasticsearch model.nixosChannels DocCountsResponse
+            ]
+        )
+
+    else
+        pair
 
 
 makeOptionsRequest : Search.Options -> List NixOSChannel -> Page.Options.Model -> Cmd Page.Options.Msg
@@ -396,6 +432,7 @@ changeRouteTo currentModel url =
                 |> updateWith Packages PackagesMsg model
                 |> avoidReinit
                 |> attemptQuery
+                |> attemptDocCounts
 
         Route.Options searchArgs ->
             let
@@ -411,6 +448,7 @@ changeRouteTo currentModel url =
                 |> updateWith Options OptionsMsg model
                 |> avoidReinit
                 |> attemptQuery
+                |> attemptDocCounts
 
         Route.Flakes searchArgs ->
             let
@@ -481,6 +519,11 @@ update msg model =
             -- A pin that now equals the OS palette stays, so the next click
             -- pins the other palette.
             ( { model | systemDark = systemDark }, Cmd.none )
+
+        ( DocCountsResponse result, _ ) ->
+            ( { model | docCounts = RemoteData.fromResult result }
+            , Cmd.none
+            )
 
         _ ->
             -- Disregard messages that arrived for the wrong page.
@@ -687,15 +730,21 @@ viewThemeToggle resolvedTheme =
 
 viewPage : Model -> Html Msg
 viewPage model =
+    let
+        docCountsOf channel =
+            RemoteData.toMaybe model.docCounts
+                |> Maybe.andThen (Dict.get channel)
+                |> Maybe.withDefault Dict.empty
+    in
     case model.page of
         NotFound ->
             div [] [ text "Not Found" ]
 
         Packages packagesModel ->
-            Html.map (\m -> PackagesMsg m) <| Page.Packages.view model.nixosChannels packagesModel
+            Html.map (\m -> PackagesMsg m) <| Page.Packages.view model.nixosChannels (docCountsOf packagesModel.channel) packagesModel
 
         Options optionsModel ->
-            Html.map (\m -> OptionsMsg m) <| Page.Options.view model.nixosChannels optionsModel
+            Html.map (\m -> OptionsMsg m) <| Page.Options.view model.nixosChannels (docCountsOf optionsModel.channel) optionsModel
 
         Flakes flakesModel ->
             Html.map (\m -> FlakesMsg m) <| Page.Flakes.view model.nixosChannels flakesModel

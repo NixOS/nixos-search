@@ -377,13 +377,12 @@ update navKey msg model nixosChannels =
 
 view :
     List NixOSChannel
+    -> Dict String Int
     -> Model
     -> Html Msg
-view nixosChannels model =
+view nixosChannels docCounts model =
     Search.view { categoryName = "packages" }
-        [ text "Search more than "
-        , strong [] [ text "140 000 packages" ]
-        ]
+        (Search.viewCountTitle "packages" (Dict.get "package" docCounts))
         nixosChannels
         model
         (viewSuccess model)
