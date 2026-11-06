@@ -35,7 +35,7 @@ import Html
         , div
         , em
         , fieldset
-        , h4
+        , h3
         , img
         , input
         , label
@@ -721,7 +721,7 @@ viewResultItem saveData showIconMargin screenshotShown nixosChannels channel sho
 
             else
                 div []
-                    [ h4 [] [ text "Desktop Entries" ]
+                    [ h3 [] [ text "Desktop Entries" ]
                     , ul [ class "desktop-entries" ]
                         (List.map viewDesktopEntry displayedEntries)
                     ]
@@ -950,7 +950,7 @@ viewResultItem saveData showIconMargin screenshotShown nixosChannels channel sho
                                 text ""
                 in
                 div []
-                    [ h4 [] [ text "Screenshots" ]
+                    [ h3 [] [ text "Screenshots" ]
                     , div [ class "screenshots-row" ]
                         (optionals scrollable
                             [ scrollButton rowId -1.0 "Show the previous screenshots" ]
@@ -1137,9 +1137,9 @@ viewResultItem saveData showIconMargin screenshotShown nixosChannels channel sho
                     List.filterMap (\m -> m.email) maintainers
             in
             optionals (List.length maintainerMails > 1)
-                [ a
-                    [ href ("mailto:" ++ String.join "," maintainerMails) ]
-                    [ li [ class "maintainer-list-item" ]
+                [ li [ class "maintainer-list-item" ]
+                    [ a
+                        [ class "mail-all-maintainers", href ("mailto:" ++ String.join "," maintainerMails) ]
                         [ text "✉️ Mail to all maintainers" ]
                     ]
                 ]
@@ -1159,7 +1159,7 @@ viewResultItem saveData showIconMargin screenshotShown nixosChannels channel sho
         maintainersTeamsAndPlatforms =
             div [ class "package-maintainers-platforms" ]
                 [ div [ class "package-details-maintainers" ]
-                    [ h4 [] [ text "Maintainers" ]
+                    [ h3 [] [ text "Maintainers" ]
                     , if List.isEmpty item.source.maintainers then
                         p [] [ text "This package has no maintainers. If you find it useful, please consider becoming a maintainer!" ]
 
@@ -1172,12 +1172,12 @@ viewResultItem saveData showIconMargin screenshotShown nixosChannels channel sho
                     ]
                 , div []
                     (optionals (not (List.isEmpty item.source.teams))
-                        [ h4 [] [ text "Teams" ]
+                        [ h3 [] [ text "Teams" ]
                         , ul [] (List.map showTeam item.source.teams)
                         ]
                     )
                 , div []
-                    [ h4 [] [ text "Platforms" ]
+                    [ h3 [] [ text "Platforms" ]
                     , if List.isEmpty item.source.platforms then
                         p [] [ text "This package does not list its available platforms." ]
 
@@ -1204,7 +1204,7 @@ viewResultItem saveData showIconMargin screenshotShown nixosChannels channel sho
                         text p
             in
             div [ class "package-programs" ]
-                [ h4 [] [ text "Programs provided" ]
+                [ h3 [] [ text "Programs provided" ]
                 , if List.isEmpty sortedPrograms then
                     p [] [ text "This package provides no programs." ]
 
@@ -1236,7 +1236,7 @@ viewResultItem saveData showIconMargin screenshotShown nixosChannels channel sho
             let
                 searchLink heading label term url =
                     div []
-                        [ h4 [] [ text heading ]
+                        [ h3 [] [ text heading ]
                         , p []
                             [ a [ href url ]
                                 [ text label
@@ -1327,7 +1327,7 @@ viewResultItem saveData showIconMargin screenshotShown nixosChannels channel sho
 
                 items ->
                     div [ class "package-popularity" ]
-                        [ h4 [] [ text "Popularity" ]
+                        [ h3 [] [ text "Popularity" ]
                         , ul [] items
                         ]
 
@@ -1575,7 +1575,7 @@ viewUsageInstructions attrName currentMethod =
 viewModularServices : String -> String -> List String -> Html msg
 viewModularServices channel attrName modularServices =
     div []
-        [ h4 []
+        [ h3 []
             [ text "Modular Services"
             , text " "
             , a

@@ -652,11 +652,22 @@ footer {
                 display: grid;
                 grid-template-columns: auto auto;
 
+                // Keep each link at the minimum target size for touch.
+                li > a {
+                  display: inline-block;
+                  min-height: 24px;
+                  line-height: 24px;
+                }
+
                 .maintainer-list-item {
                   cursor: pointer;
 
                   &:hover {
                     background-color: var(--hovered-item-background);
+                  }
+
+                  .mail-all-maintainers {
+                    display: block;
                   }
                 }
               }
@@ -919,7 +930,9 @@ a:focus-visible {
 
 // A link in a line of text must not show only by its color
 .package-license > a,
-.package-popularity li > a {
+.package-popularity li > a,
+.option-name-group,
+footer a {
   text-decoration: underline;
 }
 
@@ -1006,6 +1019,11 @@ a:focus-visible {
 
   & > pre {
     margin: 0;
+  }
+
+  // The code block has a dark background in the two color schemes.
+  .option-name-group {
+    color: var(--light-blue);
   }
 
   // Reserve space at the right edge of the code block so segment links
@@ -1219,6 +1237,11 @@ sort-select-wrapper select {
   align-items: center;
   font-weight: bold;
   anchor-name: --sort-container;
+
+  .sort-label {
+    margin-bottom: 0;
+    font-weight: inherit;
+  }
 
   .sort-select {
     appearance: base-select;

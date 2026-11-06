@@ -183,6 +183,7 @@ em {
 }
 h1,
 h2,
+h3,
 h4 {
   color:inherit;
   font-family:inherit;
@@ -193,6 +194,7 @@ h4 {
 }
 h1 small,
 h2 small,
+h3 small,
 h4 small {
   color:#999;
   font-weight:400;
@@ -208,6 +210,7 @@ h1 {
 h2 {
   font-size:31.5px
 }
+h3,
 h4 {
   font-size:17.5px
 }
@@ -311,13 +314,13 @@ input[type=submit] {
 
 input[type=checkbox]:focus,
 input:-moz-placeholder {
-  color:#999
+  color:#666
 }
 input:-ms-input-placeholder {
-  color:#999
+  color:#666
 }
 input::-webkit-input-placeholder {
-  color:#999
+  color:#666
 }
 .checkbox {
   min-height:20px;
