@@ -520,6 +520,11 @@ repo = "PrismLauncher"
 
 [[sources]]
 type = "github"
+owner = "prithvihv"
+repo = "logseq-db-nix"
+
+[[sources]]
+type = "github"
 owner = "pyproject-nix"
 repo = "pyproject.nix"
 
