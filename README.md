@@ -101,6 +101,20 @@ export ELASTICSEARCH_PASSWORD=""
 
 You may need to manually edit `frontend/src/Search.elm` to use the right index.
 
+### Request-body golden test
+
+`frontend/tests/QueryGolden.elm` compares the Elasticsearch request bodies that `Search.Query` makes with `frontend/tests/QueryGolden/Expected.elm`. The cases are in `frontend/tests/QueryGolden/Cases.elm`. Run the tests with:
+
+```
+nix develop -c npm --prefix=frontend test
+```
+
+After an intended change to the query, write `Expected.elm` again, and examine its diff:
+
+```
+nix develop -c npm --prefix=frontend run build:query-golden
+```
+
 ## Deploying
 
 - On each commit to `main` branch a GitHub Action is triggered.

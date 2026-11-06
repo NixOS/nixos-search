@@ -13,6 +13,7 @@
         "build": "rsbuild build",
         "build:autocomplete": "node scripts/build-autocomplete-corpus.mjs",
         "build:icons": "node scripts/build-icons.mjs",
+        "build:query-golden": "node scripts/build-query-golden.mjs",
         "build:screenshots": "node scripts/build-screenshots.mjs",
         "dev": "npm run build:autocomplete && rsbuild dev",
         "dev:local-images": "npm run build:autocomplete && npm run build:icons && npm run build:screenshots && LOCAL_IMAGES=true rsbuild dev",
