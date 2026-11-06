@@ -1,4 +1,5 @@
 name: Setup Environment
+description: "Set up Nix and the Cachix binary cache"
 
 inputs:
   GITHUB_TOKEN:

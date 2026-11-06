@@ -3,7 +3,6 @@ module Utils exposing
     , copyButton
     , copyable
     , showHtml
-    , textIcon
     , toggleList
     )
 

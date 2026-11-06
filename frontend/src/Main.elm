@@ -46,8 +46,8 @@ import Search
         , defaultFlakeId
         )
 import Shortcut
-import Svg exposing (Svg, path, svg)
-import Svg.Attributes exposing (d, fill, height, viewBox, width)
+import Svg exposing (Svg)
+import Svg.Attributes exposing (width)
 import Task
 import Url
 import Utils exposing (basicTextIcon)
@@ -660,7 +660,7 @@ getThemeIcon theme =
         Dark ->
             ( Icons.dark_mode 16 Inherit, "Switch to the light theme" )
 
-        default ->
+        _ ->
             ( Icons.light_mode 16 Inherit, "Switch to the dark theme" )
 
 
