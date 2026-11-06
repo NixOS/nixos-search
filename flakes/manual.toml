@@ -30,6 +30,10 @@ url = "git+https://codeberg.org/raboof/mock-oauth2-server?ref=nix"
 
 [[sources]]
 type = "git"
+url = "git+https://codeberg.org/viperML/wrapper-manager?ref=master"
+
+[[sources]]
+type = "git"
 url = "git+https://codeberg.org/wolfangaukang/python-trovo?ref=main"
 
 # wolfangaukang is no longer in 'maintainers'
