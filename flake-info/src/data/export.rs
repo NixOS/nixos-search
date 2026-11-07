@@ -196,6 +196,58 @@ fn build_license_expression(
     }
 }
 
+/// The `meta.problems` kinds that have a negated value in
+/// `package_problem_kinds_set`. A kind that is not in this list can still be
+/// selected, but the search index cannot find the packages without it.
+const PROBLEM_KINDS: [&str; 4] = ["broken", "deprecated", "maintainerless", "removal"];
+
+/// The prefix of a negated value in `package_problem_kinds_set`.
+const NO_PROBLEM_PREFIX: &str = "not ";
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PackageProblem {
+    pub kind: String,
+    pub message: Option<String>,
+    pub urls: Vec<String>,
+}
+
+/// Convert `meta.problems` to `package_problems` and
+/// `package_problem_kinds_set`.
+///
+/// The set has `<kind>` for each kind that the package has, and `not <kind>`
+/// for each of the other `PROBLEM_KINDS`, so that a term filter and a term
+/// aggregation can use both values. If `problems` is `None`, the channel does
+/// not supply `meta.problems`. Thus, the set stays empty: the package possibly
+/// has a problem that is not known.
+fn convert_problems(
+    problems: Option<BTreeMap<String, import::Problem>>,
+) -> (Vec<PackageProblem>, Vec<String>) {
+    let Some(problems) = problems else {
+        return (Vec::new(), Vec::new());
+    };
+
+    let problems: Vec<PackageProblem> = problems
+        .into_iter()
+        .map(|(name, problem)| PackageProblem {
+            kind: problem.kind.unwrap_or(name),
+            message: problem.message,
+            urls: problem.urls.unwrap_or_default(),
+        })
+        .collect();
+
+    let mut kinds: Vec<String> = problems.iter().map(|p| p.kind.clone()).collect();
+    kinds.extend(
+        PROBLEM_KINDS
+            .iter()
+            .filter(|kind| !problems.iter().any(|p| p.kind == **kind))
+            .map(|kind| format!("{NO_PROBLEM_PREFIX}{kind}")),
+    );
+    kinds.sort();
+    kinds.dedup();
+
+    (problems, kinds)
+}
+
 // ----- Unified derivation representation
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -240,6 +292,8 @@ pub enum Derivation {
         /// `package_license_set` and `package_maintainers_set`.
         package_categories_set: Vec<String>,
         package_mime_types_set: Vec<String>,
+        package_problems: Vec<PackageProblem>,
+        package_problem_kinds_set: Vec<String>,
         /// The identifiers of the package's AppStream components, which name
         /// the same application in every other catalog.
         package_component_ids: Vec<String>,
@@ -415,6 +469,8 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                     package_desktop_icons: HashMap::new(),
                     package_categories_set: Vec::new(),
                     package_mime_types_set: Vec::new(),
+                    package_problems: Vec::new(),
+                    package_problem_kinds_set: Vec::new(),
                     package_component_ids: Vec::new(),
                     package_screenshots: Vec::new(),
                     package_dep_count: None,
@@ -527,6 +583,8 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                 };
                 let package_categories_set = flatten_entries(|entry| &entry.categories);
                 let package_mime_types_set = flatten_entries(|entry| &entry.mime_types);
+                let (package_problems, package_problem_kinds_set) =
+                    convert_problems(package.meta.problems);
 
                 let long_description = package
                     .meta
@@ -573,6 +631,8 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     package_desktop_icons: package.icons,
                     package_categories_set,
                     package_mime_types_set,
+                    package_problems,
+                    package_problem_kinds_set,
                     package_component_ids: package.component_ids,
                     package_screenshots: package.screenshots,
                     package_dep_count: dep_count,
@@ -821,6 +881,82 @@ impl Export {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_convert_problems() {
+        let problems = serde_json::from_str(
+            r#"{
+                "unsupportedPython": {"kind": "broken", "message": "not for python3.14"},
+                "broken": {"message": "This package is broken."},
+                "removal": {
+                    "kind": "removal",
+                    "message": "Remove it.",
+                    "urls": ["https://example.org/"]
+                }
+            }"#,
+        )
+        .unwrap();
+
+        let (problems, kinds) = convert_problems(Some(problems));
+
+        assert_eq!(
+            problems,
+            vec![
+                PackageProblem {
+                    kind: "broken".into(),
+                    message: Some("This package is broken.".into()),
+                    urls: vec![],
+                },
+                PackageProblem {
+                    kind: "removal".into(),
+                    message: Some("Remove it.".into()),
+                    urls: vec!["https://example.org/".into()],
+                },
+                PackageProblem {
+                    kind: "broken".into(),
+                    message: Some("not for python3.14".into()),
+                    urls: vec![],
+                },
+            ]
+        );
+        assert_eq!(
+            kinds,
+            vec!["broken", "not deprecated", "not maintainerless", "removal"]
+        );
+    }
+
+    #[test]
+    fn test_convert_problems_without_problems() {
+        let (problems, kinds) = convert_problems(Some(BTreeMap::new()));
+        assert!(problems.is_empty());
+        assert_eq!(
+            kinds,
+            vec![
+                "not broken",
+                "not deprecated",
+                "not maintainerless",
+                "not removal"
+            ]
+        );
+    }
+
+    /// A kind that is not in `PROBLEM_KINDS` must not be lost.
+    #[test]
+    fn test_convert_problems_unknown_kind() {
+        let problems = serde_json::from_str(r#"{"new": {}}"#).unwrap();
+        let (_, kinds) = convert_problems(Some(problems));
+        assert!(kinds.contains(&"new".to_string()));
+        assert!(kinds.contains(&"not broken".to_string()));
+    }
+
+    /// Channels from before `meta.problems` do not tell if a package is
+    /// broken, so the index must not claim that it is `not broken`.
+    #[test]
+    fn test_convert_problems_missing() {
+        let (problems, kinds) = convert_problems(None);
+        assert!(problems.is_empty());
+        assert!(kinds.is_empty());
+    }
 
     #[test]
     fn test_option() {
