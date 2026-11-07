@@ -122,6 +122,7 @@ type alias ResultItemSource =
     , flakeDescription : Maybe String
     , flakeUrl : Maybe ( String, String )
     , modularServices : List String
+    , nixosModules : List String
     , desktopEntries : List DesktopEntry
 
     -- The file under `/icons` holding each entry's image, keyed by the name the
@@ -1456,6 +1457,11 @@ viewResultItem saveData showIconMargin screenshotShown nixosChannels channel sho
                     , desktopEntries
                     , screenshots
                     , maintainersTeamsAndPlatforms
+                    , if List.isEmpty item.source.nixosModules then
+                        text ""
+
+                      else
+                        viewNixosModules channel item.source.nixosModules
                     , optionsLink
                     , popularity
                     , if List.isEmpty item.source.modularServices then
@@ -1687,6 +1693,24 @@ viewUsageInstructions attrName currentMethod =
                 , strong [] [ text attrName ]
                 ]
             ]
+
+
+viewNixosModules : String -> List String -> Html msg
+viewNixosModules channel nixosModules =
+    div []
+        [ h3 [] [ text "NixOS modules" ]
+        , p [] [ text "These modules set up this package on NixOS." ]
+        , ul [] (List.map (viewNixosModule channel) nixosModules)
+        ]
+
+
+viewNixosModule : String -> String -> Html msg
+viewNixosModule channel nixosModule =
+    li []
+        [ a
+            [ href ("/options?channel=" ++ channel ++ "&query=" ++ nixosModule) ]
+            [ code [] [ text nixosModule ] ]
+        ]
 
 
 viewModularServices : String -> String -> List String -> Html msg
@@ -2041,6 +2065,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "flake_description" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_resolved" (Json.Decode.map Just decodeResolvedFlake) Nothing
         |> Json.Decode.Pipeline.optional "package_modular_services" (Json.Decode.list Json.Decode.string) []
+        |> Json.Decode.Pipeline.optional "package_nixos_modules" (Json.Decode.list Json.Decode.string) []
         |> Json.Decode.Pipeline.optional "package_desktop_entries" (Json.Decode.list decodeDesktopEntry) []
         |> Json.Decode.Pipeline.optional "package_desktop_icons" (Json.Decode.dict Json.Decode.string) Dict.empty
         |> Json.Decode.Pipeline.optional "package_screenshots" (Json.Decode.list decodeScreenshot) []
