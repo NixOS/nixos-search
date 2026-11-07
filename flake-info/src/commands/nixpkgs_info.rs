@@ -313,8 +313,8 @@ pub fn get_nixpkgs_info(
     };
 
     let mut programs = get_nixpkgs_programs(nixpkgs)?;
-    let mut package_services =
-        get_nixpkgs_package_services(&Source::Nixpkgs(nixpkgs.clone())).unwrap_or_default();
+    let mut package_links =
+        get_nixpkgs_package_links(&Source::Nixpkgs(nixpkgs.clone())).unwrap_or_default();
     // Skip the slow eval when only importing a single attribute.
     let dep_counts = if attribute.is_none() {
         super::get_nixpkgs_dep_counts(nixpkgs)?
@@ -386,7 +386,14 @@ pub fn get_nixpkgs_info(
                 .unwrap_or_default()
                 .into_iter()
                 .collect();
-            let modular_services = package_services.remove(&attribute).unwrap_or_default();
+            let modular_services = package_links
+                .modular_services
+                .remove(&attribute)
+                .unwrap_or_default();
+            let nixos_modules = package_links
+                .nixos_modules
+                .remove(&attribute)
+                .unwrap_or_default();
             let dep_count = dep_counts.get(&attribute).copied();
             let repology_repos = repology_counts.get(&attribute).copied();
             NixpkgsEntry::Derivation {
@@ -394,6 +401,7 @@ pub fn get_nixpkgs_info(
                 package,
                 programs,
                 modular_services,
+                nixos_modules,
                 dep_count,
                 repology_repos,
             }
@@ -542,19 +550,26 @@ fn is_system(component: &str) -> bool {
     )
 }
 
-pub fn get_nixpkgs_package_services(nixpkgs: &Source) -> Result<HashMap<String, Vec<String>>> {
+/// The modules that use a package, keyed by package attribute name.
+#[derive(Debug, Default, Deserialize)]
+pub struct PackageLinks {
+    pub modular_services: HashMap<String, Vec<String>>,
+    pub nixos_modules: HashMap<String, Vec<String>>,
+}
+
+pub fn get_nixpkgs_package_links(nixpkgs: &Source) -> Result<PackageLinks> {
     let mut command = super::nix_eval_command(&["eval", "--json", "--no-write-lock-file"]);
     super::add_flake_arg(&mut command, "nixpkgsFlake", &nixpkgs.to_flake_ref());
-    command.add_arg("nixos-package-services");
+    command.add_arg("nixos-package-links");
 
     let cow = super::run_capturing_stderr(&mut command)
-        .with_context(|| "Failed to gather modular service mapping for packages")?;
+        .with_context(|| "Failed to gather the modules that use each package")?;
 
     let output = &*cow.stdout_string_lossy();
     let de = &mut serde_json::Deserializer::from_str(output);
-    let map: HashMap<String, Vec<String>> = serde_path_to_error::deserialize(de)
-        .with_context(|| "Could not parse package-services map")?;
-    Ok(map)
+    let links = serde_path_to_error::deserialize(de)
+        .with_context(|| "Could not parse the package links")?;
+    Ok(links)
 }
 
 pub fn get_nixpkgs_programs(nixpkgs: &Nixpkgs) -> Result<HashMap<String, HashSet<String>>> {
@@ -681,6 +696,24 @@ pub fn get_darwin_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
 mod tests {
     use super::*;
     use crate::data::import::LocalizedEntry;
+
+    #[test]
+    fn test_package_links_deserialize() {
+        let json = r#"
+        {
+            "modular_services": { "php": ["default"] },
+            "nixos_modules": {
+                "fish": ["programs.fish"],
+                "docker": ["virtualisation.docker", "virtualisation.docker.rootless"]
+            }
+        }
+        "#;
+        let links: PackageLinks = serde_json::from_str(json).unwrap();
+
+        assert_eq!(links.modular_services["php"], ["default"]);
+        assert_eq!(links.nixos_modules["fish"], ["programs.fish"]);
+        assert_eq!(links.nixos_modules["docker"].len(), 2);
+    }
 
     #[test]
     fn test_packages_info_deserialize() {

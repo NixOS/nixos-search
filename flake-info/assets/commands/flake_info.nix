@@ -287,6 +287,23 @@ let
     in
     lib.mapAttrsToList (_: mergeGroup) grouped;
 
+  # Merge a list of single-key attribute sets into a map to the distinct values.
+  collectValues = entries: lib.zipAttrsWith (_: values: lib.unique values) entries;
+
+  # For an option `<module>.package` with the default `pkgs.<attribute>`, gives
+  # `[ { <attribute> = <module>; } ]`, else `[ ]`. A module that has instances
+  # has the name of the part before them: `services.foo.<name>.package` gives
+  # `services.foo`.
+  moduleOfPackageOption =
+    opt:
+    let
+      attribute = lib.match "[[:space:]]*pkgs\\.([A-Za-z0-9_.+-]+)[[:space:]]*" (opt.default.text or "");
+      module = lib.head (lib.splitString ".<" (lib.removeSuffix ".package" opt.name));
+    in
+    lib.optional (lib.hasSuffix ".package" opt.name && attribute != null) {
+      ${lib.head attribute} = module;
+    };
+
   # Base schemas from official flake-schemas input extended with custom schemas
   schemas = flake-schemas.exportedSchemas // (resolved.schemas or { });
 
@@ -485,10 +502,22 @@ rec {
 
   nixos-services = deduplicateServices realServices;
 
-  # Map from package attribute name to the list of modular service module
-  # names it exposes. Derived from the parsed service options above so it
-  # stays in sync with nixpkgs' hand-maintained list.
-  nixos-package-services = lib.zipAttrsWith (_: values: lib.unique values) (
-    map (opt: { ${opt.service_package} = opt.service_module; }) realServices
-  );
+  inherit moduleOfPackageOption;
+
+  # Links from a package to the modules that use it, in one attribute so that
+  # both come from one evaluation of the NixOS options.
+  nixos-package-links = {
+    # Map from package attribute name to the list of modular service module
+    # names it exposes. Derived from the parsed service options above so it
+    # stays in sync with nixpkgs' hand-maintained list.
+    modular_services = collectValues (
+      map (opt: { ${opt.service_package} = opt.service_module; }) realServices
+    );
+
+    # Map from package attribute name to the NixOS modules that use it. A
+    # module tells this itself: its `.package` option has that package as the
+    # default. Other defaults, such as a conditional on `stateVersion`, are
+    # skipped because they do not identify one package.
+    nixos_modules = collectValues (lib.concatMap moduleOfPackageOption nixos-options);
+  };
 }

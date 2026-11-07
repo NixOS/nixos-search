@@ -227,6 +227,9 @@ pub enum Derivation {
         package_homepage: Vec<String>,
         package_position: Option<String>,
         package_modular_services: Vec<String>,
+        /// Prefixes of the NixOS modules that use this package, such as
+        /// `programs.fish`.
+        package_nixos_modules: Vec<String>,
         /// The package's desktop entries, for rendering. Kept nested rather than
         /// flattened: an entry's `type` would otherwise collide with the tag
         /// this enum is discriminated by.
@@ -410,6 +413,7 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                     package_homepage: Vec::new(),
                     package_position: None,
                     package_modular_services: Vec::new(),
+                    package_nixos_modules: Vec::new(),
                     // Flakes carry no desktop entries; only nixpkgs indexes them.
                     package_desktop_entries: Vec::new(),
                     package_desktop_icons: HashMap::new(),
@@ -447,6 +451,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                 package,
                 programs,
                 modular_services,
+                nixos_modules,
                 dep_count,
                 repology_repos,
             } => {
@@ -569,6 +574,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                         .map_or(Default::default(), OneOrMany::into_list),
                     package_position: position,
                     package_modular_services: modular_services,
+                    package_nixos_modules: nixos_modules,
                     package_desktop_entries: desktop_entries,
                     package_desktop_icons: package.icons,
                     package_categories_set,

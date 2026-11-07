@@ -178,6 +178,9 @@ lazy_static! {
                 "package_modular_services": {
                     "type": "keyword"
                 },
+                "package_nixos_modules": {
+                    "type": "keyword"
+                },
                 // Rendered, never queried: the entry's own fields are searched
                 // through the flattened sets below.
                 "package_desktop_entries": {"type": "object", "enabled": false},

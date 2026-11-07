@@ -126,6 +126,56 @@ let
 
   results = map runTestCase testCases;
 
+  moduleOfPackageOption =
+    name: text:
+    (import ../flake_info.nix {
+      inherit flake-schemas;
+      nixpkgsFlake = pkgs;
+    }).moduleOfPackageOption
+      {
+        inherit name;
+        default.text = text;
+      };
+
+  moduleLinkFailures = lib.runTests {
+    testPackage = {
+      expr = moduleOfPackageOption "programs.fish.package" "pkgs.fish";
+      expected = [ { fish = "programs.fish"; } ];
+    };
+    testNestedAttribute = {
+      expr = moduleOfPackageOption "services.displayManager.sddm.package" "pkgs.kdePackages.sddm";
+      expected = [ { "kdePackages.sddm" = "services.displayManager.sddm"; } ];
+    };
+    testSurroundingWhitespace = {
+      expr = moduleOfPackageOption "services.foo.package" "\n  pkgs.foo\n";
+      expected = [ { foo = "services.foo"; } ];
+    };
+    testInstances = {
+      expr = moduleOfPackageOption "services.foo.<name>.package" "pkgs.foo";
+      expected = [ { foo = "services.foo"; } ];
+    };
+    testOtherOption = {
+      expr = moduleOfPackageOption "services.foo.jdk" "pkgs.jdk";
+      expected = [ ];
+    };
+    testConditionalDefault = {
+      expr = moduleOfPackageOption "services.foo.package" "if x then pkgs.foo else pkgs.bar";
+      expected = [ ];
+    };
+    testOverriddenDefault = {
+      expr = moduleOfPackageOption "services.foo.package" "pkgs.foo.override { }";
+      expected = [ ];
+    };
+    testConfigDefault = {
+      expr = moduleOfPackageOption "services.openssh.package" "config.programs.ssh.package";
+      expected = [ ];
+    };
+    testNoDefault = {
+      expr = moduleOfPackageOption "services.foo.package" "";
+      expected = [ ];
+    };
+  };
+
   allPassed = lib.all (r: r.passed) results;
 
   failedTests = lib.filter (r: !r.passed) results;
@@ -195,6 +245,9 @@ let
   ) failedTests;
 
 in
+assert lib.assertMsg (
+  moduleLinkFailures == [ ]
+) "moduleOfPackageOption tests failed: ${builtins.toJSON moduleLinkFailures}";
 if allPassed then
   pkgs.runCommand "flake-info-tests-passed"
     {

@@ -309,6 +309,7 @@ pub enum NixpkgsEntry {
         package: Package,
         programs: Vec<String>,
         modular_services: Vec<String>,
+        nixos_modules: Vec<String>,
         dep_count: Option<u64>,
         repology_repos: Option<u64>,
     },
@@ -750,6 +751,7 @@ mod tests {
                 package,
                 programs: Vec::new(),
                 modular_services: Vec::new(),
+                nixos_modules: Vec::new(),
                 dep_count: None,
                 repology_repos: None,
             })
