@@ -35,6 +35,10 @@ jobs:
       - name: Scan desktop entries
         if: github.repository_owner == 'NixOS'
         shell: sh
+        env:
+          # The token of the `nixos-search` client of `cache.nixos.org/nix/store/`.
+          # Without it, the script downloads the full NAR of each file.
+          NAR_SERVE_TOKEN: ${{ secrets.NAR_SERVE_TOKEN }}
         run: |
           NIXPKGS="$(nix flake prefetch --json github:NixOS/nixpkgs/nixos-unstable | jq -r .storePath)"
           export NIXPKGS
