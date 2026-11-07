@@ -35,6 +35,9 @@ jobs:
         working-directory: frontend
 
       - name: Run relevance benchmark
+        env:
+          # Send the queries directly to Elasticsearch. Netlify can stop a run with a 403 challenge page.
+          ELASTICSEARCH_URL: https://nixos-search-7-1733963800.us-east-1.bonsaisearch.net
         run: npm --prefix frontend --silent run benchmark > benchmark_report.md
 
       - name: report
