@@ -7,7 +7,9 @@ use std::path::{Component, Path, PathBuf};
 
 use crate::Source;
 use crate::data::Nixpkgs;
-use crate::data::import::{DesktopEntry, NixOption, NixpkgsEntry, Package, Screenshot};
+use crate::data::import::{
+    DesktopEntry, NixOption, NixpkgsEntry, Package, Screenshot, mark_duplicate_apps,
+};
 
 /// Wrapper for the channel `packages.json` format.
 #[derive(Deserialize)]
@@ -404,9 +406,11 @@ pub fn get_nixpkgs_info(
                 nixos_modules,
                 dep_count,
                 repology_repos,
+                duplicate_app: false,
             }
         })
         .collect();
+    mark_duplicate_apps(&mut entries);
 
     // One document per distinct image, from which the frontend build writes a
     // static file. Kept out of the package documents so that a search response
