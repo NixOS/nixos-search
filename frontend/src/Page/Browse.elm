@@ -5,6 +5,7 @@ module Page.Browse exposing
     , Entry
     , Model
     , Msg
+    , defaultChannel
     , init
     , matches
     , update
@@ -147,6 +148,19 @@ pageSize =
     48
 
 
+{-| The channel to show when the URL does not give one. This is the rolling
+channel, because the index of a stable channel does not contain application
+data. Use the fallback when there is no rolling channel.
+-}
+defaultChannel : String -> List NixOSChannel -> String
+defaultChannel fallbackChannel nixosChannels =
+    nixosChannels
+        |> List.filter (\channel -> channel.status == Search.Rolling)
+        |> List.head
+        |> Maybe.map .id
+        |> Maybe.withDefault fallbackChannel
+
+
 init :
     Search.Options
     -> List NixOSChannel
@@ -154,11 +168,13 @@ init :
     -> Bool
     -> BrowseArgs
     -> ( Model, Cmd Msg )
-init options nixosChannels defaultChannel saveData args =
+init options nixosChannels fallbackChannel saveData args =
     let
         model : Model
         model =
-            { channel = Maybe.withDefault defaultChannel args.channel
+            { channel =
+                args.channel
+                    |> Maybe.withDefault (defaultChannel fallbackChannel nixosChannels)
             , category = args.category
             , size = pageSize
             , saveData = saveData
