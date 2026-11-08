@@ -350,6 +350,20 @@ footer {
 }
 
 // Search seatch
+fieldset.channel-radios {
+  @include radio-segmented-group;
+  display: inline-flex;
+  align-items: center;
+
+  legend.channel-title {
+    float: left;
+    margin: 0 0.5em 0 0;
+    font-size: 1.2em;
+    line-height: 28px;
+    border: 0;
+  }
+}
+
 .search-page {
 
   &.not-asked {
@@ -412,20 +426,6 @@ footer {
       justify-content: space-between;
       align-items: center;
       margin-bottom: 40px;
-
-      fieldset.channel-radios {
-        @include radio-segmented-group;
-        display: inline-flex;
-        align-items: center;
-
-        legend.channel-title {
-          float: left;
-          margin: 0 0.5em 0 0;
-          font-size: 1.2em;
-          line-height: 28px;
-          border: 0;
-        }
-      }
     }
   }
 
@@ -895,6 +895,66 @@ footer {
 /* ------------------------------------------------------------------------- */
 /* -- Loader --------------------------------------------------------------- */
 /* ------------------------------------------------------------------------- */
+
+.browse-page {
+  .channel-radios {
+    margin: 1em 0;
+  }
+
+  .browse-category {
+    margin-bottom: 2em;
+
+    h2 a {
+      color: var(--text-color);
+    }
+  }
+
+  .browse-apps {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16em, 1fr));
+    gap: 1em;
+    margin: 0 0 1em;
+    list-style: none;
+  }
+
+  .browse-app {
+    padding: 0.6em;
+    border: 1px solid var(--line-color);
+    border-radius: 4px;
+
+    > a {
+      display: grid;
+      grid-template-columns: 3em 1fr;
+      column-gap: 0.6em;
+      align-items: center;
+    }
+
+    .browse-app-icon {
+      grid-row: span 2;
+      width: 3em;
+      height: 3em;
+    }
+
+    .browse-app-name {
+      font-weight: bold;
+    }
+
+    .browse-app-attr {
+      color: var(--search-result-short-details-color);
+      font-size: 0.85em;
+      overflow-wrap: anywhere;
+    }
+
+    .browse-app-description {
+      margin: 0.4em 0 0;
+      color: var(--text-color);
+    }
+  }
+
+  .browse-show-more {
+    text-align: center;
+  }
+}
 
 .loader-wrapper {
   height: 200px;

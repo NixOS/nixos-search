@@ -36,6 +36,7 @@ import Http
 import Json.Decode
 import Material.Icons as Icons
 import Material.Icons.Types exposing (Coloring(..))
+import Page.Browse
 import Page.Flakes exposing (Model(..))
 import Page.Options
 import Page.Packages
@@ -174,6 +175,7 @@ port systemDarkChanged : (Bool -> msg) -> Sub msg
 
 type Page
     = NotFound
+    | Browse Page.Browse.Model
     | Packages Page.Packages.Model
     | Options Page.Options.Model
     | Flakes Page.Flakes.Model
@@ -228,6 +230,7 @@ init flags url navKey =
 type Msg
     = ChangedUrl Url.Url
     | ClickedLink Browser.UrlRequest
+    | BrowseMsg Page.Browse.Msg
     | PackagesMsg Page.Packages.Msg
     | OptionsMsg Page.Options.Msg
     | FlakesMsg Page.Flakes.Msg
@@ -370,6 +373,9 @@ pageMatch m1 m2 =
         ( NotFound, NotFound ) ->
             True
 
+        ( Browse model_a, Browse model_b ) ->
+            Page.Browse.matches model_a model_b
+
         ( Packages model_a, Packages model_b ) ->
             { model_a | show = Nothing, showUsageDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
                 == { model_b | show = Nothing, showUsageDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
@@ -418,6 +424,11 @@ changeRouteTo currentModel url =
             -- Always redirect to /packages until we have something to show
             -- on the home page
             ( model, Browser.Navigation.replaceUrl model.navKey "/packages" )
+
+        Route.Browse browseArgs ->
+            Page.Browse.init currentModel.elasticsearch currentModel.nixosChannels currentModel.defaultNixOSChannel (not currentModel.preferStatic) browseArgs
+                |> updateWith Browse BrowseMsg model
+                |> avoidReinit
 
         Route.Packages searchArgs ->
             let
@@ -491,6 +502,10 @@ update msg model =
         ( ChangedUrl url, _ ) ->
             changeRouteTo model url
 
+        ( BrowseMsg subMsg, Browse subModel ) ->
+            Page.Browse.update model.navKey model.elasticsearch model.nixosChannels subMsg subModel
+                |> updateWith Browse BrowseMsg model
+
         ( PackagesMsg subMsg, Packages subModel ) ->
             Page.Packages.update model.navKey subMsg subModel model.nixosChannels
                 |> updateWith Packages PackagesMsg model
@@ -560,6 +575,9 @@ view model =
 
         title =
             case model.page of
+                Browse _ ->
+                    "NixOS Search - Browse"
+
                 Packages m ->
                     "NixOS Search - Packages" ++ maybeQuery m.query
 
@@ -667,13 +685,26 @@ viewNavigation route =
                     Route.Flakes args ->
                         args
 
+                    Route.Browse args ->
+                        Route.SearchArgs Nothing args.channel Nothing Nothing Nothing Nothing Nothing Nothing Route.defaultOptionSource
+
                     _ ->
                         Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Route.defaultOptionSource
+
+        -- All categories of Browse are in the same navigation item
+        activeRoute =
+            case route of
+                Route.Browse args ->
+                    Route.Browse { args | category = Nothing }
+
+                _ ->
+                    route
     in
     li [] []
         :: List.map
-            (viewNavigationItem route)
-            [ ( Route.Packages searchArgs, basicTextIcon Icons.widgets "Packages" )
+            (viewNavigationItem activeRoute)
+            [ ( Route.Browse { channel = searchArgs.channel, category = Nothing }, basicTextIcon Icons.explore "Browse" )
+            , ( Route.Packages searchArgs, basicTextIcon Icons.widgets "Packages" )
             , ( Route.Options searchArgs, basicTextIcon Icons.tune "Options" )
             , ( Route.Flakes searchArgs, basicTextIcon Icons.ac_unit "3rd-party Flakes" )
             ]
@@ -740,6 +771,9 @@ viewPage model =
     case model.page of
         NotFound ->
             div [] [ text "Not Found" ]
+
+        Browse browseModel ->
+            Html.map BrowseMsg <| Page.Browse.view model.nixosChannels browseModel
 
         Packages packagesModel ->
             Html.map (\m -> PackagesMsg m) <| Page.Packages.view model.nixosChannels (docCountsOf packagesModel.channel) packagesModel

@@ -1,5 +1,6 @@
 module Route exposing
-    ( OptionSource(..)
+    ( BrowseArgs
+    , OptionSource(..)
     , Route(..)
     , SearchArgs
     , SearchRoute
@@ -339,9 +340,45 @@ searchArgsToFragment args =
             fragmentToString (Dict.fromList [ ( "show", v ) ])
 
 
+{-| The Browse page shows the applications of one channel: some of each
+category, or all of one category.
+-}
+type alias BrowseArgs =
+    { channel : Maybe String
+    , category : Maybe String
+    }
+
+
+browseArgsParser : AppUrl -> BrowseArgs
+browseArgsParser appUrl =
+    let
+        string : String -> Maybe String
+        string k =
+            case Dict.get k appUrl.queryParameters of
+                Just [ v ] ->
+                    Just v
+
+                _ ->
+                    Nothing
+    in
+    { channel = string "channel"
+    , category = string "category"
+    }
+
+
+browseArgsToUrl : BrowseArgs -> AppUrl.QueryParameters
+browseArgsToUrl args =
+    [ Maybe.map (\v -> ( "channel", [ v ] )) args.channel
+    , Maybe.map (\v -> ( "category", [ v ] )) args.category
+    ]
+        |> Maybe.Extra.values
+        |> Dict.fromList
+
+
 type Route
     = NotFound
     | Home
+    | Browse BrowseArgs
     | Packages SearchArgs
     | Options SearchArgs
     | Flakes SearchArgs
@@ -357,6 +394,9 @@ fromUrl url =
     case appUrl.path of
         [] ->
             Home
+
+        [ "browse" ] ->
+            Browse (browseArgsParser appUrl)
 
         [ "packages" ] ->
             Packages (searchQueryParser appUrl)
@@ -394,6 +434,9 @@ routeToString route =
 
                 NotFound ->
                     ( [ "not-found" ], Dict.empty, Nothing )
+
+                Browse browseArgs ->
+                    ( [ "browse" ], browseArgsToUrl browseArgs, Nothing )
 
                 Packages searchArgs ->
                     ( [ "packages" ], searchArgsToUrl searchArgs, searchArgsToFragment searchArgs )
