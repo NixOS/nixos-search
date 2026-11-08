@@ -137,8 +137,11 @@ a:hover {
   margin-left:20px;
   min-height:1px
 }
+// One fluid width for all screens wider than 767px, with a 20px gutter on
+// each side. Thus the margins do not take a large part of the screen.
 .container {
-  width:940px
+  width: calc(100% - 80px);
+  max-width: 1170px;
 }
 
 [class*=span].pull-right {
@@ -180,6 +183,7 @@ em {
 }
 h1,
 h2,
+h3,
 h4 {
   color:inherit;
   font-family:inherit;
@@ -190,6 +194,7 @@ h4 {
 }
 h1 small,
 h2 small,
+h3 small,
 h4 small {
   color:#999;
   font-weight:400;
@@ -205,6 +210,7 @@ h1 {
 h2 {
   font-size:31.5px
 }
+h3,
 h4 {
   font-size:17.5px
 }
@@ -308,13 +314,13 @@ input[type=submit] {
 
 input[type=checkbox]:focus,
 input:-moz-placeholder {
-  color:#999
+  color:#666
 }
 input:-ms-input-placeholder {
-  color:#999
+  color:#666
 }
 input::-webkit-input-placeholder {
-  color:#999
+  color:#666
 }
 .checkbox {
   min-height:20px;
@@ -352,8 +358,7 @@ input[type=submit].btn::-moz-focus-inner {
   border:1px solid #fbeed5;
   border-radius:4px;
   margin-bottom:20px;
-  padding:8px 35px 8px 14px;
-  text-shadow:0 1px 0 hsla(0,0%,100%,.5)
+  padding:8px 35px 8px 14px
 }
 .alert,
 .alert h4 {
@@ -400,50 +405,6 @@ input[type=submit].btn::-moz-focus-inner {
   float:right
 }
 
-
-
-.pager {
-  list-style:none;
-  margin:20px 0;
-  text-align:center
-}
-.pager:after,
-.pager:before {
-  content:"";
-  display:table;
-  line-height:0
-}
-.pager:after {
-  clear:both
-}
-.pager li {
-  display:inline
-}
-.pager li>a,
-.pager li>span {
-  background-color:#fff;
-  border:1px solid #ddd;
-  border-radius:15px;
-  display:inline-block;
-  padding:5px 14px
-}
-.pager li>a:focus,
-.pager li>a:hover {
-  background-color:#f5f5f5;
-  text-decoration:none
-}
-.pager .previous>a,
-.pager .previous>span {
-  float:left
-}
-.pager .disabled>a,
-.pager .disabled>a:focus,
-.pager .disabled>a:hover,
-.pager .disabled>span {
-  background-color:#fff;
-  color:#999;
-  cursor:default
-}
 .badge {
   background-color:#999;
   color:#fff;
@@ -452,7 +413,6 @@ input[type=submit].btn::-moz-focus-inner {
   font-weight:700;
   line-height:14px;
   padding:2px 4px;
-  text-shadow:0 -1px 0 rgba(0,0,0,.25);
   vertical-align:baseline;
   white-space:nowrap;
   border-radius:9px;

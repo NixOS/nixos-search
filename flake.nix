@@ -181,6 +181,22 @@
             };
             nixosChannels = nixosChannelsFile;
             nixosChannelsJson = pkgs.writeText "nixosChannels.json" (lib.toJSON nixosChannels);
+          }
+          # `chromium` is only available on Linux.
+          // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+            lighthouse =
+              let
+                nodeModules = "${pkgs.google-lighthouse}/lib/node_modules";
+              in
+              pkgs.writeShellApplication {
+                name = "lighthouse";
+                runtimeInputs = [ pkgs.nodejs ];
+                text = ''
+                  export CHROME_PATH="${lib.getExe pkgs.chromium}"
+                  export NODE_PATH="${nodeModules}:${nodeModules}/lighthouse/node_modules"
+                  exec node ${./frontend/scripts/lighthouse.mjs} --dist ${packages.frontend} "$@"
+                '';
+              };
           };
 
           checks = {

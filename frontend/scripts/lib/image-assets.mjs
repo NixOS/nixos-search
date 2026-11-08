@@ -4,11 +4,16 @@
 // two callers: an icon and a screenshot differ only in the document type, the
 // fields that carry them and the directory they are written to.
 //
-// Each caller is invoked in two places, following
-// `build-autocomplete-corpus.mjs`:
-//   - the `dev` npm script, before the rsbuild dev server starts, and
+// Each caller is invoked in two places:
+//   - the `dev:local-images` npm script, before the rsbuild dev server starts,
+//     and
 //   - a `Build ... assets` CI step, after `nix build .#frontend`, writing into
 //     `./dist` before the Netlify deploy.
+//
+// The `dev` npm script does not write the images. Its dev server gets them from
+// search.nixos.org (see `server.proxy` in `rsbuild.config.mjs`), which has the
+// images of the last deploy. Use `dev:local-images` for work on the images, or
+// when the dev server reads an index that the last deploy did not.
 //
 // The Nix build itself does not run these (the sandbox has no network); the CI
 // steps do. An image a deploy did not write renders as nothing rather than as a

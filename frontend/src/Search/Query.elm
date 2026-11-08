@@ -1,4 +1,4 @@
-module Search.Query exposing (optionsBody, packagesBody, platforms)
+module Search.Query exposing (optionsBody, packagesBody, platforms, problemKindsField)
 
 {-| Single source of truth for the Elasticsearch query the client sends.
 
@@ -9,6 +9,7 @@ Further consumers may add filtering aspects. Which does not affect ranking quali
 -}
 
 import Json.Encode
+import Json.Encode.Extra exposing (optional, wrap)
 import List.Extra
 import Search exposing (Sort(..), Terms)
 
@@ -43,6 +44,15 @@ type alias Ranking =
     }
 
 
+{-| The facet where each selected value narrows the results: the values state
+facts of one package, such as `broken` and `not removal`. In all the other
+facets, a selected value extends the results.
+-}
+problemKindsField : String
+problemKindsField =
+    "package_problem_kinds_set"
+
+
 packagesBody :
     String
     -> Int
@@ -61,6 +71,7 @@ packagesBody query from size sort selectedBuckets =
             , { field = "package_platforms", size = 20, include = Just platforms }
             , { field = "package_categories_set", size = 20, include = Nothing }
             , { field = "package_mime_types_set", size = 20, include = Nothing }
+            , { field = problemKindsField, size = 20, include = Nothing }
             ]
 
         selectionFor : String -> List String
@@ -71,32 +82,32 @@ packagesBody query from size sort selectedBuckets =
                 |> Maybe.map Tuple.second
                 |> Maybe.withDefault []
 
-        filterByBuckets : List ( String, Json.Encode.Value )
-        filterByBuckets =
-            [ ( "bool"
-              , Json.Encode.object
-                    [ ( "must"
-                      , Json.Encode.list Json.Encode.object
-                            (List.map
-                                (\term ->
-                                    [ ( "bool"
-                                      , Json.Encode.object
-                                            [ ( "should"
-                                              , Json.Encode.list Json.Encode.object <|
-                                                    List.map
-                                                        (filterByBucket term.field)
-                                                        (selectionFor term.field)
-                                              )
-                                            ]
-                                      )
-                                    ]
+        bucketFilters : List ( String, Clause )
+        bucketFilters =
+            List.filterMap
+                (\term ->
+                    case selectionFor term.field of
+                        [] ->
+                            Nothing
+
+                        selection ->
+                            Just
+                                ( term.field
+                                , [ ( "bool"
+                                    , selection
+                                        |> Json.Encode.list (filterByBucket term.field >> Json.Encode.object)
+                                        |> wrap
+                                            (if term.field == problemKindsField then
+                                                "must"
+
+                                             else
+                                                "should"
+                                            )
+                                    )
+                                  ]
                                 )
-                                terms
-                            )
-                      )
-                    ]
-              )
-            ]
+                )
+                terms
     in
     encodeRequestBody
         { query = String.trim query
@@ -107,7 +118,7 @@ packagesBody query from size sort selectedBuckets =
         , sortField = "package_attr_name"
         , otherSortFields = [ "package_pversion" ]
         , terms = terms
-        , filterByBuckets = filterByBuckets
+        , bucketFilters = bucketFilters
         , negatedFields = [ "package_attr_name" ]
         , ranking = packagesRanking
         , rescore = Just { field = "package_attr_name", weight = 30.3 }
@@ -146,7 +157,7 @@ optionsBody types query from size sort =
         , sortField = "option_name"
         , otherSortFields = []
         , terms = []
-        , filterByBuckets = []
+        , bucketFilters = []
         , negatedFields = [ "option_name" ]
         , ranking = optionsRanking
         , rescore = Just { field = "option_name", weight = 22.3 }
@@ -305,33 +316,34 @@ packagesRanking words =
         -- the attribute set and the attribute name's edge-ngrams.
         depCountAndText : List Clause
         depCountAndText =
+            let
+                depCount : Clause
+                depCount =
+                    rankFeature
+                        { field = "package_dep_count"
+                        , boost = Nothing
+                        , name = Nothing
+                        , fn = sigmoidFn 7580.0 0.434
+                        }
+
+                text : List Clause
+                text =
+                    perWord { variants = False, surround = False } words
+                        |> multiMatchClauses
+                            { kind = "best_fields"
+                            , between = [ ( "analyzer", Json.Encode.string "lowercase" ) ]
+                            , fields =
+                                [ "package_longDescription.edge^12"
+                                , "package_attr_set^2.97"
+                                , "package_attr_name.edge^0.307"
+                                ]
+                            , boost = Just 0.128
+                            }
+            in
             [ [ ( "bool"
                 , Json.Encode.object
-                    [ ( "must"
-                      , Json.Encode.list Json.Encode.object
-                            [ rankFeature
-                                { field = "package_dep_count"
-                                , boost = Nothing
-                                , name = Nothing
-                                , fn = sigmoidFn 7580.0 0.434
-                                }
-                            ]
-                      )
-                    , ( "should"
-                      , Json.Encode.list Json.Encode.object
-                            (multiMatchClauses
-                                { kind = "best_fields"
-                                , between = [ ( "analyzer", Json.Encode.string "lowercase" ) ]
-                                , fields =
-                                    [ "package_longDescription.edge^12"
-                                    , "package_attr_set^2.97"
-                                    , "package_attr_name.edge^0.307"
-                                    ]
-                                , boost = Just 0.128
-                                }
-                                (perWord { variants = False, surround = False } words)
-                            )
-                      )
+                    [ ( "must", Json.Encode.list Json.Encode.object [ depCount ] )
+                    , ( "should", Json.Encode.list Json.Encode.object text )
                     , ( "boost", Json.Encode.float 0.364 )
                     ]
                 )
@@ -685,27 +697,25 @@ keywordClauses :
     -> List String
     -> List Clause
 keywordClauses spec texts =
-    texts
-        |> List.map
-            (\text ->
-                [ ( spec.kind
-                  , Json.Encode.object
-                        [ ( spec.field
-                          , Json.Encode.object
-                                (( "value", Json.Encode.string text )
-                                    :: optionalFloat "boost" spec.boost
-                                    ++ (if spec.caseInsensitive then
-                                            [ ( "case_insensitive", Json.Encode.bool True ) ]
+    let
+        caseInsensitive : List ( String, Json.Encode.Value )
+        caseInsensitive =
+            if spec.caseInsensitive then
+                [ ( "case_insensitive", Json.Encode.bool True ) ]
 
-                                        else
-                                            []
-                                       )
-                                )
-                          )
-                        ]
-                  )
-                ]
-            )
+            else
+                []
+
+        keyword : String -> Clause
+        keyword text =
+            [ ( spec.kind
+              , (( "value", Json.Encode.string text ) :: optionalFloat "boost" spec.boost ++ caseInsensitive)
+                    |> Json.Encode.object
+                    |> wrap spec.field
+              )
+            ]
+    in
+    List.map keyword texts
 
 
 {-| A `multi_match` over weighted fields. `between` carries whatever the clause
@@ -845,41 +855,42 @@ optionalFloat key value =
 -- between the two tracks except in the values the callers above pass in.
 
 
+{-| Bucket filters go in `post_filter`, so they apply to the hits but not to
+the aggregations. Each facet is counted under the filters of the other facets
+only. Thus a selection in a facet does not remove the other values of that
+facet.
+
+The response nests each facet's buckets under its own name twice:
+`aggregations.<field>.<field>.buckets`. The `all` aggregation is global and has
+no filter, so it keeps one level.
+
+-}
 toAggregations :
     List Terms
+    -> List ( String, Clause )
     -> ( String, Json.Encode.Value )
-toAggregations terms =
+toAggregations terms bucketFilters =
     let
-        aggs =
-            List.map
-                (\term ->
-                    ( term.field
-                    , Json.Encode.object
-                        [ ( "terms"
-                          , Json.Encode.object
-                                ([ ( "field"
-                                   , Json.Encode.string term.field
-                                   )
-                                 , ( "size"
-                                   , Json.Encode.int term.size
-                                   )
-                                 ]
-                                    ++ (case term.include of
-                                            Just include ->
-                                                [ ( "include"
-                                                  , Json.Encode.list Json.Encode.string include
-                                                  )
-                                                ]
+        encodeAggregation ( field, termsAgg ) =
+            ( field
+            , Json.Encode.object
+                [ ( "filter"
+                  , bucketFilters
+                        |> List.filter (\( f, _ ) -> f /= field)
+                        |> List.map Tuple.second
+                        |> Json.Encode.list Json.Encode.object
+                        |> wrap "must"
+                        |> wrap "bool"
+                  )
+                , ( "aggregations", wrap field termsAgg )
+                ]
+            )
 
-                                            Nothing ->
-                                                []
-                                       )
-                                )
-                          )
-                        ]
-                    )
-                )
-                terms
+        filtered =
+            List.map encodeAggregation aggs
+
+        aggs =
+            List.map termsAggregation terms
 
         allAggs =
             [ ( "all"
@@ -895,7 +906,20 @@ toAggregations terms =
             ]
     in
     ( "aggs"
-    , Json.Encode.object <| aggs ++ allAggs
+    , Json.Encode.object <| filtered ++ allAggs
+    )
+
+
+termsAggregation : Terms -> ( String, Json.Encode.Value )
+termsAggregation term =
+    ( term.field
+    , ([ ( "field", Json.Encode.string term.field )
+       , ( "size", Json.Encode.int term.size )
+       ]
+        ++ optional "include" (Json.Encode.list Json.Encode.string) term.include
+      )
+        |> Json.Encode.object
+        |> wrap "terms"
     )
 
 
@@ -971,35 +995,22 @@ without the field score 0 instead of dividing by nothing.
 -}
 rescoreQuery : { field : String, weight : Float } -> ( String, Json.Encode.Value )
 rescoreQuery { field, weight } =
+    let
+        source : String
+        source =
+            "doc['" ++ field ++ "'].size() == 0 ? 0 : 1.0 / doc['" ++ field ++ "'].value.length()"
+    in
     ( "rescore"
     , Json.Encode.object
         [ ( "window_size", Json.Encode.int 100 )
         , ( "query"
           , Json.Encode.object
                 [ ( "rescore_query"
-                  , Json.Encode.object
-                        [ ( "function_score"
-                          , Json.Encode.object
-                                [ ( "script_score"
-                                  , Json.Encode.object
-                                        [ ( "script"
-                                          , Json.Encode.object
-                                                [ ( "source"
-                                                  , Json.Encode.string
-                                                        ("doc['"
-                                                            ++ field
-                                                            ++ "'].size() == 0 ? 0 : 1.0 / doc['"
-                                                            ++ field
-                                                            ++ "'].value.length()"
-                                                        )
-                                                  )
-                                                ]
-                                          )
-                                        ]
-                                  )
-                                ]
-                          )
-                        ]
+                  , Json.Encode.string source
+                        |> wrap "source"
+                        |> wrap "script"
+                        |> wrap "script_score"
+                        |> wrap "function_score"
                   )
                 , ( "rescore_query_weight", Json.Encode.float weight )
                 ]
@@ -1017,7 +1028,7 @@ encodeRequestBody :
     , sortField : String
     , otherSortFields : List String
     , terms : List Terms
-    , filterByBuckets : List ( String, Json.Encode.Value )
+    , bucketFilters : List ( String, Clause )
     , negatedFields : List String
     , ranking : List String -> Ranking
     , rescore : Maybe { field : String, weight : Float }
@@ -1063,6 +1074,38 @@ encodeRequestBody request =
 
             else
                 toSortQuery request.sort request.sortField request.otherSortFields
+
+        mustNot : List Clause
+        mustNot =
+            negativeWords
+                |> List.concatMap dashUnderscoreVariants
+                |> List.Extra.unique
+                |> List.concatMap
+                    (\word -> List.map (\field -> toWildcardQuery field word) request.negatedFields)
+
+        postFilter : List ( String, Json.Encode.Value )
+        postFilter =
+            if List.isEmpty request.bucketFilters then
+                []
+
+            else
+                [ ( "post_filter"
+                  , request.bucketFilters
+                        |> List.map Tuple.second
+                        |> Json.Encode.list Json.Encode.object
+                        |> wrap "must"
+                        |> wrap "bool"
+                  )
+                ]
+
+        rescore : List ( String, Json.Encode.Value )
+        rescore =
+            case ( rescoreActive, request.rescore ) of
+                ( True, Just spec ) ->
+                    [ rescoreQuery spec ]
+
+                _ ->
+                    []
     in
     Json.Encode.object
         ([ ( "from"
@@ -1072,50 +1115,19 @@ encodeRequestBody request =
            , Json.Encode.int size
            )
          , sortQuery
-         , toAggregations request.terms
+         , toAggregations request.terms request.bucketFilters
          , ( "query"
            , Json.Encode.object
-                [ ( "bool"
-                  , Json.Encode.object
-                        [ ( "filter"
-                          , Json.Encode.list Json.Encode.object
-                                (List.append
-                                    [ filterByType request.types ]
-                                    (if List.isEmpty request.filterByBuckets then
-                                        []
-
-                                     else
-                                        [ request.filterByBuckets ]
-                                    )
-                                )
-                          )
-                        , ( "must_not"
-                          , Json.Encode.list Json.Encode.object
-                                (negativeWords
-                                    |> List.concatMap dashUnderscoreVariants
-                                    |> List.Extra.unique
-                                    |> List.concatMap
-                                        (\word ->
-                                            List.map
-                                                (\field -> toWildcardQuery field word)
-                                                request.negatedFields
-                                        )
-                                )
-                          )
-                        , ( "must", Json.Encode.list Json.Encode.object ranking.must )
-                        , ( "should", Json.Encode.list Json.Encode.object ranking.should )
-                        ]
-                  )
+                [ ( "filter", Json.Encode.list Json.Encode.object [ filterByType request.types ] )
+                , ( "must_not", Json.Encode.list Json.Encode.object mustNot )
+                , ( "must", Json.Encode.list Json.Encode.object ranking.must )
+                , ( "should", Json.Encode.list Json.Encode.object ranking.should )
                 ]
+                |> wrap "bool"
            )
          ]
-            ++ (case ( rescoreActive, request.rescore ) of
-                    ( True, Just rescore ) ->
-                        [ rescoreQuery rescore ]
-
-                    _ ->
-                        []
-               )
+            ++ postFilter
+            ++ rescore
         )
 
 

@@ -33,6 +33,30 @@ A less important, but providing better user experience. are suggestions for
 writing better search query. Suggesting feature should guide user to write
 better queries which in turn will produce better results.
 
+## Keyboard shortcuts
+
+These keys work when the focus is not in a text field:
+
+| Key                               | Action                                           |
+| --------------------------------- | ------------------------------------------------ |
+| <kbd>/</kbd> or <kbd>Ctrl+K</kbd> | Move the focus to the search field.              |
+| <kbd>j</kbd>                      | Select the next result.                          |
+| <kbd>k</kbd>                      | Select the previous result.                      |
+| <kbd>Enter</kbd>                  | Show or hide the details of the selected result. |
+
+These keys work in the search field:
+
+| Key            | Action                       |
+| -------------- | ---------------------------- |
+| <kbd>Esc</kbd> | Hide the search suggestions. |
+
+These keys work when a screenshot is open:
+
+| Key                                         | Action                                |
+| ------------------------------------------- | ------------------------------------- |
+| <kbd>Left</kbd> and <kbd>Right</kbd> arrows | Show the previous or next screenshot. |
+| <kbd>Esc</kbd>                              | Close the screenshot.                 |
+
 ## Development
 
 To start developing open a terminal and run:
@@ -100,6 +124,14 @@ export ELASTICSEARCH_PASSWORD=""
 ```
 
 You may need to manually edit `frontend/src/Search.elm` to use the right index.
+
+### Lighthouse
+
+`nix run .#lighthouse` builds the frontend and audits its main pages with [Lighthouse](https://developer.chrome.com/docs/lighthouse) for accessibility, best practices and SEO. It audits each page in the light and dark color schemes, on the mobile and desktop form factors. The check fails if an audit fails, or if a page does not show the expected content. This check runs on Linux only.
+
+The pages get their data from the production backend. If a backend error occurs, or if the index for the current version does not exist yet, the check fails.
+
+The reports go to `lighthouse-report`. Use `nix run .#lighthouse -- --out <dir>` to change this directory. The `Frontend: Lighthouse` workflow does this check on pull requests that change the frontend, and attaches the reports to the run.
 
 ## Deploying
 

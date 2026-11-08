@@ -30,6 +30,10 @@ url = "git+https://codeberg.org/raboof/mock-oauth2-server?ref=nix"
 
 [[sources]]
 type = "git"
+url = "git+https://codeberg.org/viperML/wrapper-manager?ref=master"
+
+[[sources]]
+type = "git"
 url = "git+https://codeberg.org/wolfangaukang/python-trovo?ref=main"
 
 # wolfangaukang is no longer in 'maintainers'
@@ -86,6 +90,11 @@ repo = "numen-nix"
 type = "github"
 owner = "Ap6661"
 repo = "septabee-flake"
+
+[[sources]]
+type = "github"
+owner = "arcmira"
+repo = "integrations"
 
 [[sources]]
 type = "github"
@@ -515,6 +524,11 @@ repo = "PrismLauncher"
 
 [[sources]]
 type = "github"
+owner = "prithvihv"
+repo = "logseq-db-nix"
+
+[[sources]]
+type = "github"
 owner = "pyproject-nix"
 repo = "pyproject.nix"
 
@@ -547,11 +561,6 @@ repo = "free5gc.nix"
 type = "github"
 owner = "ryantm"
 repo = "agenix"
-
-[[sources]]
-type = "github"
-owner = "sincorchetes"
-repo = "nixos-flake-hardware-profiles"
 
 [[sources]]
 type = "github"
@@ -668,11 +677,6 @@ repo = "nativelink"
 type = "github"
 owner = "utensils"
 repo = "mcp-nixos"
-
-[[sources]]
-type = "github"
-owner = "viperML"
-repo = "wrapper-manager"
 
 [[sources]]
 type = "github"

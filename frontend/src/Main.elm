@@ -4,7 +4,7 @@ import Browser
 import Browser.Dom
 import Browser.Navigation
 import Components.Button exposing (viewButton)
-import Dict
+import Dict exposing (Dict)
 import Html
     exposing
         ( Html
@@ -14,6 +14,7 @@ import Html
         , header
         , img
         , li
+        , main_
         , span
         , text
         , ul
@@ -31,7 +32,11 @@ import Html.Attributes
         , title
         )
 import Html.Events exposing (onClick)
+import Http
 import Json.Decode
+import Material.Icons as Icons
+import Material.Icons.Types exposing (Coloring(..))
+import Page.Browse
 import Page.Flakes exposing (Model(..))
 import Page.Options
 import Page.Packages
@@ -44,10 +49,11 @@ import Search
         , defaultFlakeId
         )
 import Shortcut
-import Svg exposing (Svg, path, svg)
-import Svg.Attributes exposing (d, fill, height, viewBox, width)
+import Svg exposing (Svg)
+import Svg.Attributes exposing (width)
 import Task
 import Url
+import Utils exposing (basicTextIcon)
 
 
 
@@ -154,6 +160,10 @@ type alias Model =
     , systemDark : Bool
     , isPrideMonth : Bool
     , preferStatic : Bool
+
+    -- The number of documents of each type, for each channel. One request
+    -- gets the counts of all channels, the first time that a page needs them.
+    , docCounts : RemoteData.WebData (Dict String (Dict String Int))
     }
 
 
@@ -165,6 +175,7 @@ port systemDarkChanged : (Bool -> msg) -> Sub msg
 
 type Page
     = NotFound
+    | Browse Page.Browse.Model
     | Packages Page.Packages.Model
     | Options Page.Options.Model
     | Flakes Page.Flakes.Model
@@ -206,6 +217,7 @@ init flags url navKey =
             , systemDark = flags.systemDark
             , isPrideMonth = flags.isPrideMonth
             , preferStatic = not flags.saveData
+            , docCounts = NotAsked
             }
     in
     changeRouteTo model url
@@ -218,6 +230,7 @@ init flags url navKey =
 type Msg
     = ChangedUrl Url.Url
     | ClickedLink Browser.UrlRequest
+    | BrowseMsg Page.Browse.Msg
     | PackagesMsg Page.Packages.Msg
     | OptionsMsg Page.Options.Msg
     | FlakesMsg Page.Flakes.Msg
@@ -225,6 +238,7 @@ type Msg
     | SearchFocusResult
     | ToggleTheme
     | SystemDarkChanged Bool
+    | DocCountsResponse (Result Http.Error (Dict String (Dict String Int)))
 
 
 updateWith :
@@ -283,17 +297,7 @@ attemptQuery (( model, _ ) as pair) =
                         Cmd.batch
                             [ cmd
                             , Cmd.map OptionsMsg <|
-                                Page.Options.makeRequest
-                                    model.elasticsearch
-                                    model.nixosChannels
-                                    OptionSearch
-                                    searchModel.channel
-                                    searchModel.query
-                                    searchModel.from
-                                    searchModel.size
-                                    searchModel.buckets
-                                    searchModel.sort
-                                    searchModel.activeOptionSource
+                                makeOptionsRequest model.elasticsearch model.nixosChannels searchModel
                             ]
                     )
                     pair
@@ -319,11 +323,58 @@ attemptQuery (( model, _ ) as pair) =
             pair
 
 
+{-| Request the document counts of all channels, if the page shows them and no
+request started before.
+-}
+attemptDocCounts : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+attemptDocCounts (( model, cmd ) as pair) =
+    let
+        pageShowsCounts =
+            case model.page of
+                Packages _ ->
+                    True
+
+                Options _ ->
+                    True
+
+                _ ->
+                    False
+    in
+    if pageShowsCounts && model.docCounts == NotAsked then
+        ( { model | docCounts = Loading }
+        , Cmd.batch
+            [ cmd
+            , Search.makeDocCountsRequest model.elasticsearch model.nixosChannels DocCountsResponse
+            ]
+        )
+
+    else
+        pair
+
+
+makeOptionsRequest : Search.Options -> List NixOSChannel -> Page.Options.Model -> Cmd Page.Options.Msg
+makeOptionsRequest elasticsearch nixosChannels searchModel =
+    Page.Options.makeRequest
+        elasticsearch
+        nixosChannels
+        OptionSearch
+        searchModel.channel
+        searchModel.query
+        searchModel.from
+        searchModel.size
+        searchModel.buckets
+        searchModel.sort
+        searchModel.activeOptionSource
+
+
 pageMatch : Page -> Page -> Bool
 pageMatch m1 m2 =
     case ( m1, m2 ) of
         ( NotFound, NotFound ) ->
             True
+
+        ( Browse model_a, Browse model_b ) ->
+            Page.Browse.matches model_a model_b
 
         ( Packages model_a, Packages model_b ) ->
             { model_a | show = Nothing, showUsageDetails = Search.Unset, result = NotAsked, sourceCounts = Dict.empty, previousResult = Nothing }
@@ -374,6 +425,11 @@ changeRouteTo currentModel url =
             -- on the home page
             ( model, Browser.Navigation.replaceUrl model.navKey "/packages" )
 
+        Route.Browse browseArgs ->
+            Page.Browse.init currentModel.elasticsearch currentModel.nixosChannels currentModel.defaultNixOSChannel (not currentModel.preferStatic) browseArgs
+                |> updateWith Browse BrowseMsg model
+                |> avoidReinit
+
         Route.Packages searchArgs ->
             let
                 modelPage =
@@ -388,6 +444,7 @@ changeRouteTo currentModel url =
                 |> updateWith Packages PackagesMsg model
                 |> avoidReinit
                 |> attemptQuery
+                |> attemptDocCounts
 
         Route.Options searchArgs ->
             let
@@ -403,6 +460,7 @@ changeRouteTo currentModel url =
                 |> updateWith Options OptionsMsg model
                 |> avoidReinit
                 |> attemptQuery
+                |> attemptDocCounts
 
         Route.Flakes searchArgs ->
             let
@@ -444,6 +502,10 @@ update msg model =
         ( ChangedUrl url, _ ) ->
             changeRouteTo model url
 
+        ( BrowseMsg subMsg, Browse subModel ) ->
+            Page.Browse.update model.navKey model.elasticsearch model.nixosChannels subMsg subModel
+                |> updateWith Browse BrowseMsg model
+
         ( PackagesMsg subMsg, Packages subModel ) ->
             Page.Packages.update model.navKey subMsg subModel model.nixosChannels
                 |> updateWith Packages PackagesMsg model
@@ -473,6 +535,11 @@ update msg model =
             -- A pin that now equals the OS palette stays, so the next click
             -- pins the other palette.
             ( { model | systemDark = systemDark }, Cmd.none )
+
+        ( DocCountsResponse result, _ ) ->
+            ( { model | docCounts = RemoteData.fromResult result }
+            , Cmd.none
+            )
 
         _ ->
             -- Disregard messages that arrived for the wrong page.
@@ -508,6 +575,9 @@ view model =
 
         title =
             case model.page of
+                Browse _ ->
+                    "NixOS Search - Browse"
+
                 Packages m ->
                     "NixOS Search - Packages" ++ maybeQuery m.query
 
@@ -540,29 +610,15 @@ view model =
                     [ div [ class "navbar navbar-static-top" ]
                         [ div [ class "navbar-inner" ]
                             [ div [ class "container" ]
-                                [ a [ class "brand", href "https://nixos.org" ]
-                                    [ img
-                                        [ alt "NixOS logo"
-                                        , src
-                                            (if model.isPrideMonth then
-                                                "/images/nixos-logomark-rainbow-gradient-none.svg"
-
-                                             else
-                                                "/images/nixos-logomark-default-gradient-none.svg"
-                                            )
-                                        , class "logo"
-                                        ]
-                                        []
-                                    ]
-                                , ul [ class "nav" ]
-                                    (viewNavigation model.route)
+                                [ viewBrand model.isPrideMonth
+                                , ul [ class "nav" ] (viewNavigation model.route)
                                 , viewThemeToggle (resolveTheme model.systemDark model.theme)
                                 ]
                             ]
                         ]
                     ]
                 , div [ class "container main" ]
-                    [ div [ id "content" ] [ viewPage model ]
+                    [ main_ [ id "content" ] [ viewPage model ]
                     , footer
                         [ class "container text-center" ]
                         [ div []
@@ -587,6 +643,32 @@ view model =
     }
 
 
+viewBrand : Bool -> Html msg
+viewBrand isPrideMonth =
+    let
+        variant : String
+        variant =
+            if isPrideMonth then
+                "rainbow"
+
+            else
+                "default"
+
+        logo : String
+        logo =
+            "/images/nixos-logomark-" ++ variant ++ "-gradient-none.svg"
+    in
+    a [ class "brand", href "https://nixos.org" ]
+        [ img
+            [ width "28px"
+            , alt "NixOS logo"
+            , src logo
+            , class "logo"
+            ]
+            []
+        ]
+
+
 viewNavigation : Route.Route -> List (Html Msg)
 viewNavigation route =
     let
@@ -603,18 +685,37 @@ viewNavigation route =
                     Route.Flakes args ->
                         args
 
+                    Route.Browse args ->
+                        Route.SearchArgs Nothing args.channel Nothing Nothing Nothing Nothing Nothing Nothing Route.defaultOptionSource
+
                     _ ->
                         Route.SearchArgs Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Route.defaultOptionSource
+
+        -- All categories of Browse are in the same navigation item
+        activeRoute =
+            case route of
+                Route.Browse args ->
+                    Route.Browse { args | category = Nothing }
+
+                _ ->
+                    route
     in
-    li [] [ a [ href "https://nixos.org" ] [ text "Back to nixos.org" ] ]
+    li [] []
         :: List.map
-            (viewNavigationItem route)
-            [ ( Route.Packages searchArgs, text "Packages" )
-            , ( Route.Options searchArgs, text "Options" )
-            , ( Route.Flakes searchArgs, text "3rd-party Flakes" )
+            (viewNavigationItem activeRoute)
+            [ ( Route.Browse { channel = searchArgs.channel, category = Nothing }, basicTextIcon Icons.explore "Browse" )
+            , ( Route.Packages searchArgs, basicTextIcon Icons.widgets "Packages" )
+            , ( Route.Options searchArgs, basicTextIcon Icons.tune "Options" )
+            , ( Route.Flakes searchArgs, basicTextIcon Icons.ac_unit "3rd-party Flakes" )
             ]
-        ++ [ li [ class "external" ] [ a [ href "https://noogle.dev", target "_blank", Html.Attributes.rel "noopener noreferrer" ] [ text "Functions" ] ]
-           , li [ class "external" ] [ a [ href "https://wiki.nixos.org", target "_blank", Html.Attributes.rel "noopener noreferrer" ] [ text "NixOS Wiki" ] ]
+        ++ [ li [ class "external" ]
+                [ a [ href "https://noogle.dev", target "_blank", Html.Attributes.rel "noopener noreferrer" ]
+                    [ basicTextIcon Icons.functions "Functions" ]
+                ]
+           , li [ class "external" ]
+                [ a [ href "https://wiki.nixos.org", target "_blank", Html.Attributes.rel "noopener noreferrer" ]
+                    [ basicTextIcon Icons.local_library "NixOS wiki" ]
+                ]
            ]
 
 
@@ -628,31 +729,14 @@ viewNavigationItem currentRoute ( route, title ) =
         [ a [ Route.href route ] [ title ] ]
 
 
+getThemeIcon : Theme -> ( Svg msg, String )
+getThemeIcon theme =
+    case theme of
+        Dark ->
+            ( Icons.dark_mode 16 Inherit, "Switch to the light theme" )
 
--- Material Design Icons by Google
--- Licensed under Apache License 2.0
--- https://github.com/google/material-design-icons
-
-
-themeDarkIconPath : String
-themeDarkIconPath =
-    "M48 12C28.12 12 12 28.12 12 48C12 67.88 28.12 84 48 84C67.88 84 84 67.88 84 48C84 46.16 83.84 44.32 83.6 42.56C79.68 48.04 73.28 51.6 66 51.6C54.08 51.6 44.4 41.92 44.4 30C44.4 22.76 47.96 16.32 53.44 12.4C51.68 12.16 49.84 12 48 12Z"
-
-
-themeLightIconPath : String
-themeLightIconPath =
-    "M48 28C36.96 28 28 36.96 28 48C28 59.04 36.96 68 48 68C59.04 68 68 59.04 68 48C68 36.96 59.04 28 48 28ZM8 52H16C18.2 52 20 50.2 20 48C20 45.8 18.2 44 16 44H8C5.8 44 4 45.8 4 48C4 50.2 5.8 52 8 52ZM80 52H88C90.2 52 92 50.2 92 48C92 45.8 90.2 44 88 44H80C77.8 44 76 45.8 76 48C76 50.2 77.8 52 80 52ZM44 8V16C44 18.2 45.8 20 48 20C50.2 20 52 18.2 52 16V8C52 5.8 50.2 4 48 4C45.8 4 44 5.8 44 8ZM44 80V88C44 90.2 45.8 92 48 92C50.2 92 52 90.2 52 88V80C52 77.8 50.2 76 48 76C45.8 76 44 77.8 44 80ZM23.96 18.32C22.4 16.76 19.84 16.76 18.32 18.32C16.76 19.88 16.76 22.44 18.32 23.96L22.56 28.2C24.12 29.76 26.68 29.76 28.2 28.2C29.72 26.64 29.76 24.08 28.2 22.56L23.96 18.32ZM73.44 67.8C71.88 66.24 69.32 66.24 67.8 67.8C66.24 69.36 66.24 71.92 67.8 73.44L72.04 77.68C73.6 79.24 76.16 79.24 77.68 77.68C79.24 76.12 79.24 73.56 77.68 72.04L73.44 67.8ZM77.68 23.96C79.24 22.4 79.24 19.84 77.68 18.32C76.12 16.76 73.56 16.76 72.04 18.32L67.8 22.56C66.24 24.12 66.24 26.68 67.8 28.2C69.36 29.72 71.92 29.76 73.44 28.2L77.68 23.96ZM28.2 73.44C29.76 71.88 29.76 69.32 28.2 67.8C26.64 66.24 24.08 66.24 22.56 67.8L18.32 72.04C16.76 73.6 16.76 76.16 18.32 77.68C19.88 79.2 22.44 79.24 23.96 77.68L28.2 73.44Z"
-
-
-getThemeSvgIcon : String -> Svg msg
-getThemeSvgIcon iconPath =
-    svg
-        [ viewBox "0 0 96 96"
-        , fill "currentColor"
-        , width "16"
-        , height "16"
-        ]
-        [ path [ d iconPath ] [] ]
+        _ ->
+            ( Icons.light_mode 16 Inherit, "Switch to the dark theme" )
 
 
 {-| The toggle shows the palette a click gives: a moon on the light theme and
@@ -661,12 +745,8 @@ a sun on the dark theme. The label names the same action.
 viewThemeToggle : Theme -> Html Msg
 viewThemeToggle resolvedTheme =
     let
-        ( iconPath, label ) =
-            if resolvedTheme == Dark then
-                ( themeLightIconPath, "Switch to the light theme" )
-
-            else
-                ( themeDarkIconPath, "Switch to the dark theme" )
+        ( icon, label ) =
+            getThemeIcon resolvedTheme
     in
     -- The wrapper sets the position in the navbar. The dark theme sets
     -- `margin: 0` on all `.btn` elements.
@@ -676,21 +756,30 @@ viewThemeToggle resolvedTheme =
             , attribute "aria-label" label
             , onClick ToggleTheme
             ]
-            [ span [ class "theme-icon" ] [ getThemeSvgIcon iconPath ] ]
+            [ span [ class "theme-icon" ] [ icon ] ]
         ]
 
 
 viewPage : Model -> Html Msg
 viewPage model =
+    let
+        docCountsOf channel =
+            RemoteData.toMaybe model.docCounts
+                |> Maybe.andThen (Dict.get channel)
+                |> Maybe.withDefault Dict.empty
+    in
     case model.page of
         NotFound ->
             div [] [ text "Not Found" ]
 
+        Browse browseModel ->
+            Html.map BrowseMsg <| Page.Browse.view model.nixosChannels browseModel
+
         Packages packagesModel ->
-            Html.map (\m -> PackagesMsg m) <| Page.Packages.view model.nixosChannels packagesModel
+            Html.map (\m -> PackagesMsg m) <| Page.Packages.view model.nixosChannels (docCountsOf packagesModel.channel) packagesModel
 
         Options optionsModel ->
-            Html.map (\m -> OptionsMsg m) <| Page.Options.view model.nixosChannels optionsModel
+            Html.map (\m -> OptionsMsg m) <| Page.Options.view model.nixosChannels (docCountsOf optionsModel.channel) optionsModel
 
         Flakes flakesModel ->
             Html.map (\m -> FlakesMsg m) <| Page.Flakes.view model.nixosChannels flakesModel

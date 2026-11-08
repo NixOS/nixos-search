@@ -2,7 +2,7 @@
 /// gathered from the various nix tools. Because the nix tools
 /// are very flexible, we need some utilities such as OneOrMany
 /// to support different notations found in the wild.
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
 use std::marker::PhantomData;
 use std::{path::PathBuf, str::FromStr};
@@ -309,8 +309,12 @@ pub enum NixpkgsEntry {
         package: Package,
         programs: Vec<String>,
         modular_services: Vec<String>,
+        nixos_modules: Vec<String>,
         dep_count: Option<u64>,
         repology_repos: Option<u64>,
+        /// Another attribute ships the same application, and is listed in the
+        /// place of this one. See [mark_duplicate_apps].
+        duplicate_app: bool,
     },
     Option(NixOption),
     Service(NixOption),
@@ -342,6 +346,124 @@ pub enum NixpkgsEntry {
     },
 }
 
+/// The application a package ships: the names and icons of the desktop entries
+/// it shows, and the AppStream components it ships.
+#[derive(PartialEq, Eq, Hash)]
+struct App {
+    entries: BTreeSet<(Option<String>, Option<String>)>,
+    components: BTreeSet<String>,
+}
+
+impl App {
+    /// The application a package ships, if it shows a desktop entry. An entry
+    /// with `NoDisplay=true` is not an application of its own.
+    fn of(package: &Package) -> Option<App> {
+        let entries: BTreeSet<_> = package
+            .desktop_entries
+            .iter()
+            .filter(|entry| !entry.no_display)
+            .map(|entry| (entry.desktop_name.clone(), entry.icon.clone()))
+            .collect();
+        if entries.is_empty() {
+            return None;
+        }
+        Some(App {
+            entries,
+            components: package.component_ids.iter().cloned().collect(),
+        })
+    }
+
+    /// Whether this package ships all the entries and components of `other`,
+    /// and they have a component in common. Thus a bundle with plugins
+    /// (`codeblocksFull`) ships the application of the package it bundles. A
+    /// common component is necessary, because names such as `Files` refer to
+    /// many different applications.
+    fn contains(&self, other: &App) -> bool {
+        !self.components.is_disjoint(&other.components)
+            && self.entries.is_superset(&other.entries)
+            && self.components.is_superset(&other.components)
+    }
+}
+
+/// Sets [NixpkgsEntry::Derivation::duplicate_app] on each derivation that ships
+/// the same application as another one, so that each application is listed
+/// once. Variants of a package (`-unwrapped`, `-bin`, `-with-plugins`, other
+/// versions) and the same package in different package sets all ship the same
+/// application. Two packages ship the same application when their [App]s are
+/// equal, or when one [App::contains] the other. Of each such group, the
+/// derivation that is listed is the one outside a package set, then the one
+/// with the shortest attribute name.
+pub fn mark_duplicate_apps(entries: &mut [NixpkgsEntry]) {
+    let rank = |attribute: &str| {
+        (
+            attribute.contains('.'),
+            attribute.len(),
+            attribute.to_owned(),
+        )
+    };
+    let apps: Vec<(usize, &str, App)> = entries
+        .iter()
+        .enumerate()
+        .filter_map(|(index, entry)| match entry {
+            NixpkgsEntry::Derivation {
+                attribute, package, ..
+            } => App::of(package).map(|app| (index, attribute.as_str(), app)),
+            _ => None,
+        })
+        .collect();
+
+    // A union-find over `apps`: `root` gives the group of an application.
+    let mut parent: Vec<usize> = (0..apps.len()).collect();
+    fn root(parent: &mut [usize], mut i: usize) -> usize {
+        while parent[i] != i {
+            parent[i] = parent[parent[i]];
+            i = parent[i];
+        }
+        i
+    }
+    let mut first: HashMap<&App, usize> = HashMap::new();
+    let mut by_component: HashMap<&str, Vec<usize>> = HashMap::new();
+    for (i, (_, _, app)) in apps.iter().enumerate() {
+        let mut same = Vec::new();
+        match first.get(app) {
+            Some(&j) => same.push(j),
+            None => {
+                first.insert(app, i);
+            }
+        }
+        for component in &app.components {
+            let others = by_component.entry(component).or_default();
+            same.extend(
+                others
+                    .iter()
+                    .filter(|&&j| app.contains(&apps[j].2) || apps[j].2.contains(app)),
+            );
+            others.push(i);
+        }
+        for j in same {
+            let (a, b) = (root(&mut parent, i), root(&mut parent, j));
+            parent[a] = b;
+        }
+    }
+
+    let mut listed: HashMap<usize, usize> = HashMap::new();
+    for i in 0..apps.len() {
+        let best = listed.entry(root(&mut parent, i)).or_insert(i);
+        if rank(apps[i].1) < rank(apps[*best].1) {
+            *best = i;
+        }
+    }
+    let duplicates: HashSet<usize> = (0..apps.len())
+        .filter(|&i| listed[&root(&mut parent, i)] != i)
+        .map(|i| apps[i].0)
+        .collect();
+    for (index, entry) in entries.iter_mut().enumerate() {
+        if let NixpkgsEntry::Derivation { duplicate_app, .. } = entry {
+            *duplicate_app = duplicates.contains(&index);
+        }
+    }
+}
+
 /// Most information about packages in nixpkgs is contained in the meta key
 /// This struct represents a subset of that metadata
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -359,6 +481,16 @@ pub struct Meta {
     pub long_description: Option<String>,
     #[serde(rename = "mainProgram")]
     pub main_program: Option<String>,
+    /// Is `None` for channels from before `meta.problems` was added to nixpkgs.
+    pub problems: Option<BTreeMap<String, Problem>>,
+}
+
+/// An entry of `meta.problems`. The attribute name is the default for `kind`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Problem {
+    pub kind: Option<String>,
+    pub message: Option<String>,
+    pub urls: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -692,6 +824,32 @@ mod tests {
 
     use super::*;
 
+    /// A failure on `meta.problems` fails the parse of the whole channel.
+    #[test]
+    fn test_meta_problems_deserialize() {
+        let meta: Meta = serde_json::from_str(
+            r#"{
+                "problems": {
+                    "broken": {"kind": "broken", "message": "This package is broken."},
+                    "unsupportedPython": {"kind": "broken", "urls": ["https://example.org/"]},
+                    "new": {}
+                }
+            }"#,
+        )
+        .unwrap();
+        let problems = meta.problems.unwrap();
+        assert_eq!(problems.len(), 3);
+        assert_eq!(problems["broken"].kind.as_deref(), Some("broken"));
+        assert_eq!(
+            problems["unsupportedPython"].urls,
+            Some(vec!["https://example.org/".to_string()])
+        );
+        assert_eq!(problems["new"].message, None);
+
+        let meta: Meta = serde_json::from_str("{}").unwrap();
+        assert_eq!(meta.problems, None);
+    }
+
     #[test]
     fn test_nixpkgs_deserialize() {
         let json = r#"
@@ -750,10 +908,114 @@ mod tests {
                 package,
                 programs: Vec::new(),
                 modular_services: Vec::new(),
+                nixos_modules: Vec::new(),
                 dep_count: None,
                 repology_repos: None,
+                duplicate_app: false,
             })
             .collect();
+    }
+
+    #[test]
+    fn test_mark_duplicate_apps() {
+        let derivation = |attribute: &str, entries: serde_json::Value, components: &[&str]| {
+            NixpkgsEntry::Derivation {
+                attribute: attribute.to_owned(),
+                package: serde_json::from_value(serde_json::json!({
+                    "pname": attribute,
+                    "version": "1",
+                    "system": "x86_64-linux",
+                    "desktopEntries": entries,
+                    "componentIds": components,
+                }))
+                .unwrap(),
+                programs: Vec::new(),
+                modular_services: Vec::new(),
+                nixos_modules: Vec::new(),
+                dep_count: None,
+                repology_repos: None,
+                duplicate_app: false,
+            }
+        };
+        let emacs = serde_json::json!([
+            { "desktopName": "Emacs", "icon": "emacs" },
+            { "desktopName": "Emacs (Mail)", "icon": "emacs", "noDisplay": true },
+        ]);
+        let codeblocks =
+            serde_json::json!([{ "desktopName": "Code::Blocks IDE", "icon": "codeblocks" }]);
+        let freeciv = |name: &str| {
+            serde_json::json!([
+                { "desktopName": name, "icon": "freeciv-client" },
+                { "desktopName": "Freeciv server", "icon": "freeciv-server" },
+            ])
+        };
+        let files = |icon: &str| serde_json::json!([{ "desktopName": "Files", "icon": icon }]);
+        let mut entries = vec![
+            derivation("emacs-gtk", emacs.clone(), &["org.gnu.emacs"]),
+            derivation("emacs", emacs.clone(), &["org.gnu.emacs"]),
+            derivation("emacsPackages.emacs", emacs, &["org.gnu.emacs"]),
+            // A bundle ships the entries and components of the package it bundles.
+            derivation("codeblocks", codeblocks.clone(), &["codeblocks"]),
+            derivation(
+                "codeblocksFull",
+                codeblocks,
+                &["codeblocks", "codeblocks-contrib"],
+            ),
+            // Two clients with a component in common, but neither ships the
+            // other.
+            derivation(
+                "freeciv_gtk",
+                freeciv("Freeciv"),
+                &["org.freeciv.gtk", "org.freeciv.server"],
+            ),
+            derivation(
+                "freeciv_qt",
+                freeciv("Freeciv (Qt)"),
+                &["org.freeciv.qt", "org.freeciv.server"],
+            ),
+            // The same name, but a different application.
+            derivation("nautilus", files("org.gnome.Nautilus"), &[]),
+            derivation(
+                "pantheon.elementary-files",
+                files("io.elementary.files"),
+                &[],
+            ),
+            // The same entries, but other AppStream components.
+            derivation(
+                "emacs-other",
+                serde_json::json!([{ "desktopName": "Emacs", "icon": "emacs" }]),
+                &[],
+            ),
+            // No entry to show.
+            derivation(
+                "phoc",
+                serde_json::json!([{ "desktopName": "Phoc", "noDisplay": true }]),
+                &[],
+            ),
+            derivation(
+                "phoc-bin",
+                serde_json::json!([{ "desktopName": "Phoc", "noDisplay": true }]),
+                &[],
+            ),
+        ];
+
+        mark_duplicate_apps(&mut entries);
+
+        let duplicates: Vec<&str> = entries
+            .iter()
+            .filter_map(|entry| match entry {
+                NixpkgsEntry::Derivation {
+                    attribute,
+                    duplicate_app: true,
+                    ..
+                } => Some(attribute.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            duplicates,
+            ["emacs-gtk", "emacsPackages.emacs", "codeblocksFull"]
+        );
     }
 
     #[test]

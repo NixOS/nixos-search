@@ -15,12 +15,12 @@
   --search-sidebar-container-border-color: #ccc;
   --search-sidebar-link-color: var(--text-color);
   --hovered-item-background: #eee;
-  --selected-item-background: var(--light-blue);
-  --selected-item-color: #000;
+  --selected-item-background: #dedede;
+  --selected-item-color: var(--text-color);
   /* Divider between search results */
   --search-result-divider-line-color: #ccc;
-  /* Gets overwritten by bootstrap; has no effect */
-  --search-result-title-color: #08c;
+  /* Text color for the title of a search result */
+  --search-result-title-color: var(--link-color);
   /* Text color for the details in a search result (like name, version, outputs...) */
   --search-result-short-details-color: #666;
   /* When search results are expanded, they show tabbed help for installing the result. This is the border color for that tabbed thing.
@@ -31,10 +31,23 @@
 
   /* Color of the animation above the `Loading` text that is shown when searching */
   --loader-color: #000;
-  /* Text color for links. Probably overwritten by bootstrap */
-  --link-color: #007dbb;
+  /* Text color for links. It has a contrast of 4.5:1 or more on the light backgrounds */
+  --link-color: #0078b4;
   /* Background color for the small badges with number in the sidebar */
   --badge-background: #757575;
+  /* Background colors for the labels of package problems. White text has a contrast of 4.5:1 or more on these. */
+  --problem-severe-background: #b71c1c;
+  --problem-warning-background: #8a5a00;
+
+  --button-background: #f5f5f5;
+  --button-border-color: #d4d4d4;
+  --button-hover-background: #ebebeb;
+  --button-active-background: var(--selected-item-background);
+  --button-active-hover-background: #d4d4d4;
+  --button-active-color: var(--selected-item-color);
+
+  /* Headerbar background color */
+  --headerbar-background-color: #fafafa;
 
   --orange-75: #e99861;
 
@@ -64,9 +77,11 @@
     --background-color: #242424;
     --hover-background: #ffffff13;
     --button-background: #393939;
+    --button-border-color: transparent;
     --button-hover-background: #454545;
     --button-active-background: #656565;
     --button-active-hover-background: #707070;
+    --button-active-color: var(--text-color);
     --terminal-background: #353535;
     --terminal-color: var(--text-color);
     --line-color: #ffffff26; // Color for separating lines
@@ -76,6 +91,7 @@
     --search-sidebar-container-border-color: var(--line-color);
     --search-sidebar-link-color: var(--text-color);
     --hovered-item-background: var(--hover-background);
+    --selected-item-background: var(--light-blue);
     --selected-item-color: #000;
     /* Divider between search results */
     --search-result-divider-line-color: var(--line-color);
@@ -88,8 +104,8 @@
     --search-result-expanded-tab-border: var(--line-color);
     /* Color of the animation above the `Loading` text that is shown when searching */
     --loader-color: var(--text-color);
-    /* Text color for links. Probably overwritten by bootstrap */
-    --link-color: var(--light-blue); // #007dbb;
+    /* Text color for links */
+    --link-color: var(--light-blue);
     /* Background color for the small badges with number in the sidebar */
     --badge-background: var(--button-active-hover-background);
 
@@ -140,18 +156,16 @@
 
   .btn.btn {
     margin: 0;
-    border-left: none;
-    border-right: none;
     background: var(--button-background);
     box-shadow: none;
     text-shadow: none;
-    border-bottom: none;
     color: var(--text-color);
     transition: background 0.2s;
     font-weight: bold;
 
     &.active {
       background: var(--button-active-background);
+      color: var(--button-active-color);
 
       &:hover {
         background: var(--button-active-hover-background);
@@ -170,7 +184,6 @@
 
   .sort-container {
     background: var(--button-background);
-    border: 1px solid var(--line-color);
     color: var(--text-color);
     text-shadow: none;
     box-shadow: none;
@@ -196,7 +209,7 @@
   .navbar {
     &>.navbar-inner {
       background: var(--headerbar-background-color);
-      border-bottom: none;
+      border-bottom-color: transparent;
 
       li>a {
         color: var(--text-color);
@@ -263,6 +276,11 @@
   color: var(--terminal-color);
   margin: 0;
 }
+
+// The size of a package's icon and the gap between the icon and the
+// attribute name, relative to the font size of the attribute name.
+$package-icon-size: 1.2em;
+$package-icon-gap: 0.4em;
 
 @mixin search-result-item() {
   padding-bottom: 0;
@@ -332,6 +350,20 @@ footer {
 }
 
 // Search seatch
+fieldset.channel-radios {
+  @include radio-segmented-group;
+  display: inline-flex;
+  align-items: center;
+
+  legend.channel-title {
+    float: left;
+    margin: 0 0.5em 0 0;
+    font-size: 1.2em;
+    line-height: 28px;
+    border: 0;
+  }
+}
+
 .search-page {
 
   &.not-asked {
@@ -344,6 +376,7 @@ footer {
 
   // Search section title title
   & > h1 {
+    margin-top: 40px;
     display: flex;
     gap: .5ch; // 1 space = ~1/2 '0'
     font-weight: normal;
@@ -392,21 +425,7 @@ footer {
       gap: 1em;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1.5em;
-
-      fieldset.channel-radios {
-        @include radio-segmented-group;
-        display: inline-flex;
-        align-items: center;
-
-        legend.channel-title {
-          float: left;
-          margin: 0 0.5em 0 0;
-          font-size: 1.2em;
-          line-height: 28px;
-          border: 0;
-        }
-      }
+      margin-bottom: 40px;
     }
   }
 
@@ -444,9 +463,6 @@ footer {
     padding: 0;
 
     & > li {
-      // Long unbreakable identifiers wrap instead of overflowing.
-      overflow-wrap: anywhere;
-
       & > a:hover {
         text-decoration: underline;
       }
@@ -459,7 +475,7 @@ footer {
 
   // Buckets
   .search-sidebar {
-    margin: 0 1em 0 0;
+    margin: 0 40px 0 0;
 
     fieldset.search-bucket {
       border: 1px solid var(--search-sidebar-container-border-color);
@@ -474,7 +490,7 @@ footer {
         font-size: 1.2em;
         font-weight: bold;
         margin-bottom: 0.5em;
-        padding: 0;
+        padding: 0 1ch;
         border: 0;
         color: inherit;
         line-height: inherit;
@@ -555,6 +571,8 @@ footer {
             margin-bottom: 0.5em;
             text-align: left;
             display: block;
+            // Long unbreakable identifiers wrap instead of overflowing.
+            overflow-wrap: anywhere;
             a {
               color: inherit !important;
             }
@@ -568,6 +586,36 @@ footer {
               font-size: 1.2em;
               margin-bottom: 0.5em;
               text-align: left;
+            }
+
+            // labels of `meta.problems`, next to the package name and in the details
+            .package-problem-label {
+              font-weight: normal;
+              vertical-align: middle;
+
+              &.package-problem-broken,
+              &.package-problem-removal {
+                background-color: var(--problem-severe-background);
+              }
+              &.package-problem-deprecated {
+                background-color: var(--problem-warning-background);
+              }
+            }
+
+            // `meta.problems` in the details
+            .package-problems ul {
+              list-style: none;
+              margin-left: 0;
+
+              ul {
+                margin-top: 0.25em;
+              }
+
+              .package-problem-message {
+                margin-left: 0.5em;
+                white-space: pre-line;
+                vertical-align: top;
+              }
             }
 
             // short details of a pacakge
@@ -637,11 +685,22 @@ footer {
                 display: grid;
                 grid-template-columns: auto auto;
 
+                // Keep each link at the minimum target size for touch.
+                li > a {
+                  display: inline-block;
+                  min-height: 24px;
+                  line-height: 24px;
+                }
+
                 .maintainer-list-item {
                   cursor: pointer;
 
                   &:hover {
                     background-color: var(--hovered-item-background);
+                  }
+
+                  .mail-all-maintainers {
+                    display: block;
                   }
                 }
               }
@@ -717,6 +776,10 @@ footer {
                 gap: 0.75em;
                 overflow-x: auto;
                 margin: 0;
+                // Space between the screenshots and the scrollbar. Without it,
+                // the scrollbar touches the tallest screenshot, and an overlay
+                // scrollbar is drawn over its bottom edge.
+                padding-bottom: 0.75em;
 
                 // The buttons move the row a step at a time, thus the step is
                 // shown as movement to a reader who accepts motion.
@@ -747,14 +810,24 @@ footer {
               }
             }
 
-            // The package's own icon, next to its attribute name. Sized to the
-            // title's line so a result with one does not stand taller than a
-            // result without.
+            // The package's own icon, in the margin to the left of its
+            // attribute name. Sized to the title's line so a result with one
+            // does not stand taller than a result without.
             .package-icon {
-              height: 1.2em;
-              width: 1.2em;
-              margin-right: 0.4em;
+              display: inline-block;
+              height: $package-icon-size;
+              width: $package-icon-size;
+              margin-left: -($package-icon-size + $package-icon-gap);
+              margin-right: $package-icon-gap;
               vertical-align: text-bottom;
+            }
+
+            // The margin for the icon. It is on all results of a page that
+            // shows an icon, thus the lines of all results start in one
+            // column. The icon is in the title, which has 1.5 times the font
+            // size of the result.
+            &.with-icon-margin {
+              padding-left: 1.5 * ($package-icon-size + $package-icon-gap);
             }
           }
 
@@ -823,6 +896,66 @@ footer {
 /* -- Loader --------------------------------------------------------------- */
 /* ------------------------------------------------------------------------- */
 
+.browse-page {
+  .channel-radios {
+    margin: 1em 0;
+  }
+
+  .browse-category {
+    margin-bottom: 2em;
+
+    h2 a {
+      color: var(--text-color);
+    }
+  }
+
+  .browse-apps {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16em, 1fr));
+    gap: 1em;
+    margin: 0 0 1em;
+    list-style: none;
+  }
+
+  .browse-app {
+    padding: 0.6em;
+    border: 1px solid var(--line-color);
+    border-radius: 4px;
+
+    > a {
+      display: grid;
+      grid-template-columns: 3em 1fr;
+      column-gap: 0.6em;
+      align-items: center;
+    }
+
+    .browse-app-icon {
+      grid-row: span 2;
+      width: 3em;
+      height: 3em;
+    }
+
+    .browse-app-name {
+      font-weight: bold;
+    }
+
+    .browse-app-attr {
+      color: var(--search-result-short-details-color);
+      font-size: 0.85em;
+      overflow-wrap: anywhere;
+    }
+
+    .browse-app-description {
+      margin: 0.4em 0 0;
+      color: var(--text-color);
+    }
+  }
+
+  .browse-show-more {
+    text-align: center;
+  }
+}
+
 .loader-wrapper {
   height: 200px;
   overflow: hidden;
@@ -888,6 +1021,14 @@ a:focus-visible {
   color: var(--link-color);
 }
 
+// A link in a line of text must not show only by its color
+.package-license > a,
+.package-popularity li > a,
+.option-name-group,
+footer a {
+  text-decoration: underline;
+}
+
 // // Alternative: Use a slightly more contrasty color
 // a:focus,
 // a:hover,
@@ -896,12 +1037,16 @@ a:focus-visible {
 // }
 
 .pager {
+  list-style:none;
   display: flex;
   justify-content: space-between;
   align-items: center;
   max-width: 20em;
   margin: 0 auto;
   padding: 20px 0;
+  .btn.btn.btn {
+    font-weight: 500;
+  }
 }
 
 .badge {
@@ -969,6 +1114,11 @@ a:focus-visible {
     margin: 0;
   }
 
+  // The code block has a dark background in the two color schemes.
+  .option-name-group {
+    color: var(--light-blue);
+  }
+
   // Reserve space at the right edge of the code block so segment links
   // never end up underneath the floating button.
   & > pre > code.code-block {
@@ -990,7 +1140,7 @@ a:focus-visible {
   background: var(--background-color, #fff);
 
   &:hover {
-    color: var(--text-color);
+    color: var(--terminal-color);
     background: var(--hover-background, rgba(0, 0, 0, 0.05));
   }
 }
@@ -1065,17 +1215,20 @@ a:focus-visible {
 // Make the "Please provide more precise search terms." hint stand out so
 // users notice when their query has been truncated to 10000 results.
 .search-refine-hint {
-  margin-top: 0.3em;
-  padding: 0.4em 0.6em;
+  margin-top: 0.6em;
+  padding: 0.8em;
   border-left: 3px solid var(--orange-75);
-  background: color-mix( in srgb, var(--hover-background), var(--orange-75) 10%);
-  font-size: 0.7em;
+  background: color-mix(in srgb, var(--background-color), oklch(from var(--orange-75) l calc(c * 0.5) h) 25%);
+  font-size: 1.5em;
   font-weight: bold;
 }
 
+// A fixed width: a selection changes the values in the buckets, and the
+// sidebar and the results must not move when it does.
 @media (min-width: 761px) {
   .search-sidebar {
-    max-width: 320px;
+    flex: 0 0 300px;
+    width: 300px;
   }
 }
 
@@ -1096,7 +1249,6 @@ a:focus-visible {
 .license-operator {
   font-weight: bold;
   font-size: 0.85em;
-  opacity: 0.75;
 }
 
 ul.inline-list-elements {
@@ -1179,6 +1331,11 @@ sort-select-wrapper select {
   font-weight: bold;
   anchor-name: --sort-container;
 
+  .sort-label {
+    margin-bottom: 0;
+    font-weight: inherit;
+  }
+
   .sort-select {
     appearance: base-select;
     border: none;
@@ -1228,4 +1385,132 @@ sort-select-wrapper select {
     overflow: hidden;
     height: 100%;
   }
+}
+
+// The page behind the screenshot lightbox does not scroll.
+html:has(.screenshot-lightbox[open]) {
+  overflow: hidden;
+}
+
+// The screenshot lightbox fills the window, thus the image can be large. It is
+// dark in the two themes, thus the image has the same frame in the two. The
+// dialog shows only after `showModal`, thus never in the flow of the page.
+.screenshot-lightbox[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 1em;
+  border: 0;
+  background: rgba(0, 0, 0, 0.9);
+  color: #fff;
+
+  &::backdrop {
+    background: none;
+  }
+
+  a {
+    color: #fff;
+  }
+
+  button {
+    display: flex;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    cursor: pointer;
+
+    &:hover {
+      border-color: #fff;
+    }
+  }
+
+  a:focus-visible,
+  button:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+
+  .screenshot-lightbox-bar {
+    display: flex;
+    align-items: center;
+    gap: 1em;
+  }
+
+  .screenshot-lightbox-position {
+    margin-right: auto;
+  }
+
+  .screenshot-lightbox-close {
+    padding: 0.25em;
+  }
+
+  // The image is in the middle column and gets all the height that the bar
+  // and the caption do not use. The step buttons stay at the sides of the
+  // window, thus they do not move when the width of the image changes.
+  .screenshot-lightbox-stage {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: center;
+    gap: 0.5em;
+
+    // The link has no box, thus a click near the image is a click on the
+    // stage, which closes the dialog.
+    & > a {
+      display: contents;
+    }
+  }
+
+  .screenshot-lightbox-step {
+    grid-column: 3;
+    padding: 0.5em;
+    border-radius: 50%;
+
+    &.back {
+      grid-column: 1;
+      transform: rotate(180deg);
+    }
+  }
+
+  // A click on the image opens the original, which is larger.
+  .screenshot-lightbox-image {
+    grid-column: 2;
+    justify-self: center;
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    cursor: zoom-in;
+  }
+
+  a:focus-visible > .screenshot-lightbox-image {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+
+  .screenshot-lightbox-caption {
+    margin: 0;
+    text-align: center;
+  }
+}
+
+.icon-text-wrapper {
+  display: flex;
+  gap: 1ch;
+  align-items: center;
+}
+
+li.external > a {
+  display: flex;
+  gap: 1ch;
 }
