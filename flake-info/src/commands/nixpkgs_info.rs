@@ -71,13 +71,11 @@ const ICON_EXTENSIONS: [&str; 2] = ["svg", "png"];
 /// lossy formats are the right ones for it, and vector art never is.
 const SCREENSHOT_EXTENSIONS: [&str; 4] = ["png", "jpg", "jpeg", "webp"];
 
-/// Supplies icons by name from a freedesktop icon theme directory such as
-/// `${papirus-icon-theme}/share/icons/Papirus`. An icon that the theme has
-/// replaces the icon of the package, thus the icons have one style. The icon of
-/// the package stays where the theme does not have one. Also, evaluation knows
-/// the icon *name* of an entry but not its file, thus the theme is the only
-/// source of icons for entries that did not come through the binary-cache
-/// scanner.
+/// Fills in icons for entries that arrived without one, from a freedesktop icon
+/// theme directory such as `${papirus-icon-theme}/share/icons/Papirus`.
+/// Evaluation knows an entry's icon *name* but never its file, so entries that
+/// did not come through the binary-cache scanner have nothing to render without
+/// a theme to look them up in.
 struct IconTheme {
     root: PathBuf,
     /// Icon names repeat heavily across packages, and a miss is as worth
@@ -115,12 +113,15 @@ impl IconTheme {
         found
     }
 
-    /// Sets the icon of each entry that names an icon the theme has.
+    /// Adds an icon per entry that names one the package itself did not supply.
     fn fill(&mut self, entries: &[DesktopEntry], icons: &mut HashMap<String, PathBuf>) {
         for entry in entries {
             let Some(icon) = entry.icon.as_deref() else {
                 continue;
             };
+            if icons.contains_key(icon) {
+                continue;
+            }
             if let Some(path) = self.lookup(icon) {
                 icons.insert(icon.to_owned(), path);
             }
@@ -335,7 +336,7 @@ pub fn get_nixpkgs_info(
         .into_iter()
         .map(|(attribute, mut package)| {
             // Where each of this package's icons is to be read from: a file the
-            // icon theme supplies, or failing that one the scanner wrote.
+            // scanner wrote, or failing that one the icon theme supplies.
             let mut icon_sources: HashMap<String, PathBuf> = HashMap::new();
             if let Some(indexed) = desktop_index.remove(&attribute) {
                 // The scanner reads the entries a package actually ships, so it
@@ -863,22 +864,16 @@ mod tests {
         let apps = theme.path().join("scalable/apps");
         std::fs::create_dir_all(&apps).unwrap();
         std::fs::write(apps.join("themed.svg"), b"<svg/>").unwrap();
-        std::fs::write(apps.join("already.svg"), b"<svg/>").unwrap();
 
-        let entries: Vec<DesktopEntry> =
-            ["themed", "unthemed", "already", "own", "/nix/store/x/i.png"]
-                .iter()
-                .map(|icon| DesktopEntry {
-                    icon: Some(icon.to_string()),
-                    ..Default::default()
-                })
-                .collect();
+        let entries: Vec<DesktopEntry> = ["themed", "unthemed", "already", "/nix/store/x/i.png"]
+            .iter()
+            .map(|icon| DesktopEntry {
+                icon: Some(icon.to_string()),
+                ..Default::default()
+            })
+            .collect();
         let supplied = PathBuf::from("/icons/already.png");
-        let supplied_own = PathBuf::from("/icons/own.png");
-        let mut icons = HashMap::from([
-            ("already".to_string(), supplied),
-            ("own".to_string(), supplied_own.clone()),
-        ]);
+        let mut icons = HashMap::from([("already".to_string(), supplied.clone())]);
 
         IconTheme::new(theme.path().to_owned()).fill(&entries, &mut icons);
 
@@ -886,10 +881,8 @@ mod tests {
         // A name the theme does not carry stays absent rather than becoming a
         // link the frontend would render as a broken image.
         assert!(!icons.contains_key("unthemed"));
-        // The icon of the theme replaces the icon of the package.
-        assert_eq!(icons["already"], apps.join("already.svg"));
-        // The icon of the package stays where the theme does not have one.
-        assert_eq!(icons["own"], supplied_own);
+        // An icon the package supplied itself is the better one; keep it.
+        assert_eq!(icons["already"], supplied);
         assert!(!icons.contains_key("/nix/store/x/i.png"));
     }
 
