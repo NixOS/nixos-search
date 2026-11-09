@@ -791,16 +791,21 @@ viewThemeToggle resolvedTheme =
     viewNavbarToggle icon label ToggleTheme
 
 
-{-| The toggle shows the icon style a click gives, as the theme toggle does.
+{-| The icon is the same for the two styles. The label states the style a click gives.
 -}
 viewIconStyleToggle : IconStyle -> Html Msg
 viewIconStyleToggle iconStyle =
-    case iconStyle of
-        PreferPackageIcons ->
-            viewNavbarToggle (Icons.palette 16 Inherit) "Prefer Papirus icons, with package icons as fallback" ToggleIconStyle
+    let
+        label : String
+        label =
+            case iconStyle of
+                PreferPackageIcons ->
+                    "Prefer Papirus icons, with package icons as fallback"
 
-        PreferThemeIcons ->
-            viewNavbarToggle (Icons.apps 16 Inherit) "Prefer package icons, with Papirus icons as fallback" ToggleIconStyle
+                PreferThemeIcons ->
+                    "Prefer package icons, with Papirus icons as fallback"
+    in
+    viewNavbarToggle (Icons.category 16 Inherit) label ToggleIconStyle
 
 
 viewNavbarToggle : Svg Msg -> String -> Msg -> Html Msg
