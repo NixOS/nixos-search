@@ -202,6 +202,10 @@ pub struct Package {
     /// document rather than in every package that names it.
     #[serde(default)]
     pub icons: HashMap<String, String>,
+    /// The icons of the icon theme for the names in [Package::icons] that hold
+    /// an icon of the package itself. Set by the import, not read from its input.
+    #[serde(default)]
+    pub theme_icons: HashMap<String, String>,
     /// The AppStream components the package ships, by their own identifiers.
     /// These name the application the way every other catalog names it, which
     /// is what lets a reader line a nixpkgs package up with the same
