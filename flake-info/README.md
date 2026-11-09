@@ -127,10 +127,13 @@ $ nix run .#desktop-entries-index -- --output desktop-entries.json --icon-dir ic
     --screenshot-dir screenshots --screenshot-pixel-size 224 --screenshot-quality 82 \
     --screenshot-large-pixel-size 752 --screenshot-large-quality 80
 $ flake-info nixpkgs unstable --desktop-entries-file desktop-entries.json --icon-dir icons \
+    --icon-theme-dir "$(nix build --inputs-from . --no-link --print-out-paths nixpkgs#papirus-icon-theme)/share/icons/Papirus" \
     --screenshot-dir screenshots
 ```
 
 `--icon-extensions png,svg` is not cosmetic: the script also scans for XPM by default, which no browser renders and the importer therefore drops. The other icon flags trim the images to what a browser wants, roughly 1.2 KB each.
+
+`--icon-theme-dir` looks icons up by name in a freedesktop icon theme. The theme is a fallback: the icon of a package always stays, and only an entry without an icon gets one from the theme. The import uses Papirus. A Papirus icon is an SVG of about 3 KB.
 
 Screenshots are much larger, and the index carries them as base64 in Elasticsearch, so `--screenshot-pixel-size 224` and `--screenshot-quality 82` make a WebP thumbnail of each one, about 5 KB against the 278 KB of the source image. Each screenshot is mirrored a second time, at `--screenshot-large-pixel-size 752`, because a thumbnail shows which application a result is but is too small to read its interface in: that copy averages 29 KB, thus all 2835 screenshots of `nixos-unstable` are 15 MB as thumbnails and 82 MB as the larger copy. An image narrower than the width asked for keeps its own width, since enlarging one costs bytes and shows no more of the interface. The index keeps every screenshot a package has, which is 2.66 of them on average; `--screenshots-per-package` keeps only the first few. Give `--screenshot-pixel-size 0` and `--screenshot-quality 0` to mirror the source image unchanged. `--screenshot-max-bytes` aborts a download that is larger than the limit, and `--screenshot-jobs` sets how many downloads run at the same time.
 
