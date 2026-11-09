@@ -699,11 +699,22 @@ viewNavigation route =
 
                 _ ->
                     route
+
+        -- A search page always puts its channel in the URL, and this is
+        -- usually the stable channel. Browse has a different default channel,
+        -- thus the link keeps the channel only from Browse.
+        browseChannel =
+            case route of
+                Route.Browse args ->
+                    args.channel
+
+                _ ->
+                    Nothing
     in
     li [] []
         :: List.map
             (viewNavigationItem activeRoute)
-            [ ( Route.Browse { channel = searchArgs.channel, category = Nothing }, basicTextIcon Icons.explore "Browse" )
+            [ ( Route.Browse { channel = browseChannel, category = Nothing }, basicTextIcon Icons.explore "Browse" )
             , ( Route.Packages searchArgs, basicTextIcon Icons.widgets "Packages" )
             , ( Route.Options searchArgs, basicTextIcon Icons.tune "Options" )
             , ( Route.Flakes searchArgs, basicTextIcon Icons.ac_unit "3rd-party Flakes" )

@@ -6,7 +6,7 @@ module Search exposing
     , Model
     , Msg(..)
     , NixOSChannel
-    , NixOSChannelStatus
+    , NixOSChannelStatus(..)
     , NixOSChannels
     , Options
     , ResultHits
