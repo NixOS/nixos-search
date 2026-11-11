@@ -510,7 +510,7 @@ viewBuckets bucketsAsString result =
             selectedBucket.mimeTypes
         |> viewBucket
             Search.CheckboxInput
-            "Problems"
+            "Statuses"
             Icons.warning
             (result.aggregations.package_problem_kinds_set.buckets |> sortProblemKindBuckets)
             (toggleProblemKind selectedBucket.problemKinds
