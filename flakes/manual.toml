@@ -308,11 +308,6 @@ repo = "hyprland"
 
 [[sources]]
 type = "github"
-owner = "Hythera"
-repo = "nix-waterfox"
-
-[[sources]]
-type = "github"
 owner = "Infinidoge"
 repo = "nix-minecraft"
 
