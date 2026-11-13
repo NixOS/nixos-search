@@ -131,6 +131,8 @@ $ flake-info nixpkgs unstable --desktop-entries-file desktop-entries.json --icon
     --screenshot-dir screenshots
 ```
 
+Set `NAR_SERVE_TOKEN` to get each file by itself from `cache.nixos.org/nix/store/`, in place of the full NAR that holds it. This endpoint decompresses the NAR on the server, thus it is only for the clients that have a token. The token of this indexer is that of the `nixos-search` client, in `non-critical-infra/secrets/nar-serve-token-nixos-search.caliban` of [NixOS/infra](https://github.com/NixOS/infra). Without the token, the script downloads the NARs.
+
 `--icon-extensions png,svg` is not cosmetic: the script also scans for XPM by default, which no browser renders and the importer therefore drops. The other icon flags trim the images to what a browser wants, roughly 1.2 KB each.
 
 `--icon-theme-dir` looks icons up by name in a freedesktop icon theme. The theme is a fallback: the icon of a package always stays, and only an entry without an icon gets one from the theme. The import uses Papirus. A Papirus icon is an SVG of about 3 KB.
