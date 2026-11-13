@@ -49,14 +49,13 @@ Add a new variant here (plus its cases below) to expose it to the page.
 -}
 type OptionSource
     = NixosOptions
-    | ModularServiceOptions
     | HomeManagerOptionSource
     | DarwinOptionSource
 
 
 allOptionSources : List OptionSource
 allOptionSources =
-    [ NixosOptions, HomeManagerOptionSource, DarwinOptionSource, ModularServiceOptions ]
+    [ NixosOptions, HomeManagerOptionSource, DarwinOptionSource ]
 
 
 {-| Default tab when no source is specified in the URL.
@@ -73,9 +72,6 @@ optionSourceId source =
     case source of
         NixosOptions ->
             "nixos"
-
-        ModularServiceOptions ->
-            "modular_service"
 
         HomeManagerOptionSource ->
             "home_manager"
@@ -102,9 +98,6 @@ optionSourceDocType source =
         NixosOptions ->
             "option"
 
-        ModularServiceOptions ->
-            "service"
-
         HomeManagerOptionSource ->
             "home-manager-option"
 
@@ -120,9 +113,6 @@ optionSourceLabel source =
         NixosOptions ->
             "NixOS"
 
-        ModularServiceOptions ->
-            "Modular services"
-
         HomeManagerOptionSource ->
             "Home Manager"
 
@@ -134,9 +124,6 @@ optionSourceRepoUrl : OptionSource -> String
 optionSourceRepoUrl source =
     case source of
         NixosOptions ->
-            "https://github.com/NixOS/nixpkgs"
-
-        ModularServiceOptions ->
             "https://github.com/NixOS/nixpkgs"
 
         HomeManagerOptionSource ->

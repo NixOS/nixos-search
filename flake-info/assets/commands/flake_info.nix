@@ -236,57 +236,6 @@ let
       };
     };
 
-  # Parses the angle-bracket prefix from modular service option names to extract
-  # service_package and service_module, strips the prefix, and tags as entry_type = "service".
-  parseServiceOption =
-    opt:
-    let
-      # Match: <imports = [ pkgs.PKG.services.MODULE ]>.OPTNAME
-      # Group 1: package attrname, group 2: module name, group 3: remaining option path
-      m = lib.match ".*imports.*pkgs\\.([^.]+)\\.services\\.([^ ]+).*>\\.(.*)" opt.name;
-    in
-    if m != null then
-      opt
-      // {
-        entry_type = "service";
-        name = lib.elemAt m 2;
-        service_package = lib.elemAt m 0;
-        service_module = lib.elemAt m 1;
-      }
-    else
-      # Fallback: keep as-is but still tag as service
-      opt // { entry_type = "service"; };
-
-  # Deduplicate service options that share the same underlying module. When
-  # several packages re-export the same service module (e.g. php, php82..php85
-  # all point to the same pkgs/development/interpreters/php/service.nix), we
-  # end up with identical option entries differing only by service_package.
-  # Group by (declarations, parsed name) and keep a single entry per group,
-  # with a canonical service_package and the full list in service_packages.
-  deduplicateServices =
-    opts:
-    let
-      keyOf =
-        opt:
-        lib.toJSON [
-          (opt.declarations or [ ])
-          (opt.name or "")
-          (opt.service_module or "")
-        ];
-      grouped = lib.groupBy keyOf opts;
-      mergeGroup =
-        entries:
-        let
-          packages = lib.naturalSort (lib.unique (map (e: e.service_package or "") entries));
-        in
-        (lib.head entries)
-        // {
-          service_package = lib.head packages;
-          service_packages = packages;
-        };
-    in
-    lib.mapAttrsToList (_: mergeGroup) grouped;
-
   # Merge a list of single-key attribute sets into a map to the distinct values.
   collectValues = entries: lib.zipAttrsWith (_: values: lib.unique values) entries;
 
@@ -441,20 +390,6 @@ let
     { nixpkgs.hostPlatform = "x86_64-linux"; }
   ];
 
-  # Use nixpkgs' hand-maintained modular services list rather than walking all
-  # `pkgs` attributes (which would force shallow evaluation of every package
-  # and is too expensive -- see NixOS/nixpkgs#509117).
-  serviceDocModules =
-    (import "${nixpkgsFlake}/nixos/modules/misc/documentation/modular-services.nix" {
-      inherit lib;
-      pkgs = nixpkgs;
-    }).documentation.nixos.extraModules;
-
-  # Evaluate base + service documentation modules together (service modules
-  # depend on base option types). Then partition: options whose name starts
-  # with "<" come from modular services.
-  nixpkgsAllOpts = readNixOSOptions { module = nixpkgsBaseModules ++ serviceDocModules; };
-  isServiceOption = opt: lib.hasPrefix "<" opt.name;
   readOptionsIf =
     {
       cond,
@@ -491,29 +426,12 @@ rec {
   };
   all = packages ++ apps ++ options;
 
-  # Partition options into standard NixOS options and modular service options in a single pass
-  nixpkgsOptionsPartition = lib.partition isServiceOption nixpkgsAllOpts;
-  nixos-options = nixpkgsOptionsPartition.wrong;
-
-  # Parsed service options
-  realServices = lib.filter (opt: opt ? service_package) (
-    map parseServiceOption nixpkgsOptionsPartition.right
-  );
-
-  nixos-services = deduplicateServices realServices;
+  nixos-options = readNixOSOptions { module = nixpkgsBaseModules; };
 
   inherit moduleOfPackageOption;
 
-  # Links from a package to the modules that use it, in one attribute so that
-  # both come from one evaluation of the NixOS options.
+  # Links from a package to the modules that use it.
   nixos-package-links = {
-    # Map from package attribute name to the list of modular service module
-    # names it exposes. Derived from the parsed service options above so it
-    # stays in sync with nixpkgs' hand-maintained list.
-    modular_services = collectValues (
-      map (opt: { ${opt.service_package} = opt.service_module; }) realServices
-    );
-
     # Map from package attribute name to the NixOS modules that use it. A
     # module tells this itself: its `.package` option has that package as the
     # default. Other defaults, such as a conditional on `stateVersion`, are

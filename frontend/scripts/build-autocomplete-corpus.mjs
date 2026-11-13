@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 // Pre-generates the typeahead corpus fetched from Elasticsearch. Writes
-// `<AUTOCOMPLETE_OUT_DIR>/modular_service-<channel>.json` and
-// `home_manager-<channel>.json` for every channel in `NIXOS_CHANNELS`
+// `<AUTOCOMPLETE_OUT_DIR>/home_manager-<channel>.json` for every channel in `NIXOS_CHANNELS`
 // (default output dir: `public/autocomplete`).
 //
 // Invoked in two places:
@@ -85,15 +84,9 @@ async function fetchCorpus(category, docType, channelId, branch) {
 
 for (const channel of channels) {
     const { id, branch } = channel;
-    const [services, hm] = await Promise.all([
-        fetchCorpus("modular_service", "service", id, branch),
-        fetchCorpus("home_manager", "home-manager-option", id, branch),
-    ]);
-    writeFileSync(join(OUT_DIR, `modular_service-${id}.json`), JSON.stringify(services));
+    const hm = await fetchCorpus("home_manager", "home-manager-option", id, branch);
     writeFileSync(join(OUT_DIR, `home_manager-${id}.json`), JSON.stringify(hm));
-    console.log(
-        `[autocomplete] ${id}: ${services.length} modular_service, ${hm.length} home_manager options`,
-    );
+    console.log(`[autocomplete] ${id}: ${hm.length} home_manager options`);
 }
 
 if (hadFailure) {
