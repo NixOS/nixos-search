@@ -121,7 +121,6 @@ type alias ResultItemSource =
     , flakeName : Maybe String
     , flakeDescription : Maybe String
     , flakeUrl : Maybe ( String, String )
-    , modularServices : List String
     , nixosModules : List String
     , desktopEntries : List DesktopEntry
 
@@ -1464,11 +1463,6 @@ viewResultItem saveData showIconMargin screenshotShown nixosChannels channel sho
                         viewNixosModules channel item.source.nixosModules
                     , optionsLink
                     , popularity
-                    , if List.isEmpty item.source.modularServices then
-                        text ""
-
-                      else
-                        viewModularServices channel item.source.attr_name item.source.modularServices
                     ]
                 ]
 
@@ -1710,41 +1704,6 @@ viewNixosModule channel nixosModule =
         [ a
             [ href ("/options?channel=" ++ channel ++ "&query=" ++ nixosModule) ]
             [ code [] [ text nixosModule ] ]
-        ]
-
-
-viewModularServices : String -> String -> List String -> Html msg
-viewModularServices channel attrName modularServices =
-    div []
-        [ h3 []
-            [ text "Modular Services"
-            , text " "
-            , a
-                [ href "https://nixos.org/manual/nixos/stable/#modular-services"
-                , Html.Attributes.target "_blank"
-                , Html.Attributes.title "What are modular services?"
-                ]
-                [ text "(?)" ]
-            ]
-        , ul [] (List.map (viewModularService channel attrName) modularServices)
-        ]
-
-
-viewModularService : String -> String -> String -> Html msg
-viewModularService channel attrName mod_ =
-    let
-        suffix : String
-        suffix =
-            if mod_ == "default" then
-                ""
-
-            else
-                "." ++ mod_
-    in
-    li []
-        [ a
-            [ href ("/options?channel=" ++ channel ++ "&query=" ++ attrName ++ "&include_nixos_options=0") ]
-            [ code [] [ text ("pkgs." ++ attrName ++ ".services" ++ suffix) ] ]
         ]
 
 
@@ -2064,7 +2023,6 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "flake_name" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_description" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_resolved" (Json.Decode.map Just decodeResolvedFlake) Nothing
-        |> Json.Decode.Pipeline.optional "package_modular_services" (Json.Decode.list Json.Decode.string) []
         |> Json.Decode.Pipeline.optional "package_nixos_modules" (Json.Decode.list Json.Decode.string) []
         |> Json.Decode.Pipeline.optional "package_desktop_entries" (Json.Decode.list decodeDesktopEntry) []
         |> Json.Decode.Pipeline.optional "package_desktop_icons" (Json.Decode.dict Json.Decode.string) Dict.empty

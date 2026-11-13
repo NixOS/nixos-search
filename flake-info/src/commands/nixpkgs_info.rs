@@ -388,10 +388,6 @@ pub fn get_nixpkgs_info(
                 .unwrap_or_default()
                 .into_iter()
                 .collect();
-            let modular_services = package_links
-                .modular_services
-                .remove(&attribute)
-                .unwrap_or_default();
             let nixos_modules = package_links
                 .nixos_modules
                 .remove(&attribute)
@@ -402,7 +398,6 @@ pub fn get_nixpkgs_info(
                 attribute,
                 package,
                 programs,
-                modular_services,
                 nixos_modules,
                 dep_count,
                 repology_repos,
@@ -557,7 +552,6 @@ fn is_system(component: &str) -> bool {
 /// The modules that use a package, keyed by package attribute name.
 #[derive(Debug, Default, Deserialize)]
 pub struct PackageLinks {
-    pub modular_services: HashMap<String, Vec<String>>,
     pub nixos_modules: HashMap<String, Vec<String>>,
 }
 
@@ -642,11 +636,6 @@ pub fn get_nixpkgs_options(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
     Ok(options.into_iter().map(NixpkgsEntry::Option).collect())
 }
 
-pub fn get_nixpkgs_services(nixpkgs: &Source) -> Result<Vec<NixpkgsEntry>> {
-    let options = get_options_from_script(nixpkgs, "nixos-services", None)?;
-    Ok(options.into_iter().map(NixpkgsEntry::Service).collect())
-}
-
 fn flake_ref_for(nixpkgs: &Source, base: &str, suffix_pattern: Option<&str>) -> String {
     match nixpkgs {
         Source::Nixpkgs(Nixpkgs { channel, .. }) if channel != "unstable" => {
@@ -705,7 +694,6 @@ mod tests {
     fn test_package_links_deserialize() {
         let json = r#"
         {
-            "modular_services": { "php": ["default"] },
             "nixos_modules": {
                 "fish": ["programs.fish"],
                 "docker": ["virtualisation.docker", "virtualisation.docker.rootless"]
@@ -714,7 +702,6 @@ mod tests {
         "#;
         let links: PackageLinks = serde_json::from_str(json).unwrap();
 
-        assert_eq!(links.modular_services["php"], ["default"]);
         assert_eq!(links.nixos_modules["fish"], ["programs.fish"]);
         assert_eq!(links.nixos_modules["docker"].len(), 2);
     }

@@ -20,8 +20,8 @@ module Search.Typeahead exposing
 
 Static assets are preferred where available: `/autocomplete/<source>-<channel>.json`
 is fetched once per session (where `<source>` is the `optionSourceId`, e.g.
-`home_manager` or `modular_service`) and searched client-side with multi-word
-ranking. This covers Modular Services and Home Manager options without touching
+`home_manager`) and searched client-side with multi-word
+ranking. This covers Home Manager options without touching
 the Elasticsearch instance -- cheap on metered networks.
 
 For the categories the static corpus does not cover (Packages and NixOS Options)
@@ -406,9 +406,6 @@ decodeItem category channel =
             case category of
                 "home_manager" ->
                     "home-manager-option"
-
-                "modular_service" ->
-                    "service"
 
                 _ ->
                     "option"

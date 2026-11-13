@@ -1032,12 +1032,6 @@ viewNoResults categoryName activeOptionSource query channel =
                 , text "."
                 ]
 
-            else if categoryName == "modular services" then
-                [ text "Not all packages provide modular services. You might want to "
-                , nixpkgsIssues
-                , text "."
-                ]
-
             else if activeOptionSource == Route.HomeManagerOptionSource then
                 let
                     homeManagerIssues =

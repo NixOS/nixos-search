@@ -68,7 +68,6 @@ import Search
 import Search.Query
 import SyntaxHighlight exposing (elm, oneDark, toBlockHtml, useTheme)
 import Task
-import Url
 import Utils exposing (basicTextIcon)
 
 
@@ -88,7 +87,7 @@ type alias ResultItemSource =
     , example : Maybe String
     , source : Maybe String
 
-    -- ES document type ("option", "service", "home-manager-option")
+    -- ES document type ("option", "home-manager-option", "darwin-option")
     , docType : String
 
     -- flake
@@ -97,11 +96,6 @@ type alias ResultItemSource =
     , flakeDescription : Maybe String
     , flakeUrl : Maybe String
     , flakeRevision : Maybe String
-
-    -- modular service metadata (populated only for `service` docs)
-    , servicePackage : Maybe String
-    , serviceModule : Maybe String
-    , servicePackages : List String
     }
 
 
@@ -281,14 +275,13 @@ type SourceCategory
     = Official
     | Community
     | External
-    | Experimental
 
 
 {-| Order of the category fieldsets in the sidebar.
 -}
 allSourceCategories : List SourceCategory
 allSourceCategories =
-    [ Official, Community, External, Experimental ]
+    [ Official, Community, External ]
 
 
 sourceCategory : OptionSource -> SourceCategory
@@ -303,9 +296,6 @@ sourceCategory source =
         Route.DarwinOptionSource ->
             External
 
-        Route.ModularServiceOptions ->
-            Experimental
-
 
 sourceCategoryLabel : SourceCategory -> String
 sourceCategoryLabel category =
@@ -319,9 +309,6 @@ sourceCategoryLabel category =
         External ->
             "External"
 
-        Experimental ->
-            "Experimental"
-
 
 sourceCategoryIcon : SourceCategory -> IconsTypes.Icon i
 sourceCategoryIcon category =
@@ -334,9 +321,6 @@ sourceCategoryIcon category =
 
         External ->
             Icons.public
-
-        Experimental ->
-            Icons.science
 
 
 {-| Compact rendering of a hit count for the tab badge: 1.2k, 23k, etc.
@@ -446,15 +430,6 @@ viewOptionDetails nixosChannels channel activeSource nameSegments source =
         asPreCode value =
             div [] [ pre [] [ code [ class "code-block" ] [ text value ] ] ]
 
-        pkgLink pkg =
-            a
-                [ href ("/packages?channel=" ++ channel ++ "&query=" ++ pkg ++ "#show=" ++ Url.percentEncode pkg) ]
-                [ code [] [ text pkg ] ]
-
-        isService : Bool
-        isService =
-            source.docType == "service"
-
         descriptionItems : List (Html Msg)
         descriptionItems =
             source.description
@@ -499,49 +474,6 @@ viewOptionDetails nixosChannels channel activeSource nameSegments source =
                         ]
                     )
                 |> Maybe.withDefault []
-
-        aboutItems : List (Html Msg)
-        aboutItems =
-            if isService then
-                [ dt [] [ text "About" ]
-                , dd []
-                    [ a
-                        [ href "https://nixos.org/manual/nixos/stable/#modular-services"
-                        , Html.Attributes.target "_blank"
-                        ]
-                        [ text "What are modular services?" ]
-                    ]
-                ]
-
-            else
-                []
-
-        providedByPackage : String -> List (Html Msg)
-        providedByPackage pkg =
-            [ dt [] [ text "Provided by package" ]
-            , dd [] [ pkgLink pkg ]
-            ]
-
-        packageItems : List (Html Msg)
-        packageItems =
-            if isService then
-                case source.servicePackages of
-                    [] ->
-                        source.servicePackage
-                            |> Maybe.map providedByPackage
-                            |> Maybe.withDefault []
-
-                    [ single ] ->
-                        providedByPackage single
-
-                    many ->
-                        [ dt [] [ text "Provided by packages" ]
-                        , dd []
-                            (List.intersperse (text ", ") (List.map pkgLink many))
-                        ]
-
-            else
-                []
     in
     dl [ class "option-details", Html.Attributes.map SearchMsg Search.trapClick ] <|
         [ dt [] [ text "Name" ]
@@ -551,8 +483,6 @@ viewOptionDetails nixosChannels channel activeSource nameSegments source =
             ++ typeItems
             ++ defaultItems
             ++ exampleItems
-            ++ aboutItems
-            ++ packageItems
             ++ viewUsageSnippet source
             ++ [ dt [] [ text "Declared in" ]
                , dd [] <| findSource nixosChannels channel source
@@ -612,23 +542,6 @@ viewUsageSnippet source =
             ]
     in
     case source.docType of
-        "service" ->
-            case ( source.servicePackage, source.serviceModule ) of
-                ( Just pkg, Just mod_ ) ->
-                    usage
-                        ("system.services.<name> = {\n"
-                            ++ "  imports = [ pkgs."
-                            ++ pkg
-                            ++ ".services."
-                            ++ mod_
-                            ++ " ];\n"
-                            ++ nestedOption "  "
-                            ++ "};"
-                        )
-
-                _ ->
-                    []
-
         "option" ->
             usage
                 ("# configuration.nix\n"
@@ -959,9 +872,6 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "flake_description" (Json.Decode.map Just Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "flake_resolved" (Json.Decode.map Just decodeResolvedFlake) Nothing
         |> Json.Decode.Pipeline.optional "revision" (Json.Decode.map Just Json.Decode.string) Nothing
-        |> Json.Decode.Pipeline.optional "service_package" (Json.Decode.map Just Json.Decode.string) Nothing
-        |> Json.Decode.Pipeline.optional "service_module" (Json.Decode.map Just Json.Decode.string) Nothing
-        |> Json.Decode.Pipeline.optional "service_packages" (Json.Decode.list Json.Decode.string) []
 
 
 decodeResultAggregations : Json.Decode.Decoder ResultAggregations
