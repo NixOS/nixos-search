@@ -115,19 +115,36 @@ impl IconTheme {
         found
     }
 
-    /// Adds an icon per entry that names one the package itself did not supply.
-    fn fill(&mut self, entries: &[DesktopEntry], icons: &mut HashMap<String, PathBuf>) {
+    /// Looks up the icon of each entry in the theme. A name that the package
+    /// does not supply gets the icon of the theme in `icons`. A name that the
+    /// package supplies keeps that icon, and the returned map holds the icon of
+    /// the theme as the alternative that a reader can select.
+    fn fill(
+        &mut self,
+        entries: &[DesktopEntry],
+        icons: &mut HashMap<String, PathBuf>,
+    ) -> HashMap<String, PathBuf> {
+        let mut alternatives = HashMap::new();
         for entry in entries {
             let Some(icon) = entry.icon.as_deref() else {
                 continue;
             };
-            if icons.contains_key(icon) {
+            let Some(path) = self.lookup(icon) else {
                 continue;
-            }
-            if let Some(path) = self.lookup(icon) {
-                icons.insert(icon.to_owned(), path);
+            };
+            match icons.get(icon) {
+                None => {
+                    icons.insert(icon.to_owned(), path);
+                }
+                // Two entries can name one icon, and the first can have put
+                // the icon of the theme in `icons`.
+                Some(own) if *own != path => {
+                    alternatives.insert(icon.to_owned(), path);
+                }
+                Some(_) => {}
             }
         }
+        alternatives
     }
 }
 
@@ -358,10 +375,12 @@ pub fn get_nixpkgs_info(
                 package.component_ids = indexed.component_ids;
                 package.screenshots = indexed.screenshots;
             }
-            if let Some(theme) = icon_theme.as_mut() {
-                theme.fill(&package.desktop_entries, &mut icon_sources);
-            }
+            let theme_icon_sources = match icon_theme.as_mut() {
+                Some(theme) => theme.fill(&package.desktop_entries, &mut icon_sources),
+                None => HashMap::new(),
+            };
             package.icons = icon_store.intern(icon_sources);
+            package.theme_icons = icon_store.intern(theme_icon_sources);
             // A screenshot now names the file that carries the image, rather
             // than the file the scanner wrote. One that cannot be read is
             // dropped: the index only names images it also carries.
@@ -902,7 +921,18 @@ mod tests {
         std::fs::create_dir_all(&apps).unwrap();
         std::fs::write(apps.join("themed.svg"), b"<svg/>").unwrap();
 
-        let entries: Vec<DesktopEntry> = ["themed", "unthemed", "already", "/nix/store/x/i.png"]
+        std::fs::write(apps.join("already.svg"), b"<svg/>").unwrap();
+
+        // The first name is there two times: a theme icon that fills a gap is
+        // not an alternative to itself.
+        let names = [
+            "themed",
+            "themed",
+            "unthemed",
+            "already",
+            "/nix/store/x/i.png",
+        ];
+        let entries: Vec<DesktopEntry> = names
             .iter()
             .map(|icon| DesktopEntry {
                 icon: Some(icon.to_string()),
@@ -912,7 +942,7 @@ mod tests {
         let supplied = PathBuf::from("/icons/already.png");
         let mut icons = HashMap::from([("already".to_string(), supplied.clone())]);
 
-        IconTheme::new(theme.path().to_owned()).fill(&entries, &mut icons);
+        let alternatives = IconTheme::new(theme.path().to_owned()).fill(&entries, &mut icons);
 
         assert_eq!(icons["themed"], apps.join("themed.svg"));
         // A name the theme does not carry stays absent rather than becoming a
@@ -921,6 +951,12 @@ mod tests {
         // An icon the package supplied itself is the better one; keep it.
         assert_eq!(icons["already"], supplied);
         assert!(!icons.contains_key("/nix/store/x/i.png"));
+        // The icon of the theme stays available as the alternative, and only
+        // for the name that has an icon of its own.
+        assert_eq!(
+            alternatives,
+            HashMap::from([("already".to_string(), apps.join("already.svg"))])
+        );
     }
 
     #[test]

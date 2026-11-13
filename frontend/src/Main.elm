@@ -53,7 +53,7 @@ import Svg exposing (Svg)
 import Svg.Attributes exposing (width)
 import Task
 import Url
-import Utils exposing (basicTextIcon)
+import Utils exposing (IconStyle(..), basicTextIcon, iconStyleFromString, iconStyleToString)
 
 
 
@@ -67,6 +67,7 @@ type alias Flags =
     , elasticsearchPassword : String
     , nixosChannels : Json.Decode.Value
     , theme : String
+    , iconStyle : String
     , systemDark : Bool
     , isPrideMonth : Bool
     , saveData : Bool
@@ -157,6 +158,7 @@ type alias Model =
     , nixosChannels : List NixOSChannel
     , page : Page
     , theme : Theme
+    , iconStyle : IconStyle
     , systemDark : Bool
     , isPrideMonth : Bool
     , preferStatic : Bool
@@ -168,6 +170,9 @@ type alias Model =
 
 
 port setTheme : String -> Cmd msg
+
+
+port setIconStyle : String -> Cmd msg
 
 
 port systemDarkChanged : (Bool -> msg) -> Sub msg
@@ -214,6 +219,7 @@ init flags url navKey =
             , page = NotFound
             , route = Route.Home
             , theme = themeFromString flags.theme
+            , iconStyle = iconStyleFromString flags.iconStyle
             , systemDark = flags.systemDark
             , isPrideMonth = flags.isPrideMonth
             , preferStatic = not flags.saveData
@@ -237,6 +243,7 @@ type Msg
     | CtrlKRegistered
     | SearchFocusResult
     | ToggleTheme
+    | ToggleIconStyle
     | SystemDarkChanged Bool
     | DocCountsResponse (Result Http.Error (Dict String (Dict String Int)))
 
@@ -531,6 +538,21 @@ update msg model =
             , setTheme (themeToString theme)
             )
 
+        ( ToggleIconStyle, _ ) ->
+            let
+                iconStyle : IconStyle
+                iconStyle =
+                    case model.iconStyle of
+                        PreferPackageIcons ->
+                            PreferThemeIcons
+
+                        PreferThemeIcons ->
+                            PreferPackageIcons
+            in
+            ( { model | iconStyle = iconStyle }
+            , setIconStyle (iconStyleToString iconStyle)
+            )
+
         ( SystemDarkChanged systemDark, _ ) ->
             -- A pin that now equals the OS palette stays, so the next click
             -- pins the other palette.
@@ -612,7 +634,14 @@ view model =
                             [ div [ class "container" ]
                                 [ viewBrand model.isPrideMonth
                                 , ul [ class "nav" ] (viewNavigation model.route)
-                                , viewThemeToggle (resolveTheme model.systemDark model.theme)
+                                , div [ class "navbar-toggles" ]
+                                    [ if pageHasIcons model.page then
+                                        viewIconStyleToggle model.iconStyle
+
+                                      else
+                                        text ""
+                                    , viewThemeToggle (resolveTheme model.systemDark model.theme)
+                                    ]
                                 ]
                             ]
                         ]
@@ -759,16 +788,47 @@ viewThemeToggle resolvedTheme =
         ( icon, label ) =
             getThemeIcon resolvedTheme
     in
-    -- The wrapper sets the position in the navbar. The dark theme sets
-    -- `margin: 0` on all `.btn` elements.
-    div [ class "theme-toggle" ]
-        [ viewButton
-            [ title label
-            , attribute "aria-label" label
-            , onClick ToggleTheme
-            ]
-            [ span [ class "theme-icon" ] [ icon ] ]
+    viewNavbarToggle icon label ToggleTheme
+
+
+{-| The icon is the same for the two styles. The label states the style a click gives.
+-}
+viewIconStyleToggle : IconStyle -> Html Msg
+viewIconStyleToggle iconStyle =
+    let
+        label : String
+        label =
+            case iconStyle of
+                PreferPackageIcons ->
+                    "Prefer Papirus icons, with package icons as fallback"
+
+                PreferThemeIcons ->
+                    "Prefer package icons, with Papirus icons as fallback"
+    in
+    viewNavbarToggle (Icons.category 16 Inherit) label ToggleIconStyle
+
+
+viewNavbarToggle : Svg Msg -> String -> Msg -> Html Msg
+viewNavbarToggle icon label msg =
+    viewButton
+        [ title label
+        , attribute "aria-label" label
+        , onClick msg
         ]
+        [ span [ class "navbar-toggle-icon" ] [ icon ] ]
+
+
+pageHasIcons : Page -> Bool
+pageHasIcons page =
+    case page of
+        Browse browseModel ->
+            Page.Browse.hasIcons browseModel
+
+        Packages packagesModel ->
+            Page.Packages.hasIcons packagesModel
+
+        _ ->
+            False
 
 
 viewPage : Model -> Html Msg
@@ -784,10 +844,10 @@ viewPage model =
             div [] [ text "Not Found" ]
 
         Browse browseModel ->
-            Html.map BrowseMsg <| Page.Browse.view model.nixosChannels browseModel
+            Html.map BrowseMsg <| Page.Browse.view model.iconStyle model.nixosChannels browseModel
 
         Packages packagesModel ->
-            Html.map (\m -> PackagesMsg m) <| Page.Packages.view model.nixosChannels (docCountsOf packagesModel.channel) packagesModel
+            Html.map (\m -> PackagesMsg m) <| Page.Packages.view model.iconStyle model.nixosChannels (docCountsOf packagesModel.channel) packagesModel
 
         Options optionsModel ->
             Html.map (\m -> OptionsMsg m) <| Page.Options.view model.nixosChannels (docCountsOf optionsModel.channel) optionsModel

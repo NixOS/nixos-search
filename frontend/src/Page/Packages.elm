@@ -15,6 +15,7 @@ module Page.Packages exposing
     , Screenshot
     , decodeResultAggregations
     , decodeResultItemSource
+    , hasIcons
     , init
     , makeRequest
     , makeRequestBody
@@ -76,6 +77,7 @@ import List.Extra
 import Material.Icons as Icons
 import Ports
 import Regex
+import RemoteData
 import Route exposing (SearchType)
 import Search
     exposing
@@ -88,7 +90,7 @@ import Svg exposing (path, svg)
 import Svg.Attributes as SA
 import Task
 import Url
-import Utils
+import Utils exposing (IconStyle(..), iconFile)
 
 
 
@@ -128,6 +130,9 @@ type alias ResultItemSource =
     -- The file under `/icons` holding each entry's image, keyed by the name the
     -- entry's `icon` refers to.
     , desktopIcons : Dict String String
+
+    -- The icon of the theme for the names that have an icon of the package.
+    , desktopThemeIcons : Dict String String
 
     -- The screenshots the package's AppStream metainfo points at.
     , screenshots : List Screenshot
@@ -394,16 +399,17 @@ update navKey msg model nixosChannels =
 
 
 view :
-    List NixOSChannel
+    IconStyle
+    -> List NixOSChannel
     -> Dict String Int
     -> Model
     -> Html Msg
-view nixosChannels docCounts model =
+view iconStyle nixosChannels docCounts model =
     Search.view { categoryName = "packages" }
         (Search.viewCountTitle "packages" (Dict.get "package" docCounts))
         nixosChannels
         model
-        (viewSuccess model)
+        (viewSuccess iconStyle model)
         viewBuckets
         SearchMsg
         []
@@ -575,22 +581,23 @@ viewProblem problem =
 
 
 viewSuccess :
-    Model
+    IconStyle
+    -> Model
     -> List NixOSChannel
     -> String
     -> Details
     -> Maybe String
     -> List (Search.ResultItem ResultItemSource)
     -> Html Msg
-viewSuccess model nixosChannels channel showUsageDetails show hits =
+viewSuccess iconStyle model nixosChannels channel showUsageDetails show hits =
     let
         -- Only a page that shows an icon needs room for one in each result.
         showIconMargin =
-            List.any (\hit -> packageIconFile model.saveData hit.source /= Nothing) hits
+            List.any (\hit -> packageIconFile iconStyle model.saveData hit.source /= Nothing) hits
     in
     ul [ class "search-results-list" ]
         (List.map
-            (viewResultItem model.saveData showIconMargin model.screenshotShown nixosChannels channel showUsageDetails show)
+            (viewResultItem iconStyle model.saveData showIconMargin model.screenshotShown nixosChannels channel showUsageDetails show)
             hits
         )
 
@@ -608,24 +615,38 @@ displayedDesktopEntries source =
 one to show. Icons are served as static files written by the frontend build,
 one per image, named after its contents.
 -}
-desktopIconFile : Bool -> ResultItemSource -> DesktopEntry -> Maybe String
-desktopIconFile saveData source entry =
+desktopIconFile : IconStyle -> Bool -> ResultItemSource -> DesktopEntry -> Maybe String
+desktopIconFile iconStyle saveData source entry =
     if saveData then
         Nothing
 
     else
         entry.icon
-            |> Maybe.andThen (\iconName -> Dict.get iconName source.desktopIcons)
+            |> Maybe.andThen (iconFile iconStyle source.desktopIcons source.desktopThemeIcons)
 
 
 {-| The file holding the icon beside the attribute name of a package: that of
 its first displayed desktop entry with an icon.
 -}
-packageIconFile : Bool -> ResultItemSource -> Maybe String
-packageIconFile saveData source =
+packageIconFile : IconStyle -> Bool -> ResultItemSource -> Maybe String
+packageIconFile iconStyle saveData source =
     displayedDesktopEntries source
-        |> List.filterMap (desktopIconFile saveData source)
+        |> List.filterMap (desktopIconFile iconStyle saveData source)
         |> List.head
+
+
+{-| Whether the results show a package with an icon in at least one icon style.
+`PreferThemeIcons` finds an icon wherever `PreferPackageIcons` does, and a page must keep
+the switcher if only the other style has its icons.
+-}
+hasIcons : Model -> Bool
+hasIcons model =
+    case model.result of
+        RemoteData.Success result ->
+            List.any (\hit -> packageIconFile PreferThemeIcons model.saveData hit.source /= Nothing) result.hits.hits
+
+        _ ->
+            False
 
 
 {-| The id of the `<dialog>` that shows a screenshot. The page shows one at a
@@ -719,7 +740,8 @@ copyableCommand preClass commandText content =
 
 
 viewResultItem :
-    Bool
+    IconStyle
+    -> Bool
     -> Bool
     -> Maybe ( String, Int )
     -> List NixOSChannel
@@ -728,7 +750,7 @@ viewResultItem :
     -> Maybe String
     -> Search.ResultItem ResultItemSource
     -> Html Msg
-viewResultItem saveData showIconMargin screenshotShown nixosChannels channel showUsageDetails show item =
+viewResultItem iconStyle saveData showIconMargin screenshotShown nixosChannels channel showUsageDetails show item =
     let
         optionals b l =
             if b then
@@ -782,12 +804,12 @@ viewResultItem saveData showIconMargin screenshotShown nixosChannels channel sho
             displayedDesktopEntries item.source
 
         packageIcon =
-            viewIcon "package-icon" (packageIconFile saveData item.source)
+            viewIcon "package-icon" (packageIconFile iconStyle saveData item.source)
 
         viewDesktopEntry entry =
             li []
                 (span [ class "desktop-entry-name" ]
-                    [ viewIcon "desktop-entry-icon" (desktopIconFile saveData item.source entry)
+                    [ viewIcon "desktop-entry-icon" (desktopIconFile iconStyle saveData item.source entry)
                     , text (Maybe.withDefault item.source.pname entry.desktopName)
                     ]
                     -- `GenericName` says what the application is where its name
@@ -2068,6 +2090,7 @@ decodeResultItemSource =
         |> Json.Decode.Pipeline.optional "package_nixos_modules" (Json.Decode.list Json.Decode.string) []
         |> Json.Decode.Pipeline.optional "package_desktop_entries" (Json.Decode.list decodeDesktopEntry) []
         |> Json.Decode.Pipeline.optional "package_desktop_icons" (Json.Decode.dict Json.Decode.string) Dict.empty
+        |> Json.Decode.Pipeline.optional "package_desktop_theme_icons" (Json.Decode.dict Json.Decode.string) Dict.empty
         |> Json.Decode.Pipeline.optional "package_screenshots" (Json.Decode.list decodeScreenshot) []
         |> Json.Decode.Pipeline.optional "package_dep_count" (Json.Decode.map Just Json.Decode.int) Nothing
         |> Json.Decode.Pipeline.optional "package_repology_repos" (Json.Decode.map Just Json.Decode.int) Nothing

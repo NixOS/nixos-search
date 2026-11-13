@@ -38,6 +38,7 @@ import Search
         , viewResult
         , viewSearchInput
         )
+import Utils exposing (IconStyle(..))
 
 
 
@@ -194,7 +195,7 @@ view nixosChannels model =
             Html.map OptionsMsg <| mkBody "3rd-party flake options" model_ (Page.Options.viewSuccess model_.activeOptionSource) Page.Options.viewBuckets Page.Options.SearchMsg
 
         PackagesModel model_ ->
-            Html.map PackagesMsg <| mkBody "3rd-party flake packages" model_ (Page.Packages.viewSuccess model_) Page.Packages.viewBuckets Page.Packages.SearchMsg
+            Html.map PackagesMsg <| mkBody "3rd-party flake packages" model_ (Page.Packages.viewSuccess PreferPackageIcons model_) Page.Packages.viewBuckets Page.Packages.SearchMsg
 
 
 

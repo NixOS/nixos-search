@@ -187,6 +187,7 @@ lazy_static! {
                 // File names of the images, which are `icon` documents in the
                 // shared image index. Rendered, never queried.
                 "package_desktop_icons": {"type": "object", "enabled": false},
+                "package_desktop_theme_icons": {"type": "object", "enabled": false},
                 "package_categories_set": {"type": "keyword"},
                 "package_mime_types_set": {"type": "keyword"},
                 "package_problems": {"type": "object", "enabled": false},

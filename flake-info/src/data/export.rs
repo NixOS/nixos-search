@@ -291,6 +291,10 @@ pub enum Derivation {
         /// commonly share one icon. The images themselves are [Derivation::Icon]
         /// documents, which the frontend build turns into static files.
         package_desktop_icons: HashMap<String, String>,
+        /// File names of the icons of the icon theme, for the names for which
+        /// `package_desktop_icons` holds an icon of the package itself. The
+        /// frontend shows these if the reader selects the icon theme.
+        package_desktop_theme_icons: HashMap<String, String>,
         /// Flattened out of the entries so they can be aggregated on, following
         /// `package_license_set` and `package_maintainers_set`.
         package_categories_set: Vec<String>,
@@ -475,6 +479,7 @@ impl TryFrom<(import::FlakeEntry, super::Flake)> for Derivation {
                     // Flakes carry no desktop entries; only nixpkgs indexes them.
                     package_desktop_entries: Vec::new(),
                     package_desktop_icons: HashMap::new(),
+                    package_desktop_theme_icons: HashMap::new(),
                     package_categories_set: Vec::new(),
                     package_mime_types_set: Vec::new(),
                     package_problems: Vec::new(),
@@ -652,6 +657,7 @@ impl TryFrom<import::NixpkgsEntry> for Derivation {
                     package_nixos_modules: nixos_modules,
                     package_desktop_entries: desktop_entries,
                     package_desktop_icons: package.icons,
+                    package_desktop_theme_icons: package.theme_icons,
                     package_categories_set,
                     package_mime_types_set,
                     package_problems,
