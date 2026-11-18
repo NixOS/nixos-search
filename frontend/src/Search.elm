@@ -960,7 +960,6 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
                 Nothing ->
                     div [ class "loader-wrapper" ]
                         [ aside [ class "search-sidebar" ] searchBuckets
-                        , div [ class "loader" ] [ text "Loading..." ]
                         , h2 [] [ text "Searching..." ]
                         ]
 
@@ -971,10 +970,16 @@ viewResult nixosChannels outMsg categoryName model viewSuccess viewBuckets searc
             in
             if result.hits.total.value == 0 && List.isEmpty buckets then
                 div [ class "search-results" ]
-                    [ aside [ class "search-sidebar" ] searchBuckets
-                    , div [ class "search-results-main" ]
-                        [ viewNoResults categoryName model.activeOptionSource model.query model.channel ]
-                    ]
+                    ((if List.isEmpty searchBuckets then
+                        []
+
+                      else
+                        [ aside [ class "search-sidebar" ] searchBuckets ]
+                     )
+                        ++ [ div [ class "search-results-main" ]
+                                [ viewNoResults categoryName model.activeOptionSource model.query model.channel ]
+                           ]
+                    )
 
             else
                 div [ class "search-results" ]
