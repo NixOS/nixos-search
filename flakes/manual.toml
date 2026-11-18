@@ -564,6 +564,11 @@ repo = "agenix"
 
 [[sources]]
 type = "github"
+owner = "schembriaiden"
+repo = "helium-browser-nix-flake"
+
+[[sources]]
+type = "github"
 owner = "skelettor"
 repo = "nix-openlinkhub"
 
