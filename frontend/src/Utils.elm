@@ -1,11 +1,16 @@
 module Utils exposing
-    ( basicTextIcon
+    ( IconStyle(..)
+    , basicTextIcon
     , copyButton
     , copyable
+    , iconFile
+    , iconStyleFromString
+    , iconStyleToString
     , showHtml
     , toggleList
     )
 
+import Dict exposing (Dict)
 import Html exposing (Html)
 import Html.Attributes exposing (class, title, type_)
 import Html.Events exposing (onClick)
@@ -63,3 +68,46 @@ textIcon icon size style text =
 basicTextIcon : IconsTypes.Icon msg -> String -> Html msg
 basicTextIcon icon text =
     textIcon icon 16 Inherit text
+
+
+{-| The order in which to look for the icon of an application. Both styles use
+the two sources, and only the priority changes. `PreferPackageIcons` uses the
+icon of the package, with the icon of the theme as the fallback.
+`PreferThemeIcons` uses the icon of the theme, with the icon of the package as
+the fallback.
+-}
+type IconStyle
+    = PreferPackageIcons
+    | PreferThemeIcons
+
+
+iconStyleFromString : String -> IconStyle
+iconStyleFromString s =
+    if s == "theme" then
+        PreferThemeIcons
+
+    else
+        PreferPackageIcons
+
+
+iconStyleToString : IconStyle -> String
+iconStyleToString style =
+    case style of
+        PreferPackageIcons ->
+            "package"
+
+        PreferThemeIcons ->
+            "theme"
+
+
+{-| The file under `/icons` for an icon name. `icons` is
+`package_desktop_icons`, and `themeIcons` is `package_desktop_theme_icons`.
+-}
+iconFile : IconStyle -> Dict String String -> Dict String String -> String -> Maybe String
+iconFile style icons themeIcons name =
+    case ( style, Dict.get name themeIcons ) of
+        ( PreferThemeIcons, Just file ) ->
+            Just file
+
+        _ ->
+            Dict.get name icons

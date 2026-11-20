@@ -6,6 +6,7 @@ module Page.Browse exposing
     , Model
     , Msg
     , defaultChannel
+    , hasIcons
     , init
     , matches
     , update
@@ -56,6 +57,7 @@ import RemoteData exposing (RemoteData(..), WebData)
 import Route exposing (BrowseArgs)
 import Search exposing (NixOSChannel)
 import Task
+import Utils exposing (IconStyle(..), iconFile)
 
 
 
@@ -93,6 +95,7 @@ type alias App =
     , description : Maybe String
     , entries : List Entry
     , icons : Dict String String
+    , themeIcons : Dict String String
     }
 
 
@@ -273,6 +276,7 @@ makeRequest options nixosChannels model =
                 , "package_description"
                 , "package_desktop_entries"
                 , "package_desktop_icons"
+                , "package_desktop_theme_icons"
                 ]
 
         categoryTerms : List ( String, Json.Encode.Value )
@@ -401,6 +405,7 @@ decodeApp =
         |> Json.Decode.Pipeline.optional "package_description" (Json.Decode.nullable Json.Decode.string) Nothing
         |> Json.Decode.Pipeline.optional "package_desktop_entries" (Json.Decode.list decodeEntry) []
         |> Json.Decode.Pipeline.optional "package_desktop_icons" (Json.Decode.dict Json.Decode.string) Dict.empty
+        |> Json.Decode.Pipeline.optional "package_desktop_theme_icons" (Json.Decode.dict Json.Decode.string) Dict.empty
 
 
 decodeEntry : Json.Decode.Decoder Entry
@@ -416,8 +421,8 @@ decodeEntry =
 -- VIEW
 
 
-view : List NixOSChannel -> Model -> Html Msg
-view nixosChannels model =
+view : IconStyle -> List NixOSChannel -> Model -> Html Msg
+view iconStyle nixosChannels model =
     div [ class "search-page browse-page" ]
         (Search.viewChannels ChannelChange nixosChannels model.channel
             ++ (case model.result of
@@ -445,7 +450,7 @@ view nixosChannels model =
                         else
                             [ div [ class "search-results" ]
                                 [ aside [ class "search-sidebar" ] (viewCategoryBucket model result)
-                                , div [ class "search-results-main" ] (viewResult model result)
+                                , div [ class "search-results-main" ] (viewResult iconStyle model result)
                                 ]
                             ]
                )
@@ -518,8 +523,8 @@ sortCategories categories =
         mainCategories
 
 
-viewResult : Model -> BrowseResult -> List (Html Msg)
-viewResult model result =
+viewResult : IconStyle -> Model -> BrowseResult -> List (Html Msg)
+viewResult iconStyle model result =
     case model.category of
         Nothing ->
             List.map
@@ -529,7 +534,7 @@ viewResult model result =
                             [ a [ Route.href (Route.Browse { channel = Just model.channel, category = Just c.category }) ]
                                 [ text (categoryLabel c.category) ]
                             ]
-                        , viewApps model c.top
+                        , viewApps iconStyle model c.top
                         , a
                             [ class "browse-category-more"
                             , Route.href (Route.Browse { channel = Just model.channel, category = Just c.category })
@@ -542,7 +547,7 @@ viewResult model result =
         Just category ->
             [ div [ class "browse-category" ]
                 (h2 [] [ text (categoryLabel category) ]
-                    :: viewApps model result.apps
+                    :: viewApps iconStyle model result.apps
                     :: (if List.length result.apps < result.total then
                             [ div [ class "browse-show-more" ]
                                 [ button [ class "btn", onClick ShowMore ] [ text "Show more" ] ]
@@ -558,13 +563,50 @@ viewResult model result =
             ]
 
 
-viewApps : Model -> List App -> Html Msg
-viewApps model apps =
-    ul [ class "browse-apps" ] (List.map (viewApp model) apps)
+viewApps : IconStyle -> Model -> List App -> Html Msg
+viewApps iconStyle model apps =
+    ul [ class "browse-apps" ] (List.map (viewApp iconStyle model) apps)
 
 
-viewApp : Model -> App -> Html Msg
-viewApp model app =
+{-| The file under `/icons` for the icon of an application, if there is one to
+show.
+-}
+appIconFile : IconStyle -> Bool -> App -> Maybe String
+appIconFile iconStyle saveData app =
+    if saveData then
+        Nothing
+
+    else
+        app.entries
+            |> List.filter (not << .noDisplay)
+            |> List.filterMap .icon
+            |> List.filterMap (iconFile iconStyle app.icons app.themeIcons)
+            |> List.head
+
+
+{-| Whether the page shows an application with an icon in at least one icon
+style. `PreferThemeIcons` finds an icon wherever `PreferPackageIcons` does, and a page must
+keep the switcher if only the other style has its icons.
+-}
+hasIcons : Model -> Bool
+hasIcons model =
+    case model.result of
+        Success result ->
+            (case model.category of
+                Nothing ->
+                    List.concatMap .top result.categories
+
+                Just _ ->
+                    result.apps
+            )
+                |> List.any (\app -> appIconFile PreferThemeIcons model.saveData app /= Nothing)
+
+        _ ->
+            False
+
+
+viewApp : IconStyle -> Model -> App -> Html Msg
+viewApp iconStyle model app =
     let
         entries : List Entry
         entries =
@@ -586,16 +628,6 @@ viewApp model app =
                 Nothing ->
                     List.head (List.filterMap .comment entries)
 
-        iconFile : Maybe String
-        iconFile =
-            if model.saveData then
-                Nothing
-
-            else
-                entries
-                    |> List.filterMap (\entry -> Maybe.andThen (\icon -> Dict.get icon app.icons) entry.icon)
-                    |> List.head
-
         target : Route.Route
         target =
             Route.Packages
@@ -612,7 +644,7 @@ viewApp model app =
     in
     li [ class "browse-app" ]
         [ a [ Route.href target ]
-            [ case iconFile of
+            [ case appIconFile iconStyle model.saveData app of
                 Just file ->
                     -- Decorative: the name is beside it.
                     img [ class "browse-app-icon", src ("/icons/" ++ file), alt "", attribute "loading" "lazy" ] []

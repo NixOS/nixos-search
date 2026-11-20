@@ -343,7 +343,7 @@ footer {
 
 // An inline icon aligns to the text baseline. Thus center the icon in a box
 // with the height of one line, which keeps the height of the button.
-.theme-toggle .theme-icon {
+.navbar-toggles .navbar-toggle-icon {
   display: flex;
   align-items: center;
   height: 1lh;

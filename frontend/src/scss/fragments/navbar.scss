@@ -37,7 +37,7 @@
   @media (max-width:979px) {
     // save a bunch of real-estage be merging
     .nav { order: 3;  }
-    .theme-toggle { order: 2; }
+    .navbar-toggles { order: 2; }
   }
 
   .nav {
@@ -81,8 +81,9 @@
       }
     }
 
-    & + .theme-toggle {
+    & + .navbar-toggles {
       display: flex;
+      gap: 4px;
       margin: unset;
       margin-left: auto;
     }

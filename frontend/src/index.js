@@ -15,6 +15,10 @@ function applyTheme(theme) {
     }
 }
 
+function normalizeIconStyle(value) {
+    return value === "theme" ? value : "package";
+}
+
 const initialTheme = normalizeTheme(localStorage.getItem("theme"));
 applyTheme(initialTheme);
 
@@ -39,6 +43,7 @@ const app = Elm.Main.init({
             process.env.ELASTICSEARCH_PASSWORD || "X8gPHnzL52wFEekuxsfQ9cSh",
         nixosChannels: JSON.parse(process.env.NIXOS_CHANNELS),
         theme: initialTheme,
+        iconStyle: normalizeIconStyle(localStorage.getItem("iconStyle")),
         systemDark: systemDarkQuery.matches,
         isPrideMonth: new Date().getMonth() === 5,
         saveData: Boolean(saveData),
@@ -56,6 +61,19 @@ if (app.ports && app.ports.setTheme) {
             }
         } catch (_) {}
         applyTheme(theme);
+    });
+}
+
+if (app.ports && app.ports.setIconStyle) {
+    app.ports.setIconStyle.subscribe((value) => {
+        const iconStyle = normalizeIconStyle(value);
+        try {
+            if (iconStyle === "package") {
+                localStorage.removeItem("iconStyle");
+            } else {
+                localStorage.setItem("iconStyle", iconStyle);
+            }
+        } catch (_) {}
     });
 }
 
