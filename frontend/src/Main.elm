@@ -66,6 +66,7 @@ type alias Flags =
     , elasticsearchUsername : String
     , elasticsearchPassword : String
     , nixosChannels : Json.Decode.Value
+    , savedChannel : Maybe String
     , theme : String
     , systemDark : Bool
     , isPrideMonth : Bool
@@ -154,6 +155,7 @@ type alias Model =
     , route : Route.Route
     , elasticsearch : Search.Options
     , defaultNixOSChannel : String
+    , savedChannel : Maybe String
     , nixosChannels : List NixOSChannel
     , page : Page
     , theme : Theme
@@ -168,6 +170,9 @@ type alias Model =
 
 
 port setTheme : String -> Cmd msg
+
+
+port saveChannel : String -> Cmd msg
 
 
 port systemDarkChanged : (Bool -> msg) -> Sub msg
@@ -210,6 +215,10 @@ init flags url navKey =
             { navKey = navKey
             , elasticsearch = elasticSearch
             , defaultNixOSChannel = nixosChannels.default
+            , savedChannel =
+                List.filter (\channel -> Just channel.id == flags.savedChannel) nixosChannels.channels
+                    |> List.head
+                    |> Maybe.map .id
             , nixosChannels = nixosChannels.channels
             , page = NotFound
             , route = Route.Home
@@ -248,9 +257,76 @@ updateWith :
     -> ( subModel, Cmd subMsg )
     -> ( Model, Cmd Msg )
 updateWith toPage toMsg model ( subModel, subCmd ) =
-    ( { model | page = toPage subModel }
-    , Cmd.map toMsg subCmd
+    let
+        newPage =
+            toPage subModel
+
+        saveSelectedChannel =
+            case ( pageChannel model.page, pageChannel newPage ) of
+                ( _, Just channel ) ->
+                    if pageChannel model.page == Just channel then
+                        Cmd.none
+
+                    else
+                        saveChannel channel
+
+                _ ->
+                    Cmd.none
+    in
+    ( { model
+        | page = newPage
+        , savedChannel = firstJust (pageChannel newPage) model.savedChannel
+        }
+    , Cmd.batch [ Cmd.map toMsg subCmd, saveSelectedChannel ]
     )
+
+
+firstJust : Maybe a -> Maybe a -> Maybe a
+firstJust preferred fallback =
+    case preferred of
+        Just value ->
+            Just value
+
+        Nothing ->
+            fallback
+
+
+routeWithSavedChannel : Maybe String -> Route.Route -> Route.Route
+routeWithSavedChannel savedChannel route =
+    case route of
+        Route.Browse args ->
+            Route.Browse { args | channel = firstJust args.channel savedChannel }
+
+        Route.Packages args ->
+            Route.Packages { args | channel = firstJust args.channel savedChannel }
+
+        Route.Options args ->
+            Route.Options { args | channel = firstJust args.channel savedChannel }
+
+        Route.Flakes args ->
+            Route.Flakes { args | channel = firstJust args.channel savedChannel }
+
+        _ ->
+            route
+
+
+pageChannel : Page -> Maybe String
+pageChannel page =
+    case page of
+        Browse pageModel ->
+            Just pageModel.channel
+
+        Packages pageModel ->
+            Just pageModel.channel
+
+        Options pageModel ->
+            Just pageModel.channel
+
+        Flakes _ ->
+            Nothing
+
+        NotFound ->
+            Nothing
 
 
 attemptQuery : ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
@@ -404,7 +480,7 @@ changeRouteTo currentModel url =
     let
         route : Route.Route
         route =
-            Route.fromUrl url
+            routeWithSavedChannel currentModel.savedChannel (Route.fromUrl url)
 
         model =
             { currentModel | route = route }
