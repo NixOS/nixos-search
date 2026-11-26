@@ -276,7 +276,7 @@ updateWith toPage toMsg model ( subModel, subCmd ) =
     ( { model
         | page = newPage
         , savedChannel = firstJust (pageChannel newPage) model.savedChannel
-        }
+      }
     , Cmd.batch [ Cmd.map toMsg subCmd, saveSelectedChannel ]
     )
 
