@@ -1,0 +1,114 @@
+name: "Frontend: Deploy a fork to Netlify"
+
+# Deploys the site that `frontend.yml` built for a pull request from a fork.
+# A pull request from a fork gets no secrets, thus this trusted workflow does
+# the deploy. It runs the workflow file and the code of the default branch.
+#
+# The artifact is data from the fork. Do not run code from it. The Netlify CLI
+# runs the code of each edge function (with access to the environment) when it
+# bundles the edge functions, thus the deploy uses the edge functions and the
+# `netlify.toml` of the default branch.
+on:
+  workflow_run:
+    workflows: ["Frontend: Build & Deploy to Netlify"]
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+  statuses: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: >-
+      github.repository_owner == 'NixOS' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_repository.full_name != github.repository
+
+    steps:
+      - name: Checking out the repository
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download the site
+        uses: actions/download-artifact@v8
+        with:
+          name: frontend-dist
+          path: dist
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Find the pull request from GitHub data, not from the artifact.
+      - name: Find the pull request
+        id: pr
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.event.workflow_run.head_repository.owner.login }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          number=$(gh api -X GET "repos/$GITHUB_REPOSITORY/pulls" \
+            -f head="$OWNER:$BRANCH" -f state=open \
+            --jq '.[] | select(.head.sha == env.SHA) | .number' | head -n 1)
+          if [ -z "$number" ]; then
+            echo "No open pull request for $SHA, thus no deploy."
+          fi
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
+      - name: Setup
+        if: steps.pr.outputs.number != ''
+        uses: ./.github/actions/common-setup
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CACHIX_SIGNING_KEY: ${{ secrets.CACHIX_SIGNING_KEY }}
+
+      - name: Deploy to Netlify
+        id: deploy
+        if: steps.pr.outputs.number != ''
+        working-directory: frontend
+        shell: bash
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          nix shell --inputs-from .. nixpkgs#netlify-cli nixpkgs#deno -c \
+            netlify deploy --no-build --dir ../dist --message "Deploy of a fork from GitHub Actions" --json > ../deploy.json
+          echo "url=$(jq -r .deploy_url ../deploy.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Set the commit status
+        if: steps.deploy.outputs.url != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
+            -f state=success -f context=Netlify -f description="Netlify deployment" -f target_url="$URL"
+
+      - name: Comment the deploy URL on the pull request
+        if: steps.deploy.outputs.url != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ steps.pr.outputs.number }}
+          URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          # Change the comment of an earlier deploy, if there is one.
+          body="<!-- NETLIFY DEPLOY COMMENT -->
+          Deployed on $URL
+
+          This pull request is from a fork, thus the deploy uses the edge functions of the default branch."
+          id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("NETLIFY DEPLOY COMMENT"))) | .id' | head -n 1)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -f body="$body"
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -f body="$body"
+          fi

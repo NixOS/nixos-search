@@ -69,6 +69,16 @@ jobs:
           export ELASTICSEARCH_MAPPING_SCHEMA_VERSION
           npm --prefix frontend run build:screenshots
 
+      # A pull request from a fork gets no secrets. The workflow
+      # `frontend-deploy-fork.yml` deploys this artifact with the secrets.
+      - name: Upload the site for the deploy of a fork
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-dist
+          path: dist
+          retention-days: 3
+
       # The Netlify CLI also uploads the edge functions in
       # `frontend/netlify/edge-functions`. It finds them and `netlify.toml`
       # from its working directory.
@@ -82,7 +92,7 @@ jobs:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           PRODUCTION: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
         run: |
-          # A pull request from a fork gets no secrets, thus it gets no deploy.
+          # A pull request from a fork gets no secrets. `frontend-deploy-fork.yml` deploys it.
           if [ -z "$NETLIFY_AUTH_TOKEN" ]; then
             echo "No Netlify credentials, thus no deploy."
             exit 0
